@@ -47,12 +47,24 @@ class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     email: EmailStr
     name: str
+    role: str = "operator"  # "admin", "manager", "operator"
+    branch_id: Optional[str] = None  # For branch-specific access
+    permissions: List[str] = []  # ["sales", "expenses", "reports", "branches", "customers", "suppliers", "users"]
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
     name: str
+    role: Optional[str] = "operator"
+    branch_id: Optional[str] = None
+    permissions: Optional[List[str]] = []
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+    branch_id: Optional[str] = None
+    permissions: Optional[List[str]] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
