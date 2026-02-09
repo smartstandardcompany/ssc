@@ -526,7 +526,12 @@ async def delete_customer(customer_id: str, current_user: User = Depends(get_cur
 # Sales Routes
 @api_router.get("/sales", response_model=List[Sale])
 async def get_sales(current_user: User = Depends(get_current_user)):
-    sales = await db.sales.find({}, {"_id": 0}).sort("date", -1).to_list(1000)
+    query = {}
+    # Filter by branch for non-admin users
+    if current_user.branch_id and current_user.role != "admin":
+        query["branch_id"] = current_user.branch_id
+    
+    sales = await db.sales.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
     for sale in sales:
         if isinstance(sale.get('date'), str):
             sale['date'] = datetime.fromisoformat(sale['date'])
@@ -536,28 +541,49 @@ async def get_sales(current_user: User = Depends(get_current_user)):
 
 @api_router.post("/sales", response_model=Sale)
 async def create_sale(sale_data: SaleCreate, current_user: User = Depends(get_current_user)):
-    sale = Sale(**sale_data.model_dump(), created_by=current_user.id)
+    # Calculate credit amount
+    total_paid = sum(p["amount"] for p in sale_data.payment_details if p["mode"] in ["cash", "bank"])
+    credit_amount = sale_data.amount - total_paid
+    
+    sale = Sale(
+        **sale_data.model_dump(),
+        credit_amount=credit_amount,
+        credit_received=0,
+        created_by=current_user.id
+    )
     sale_dict = sale.model_dump()
     sale_dict["date"] = sale_dict["date"].isoformat()
     sale_dict["created_at"] = sale_dict["created_at"].isoformat()
     await db.sales.insert_one(sale_dict)
     return sale
 
-@api_router.put("/sales/{sale_id}", response_model=Sale)
-async def update_sale(sale_id: str, sale_update: SaleUpdate, current_user: User = Depends(get_current_user)):
-    result = await db.sales.find_one({"id": sale_id}, {"_id": 0})
-    if not result:
+@api_router.post("/sales/{sale_id}/receive-credit")
+async def receive_credit_payment(sale_id: str, payment: SalePayment, current_user: User = Depends(get_current_user)):
+    sale = await db.sales.find_one({"id": sale_id}, {"_id": 0})
+    if not sale:
         raise HTTPException(status_code=404, detail="Sale not found")
     
-    update_data = {k: v for k, v in sale_update.model_dump().items() if v is not None}
-    await db.sales.update_one({"id": sale_id}, {"$set": update_data})
+    remaining_credit = sale["credit_amount"] - sale["credit_received"]
+    if payment.amount > remaining_credit:
+        raise HTTPException(status_code=400, detail=f"Payment amount exceeds remaining credit of ${remaining_credit:.2f}")
     
-    updated = await db.sales.find_one({"id": sale_id}, {"_id": 0})
-    if isinstance(updated.get('date'), str):
-        updated['date'] = datetime.fromisoformat(updated['date'])
-    if isinstance(updated.get('created_at'), str):
-        updated['created_at'] = datetime.fromisoformat(updated['created_at'])
-    return Sale(**updated)
+    # Update sale
+    new_credit_received = sale["credit_received"] + payment.amount
+    new_payment_details = sale["payment_details"] + [{"mode": payment.payment_mode, "amount": payment.amount}]
+    
+    await db.sales.update_one(
+        {"id": sale_id},
+        {"$set": {
+            "credit_received": new_credit_received,
+            "payment_details": new_payment_details
+        }}
+    )
+    
+    return {
+        "message": "Credit payment received",
+        "received": payment.amount,
+        "remaining_credit": remaining_credit - payment.amount
+    }
 
 @api_router.delete("/sales/{sale_id}")
 async def delete_sale(sale_id: str, current_user: User = Depends(get_current_user)):
