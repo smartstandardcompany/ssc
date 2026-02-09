@@ -306,6 +306,80 @@ async def login(credentials: UserLogin):
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
 
+# User Management Routes (Admin only)
+@api_router.get("/users", response_model=List[User])
+async def get_users(current_user: User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(1000)
+    for user in users:
+        if isinstance(user.get('created_at'), str):
+            user['created_at'] = datetime.fromisoformat(user['created_at'])
+    return users
+
+@api_router.post("/users", response_model=User)
+async def create_user(user_data: UserCreate, current_user: User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    existing_user = await db.users.find_one({"email": user_data.email}, {"_id": 0})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Set permissions based on role
+    if user_data.role == "admin":
+        permissions = ["sales", "expenses", "reports", "branches", "customers", "suppliers", "users"]
+    elif user_data.role == "manager":
+        permissions = ["sales", "expenses", "reports", "branches", "customers", "suppliers"]
+    else:
+        permissions = ["sales", "expenses"]
+    
+    user = User(
+        email=user_data.email,
+        name=user_data.name,
+        role=user_data.role or "operator",
+        branch_id=user_data.branch_id,
+        permissions=user_data.permissions or permissions
+    )
+    user_dict = user.model_dump()
+    user_dict["password"] = hash_password(user_data.password)
+    user_dict["created_at"] = user_dict["created_at"].isoformat()
+    
+    await db.users.insert_one(user_dict)
+    return user
+
+@api_router.put("/users/{user_id}", response_model=User)
+async def update_user(user_id: str, user_update: UserUpdate, current_user: User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    result = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not result:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    update_data = {k: v for k, v in user_update.model_dump().items() if v is not None}
+    if update_data:
+        await db.users.update_one({"id": user_id}, {"$set": update_data})
+    
+    updated = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
+    if isinstance(updated.get('created_at'), str):
+        updated['created_at'] = datetime.fromisoformat(updated['created_at'])
+    return User(**updated)
+
+@api_router.delete("/users/{user_id}")
+async def delete_user(user_id: str, current_user: User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    
+    result = await db.users.delete_one({"id": user_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"message": "User deleted successfully"}
+
 # Branch Routes
 @api_router.get("/branches", response_model=List[Branch])
 async def get_branches(current_user: User = Depends(get_current_user)):
