@@ -127,9 +127,28 @@ class SalePayment(BaseModel):
     payment_mode: str  # "cash" or "bank"
     amount: float
 
+class Supplier(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    branch_id: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    credit_limit: float = 0
+    current_credit: float = 0  # Amount owed to supplier
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class SupplierCreate(BaseModel):
+    name: str
+    branch_id: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    credit_limit: Optional[float] = 0
+
 class SupplierPayment(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    supplier_id: str
     supplier_name: str
     amount: float
     payment_mode: str  # "cash", "bank", "credit"
@@ -139,11 +158,15 @@ class SupplierPayment(BaseModel):
     created_by: str
 
 class SupplierPaymentCreate(BaseModel):
-    supplier_name: str
+    supplier_id: str
     amount: float
     payment_mode: str
     date: datetime
     notes: Optional[str] = None
+
+class SupplierCreditPayment(BaseModel):
+    payment_mode: str  # "cash" or "bank"
+    amount: float
 
 class Expense(BaseModel):
     model_config = ConfigDict(extra="ignore")
