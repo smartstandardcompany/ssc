@@ -7,9 +7,11 @@ import DashboardPage from "./pages/DashboardPage";
 import SalesPage from "./pages/SalesPage";
 import BranchesPage from "./pages/BranchesPage";
 import CustomersPage from "./pages/CustomersPage";
+import SuppliersPage from "./pages/SuppliersPage";
 import SupplierPaymentsPage from "./pages/SupplierPaymentsPage";
 import ExpensesPage from "./pages/ExpensesPage";
 import ReportsPage from "./pages/ReportsPage";
+import UsersPage from "./pages/UsersPage";
 import { Toaster } from "@/components/ui/sonner";
 
 function App() {
@@ -38,9 +40,11 @@ function App() {
           <Route path="/sales" element={isAuthenticated ? <SalesPage /> : <Navigate to="/login" />} />
           <Route path="/branches" element={isAuthenticated ? <BranchesPage /> : <Navigate to="/login" />} />
           <Route path="/customers" element={isAuthenticated ? <CustomersPage /> : <Navigate to="/login" />} />
+          <Route path="/suppliers" element={isAuthenticated ? <SuppliersPage /> : <Navigate to="/login" />} />
           <Route path="/supplier-payments" element={isAuthenticated ? <SupplierPaymentsPage /> : <Navigate to="/login" />} />
           <Route path="/expenses" element={isAuthenticated ? <ExpensesPage /> : <Navigate to="/login" />} />
           <Route path="/reports" element={isAuthenticated ? <ReportsPage /> : <Navigate to="/login" />} />
+          <Route path="/users" element={isAuthenticated ? <UsersPage /> : <Navigate to="/login" />} />
         </Routes>
       </BrowserRouter>
       <Toaster position="top-right" richColors />
