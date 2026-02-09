@@ -95,7 +95,7 @@ export default function BranchesPage() {
                 Add Branch
               </Button>
             </DialogTrigger>
-            <DialogContent data-testid="branch-dialog">
+            <DialogContent data-testid="branch-dialog" aria-describedby="branch-dialog-description">
               <DialogHeader>
                 <DialogTitle className="font-outfit">{editingBranch ? 'Edit Branch' : 'Add New Branch'}</DialogTitle>
               </DialogHeader>
