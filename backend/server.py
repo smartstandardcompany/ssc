@@ -676,18 +676,33 @@ async def delete_expense(expense_id: str, current_user: User = Depends(get_curre
 # Dashboard Stats
 @api_router.get("/dashboard/stats", response_model=DashboardStats)
 async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
-    sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+    query = {}
+    if current_user.branch_id and current_user.role != "admin":
+        query["branch_id"] = current_user.branch_id
+    
+    sales = await db.sales.find(query, {"_id": 0}).to_list(10000)
     expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
     supplier_payments = await db.supplier_payments.find({}, {"_id": 0}).to_list(10000)
     
-    total_sales = sum(sale["amount"] for sale in sales if sale["payment_status"] == "received" or sale["payment_mode"] != "credit")
+    # Calculate total sales (amount minus remaining credit)
+    total_sales = sum(sale["amount"] - (sale.get("credit_amount", 0) - sale.get("credit_received", 0)) for sale in sales)
     total_expenses = sum(expense["amount"] for expense in expenses)
-    total_supplier_payments = sum(payment["amount"] for payment in supplier_payments)
-    pending_credits = sum(sale["amount"] for sale in sales if sale["payment_mode"] == "credit" and sale["payment_status"] == "pending")
+    total_supplier_payments = sum(payment["amount"] for payment in supplier_payments if payment.get("payment_mode") != "credit")
     
-    cash_sales = sum(sale["amount"] for sale in sales if sale["payment_mode"] == "cash" or (sale["payment_mode"] == "credit" and sale["received_mode"] == "cash"))
-    bank_sales = sum(sale["amount"] for sale in sales if sale["payment_mode"] == "bank" or (sale["payment_mode"] == "credit" and sale["received_mode"] == "bank"))
-    credit_sales = sum(sale["amount"] for sale in sales if sale["payment_mode"] == "credit" and sale["payment_status"] == "pending")
+    # Calculate pending credits
+    pending_credits = sum(sale.get("credit_amount", 0) - sale.get("credit_received", 0) for sale in sales)
+    
+    # Calculate payment mode breakdown
+    cash_sales = 0
+    bank_sales = 0
+    credit_sales = pending_credits
+    
+    for sale in sales:
+        for payment in sale.get("payment_details", []):
+            if payment["mode"] == "cash":
+                cash_sales += payment["amount"]
+            elif payment["mode"] == "bank":
+                bank_sales += payment["amount"]
     
     net_profit = total_sales - total_expenses - total_supplier_payments
     
