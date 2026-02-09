@@ -42,6 +42,12 @@ export const DashboardLayout = ({ children }) => {
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
+            
+            // Hide admin-only items for non-admins
+            if (item.adminOnly && user.role !== 'admin') {
+              return null;
+            }
+            
             return (
               <Link
                 key={item.path}
