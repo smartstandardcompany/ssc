@@ -416,6 +416,77 @@ async def delete_branch(branch_id: str, current_user: User = Depends(get_current
         raise HTTPException(status_code=404, detail="Branch not found")
     return {"message": "Branch deleted successfully"}
 
+# Supplier Routes
+@api_router.get("/suppliers", response_model=List[Supplier])
+async def get_suppliers(current_user: User = Depends(get_current_user)):
+    # If user has branch_id, filter suppliers by branch
+    query = {}
+    if current_user.branch_id and current_user.role != "admin":
+        query["branch_id"] = current_user.branch_id
+    
+    suppliers = await db.suppliers.find(query, {"_id": 0}).to_list(1000)
+    for supplier in suppliers:
+        if isinstance(supplier.get('created_at'), str):
+            supplier['created_at'] = datetime.fromisoformat(supplier['created_at'])
+    return suppliers
+
+@api_router.post("/suppliers", response_model=Supplier)
+async def create_supplier(supplier_data: SupplierCreate, current_user: User = Depends(get_current_user)):
+    supplier = Supplier(**supplier_data.model_dump())
+    supplier_dict = supplier.model_dump()
+    supplier_dict["created_at"] = supplier_dict["created_at"].isoformat()
+    await db.suppliers.insert_one(supplier_dict)
+    return supplier
+
+@api_router.put("/suppliers/{supplier_id}", response_model=Supplier)
+async def update_supplier(supplier_id: str, supplier_data: SupplierCreate, current_user: User = Depends(get_current_user)):
+    result = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
+    if not result:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    
+    await db.suppliers.update_one({"id": supplier_id}, {"$set": supplier_data.model_dump()})
+    updated = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
+    if isinstance(updated.get('created_at'), str):
+        updated['created_at'] = datetime.fromisoformat(updated['created_at'])
+    return Supplier(**updated)
+
+@api_router.delete("/suppliers/{supplier_id}")
+async def delete_supplier(supplier_id: str, current_user: User = Depends(get_current_user)):
+    result = await db.suppliers.delete_one({"id": supplier_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    return {"message": "Supplier deleted successfully"}
+
+@api_router.post("/suppliers/{supplier_id}/pay-credit")
+async def pay_supplier_credit(supplier_id: str, payment: SupplierCreditPayment, current_user: User = Depends(get_current_user)):
+    supplier = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    
+    if payment.amount > supplier["current_credit"]:
+        raise HTTPException(status_code=400, detail="Payment amount exceeds current credit")
+    
+    # Update supplier credit
+    new_credit = supplier["current_credit"] - payment.amount
+    await db.suppliers.update_one({"id": supplier_id}, {"$set": {"current_credit": new_credit}})
+    
+    # Record payment
+    payment_record = SupplierPayment(
+        supplier_id=supplier_id,
+        supplier_name=supplier["name"],
+        amount=payment.amount,
+        payment_mode=payment.payment_mode,
+        date=datetime.now(timezone.utc),
+        notes=f"Credit payment - Remaining: ${new_credit:.2f}",
+        created_by=current_user.id
+    )
+    payment_dict = payment_record.model_dump()
+    payment_dict["date"] = payment_dict["date"].isoformat()
+    payment_dict["created_at"] = payment_dict["created_at"].isoformat()
+    await db.supplier_payments.insert_one(payment_dict)
+    
+    return {"message": "Credit payment recorded", "remaining_credit": new_credit}
+
 # Customer Routes
 @api_router.get("/customers", response_model=List[Customer])
 async def get_customers(current_user: User = Depends(get_current_user)):
