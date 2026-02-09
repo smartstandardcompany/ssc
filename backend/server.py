@@ -184,6 +184,11 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         raise HTTPException(status_code=401, detail="User not found")
     return User(**user)
 
+# Health Check
+@api_router.get("/")
+async def root():
+    return {"message": "DataEntry Hub API"}
+
 # Auth Routes
 @api_router.post("/auth/register", response_model=Token)
 async def register(user_data: UserCreate):
