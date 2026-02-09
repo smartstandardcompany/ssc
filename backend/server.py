@@ -605,11 +605,28 @@ async def get_supplier_payments(current_user: User = Depends(get_current_user)):
 
 @api_router.post("/supplier-payments", response_model=SupplierPayment)
 async def create_supplier_payment(payment_data: SupplierPaymentCreate, current_user: User = Depends(get_current_user)):
-    payment = SupplierPayment(**payment_data.model_dump(), created_by=current_user.id)
+    # Get supplier details
+    supplier = await db.suppliers.find_one({"id": payment_data.supplier_id}, {"_id": 0})
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    
+    payment = SupplierPayment(
+        **payment_data.model_dump(),
+        supplier_name=supplier["name"],
+        created_by=current_user.id
+    )
     payment_dict = payment.model_dump()
     payment_dict["date"] = payment_dict["date"].isoformat()
     payment_dict["created_at"] = payment_dict["created_at"].isoformat()
     await db.supplier_payments.insert_one(payment_dict)
+    
+    # If payment mode is credit, update supplier's current credit
+    if payment_data.payment_mode == "credit":
+        new_credit = supplier.get("current_credit", 0) + payment_data.amount
+        if new_credit > supplier.get("credit_limit", 0):
+            raise HTTPException(status_code=400, detail=f"Payment exceeds credit limit. Available: ${supplier.get('credit_limit', 0) - supplier.get('current_credit', 0):.2f}")
+        await db.suppliers.update_one({"id": payment_data.supplier_id}, {"$set": {"current_credit": new_credit}})
+    
     return payment
 
 @api_router.delete("/supplier-payments/{payment_id}")
