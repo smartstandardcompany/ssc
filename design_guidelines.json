@@ -1,0 +1,148 @@
+{
+  "identity": {
+    "name": "E1",
+    "mission": "Create a data entry dashboard that feels like a modern fintech product, not a spreadsheet.",
+    "principles": [
+      "Fusion: Finance precision meets Pop Art vibrancy.",
+      "Emotion: Data entry should feel rewarding, not tedious.",
+      "Clarity: High contrast for data, soft backgrounds for structure.",
+      "Asymmetry: Use bento grids to break visual monotony."
+    ]
+  },
+  "theme": {
+    "name": "Vibrant Utility",
+    "mode": "light",
+    "strategy": "Archetype 6 (Vibrant Play) + Archetype 4 (Swiss High-Contrast)",
+    "description": "A clean, white-dominant interface with explosive bursts of color for functional differentiation (Cash vs Bank vs Credit)."
+  },
+  "colors": {
+    "palette": {
+      "primary": "#7C3AED",
+      "primary_foreground": "#FFFFFF",
+      "secondary": "#F1F5F9",
+      "secondary_foreground": "#0F172A",
+      "accent": "#F59E0B",
+      "accent_foreground": "#FFFFFF",
+      "background": "#F8FAFC",
+      "foreground": "#0F172A",
+      "card": "#FFFFFF",
+      "card_foreground": "#0F172A",
+      "border": "#E2E8F0",
+      "input": "#E2E8F0",
+      "ring": "#7C3AED",
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "error": "#F43F5E",
+      "info": "#0EA5E9",
+      "cash": "#10B981",
+      "bank": "#0EA5E9",
+      "credit": "#F59E0B"
+    },
+    "rules": [
+      "Never use pure black (#000000). Use #0F172A (Slate 900).",
+      "Never use pure white (#FFFFFF) for the main background. Use #F8FAFC (Slate 50).",
+      "Use specific colors for transaction types: Green for Cash, Blue for Bank, Orange for Credit.",
+      "Gradients are allowed ONLY on 'Total Sales' cards or active states, never on text."
+    ]
+  },
+  "typography": {
+    "headings": {
+      "family": "Outfit, sans-serif",
+      "weights": ["500", "600", "700"],
+      "usage": "All page titles, card headers, and major metrics.",
+      "rule": "Tight tracking (-0.02em) for a modern look."
+    },
+    "body": {
+      "family": "Public Sans, sans-serif",
+      "weights": ["400", "500"],
+      "usage": "Table data, labels, inputs, paragraphs.",
+      "rule": "Tabular nums feature enabled for all data tables."
+    },
+    "installation": "Import from Google Fonts: @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Public+Sans:wght@400;500;600&display=swap');"
+  },
+  "layout": {
+    "grid_system": "Bento Grid",
+    "spacing": {
+      "container_padding": "p-6 md:p-8 lg:p-12",
+      "element_gap": "gap-6",
+      "internal_padding": "p-6"
+    },
+    "structure": {
+      "dashboard": "Grid with 12 columns. Summary cards span 3 or 4 cols. Main chart spans 8 cols. Recent activity spans 4 cols.",
+      "forms": "Max-width 2xl. Two-column grid for inputs on desktop, single column on mobile.",
+      "tables": "Full width, card-contained, with sticky headers."
+    }
+  },
+  "components": {
+    "cards": {
+      "style": "Flat white background, 1px border (slate-200), subtle shadow-sm.",
+      "hover": "Translate-y-1, shadow-md, border-primary/50.",
+      "radius": "rounded-xl"
+    },
+    "buttons": {
+      "primary": "bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20 rounded-full px-6",
+      "secondary": "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 rounded-full px-6",
+      "ghost": "hover:bg-slate-100 text-slate-600 rounded-lg"
+    },
+    "inputs": {
+      "style": "bg-white border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg h-11",
+      "labels": "text-sm font-medium text-slate-500 mb-1.5 block"
+    },
+    "navigation": {
+      "sidebar": "Fixed left, bg-white border-r border-slate-200. Active item: bg-primary/10 text-primary font-medium."
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": "Use backdrop-blur-md bg-white/80 for sticky headers and modal overlays.",
+    "micro_interactions": "All buttons and cards must have active scale (0.98) and hover lift.",
+    "textures": "Use a subtle noise texture on the login page background to reduce flatness.",
+    "icons": "Lucide React. Stroke width 2px for clarity."
+  },
+  "images": {
+    "login_background": {
+      "url": "https://images.unsplash.com/photo-1767482712476-7b72663a0120?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "alt": "Abstract colorful geometric shapes",
+      "usage": "Full screen background for Login/Register pages with a glassmorphism card overlay."
+    },
+    "dashboard_welcome": {
+      "url": "https://images.unsplash.com/photo-1573166675921-076ea6b621ce?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "alt": "Diverse team working",
+      "usage": "Optional welcome widget or 'About' modal."
+    }
+  },
+  "accessibility": {
+    "contrast": "Ensure all text meets WCAG AA. Use Slate-600+ for placeholder text, not lighter.",
+    "focus": "Visible focus rings on all interactive elements.",
+    "testing": "All interactive elements must have data-testid attributes."
+  },
+  "instructions_to_main_agent": [
+    "1. INSTALL FONTS: Add the Google Fonts import to index.css immediately.",
+    "2. SETUP THEME: Update tailwind.config.js with the specific colors defined in 'colors.palette'.",
+    "3. CREATE LAYOUT: Build a 'DashboardLayout' component with a sidebar and topbar.",
+    "4. BUILD COMPONENTS: Customize Shadcn UI components (Card, Button, Input) to match the 'components' rules.",
+    "5. IMPLEMENT PAGES: Start with the Dashboard (Bento Grid) and then the Sales Entry forms.",
+    "6. USE IMAGES: Use the provided Unsplash URLs for the login page and welcome sections.",
+    "7. DATA ENTRY: For the 'Sales Entry' page, use a clear distinction between 'Cash', 'Bank', and 'Credit' using the defined color codes.",
+    "8. DO NOT use generic 'Inter' font. Use 'Outfit' for headings and 'Public Sans' for body."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy",
+    "Use glass-morphism effects with backdrop filters (12-24px blur)",
+    "You MUST NOT apply universal transition. Eg: transition: all. This results in breaking transforms. Always add transitions for specific interactive elements like button, input excluding transforms",
+    "You MUST NOT center align the app container, ie do not add .App { text-align: center; } in the css file. This disrupts the human natural reading flow of text",
+    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style",
+    "NEVER: use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯📚🎭🎬🎪🎉🎊🎁🎀🎂🍰🎈🎨🎰💰💵💳🏦💎🪙💸🤑📊📈📉💹🔢🏆🥇 etc for icons.",
+    "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations. Static = dead.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "Subtle grain textures, noise overlays, custom cursors, selection states, and loading animations: separates good from extraordinary.",
+    "Main agent relies on these image URLs. Missing categories (especially sponsor logos) = main agent will use placeholder text which is FORBIDDEN",
+    "Prioritize using pre-existing components from src/components/ui when applicable",
+    "Create new components that match the style and conventions of existing components when needed",
+    "Examine existing components to understand the project's component patterns before creating new ones",
+    "Components MUST use named exports (export const ComponentName = ...)",
+    "Pages MUST use default exports (export default function PageName() {...})",
+    "Use sonner for toasts. Sonner component are located in /app/src/components/ui/sonner.tsx"
+  ]
+}
