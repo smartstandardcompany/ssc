@@ -106,9 +106,9 @@ class Sale(BaseModel):
     branch_id: Optional[str] = None
     customer_id: Optional[str] = None
     amount: float
-    payment_mode: str  # "cash", "bank", "credit"
-    payment_status: str = "pending"  # "pending" or "received"
-    received_mode: Optional[str] = None  # "cash" or "bank" when credit is received
+    payment_details: List[dict]  # [{"mode": "cash", "amount": 100}, {"mode": "bank", "amount": 50}]
+    credit_amount: float = 0  # Amount still pending for credit sales
+    credit_received: float = 0  # Amount received against credit
     date: datetime
     notes: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -119,16 +119,13 @@ class SaleCreate(BaseModel):
     branch_id: Optional[str] = None
     customer_id: Optional[str] = None
     amount: float
-    payment_mode: str
-    payment_status: Optional[str] = "pending"
-    received_mode: Optional[str] = None
+    payment_details: List[dict]
     date: datetime
     notes: Optional[str] = None
 
-class SaleUpdate(BaseModel):
-    payment_status: Optional[str] = None
-    received_mode: Optional[str] = None
-    notes: Optional[str] = None
+class SalePayment(BaseModel):
+    payment_mode: str  # "cash" or "bank"
+    amount: float
 
 class SupplierPayment(BaseModel):
     model_config = ConfigDict(extra="ignore")
