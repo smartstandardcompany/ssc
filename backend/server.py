@@ -261,7 +261,25 @@ async def register(user_data: UserCreate):
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    user = User(email=user_data.email, name=user_data.name)
+    # First user becomes admin
+    user_count = await db.users.count_documents({})
+    role = "admin" if user_count == 0 else user_data.role or "operator"
+    
+    # Set default permissions based on role
+    if role == "admin":
+        permissions = ["sales", "expenses", "reports", "branches", "customers", "suppliers", "users"]
+    elif role == "manager":
+        permissions = ["sales", "expenses", "reports", "branches", "customers", "suppliers"]
+    else:
+        permissions = ["sales", "expenses"]
+    
+    user = User(
+        email=user_data.email, 
+        name=user_data.name,
+        role=role,
+        branch_id=user_data.branch_id,
+        permissions=user_data.permissions or permissions
+    )
     user_dict = user.model_dump()
     user_dict["password"] = hash_password(user_data.password)
     user_dict["created_at"] = user_dict["created_at"].isoformat()
