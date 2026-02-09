@@ -166,6 +166,26 @@ class DashboardStats(BaseModel):
     bank_sales: float
     credit_sales: float
 
+class WhatsAppSettings(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    phone_number: str
+    enabled: bool = True
+    notification_time: str = "09:00"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class WhatsAppSettingsCreate(BaseModel):
+    phone_number: str
+    enabled: bool = True
+    notification_time: str = "09:00"
+
+class ExportRequest(BaseModel):
+    format: str  # "pdf" or "excel"
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    branch_id: Optional[str] = None
+
 # Helper functions
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
