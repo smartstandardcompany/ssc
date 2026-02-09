@@ -654,6 +654,16 @@ async def create_expense(expense_data: ExpenseCreate, current_user: User = Depen
     expense_dict["date"] = expense_dict["date"].isoformat()
     expense_dict["created_at"] = expense_dict["created_at"].isoformat()
     await db.expenses.insert_one(expense_dict)
+    
+    # If expense is linked to supplier and payment mode is credit, update supplier credit
+    if expense_data.supplier_id and expense_data.payment_mode == "credit":
+        supplier = await db.suppliers.find_one({"id": expense_data.supplier_id}, {"_id": 0})
+        if supplier:
+            new_credit = supplier.get("current_credit", 0) + expense_data.amount
+            if new_credit > supplier.get("credit_limit", 0):
+                raise HTTPException(status_code=400, detail=f"Expense exceeds supplier credit limit")
+            await db.suppliers.update_one({"id": expense_data.supplier_id}, {"$set": {"current_credit": new_credit}})
+    
     return expense
 
 @api_router.delete("/expenses/{expense_id}")
