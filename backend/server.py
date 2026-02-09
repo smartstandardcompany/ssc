@@ -452,6 +452,319 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
         credit_sales=credit_sales
     )
 
+# WhatsApp Settings Routes
+@api_router.get("/whatsapp/settings")
+async def get_whatsapp_settings(current_user: User = Depends(get_current_user)):
+    settings = await db.whatsapp_settings.find_one({"user_id": current_user.id}, {"_id": 0})
+    return settings if settings else None
+
+@api_router.post("/whatsapp/settings")
+async def save_whatsapp_settings(settings_data: WhatsAppSettingsCreate, current_user: User = Depends(get_current_user)):
+    existing = await db.whatsapp_settings.find_one({"user_id": current_user.id})
+    
+    settings = WhatsAppSettings(**settings_data.model_dump(), user_id=current_user.id)
+    settings_dict = settings.model_dump()
+    settings_dict["created_at"] = settings_dict["created_at"].isoformat()
+    
+    if existing:
+        await db.whatsapp_settings.update_one({"user_id": current_user.id}, {"$set": settings_dict})
+    else:
+        await db.whatsapp_settings.insert_one(settings_dict)
+    
+    return {"message": "WhatsApp settings saved successfully"}
+
+@api_router.post("/whatsapp/send-daily-report")
+async def send_daily_whatsapp_report(current_user: User = Depends(get_current_user)):
+    try:
+        # Get WhatsApp settings
+        settings = await db.whatsapp_settings.find_one({"user_id": current_user.id}, {"_id": 0})
+        if not settings or not settings.get("enabled"):
+            raise HTTPException(status_code=400, detail="WhatsApp notifications not configured")
+        
+        # Get today's data
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end = today_start + timedelta(days=1)
+        
+        sales = await db.sales.find({
+            "date": {"$gte": today_start.isoformat(), "$lt": today_end.isoformat()}
+        }, {"_id": 0}).to_list(1000)
+        
+        expenses = await db.expenses.find({
+            "date": {"$gte": today_start.isoformat(), "$lt": today_end.isoformat()}
+        }, {"_id": 0}).to_list(1000)
+        
+        branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+        
+        # Calculate stats
+        total_sales = sum(sale["amount"] for sale in sales)
+        total_expenses = sum(expense["amount"] for expense in expenses)
+        
+        # Branch-wise breakdown
+        branch_sales = {}
+        for branch in branches:
+            branch_total = sum(sale["amount"] for sale in sales if sale.get("branch_id") == branch["id"])
+            if branch_total > 0:
+                branch_sales[branch["name"]] = branch_total
+        
+        # Create message
+        message = f"📊 *Daily Sales Report - {datetime.now().strftime('%d %b %Y')}*\\n\\n"
+        message += f"💰 Total Sales: ${total_sales:.2f}\\n"
+        message += f"💸 Total Expenses: ${total_expenses:.2f}\\n"
+        message += f"📈 Net: ${(total_sales - total_expenses):.2f}\\n\\n"
+        
+        if branch_sales:
+            message += "*Branch-wise Sales:*\\n"
+            for branch_name, amount in branch_sales.items():
+                message += f"• {branch_name}: ${amount:.2f}\\n"
+        
+        # Send via Twilio
+        twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+        twilio_token = os.environ.get("TWILIO_AUTH_TOKEN")
+        twilio_phone = os.environ.get("TWILIO_PHONE_NUMBER")
+        
+        if not all([twilio_sid, twilio_token, twilio_phone]):
+            raise HTTPException(status_code=500, detail="Twilio credentials not configured")
+        
+        client = Client(twilio_sid, twilio_token)
+        
+        # Send WhatsApp message
+        whatsapp_message = client.messages.create(
+            from_=f'whatsapp:{twilio_phone}',
+            body=message,
+            to=f'whatsapp:{settings["phone_number"]}'
+        )
+        
+        return {"message": "Daily report sent successfully", "sid": whatsapp_message.sid}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send WhatsApp message: {str(e)}")
+
+# Export Routes
+@api_router.post("/export/reports")
+async def export_reports(export_request: ExportRequest, current_user: User = Depends(get_current_user)):
+    try:
+        # Fetch data
+        sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+        expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
+        supplier_payments = await db.supplier_payments.find({}, {"_id": 0}).to_list(10000)
+        branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+        customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
+        
+        # Filter by date range
+        if export_request.start_date:
+            start = datetime.fromisoformat(export_request.start_date)
+            sales = [s for s in sales if datetime.fromisoformat(s["date"]) >= start]
+            expenses = [e for e in expenses if datetime.fromisoformat(e["date"]) >= start]
+            supplier_payments = [p for p in supplier_payments if datetime.fromisoformat(p["date"]) >= start]
+        
+        if export_request.end_date:
+            end = datetime.fromisoformat(export_request.end_date)
+            sales = [s for s in sales if datetime.fromisoformat(s["date"]) <= end]
+            expenses = [e for e in expenses if datetime.fromisoformat(e["date"]) <= end]
+            supplier_payments = [p for p in supplier_payments if datetime.fromisoformat(p["date"]) <= end]
+        
+        # Filter by branch
+        if export_request.branch_id and export_request.branch_id != "all":
+            sales = [s for s in sales if s.get("branch_id") == export_request.branch_id]
+        
+        if export_request.format == "pdf":
+            return generate_pdf_report(sales, expenses, supplier_payments, branches, customers)
+        elif export_request.format == "excel":
+            return generate_excel_report(sales, expenses, supplier_payments, branches, customers)
+        else:
+            raise HTTPException(status_code=400, detail="Invalid export format")
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+
+def generate_pdf_report(sales, expenses, supplier_payments, branches, customers):
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Title
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=24,
+        textColor=colors.HexColor('#7C3AED'),
+        spaceAfter=30,
+        alignment=1
+    )
+    elements.append(Paragraph("DataEntry Hub - Sales Report", title_style))
+    elements.append(Spacer(1, 0.2*inch))
+    
+    # Summary Stats
+    total_sales = sum(s["amount"] for s in sales if s["payment_status"] == "received" or s["payment_mode"] != "credit")
+    total_expenses = sum(e["amount"] for e in expenses)
+    total_supplier = sum(p["amount"] for p in supplier_payments)
+    net_profit = total_sales - total_expenses - total_supplier
+    
+    summary_data = [
+        ["Metric", "Amount"],
+        ["Total Sales", f"${total_sales:.2f}"],
+        ["Total Expenses", f"${total_expenses:.2f}"],
+        ["Supplier Payments", f"${total_supplier:.2f}"],
+        ["Net Profit", f"${net_profit:.2f}"]
+    ]
+    
+    summary_table = Table(summary_data, colWidths=[3*inch, 2*inch])
+    summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#7C3AED')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 14),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    elements.append(summary_table)
+    elements.append(Spacer(1, 0.3*inch))
+    
+    # Sales Table
+    elements.append(Paragraph("Sales Transactions", styles['Heading2']))
+    elements.append(Spacer(1, 0.1*inch))
+    
+    sales_data = [["Date", "Type", "Amount", "Payment"]]
+    for sale in sales[:20]:  # Limit to 20 for PDF
+        date_str = datetime.fromisoformat(sale["date"]).strftime("%Y-%m-%d")
+        sales_data.append([
+            date_str,
+            sale["sale_type"].capitalize(),
+            f"${sale['amount']:.2f}",
+            sale["payment_mode"].capitalize()
+        ])
+    
+    sales_table = Table(sales_data, colWidths=[1.5*inch, 1.5*inch, 1.5*inch, 1.5*inch])
+    sales_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    elements.append(sales_table)
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=sales_report.pdf"}
+    )
+
+def generate_excel_report(sales, expenses, supplier_payments, branches, customers):
+    buffer = BytesIO()
+    wb = Workbook()
+    
+    # Summary Sheet
+    ws_summary = wb.active
+    ws_summary.title = "Summary"
+    
+    # Add headers
+    ws_summary['A1'] = "DataEntry Hub - Sales Report"
+    ws_summary['A1'].font = Font(size=16, bold=True, color="7C3AED")
+    
+    total_sales = sum(s["amount"] for s in sales if s["payment_status"] == "received" or s["payment_mode"] != "credit")
+    total_expenses = sum(e["amount"] for e in expenses)
+    total_supplier = sum(p["amount"] for p in supplier_payments)
+    net_profit = total_sales - total_expenses - total_supplier
+    
+    ws_summary['A3'] = "Metric"
+    ws_summary['B3'] = "Amount"
+    ws_summary['A3'].font = Font(bold=True)
+    ws_summary['B3'].font = Font(bold=True)
+    
+    summary_data = [
+        ("Total Sales", total_sales),
+        ("Total Expenses", total_expenses),
+        ("Supplier Payments", total_supplier),
+        ("Net Profit", net_profit)
+    ]
+    
+    for idx, (metric, amount) in enumerate(summary_data, start=4):
+        ws_summary[f'A{idx}'] = metric
+        ws_summary[f'B{idx}'] = f"${amount:.2f}"
+    
+    # Sales Sheet
+    ws_sales = wb.create_sheet("Sales")
+    sales_headers = ["Date", "Type", "Branch/Customer", "Amount", "Payment Mode", "Status"]
+    ws_sales.append(sales_headers)
+    
+    for col in ws_sales[1]:
+        col.font = Font(bold=True)
+        col.fill = PatternFill(start_color="7C3AED", end_color="7C3AED", fill_type="solid")
+        col.font = Font(bold=True, color="FFFFFF")
+    
+    for sale in sales:
+        date_str = datetime.fromisoformat(sale["date"]).strftime("%Y-%m-%d")
+        branch_name = next((b["name"] for b in branches if b["id"] == sale.get("branch_id")), "-")
+        customer_name = next((c["name"] for c in customers if c["id"] == sale.get("customer_id")), "-")
+        ref = branch_name if sale["sale_type"] == "branch" else customer_name
+        
+        ws_sales.append([
+            date_str,
+            sale["sale_type"].capitalize(),
+            ref,
+            sale["amount"],
+            sale["payment_mode"].capitalize(),
+            sale["payment_status"].capitalize()
+        ])
+    
+    # Expenses Sheet
+    ws_expenses = wb.create_sheet("Expenses")
+    expense_headers = ["Date", "Category", "Description", "Amount", "Payment Mode"]
+    ws_expenses.append(expense_headers)
+    
+    for col in ws_expenses[1]:
+        col.font = Font(bold=True)
+        col.fill = PatternFill(start_color="F43F5E", end_color="F43F5E", fill_type="solid")
+        col.font = Font(bold=True, color="FFFFFF")
+    
+    for expense in expenses:
+        date_str = datetime.fromisoformat(expense["date"]).strftime("%Y-%m-%d")
+        ws_expenses.append([
+            date_str,
+            expense["category"].capitalize(),
+            expense["description"],
+            expense["amount"],
+            expense["payment_mode"].capitalize()
+        ])
+    
+    # Supplier Payments Sheet
+    ws_supplier = wb.create_sheet("Supplier Payments")
+    supplier_headers = ["Date", "Supplier Name", "Amount", "Payment Mode", "Notes"]
+    ws_supplier.append(supplier_headers)
+    
+    for col in ws_supplier[1]:
+        col.font = Font(bold=True)
+        col.fill = PatternFill(start_color="0EA5E9", end_color="0EA5E9", fill_type="solid")
+        col.font = Font(bold=True, color="FFFFFF")
+    
+    for payment in supplier_payments:
+        date_str = datetime.fromisoformat(payment["date"]).strftime("%Y-%m-%d")
+        ws_supplier.append([
+            date_str,
+            payment["supplier_name"],
+            payment["amount"],
+            payment["payment_mode"].capitalize(),
+            payment.get("notes", "")
+        ])
+    
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=sales_report.xlsx"}
+    )
+
 app.include_router(api_router)
 
 app.add_middleware(
