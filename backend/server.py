@@ -171,10 +171,11 @@ class SupplierCreditPayment(BaseModel):
 class Expense(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    category: str  # "salary", "rent", "maintenance", "vat", "insurance", "other"
+    category: str  # "salary", "rent", "maintenance", "vat", "insurance", "supplier", "other"
     description: str
     amount: float
     payment_mode: str  # "cash" or "bank"
+    supplier_id: Optional[str] = None  # For supplier-related expenses
     date: datetime
     notes: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -185,6 +186,7 @@ class ExpenseCreate(BaseModel):
     description: str
     amount: float
     payment_mode: str
+    supplier_id: Optional[str] = None
     date: datetime
     notes: Optional[str] = None
 
