@@ -20,9 +20,11 @@ export const DashboardLayout = ({ children }) => {
     { path: '/sales', icon: ShoppingCart, label: 'Sales' },
     { path: '/branches', icon: Store, label: 'Branches' },
     { path: '/customers', icon: Users, label: 'Customers' },
-    { path: '/supplier-payments', icon: Truck, label: 'Supplier Payments' },
+    { path: '/suppliers', icon: Truck, label: 'Suppliers' },
+    { path: '/supplier-payments', icon: Receipt, label: 'Supplier Payments' },
     { path: '/expenses', icon: Receipt, label: 'Expenses' },
     { path: '/reports', icon: BarChart3, label: 'Reports' },
+    { path: '/users', icon: Shield, label: 'Users', adminOnly: true },
   ];
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
