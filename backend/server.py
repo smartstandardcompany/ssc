@@ -312,6 +312,7 @@ class SalaryPayment(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     employee_id: str
     employee_name: str
+    payment_type: str = "salary"  # "salary", "advance", "overtime", "tickets", "id_card"
     amount: float
     payment_mode: str  # "cash", "bank"
     branch_id: Optional[str] = None
@@ -323,6 +324,7 @@ class SalaryPayment(BaseModel):
 
 class SalaryPaymentCreate(BaseModel):
     employee_id: str
+    payment_type: Optional[str] = "salary"
     amount: float
     payment_mode: str
     branch_id: Optional[str] = None
