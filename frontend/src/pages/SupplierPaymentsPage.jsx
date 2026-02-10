@@ -10,16 +10,19 @@ import { Plus, Trash2 } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { ExportButtons } from '@/components/ExportButtons';
 
 export default function SupplierPaymentsPage() {
   const [payments, setPayments] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     supplier_id: '',
     amount: '',
     payment_mode: 'cash',
+    branch_id: '',
     date: new Date().toISOString().split('T')[0],
     notes: '',
   });
@@ -30,12 +33,14 @@ export default function SupplierPaymentsPage() {
 
   const fetchData = async () => {
     try {
-      const [paymentsRes, suppliersRes] = await Promise.all([
+      const [paymentsRes, suppliersRes, branchesRes] = await Promise.all([
         api.get('/supplier-payments'),
         api.get('/suppliers'),
+        api.get('/branches'),
       ]);
       setPayments(paymentsRes.data);
       setSuppliers(suppliersRes.data);
+      setBranches(branchesRes.data);
     } catch (error) {
       toast.error('Failed to fetch data');
     } finally {
@@ -49,6 +54,7 @@ export default function SupplierPaymentsPage() {
       const payload = {
         ...formData,
         amount: parseFloat(formData.amount),
+        branch_id: formData.branch_id || null,
         date: new Date(formData.date).toISOString(),
       };
       await api.post('/supplier-payments', payload);
@@ -66,6 +72,7 @@ export default function SupplierPaymentsPage() {
       supplier_id: '',
       amount: '',
       payment_mode: 'cash',
+      branch_id: '',
       date: new Date().toISOString().split('T')[0],
       notes: '',
     });
@@ -112,7 +119,9 @@ export default function SupplierPaymentsPage() {
             <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="supplier-payments-page-title">Supplier Payments</h1>
             <p className="text-muted-foreground">Track payments made to suppliers</p>
           </div>
-          <Button
+          <div className="flex gap-3 items-center">
+            <ExportButtons dataType="supplier-payments" />
+            <Button
             onClick={() => setShowForm(!showForm)}
             data-testid="add-payment-button"
             className="rounded-full"
@@ -120,6 +129,7 @@ export default function SupplierPaymentsPage() {
             <Plus size={18} className="mr-2" />
             Add Payment
           </Button>
+          </div>
         </div>
 
         {showForm && (
