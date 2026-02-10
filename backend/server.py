@@ -343,6 +343,40 @@ async def get_users(current_user: User = Depends(get_current_user)):
             user['created_at'] = datetime.fromisoformat(user['created_at'])
     return users
 
+# Category Management Routes
+@api_router.get("/categories")
+async def get_categories(category_type: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {}
+    if category_type:
+        query["type"] = category_type
+    
+    categories = await db.categories.find(query, {"_id": 0}).to_list(1000)
+    for category in categories:
+        if isinstance(category.get('created_at'), str):
+            category['created_at'] = datetime.fromisoformat(category['created_at'])
+    return categories
+
+@api_router.post("/categories", response_model=Category)
+async def create_category(category_data: CategoryCreate, current_user: User = Depends(get_current_user)):
+    # Check if category already exists
+    existing = await db.categories.find_one({"name": category_data.name, "type": category_data.type}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="Category already exists")
+    
+    category = Category(**category_data.model_dump())
+    category_dict = category.model_dump()
+    category_dict["created_at"] = category_dict["created_at"].isoformat()
+    await db.categories.insert_one(category_dict)
+    return category
+
+@api_router.delete("/categories/{category_id}")
+async def delete_category(category_id: str, current_user: User = Depends(get_current_user)):
+    result = await db.categories.delete_one({"id": category_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return {"message": "Category deleted successfully"}
+
+# User Management Routes (Admin only) - Continued
 @api_router.post("/users", response_model=User)
 async def create_user(user_data: UserCreate, current_user: User = Depends(get_current_user)):
     if current_user.role != "admin":
