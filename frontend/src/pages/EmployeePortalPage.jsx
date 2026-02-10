@@ -157,9 +157,12 @@ export default function EmployeePortalPage() {
                               <Button size="sm" variant="outline" onClick={() => handleAcknowledge(p.id)} className="h-7 text-xs" data-testid="ack-btn">Confirm Receipt</Button>
                             )}
                           </td>
+                          <td className="p-3 text-center">
+                            <Button size="sm" variant="ghost" onClick={() => downloadPayslip(p.id)} className="h-7 text-xs" data-testid="payslip-btn"><FileText size={12} className="mr-1" />PDF</Button>
+                          </td>
                         </tr>
                       ))}
-                      {payments.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">No payments yet</td></tr>}
+                      {payments.length === 0 && <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">No payments yet</td></tr>}
                     </tbody>
                   </table>
                 </div>
