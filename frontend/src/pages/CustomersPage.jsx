@@ -73,7 +73,7 @@ export default function CustomersPage() {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', phone: '', email: '' });
+    setFormData({ name: '', branch_id: '', phone: '', email: '' });
     setEditingCustomer(null);
   };
 
