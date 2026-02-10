@@ -11,6 +11,7 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
+import { DateFilter } from '@/components/DateFilter';
 
 export default function SupplierPaymentsPage() {
   const [payments, setPayments] = useState([]);
@@ -26,6 +27,7 @@ export default function SupplierPaymentsPage() {
     date: new Date().toISOString().split('T')[0],
     notes: '',
   });
+  const [dateFilter, setDateFilter] = useState({ start: null, end: null, period: 'all' });
 
   useEffect(() => {
     fetchData();
@@ -119,7 +121,8 @@ export default function SupplierPaymentsPage() {
             <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="supplier-payments-page-title">Supplier Payments</h1>
             <p className="text-muted-foreground">Track payments made to suppliers</p>
           </div>
-          <div className="flex gap-3 items-center">
+          <div className="flex gap-3 items-center flex-wrap">
+            <DateFilter onFilterChange={setDateFilter} />
             <ExportButtons dataType="supplier-payments" />
             <Button
             onClick={() => setShowForm(!showForm)}
@@ -249,7 +252,13 @@ export default function SupplierPaymentsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {payments.map((payment) => (
+                  {payments.filter(p => {
+                    if (dateFilter.start && dateFilter.end) {
+                      const d = new Date(p.date);
+                      return d >= dateFilter.start && d <= dateFilter.end;
+                    }
+                    return true;
+                  }).map((payment) => (
                     <tr key={payment.id} className="border-b border-border hover:bg-secondary/50" data-testid="payment-row">
                       <td className="p-3 text-sm">{format(new Date(payment.date), 'MMM dd, yyyy')}</td>
                       <td className="p-3 text-sm font-medium">{payment.supplier_name}</td>
