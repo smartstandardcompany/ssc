@@ -164,6 +164,7 @@ class SupplierPayment(BaseModel):
     supplier_name: str
     amount: float
     payment_mode: str  # "cash", "bank", "credit"
+    branch_id: Optional[str] = None  # Which branch cash/bank is used
     date: datetime
     notes: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -173,12 +174,14 @@ class SupplierPaymentCreate(BaseModel):
     supplier_id: str
     amount: float
     payment_mode: str
+    branch_id: Optional[str] = None
     date: datetime
     notes: Optional[str] = None
 
 class SupplierCreditPayment(BaseModel):
     payment_mode: str  # "cash" or "bank"
     amount: float
+    branch_id: Optional[str] = None
 
 class Expense(BaseModel):
     model_config = ConfigDict(extra="ignore")
