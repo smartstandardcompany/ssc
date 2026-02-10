@@ -228,13 +228,3 @@ export default function CreditReportPage() {
     </DashboardLayout>
   );
 }
-
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </DashboardLayout>
-  );
-}
