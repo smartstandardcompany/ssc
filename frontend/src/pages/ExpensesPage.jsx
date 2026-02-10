@@ -14,8 +14,10 @@ import { format } from 'date-fns';
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
+  const [customCategories, setCustomCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
   const [formData, setFormData] = useState({
     category: 'salary',
     description: '',
@@ -26,7 +28,7 @@ export default function ExpensesPage() {
     notes: '',
   });
 
-  const expenseCategories = [
+  const defaultCategories = [
     { value: 'salary', label: 'Salary' },
     { value: 'rent', label: 'Rent' },
     { value: 'maintenance', label: 'Maintenance' },
@@ -42,16 +44,36 @@ export default function ExpensesPage() {
 
   const fetchData = async () => {
     try {
-      const [expensesRes, suppliersRes] = await Promise.all([
+      const [expensesRes, suppliersRes, categoriesRes] = await Promise.all([
         api.get('/expenses'),
         api.get('/suppliers'),
+        api.get('/categories?category_type=expense'),
       ]);
       setExpenses(expensesRes.data);
       setSuppliers(suppliersRes.data);
+      setCustomCategories(categoriesRes.data);
     } catch (error) {
       toast.error('Failed to fetch data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const allCategories = [
+    ...defaultCategories,
+    ...customCategories.filter(c => !defaultCategories.find(d => d.value === c.name.toLowerCase())).map(c => ({ value: c.name.toLowerCase(), label: c.name }))
+  ];
+
+  const handleAddCategory = async () => {
+    if (!newCategory.trim()) return;
+    try {
+      await api.post('/categories', { name: newCategory.trim(), type: 'expense' });
+      toast.success('Category added');
+      setNewCategory('');
+      const res = await api.get('/categories?category_type=expense');
+      setCustomCategories(res.data);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to add category');
     }
   };
 
@@ -154,13 +176,26 @@ export default function ExpensesPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {expenseCategories.map((cat) => (
+                        {allCategories.map((cat) => (
                           <SelectItem key={cat.value} value={cat.value}>
                             {cat.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    <div className="flex gap-2 mt-2">
+                      <Input
+                        value={newCategory}
+                        onChange={(e) => setNewCategory(e.target.value)}
+                        placeholder="New category"
+                        className="h-8 text-xs"
+                        data-testid="new-expense-category-input"
+                      />
+                      <Button type="button" size="sm" variant="outline" onClick={handleAddCategory} className="h-8 text-xs whitespace-nowrap" data-testid="add-expense-category-button">
+                        <Plus size={12} className="mr-1" />
+                        Add
+                      </Button>
+                    </div>
                   </div>
 
                   {isSupplierCategory && (
