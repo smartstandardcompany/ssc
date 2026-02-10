@@ -1354,11 +1354,49 @@ async def get_employees(current_user: User = Depends(get_current_user)):
 async def create_employee(data: EmployeeCreate, current_user: User = Depends(get_current_user)):
     emp = Employee(**data.model_dump())
     emp_dict = emp.model_dump()
+    
+    # Auto-create user account for employee if email provided
+    if data.email:
+        existing_user = await db.users.find_one({"email": data.email}, {"_id": 0})
+        if not existing_user:
+            user = User(email=data.email, name=data.name, role="employee", permissions=["self_service"])
+            user_dict = user.model_dump()
+            user_dict["password"] = hash_password("emp@123")  # Default password
+            user_dict["created_at"] = user_dict["created_at"].isoformat()
+            await db.users.insert_one(user_dict)
+            emp_dict["user_id"] = user.id
+        else:
+            emp_dict["user_id"] = existing_user["id"]
+    
     for f in ['created_at', 'join_date', 'document_expiry']:
         if emp_dict.get(f):
             emp_dict[f] = emp_dict[f].isoformat()
     await db.employees.insert_one(emp_dict)
     return {k: v for k, v in emp_dict.items() if k != '_id'}
+
+# Link existing employee to user account
+@api_router.post("/employees/{emp_id}/link-user")
+async def link_employee_user(emp_id: str, body: dict, current_user: User = Depends(get_current_user)):
+    emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    email = body.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="Email required")
+    
+    existing = await db.users.find_one({"email": email}, {"_id": 0})
+    if existing:
+        await db.employees.update_one({"id": emp_id}, {"$set": {"user_id": existing["id"]}})
+        return {"message": f"Linked to existing user {email}", "user_id": existing["id"]}
+    
+    user = User(email=email, name=emp["name"], role="employee", permissions=["self_service"])
+    user_dict = user.model_dump()
+    user_dict["password"] = hash_password("emp@123")
+    user_dict["created_at"] = user_dict["created_at"].isoformat()
+    await db.users.insert_one(user_dict)
+    await db.employees.update_one({"id": emp_id}, {"$set": {"user_id": user.id}})
+    return {"message": f"Created account for {email} (password: emp@123)", "user_id": user.id}
 
 @api_router.put("/employees/{emp_id}")
 async def update_employee(emp_id: str, data: EmployeeCreate, current_user: User = Depends(get_current_user)):
