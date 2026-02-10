@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Trash2, CheckCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Plus, Trash2, DollarSign, X } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -18,6 +19,8 @@ export default function SalesPage() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showReceiveDialog, setShowReceiveDialog] = useState(false);
+  const [receivingSale, setReceivingSale] = useState(null);
   const [activeTab, setActiveTab] = useState('branch');
 
   const [formData, setFormData] = useState({
@@ -25,12 +28,12 @@ export default function SalesPage() {
     branch_id: '',
     customer_id: '',
     amount: '',
-    payment_mode: 'cash',
-    payment_status: 'received',
-    received_mode: '',
+    payment_details: [{ mode: 'cash', amount: '' }],
     date: new Date().toISOString().split('T')[0],
     notes: '',
   });
+
+  const [receivePayment, setReceivePayment] = useState({ payment_mode: 'cash', amount: '' });
 
   useEffect(() => {
     fetchData();
@@ -53,14 +56,54 @@ export default function SalesPage() {
     }
   };
 
+  const addPaymentRow = () => {
+    setFormData({
+      ...formData,
+      payment_details: [...formData.payment_details, { mode: 'cash', amount: '' }]
+    });
+  };
+
+  const removePaymentRow = (index) => {
+    const newPayments = formData.payment_details.filter((_, i) => i !== index);
+    setFormData({ ...formData, payment_details: newPayments });
+  };
+
+  const updatePaymentRow = (index, field, value) => {
+    const newPayments = [...formData.payment_details];
+    newPayments[index][field] = value;
+    setFormData({ ...formData, payment_details: newPayments });
+  };
+
+  const calculateTotalPayment = () => {
+    return formData.payment_details.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+  };
+
+  const calculateCredit = () => {
+    const total = parseFloat(formData.amount) || 0;
+    const paid = calculateTotalPayment();
+    return Math.max(0, total - paid);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    const totalAmount = parseFloat(formData.amount);
+    const totalPayment = calculateTotalPayment();
+    
+    if (totalPayment > totalAmount) {
+      toast.error('Total payment cannot exceed sale amount');
+      return;
+    }
+
     try {
       const payload = {
         ...formData,
-        amount: parseFloat(formData.amount),
+        amount: totalAmount,
+        payment_details: formData.payment_details.map(p => ({
+          mode: p.mode,
+          amount: parseFloat(p.amount) || 0
+        })),
         date: new Date(formData.date).toISOString(),
-        payment_status: formData.payment_mode === 'credit' ? 'pending' : 'received',
       };
 
       await api.post('/sales', payload);
@@ -79,9 +122,7 @@ export default function SalesPage() {
       branch_id: '',
       customer_id: '',
       amount: '',
-      payment_mode: 'cash',
-      payment_status: 'received',
-      received_mode: '',
+      payment_details: [{ mode: 'cash', amount: '' }],
       date: new Date().toISOString().split('T')[0],
       notes: '',
     });
@@ -99,35 +140,21 @@ export default function SalesPage() {
     }
   };
 
-  const handleMarkReceived = async (sale) => {
-    const receivedMode = window.prompt('Enter received mode (cash/bank):');
-    if (receivedMode && ['cash', 'bank'].includes(receivedMode.toLowerCase())) {
-      try {
-        await api.put(`/sales/${sale.id}`, {
-          payment_status: 'received',
-          received_mode: receivedMode.toLowerCase(),
-        });
-        toast.success('Sale marked as received');
-        fetchData();
-      } catch (error) {
-        toast.error('Failed to update sale');
-      }
-    } else {
-      toast.error('Invalid received mode');
+  const handleReceiveCredit = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post(`/sales/${receivingSale.id}/receive-credit`, receivePayment);
+      toast.success('Credit payment received');
+      setShowReceiveDialog(false);
+      setReceivePayment({ payment_mode: 'cash', amount: '' });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to receive payment');
     }
   };
 
-  const getPaymentBadgeClass = (mode) => {
-    switch (mode) {
-      case 'cash':
-        return 'bg-cash/20 text-cash border-cash/30';
-      case 'bank':
-        return 'bg-bank/20 text-bank border-bank/30';
-      case 'credit':
-        return 'bg-credit/20 text-credit border-credit/30';
-      default:
-        return 'bg-secondary text-secondary-foreground';
-    }
+  const getRemainingCredit = (sale) => {
+    return (sale.credit_amount || 0) - (sale.credit_received || 0);
   };
 
   if (loading) {
@@ -144,7 +171,7 @@ export default function SalesPage() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="sales-page-title">Sales Management</h1>
-            <p className="text-muted-foreground">Track and manage all your sales transactions</p>
+            <p className="text-muted-foreground">Track sales with flexible payment options</p>
           </div>
           <Button
             onClick={() => setShowForm(!showForm)}
@@ -169,82 +196,127 @@ export default function SalesPage() {
                 </TabsList>
 
                 <form onSubmit={handleSubmit}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <TabsContent value="branch" className="col-span-2 mt-0">
-                      <div className="space-y-4">
-                        <div>
-                          <Label>Branch *</Label>
-                          <Select value={formData.branch_id} onValueChange={(val) => setFormData({ ...formData, branch_id: val })} required>
-                            <SelectTrigger data-testid="branch-select">
-                              <SelectValue placeholder="Select branch" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {branches.map((branch) => (
-                                <SelectItem key={branch.id} value={branch.id}>
-                                  {branch.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                  <div className="space-y-6">
+                    <TabsContent value="branch" className="mt-0">
+                      <div>
+                        <Label>Branch *</Label>
+                        <Select value={formData.branch_id} onValueChange={(val) => setFormData({ ...formData, branch_id: val })} required>
+                          <SelectTrigger data-testid="branch-select">
+                            <SelectValue placeholder="Select branch" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {branches.map((branch) => (
+                              <SelectItem key={branch.id} value={branch.id}>
+                                {branch.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </TabsContent>
 
-                    <TabsContent value="online" className="col-span-2 mt-0">
-                      <div className="space-y-4">
-                        <div>
-                          <Label>Customer *</Label>
-                          <Select value={formData.customer_id} onValueChange={(val) => setFormData({ ...formData, customer_id: val })} required>
-                            <SelectTrigger data-testid="customer-select">
-                              <SelectValue placeholder="Select customer" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {customers.map((customer) => (
-                                <SelectItem key={customer.id} value={customer.id}>
-                                  {customer.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                    <TabsContent value="online" className="mt-0">
+                      <div>
+                        <Label>Customer *</Label>
+                        <Select value={formData.customer_id} onValueChange={(val) => setFormData({ ...formData, customer_id: val })} required>
+                          <SelectTrigger data-testid="customer-select">
+                            <SelectValue placeholder="Select customer" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {customers.map((customer) => (
+                              <SelectItem key={customer.id} value={customer.id}>
+                                {customer.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </TabsContent>
 
-                    <div>
-                      <Label>Amount *</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        data-testid="amount-input"
-                        value={formData.amount}
-                        onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                        required
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Total Amount *</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          data-testid="amount-input"
+                          value={formData.amount}
+                          onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label>Date *</Label>
+                        <Input
+                          type="date"
+                          data-testid="date-input"
+                          value={formData.date}
+                          onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                          required
+                        />
+                      </div>
                     </div>
 
                     <div>
-                      <Label>Payment Mode *</Label>
-                      <Select value={formData.payment_mode} onValueChange={(val) => setFormData({ ...formData, payment_mode: val })}>
-                        <SelectTrigger data-testid="payment-mode-select">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cash">Cash</SelectItem>
-                          <SelectItem value="bank">Bank</SelectItem>
-                          <SelectItem value="credit">Credit</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label>Date *</Label>
-                      <Input
-                        type="date"
-                        data-testid="date-input"
-                        value={formData.date}
-                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                        required
-                      />
+                      <div className="flex justify-between items-center mb-3">
+                        <Label>Payment Details</Label>
+                        <Button type="button" size="sm" variant="outline" onClick={addPaymentRow} className="rounded-full">
+                          <Plus size={14} className="mr-1" />
+                          Add Payment
+                        </Button>
+                      </div>
+                      <div className="space-y-3 border rounded-lg p-4 bg-secondary/30">
+                        {formData.payment_details.map((payment, index) => (
+                          <div key={index} className="flex gap-3 items-end">
+                            <div className="flex-1">
+                              <Label className="text-xs">Mode</Label>
+                              <Select
+                                value={payment.mode}
+                                onValueChange={(val) => updatePaymentRow(index, 'mode', val)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="cash">Cash</SelectItem>
+                                  <SelectItem value="bank">Bank</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="flex-1">
+                              <Label className="text-xs">Amount</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={payment.amount}
+                                onChange={(e) => updatePaymentRow(index, 'amount', e.target.value)}
+                                placeholder="0.00"
+                              />
+                            </div>
+                            {formData.payment_details.length > 1 && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => removePaymentRow(index)}
+                                className="text-error"
+                              >
+                                <X size={16} />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                        <div className="pt-3 border-t flex justify-between text-sm">
+                          <span className="font-medium">Total Paid:</span>
+                          <span className="font-bold">${calculateTotalPayment().toFixed(2)}</span>
+                        </div>
+                        {calculateCredit() > 0 && (
+                          <div className="flex justify-between text-sm text-warning">
+                            <span className="font-medium">Credit Amount:</span>
+                            <span className="font-bold">${calculateCredit().toFixed(2)}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div>
@@ -284,7 +356,7 @@ export default function SalesPage() {
                     <th className="text-left p-3 font-medium text-sm">Branch/Customer</th>
                     <th className="text-right p-3 font-medium text-sm">Amount</th>
                     <th className="text-left p-3 font-medium text-sm">Payment</th>
-                    <th className="text-left p-3 font-medium text-sm">Status</th>
+                    <th className="text-left p-3 font-medium text-sm">Credit</th>
                     <th className="text-right p-3 font-medium text-sm">Actions</th>
                   </tr>
                 </thead>
@@ -292,6 +364,8 @@ export default function SalesPage() {
                   {sales.map((sale) => {
                     const branchName = branches.find((b) => b.id === sale.branch_id)?.name || '-';
                     const customerName = customers.find((c) => c.id === sale.customer_id)?.name || '-';
+                    const remainingCredit = getRemainingCredit(sale);
+                    
                     return (
                       <tr key={sale.id} className="border-b border-border hover:bg-secondary/50" data-testid="sale-row">
                         <td className="p-3 text-sm">{format(new Date(sale.date), 'MMM dd, yyyy')}</td>
@@ -299,33 +373,37 @@ export default function SalesPage() {
                         <td className="p-3 text-sm">{sale.sale_type === 'branch' ? branchName : customerName}</td>
                         <td className="p-3 text-sm text-right font-medium">${sale.amount.toFixed(2)}</td>
                         <td className="p-3">
-                          <span className={`inline-block px-2 py-1 rounded text-xs font-medium border ${getPaymentBadgeClass(sale.payment_mode)}`}>
-                            {sale.payment_mode}
-                          </span>
+                          <div className="flex gap-1 flex-wrap">
+                            {sale.payment_details?.map((p, i) => (
+                              <span key={i} className={`inline-block px-2 py-0.5 rounded text-xs font-medium border ${
+                                p.mode === 'cash' ? 'bg-cash/20 text-cash border-cash/30' : 'bg-bank/20 text-bank border-bank/30'
+                              }`}>
+                                {p.mode}: ${p.amount.toFixed(2)}
+                              </span>
+                            ))}
+                          </div>
                         </td>
                         <td className="p-3">
-                          {sale.payment_status === 'pending' ? (
-                            <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-warning/20 text-warning border border-warning/30">
-                              Pending
+                          {remainingCredit > 0 ? (
+                            <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-credit/20 text-credit border border-credit/30">
+                              ${remainingCredit.toFixed(2)}
                             </span>
                           ) : (
-                            <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-success/20 text-success border border-success/30">
-                              Received
-                            </span>
+                            <span className="text-xs text-muted-foreground">-</span>
                           )}
                         </td>
                         <td className="p-3 text-right">
                           <div className="flex gap-2 justify-end">
-                            {sale.payment_status === 'pending' && (
+                            {remainingCredit > 0 && (
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleMarkReceived(sale)}
-                                data-testid="mark-received-button"
+                                onClick={() => { setReceivingSale(sale); setShowReceiveDialog(true); }}
+                                data-testid="receive-credit-button"
                                 className="h-8"
                               >
-                                <CheckCircle size={14} className="mr-1" />
-                                Mark Received
+                                <DollarSign size={14} className="mr-1" />
+                                Receive
                               </Button>
                             )}
                             <Button
@@ -354,6 +432,55 @@ export default function SalesPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Receive Credit Dialog */}
+        <Dialog open={showReceiveDialog} onOpenChange={setShowReceiveDialog}>
+          <DialogContent data-testid="receive-credit-dialog">
+            <DialogHeader>
+              <DialogTitle className="font-outfit">Receive Credit Payment</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleReceiveCredit} className="space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Sale Amount: <span className="font-medium text-foreground">${receivingSale?.amount?.toFixed(2)}</span>
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Remaining Credit: <span className="font-bold text-credit">${getRemainingCredit(receivingSale || {}).toFixed(2)}</span>
+                </p>
+              </div>
+              <div>
+                <Label>Payment Amount *</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={receivePayment.amount}
+                  data-testid="receive-amount-input"
+                  onChange={(e) => setReceivePayment({ ...receivePayment, amount: e.target.value })}
+                  required
+                  max={getRemainingCredit(receivingSale || {})}
+                />
+              </div>
+              <div>
+                <Label>Payment Mode *</Label>
+                <Select value={receivePayment.payment_mode} onValueChange={(val) => setReceivePayment({ ...receivePayment, payment_mode: val })}>
+                  <SelectTrigger data-testid="receive-mode-select">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="bank">Bank</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-3">
+                <Button type="submit" data-testid="submit-receive-button" className="rounded-full">Receive Payment</Button>
+                <Button type="button" variant="outline" onClick={() => setShowReceiveDialog(false)} className="rounded-full">
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
