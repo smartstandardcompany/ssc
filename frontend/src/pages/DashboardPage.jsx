@@ -160,6 +160,33 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Document Expiry Alerts */}
+        {alerts.length > 0 && (
+          <Card className="border-border border-warning/50 bg-warning/5">
+            <CardHeader>
+              <CardTitle className="font-outfit flex items-center gap-2">
+                <AlertTriangle size={18} className="text-warning" />
+                Document Expiry Alerts ({alerts.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {alerts.slice(0, 5).map((a) => (
+                  <div key={a.id + a.type} className={`flex justify-between items-center p-3 rounded-lg ${a.days_left < 0 ? 'bg-error/10' : 'bg-warning/10'}`} data-testid="dashboard-alert">
+                    <div>
+                      <div className="font-medium text-sm">{a.name}</div>
+                      <div className="text-xs text-muted-foreground">{a.related_to} | {format(new Date(a.expiry_date), 'MMM dd, yyyy')}</div>
+                    </div>
+                    <Badge className={a.days_left < 0 ? 'bg-error/20 text-error' : 'bg-warning/20 text-warning'}>
+                      {a.days_left < 0 ? `${Math.abs(a.days_left)}d overdue` : `${a.days_left}d left`}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Quick Actions */}
         <Card className="border-border">
           <CardHeader>
