@@ -18,17 +18,23 @@ Build a data entry application to track sales, expenses, and supplier payments w
 - [x] Customer management with branch assignment
 - [x] Supplier management with managed categories
 - [x] Sales tracking with split payments (cash/bank/credit), discounts
-- [x] Expense tracking with managed categories
-- [x] Supplier payments with credit tracking
+- [x] Expense tracking with managed categories + branch selection
+- [x] Supplier payments with credit tracking + branch selection
+- [x] Pay supplier credit with branch + cash/bank selection
 - [x] Dashboard with key metrics
 
-### Reporting
+### Reporting & Charts
 - [x] Credit Sales Report with payment reception
-- [x] Supplier Report page
-- [x] Category Report page (supplier category breakdown)
-- [x] Reports page with filters (date, branch, type)
-- [x] PDF export
-- [x] Excel export
+- [x] Supplier Report with charts, date period filter (day/month/year)
+- [x] Category Report with bar + pie charts
+- [x] Reports page with charts (pie, bar) + branch-wise cash/bank breakdown
+- [x] Branch-wise cash vs bank detailed table
+- [x] Date filters, branch filters, sale type filters
+
+### Export (All Pages)
+- [x] PDF/Excel export on Sales, Customers, Suppliers, Supplier Payments, Expenses pages
+- [x] PDF/Excel export on Credit Report, Supplier Report, Category Report
+- [x] Full report export from Reports page
 
 ### User Management
 - [x] User CRUD (admin only)
