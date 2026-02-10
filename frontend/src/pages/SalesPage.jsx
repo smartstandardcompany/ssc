@@ -13,6 +13,7 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
+import { DateFilter } from '@/components/DateFilter';
 
 export default function SalesPage() {
   const [sales, setSales] = useState([]);
@@ -35,6 +36,7 @@ export default function SalesPage() {
   });
 
   const [receivePayment, setReceivePayment] = useState({ payment_mode: 'cash', amount: '' });
+  const [dateFilter, setDateFilter] = useState({ start: null, end: null, period: 'all' });
 
   useEffect(() => {
     fetchData();
@@ -189,6 +191,7 @@ export default function SalesPage() {
             <p className="text-muted-foreground">Track sales with flexible payment options</p>
           </div>
           <div className="flex gap-3 items-center">
+            <DateFilter onFilterChange={setDateFilter} />
             <ExportButtons dataType="sales" />
             <Button
             onClick={() => setShowForm(!showForm)}
