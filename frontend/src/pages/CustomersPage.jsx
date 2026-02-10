@@ -11,21 +11,26 @@ import { toast } from 'sonner';
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [formData, setFormData] = useState({ name: '', branch_id: '', phone: '', email: '' });
 
   useEffect(() => {
-    fetchCustomers();
+    fetchData();
   }, []);
 
-  const fetchCustomers = async () => {
+  const fetchData = async () => {
     try {
-      const response = await api.get('/customers');
-      setCustomers(response.data);
+      const [customersRes, branchesRes] = await Promise.all([
+        api.get('/customers'),
+        api.get('/branches'),
+      ]);
+      setCustomers(customersRes.data);
+      setBranches(branchesRes.data);
     } catch (error) {
-      toast.error('Failed to fetch customers');
+      toast.error('Failed to fetch data');
     } finally {
       setLoading(false);
     }
