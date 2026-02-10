@@ -604,6 +604,12 @@ async def get_sales(current_user: User = Depends(get_current_user)):
         if isinstance(sale.get('created_at'), str):
             sale['created_at'] = datetime.fromisoformat(sale['created_at'])
         
+        # Add discount and final_amount if missing
+        if 'discount' not in sale:
+            sale['discount'] = 0
+        if 'final_amount' not in sale:
+            sale['final_amount'] = sale.get('amount', 0) - sale.get('discount', 0)
+        
         # Convert old format to new format
         if 'payment_details' not in sale or sale['payment_details'] is None:
             payment_mode = sale.get('payment_mode', 'cash')
@@ -613,15 +619,15 @@ async def get_sales(current_user: User = Depends(get_current_user)):
             if payment_mode == 'credit':
                 if payment_status == 'pending':
                     sale['payment_details'] = []
-                    sale['credit_amount'] = amount
+                    sale['credit_amount'] = sale['final_amount']
                     sale['credit_received'] = 0
                 else:
                     received_mode = sale.get('received_mode', 'cash')
-                    sale['payment_details'] = [{"mode": received_mode, "amount": amount}]
+                    sale['payment_details'] = [{"mode": received_mode, "amount": sale['final_amount']}]
                     sale['credit_amount'] = 0
                     sale['credit_received'] = 0
             else:
-                sale['payment_details'] = [{"mode": payment_mode, "amount": amount}]
+                sale['payment_details'] = [{"mode": payment_mode, "amount": sale['final_amount']}]
                 sale['credit_amount'] = 0
                 sale['credit_received'] = 0
             
@@ -631,7 +637,9 @@ async def get_sales(current_user: User = Depends(get_current_user)):
                 {"$set": {
                     "payment_details": sale['payment_details'],
                     "credit_amount": sale['credit_amount'],
-                    "credit_received": sale['credit_received']
+                    "credit_received": sale['credit_received'],
+                    "discount": sale['discount'],
+                    "final_amount": sale['final_amount']
                 }}
             )
     
