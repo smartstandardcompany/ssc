@@ -217,7 +217,7 @@ export default function CustomersPage() {
                   ))}
                   {customers.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="p-8 text-center text-muted-foreground">
+                      <td colSpan={5} className="p-8 text-center text-muted-foreground">
                         No customers yet. Add your first customer above!
                       </td>
                     </tr>
