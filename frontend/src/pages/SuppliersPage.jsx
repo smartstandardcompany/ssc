@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, Edit, Trash2, DollarSign } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { ExportButtons } from '@/components/ExportButtons';
 
 export default function SuppliersPage() {
   const [suppliers, setSuppliers] = useState([]);
@@ -20,7 +21,7 @@ export default function SuppliersPage() {
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [payingSupplier, setPayingSupplier] = useState(null);
   const [formData, setFormData] = useState({ name: '', category: '', branch_id: '', phone: '', email: '', credit_limit: 0 });
-  const [paymentData, setPaymentData] = useState({ payment_mode: 'cash', amount: '' });
+  const [paymentData, setPaymentData] = useState({ payment_mode: 'cash', amount: '', branch_id: '' });
   const [newCategory, setNewCategory] = useState('');
 
   useEffect(() => {
@@ -81,7 +82,7 @@ export default function SuppliersPage() {
       await api.post(`/suppliers/${payingSupplier.id}/pay-credit`, paymentData);
       toast.success('Credit payment recorded');
       setShowPayDialog(false);
-      setPaymentData({ payment_mode: 'cash', amount: '' });
+      setPaymentData({ payment_mode: 'cash', amount: '', branch_id: '' });
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to record payment');
@@ -134,7 +135,9 @@ export default function SuppliersPage() {
             <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="suppliers-page-title">Suppliers</h1>
             <p className="text-muted-foreground">Manage suppliers and track credit</p>
           </div>
-          <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) resetForm(); }}>
+          <div className="flex gap-3 items-center">
+            <ExportButtons dataType="suppliers" />
+            <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button className="rounded-full" data-testid="add-supplier-button">
                 <Plus size={18} className="mr-2" />
@@ -238,7 +241,7 @@ export default function SuppliersPage() {
               </form>
             </DialogContent>
           </Dialog>
-        </div>
+          </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {suppliers.map((supplier) => {
