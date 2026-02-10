@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, TrendingUp, TrendingDown, AlertCircle, Wallet, Building2, CreditCard } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, AlertCircle, Wallet, Building2, CreditCard, AlertTriangle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState(null);
+  const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,8 +18,12 @@ export default function DashboardPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await api.get('/dashboard/stats');
-      setStats(response.data);
+      const [statsRes, alertsRes] = await Promise.all([
+        api.get('/dashboard/stats'),
+        api.get('/documents/alerts/upcoming'),
+      ]);
+      setStats(statsRes.data);
+      setAlerts(alertsRes.data);
     } catch (error) {
       toast.error('Failed to fetch dashboard stats');
     } finally {
