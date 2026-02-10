@@ -14,7 +14,7 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
-  const [formData, setFormData] = useState({ name: '', phone: '', email: '' });
+  const [formData, setFormData] = useState({ name: '', branch_id: '', phone: '', email: '' });
 
   useEffect(() => {
     fetchCustomers();
