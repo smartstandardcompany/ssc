@@ -790,17 +790,20 @@ async def get_sales(current_user: User = Depends(get_current_user)):
 
 @api_router.post("/sales", response_model=Sale)
 async def create_sale(sale_data: SaleCreate, current_user: User = Depends(get_current_user)):
-    # Calculate final amount after discount
     discount = sale_data.discount or 0
     final_amount = sale_data.amount - discount
     
-    # Calculate credit amount
-    total_paid = sum(p["amount"] for p in sale_data.payment_details if p["mode"] in ["cash", "bank"])
-    credit_amount = final_amount - total_paid
+    # Calculate credit from payment details
+    total_cash_bank = sum(p["amount"] for p in sale_data.payment_details if p["mode"] in ["cash", "bank"])
+    total_credit = sum(p["amount"] for p in sale_data.payment_details if p["mode"] == "credit")
+    credit_amount = max(0, total_credit if total_credit > 0 else final_amount - total_cash_bank)
     
-    # Exclude discount from model_dump to avoid duplicate kwarg
+    # Clean empty strings
     sale_data_dict = sale_data.model_dump()
-    sale_data_dict.pop('discount', None)  # Remove discount since we're setting it explicitly
+    sale_data_dict.pop('discount', None)
+    for f in ['branch_id', 'customer_id']:
+        if not sale_data_dict.get(f):
+            sale_data_dict[f] = None
     
     sale = Sale(
         **sale_data_dict,
