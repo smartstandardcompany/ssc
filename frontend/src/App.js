@@ -11,6 +11,7 @@ import SuppliersPage from "./pages/SuppliersPage";
 import SupplierPaymentsPage from "./pages/SupplierPaymentsPage";
 import ExpensesPage from "./pages/ExpensesPage";
 import ReportsPage from "./pages/ReportsPage";
+import CreditReportPage from "./pages/CreditReportPage";
 import UsersPage from "./pages/UsersPage";
 import { Toaster } from "@/components/ui/sonner";
 
