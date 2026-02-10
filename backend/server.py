@@ -738,6 +738,75 @@ async def delete_customer(customer_id: str, current_user: User = Depends(get_cur
         raise HTTPException(status_code=404, detail="Customer not found")
     return {"message": "Customer deleted successfully"}
 
+# Customer Balance
+@api_router.get("/customers/{customer_id}/balance")
+async def get_customer_balance(customer_id: str, current_user: User = Depends(get_current_user)):
+    customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    sales = await db.sales.find({"customer_id": customer_id}, {"_id": 0}).to_list(10000)
+    
+    total_sales = 0
+    total_cash = 0
+    total_bank = 0
+    total_credit_given = 0
+    total_credit_received = 0
+    
+    for sale in sales:
+        total_sales += sale.get("final_amount", sale.get("amount", 0) - sale.get("discount", 0))
+        for p in sale.get("payment_details", []):
+            if p.get("mode") == "cash":
+                total_cash += p["amount"]
+            elif p.get("mode") == "bank":
+                total_bank += p["amount"]
+        total_credit_given += sale.get("credit_amount", 0)
+        total_credit_received += sale.get("credit_received", 0)
+    
+    return {
+        "customer_id": customer_id,
+        "customer_name": customer["name"],
+        "total_sales": total_sales,
+        "total_cash": total_cash,
+        "total_bank": total_bank,
+        "total_credit_given": total_credit_given,
+        "total_credit_received": total_credit_received,
+        "credit_balance": total_credit_given - total_credit_received,
+        "sales_count": len(sales)
+    }
+
+# All Customers Balance Summary
+@api_router.get("/customers-balance")
+async def get_all_customers_balance(current_user: User = Depends(get_current_user)):
+    customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
+    sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+    
+    result = []
+    for customer in customers:
+        cid = customer["id"]
+        cust_sales = [s for s in sales if s.get("customer_id") == cid]
+        total_sales = sum(s.get("final_amount", s.get("amount", 0)) for s in cust_sales)
+        total_cash = sum(p["amount"] for s in cust_sales for p in s.get("payment_details", []) if p.get("mode") == "cash")
+        total_bank = sum(p["amount"] for s in cust_sales for p in s.get("payment_details", []) if p.get("mode") == "bank")
+        total_credit = sum(s.get("credit_amount", 0) for s in cust_sales)
+        total_received = sum(s.get("credit_received", 0) for s in cust_sales)
+        
+        result.append({
+            "id": cid,
+            "name": customer["name"],
+            "phone": customer.get("phone", ""),
+            "branch_id": customer.get("branch_id"),
+            "total_sales": total_sales,
+            "cash": total_cash,
+            "bank": total_bank,
+            "credit_given": total_credit,
+            "credit_received": total_received,
+            "credit_balance": total_credit - total_received,
+            "sales_count": len(cust_sales)
+        })
+    
+    return result
+
 # Sales Routes
 @api_router.get("/sales", response_model=List[Sale])
 async def get_sales(current_user: User = Depends(get_current_user)):
