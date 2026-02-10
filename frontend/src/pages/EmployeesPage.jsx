@@ -341,9 +341,12 @@ export default function EmployeesPage() {
                         </div>
                         <div className="space-y-1">
                           {m.payments.map(p => (
-                            <div key={p.id} className="flex justify-between text-xs p-2 bg-secondary/30 rounded">
+                            <div key={p.id} className="flex justify-between items-center text-xs p-2 bg-secondary/30 rounded">
                               <span>{format(new Date(p.date), 'MMM dd')} - <span className="capitalize font-medium">{p.payment_type.replace('_', ' ')}</span> ({p.payment_mode}){p.notes ? ` - ${p.notes}` : ''}</span>
-                              <span className="font-bold">${p.amount.toFixed(2)}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold">${p.amount.toFixed(2)}</span>
+                                <Button size="sm" variant="ghost" onClick={() => downloadPayslip(p.id)} className="h-6 w-6 p-0" title="Download Payslip"><FileText size={12} /></Button>
+                              </div>
                             </div>
                           ))}
                         </div>
