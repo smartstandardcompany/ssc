@@ -2104,92 +2104,196 @@ async def get_expiry_alerts(current_user: User = Depends(get_current_user)):
     alerts.sort(key=lambda x: x["days_left"])
     return alerts
 
-# WhatsApp Settings Routes
-@api_router.get("/whatsapp/settings")
-async def get_whatsapp_settings(current_user: User = Depends(get_current_user)):
-    settings = await db.whatsapp_settings.find_one({"user_id": current_user.id}, {"_id": 0})
-    return settings if settings else None
+# ===== SETTINGS & NOTIFICATION ROUTES =====
 
-@api_router.post("/whatsapp/settings")
-async def save_whatsapp_settings(settings_data: WhatsAppSettingsCreate, current_user: User = Depends(get_current_user)):
-    existing = await db.whatsapp_settings.find_one({"user_id": current_user.id})
-    
-    settings = WhatsAppSettings(**settings_data.model_dump(), user_id=current_user.id)
-    settings_dict = settings.model_dump()
-    settings_dict["created_at"] = settings_dict["created_at"].isoformat()
-    
+# Email Settings
+@api_router.get("/settings/email")
+async def get_email_settings(current_user: User = Depends(get_current_user)):
+    settings = await db.email_settings.find_one({}, {"_id": 0})
+    if settings and settings.get("password"):
+        settings["password"] = "••••••••"  # mask password
+    return settings
+
+@api_router.post("/settings/email")
+async def save_email_settings(body: dict, current_user: User = Depends(get_current_user)):
+    existing = await db.email_settings.find_one({})
+    data = {
+        "smtp_host": body.get("smtp_host", ""),
+        "smtp_port": int(body.get("smtp_port", 587)),
+        "username": body.get("username", ""),
+        "from_email": body.get("from_email", ""),
+        "use_tls": body.get("use_tls", True),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    if body.get("password") and body["password"] != "••••••••":
+        data["password"] = body["password"]
     if existing:
-        await db.whatsapp_settings.update_one({"user_id": current_user.id}, {"$set": settings_dict})
+        await db.email_settings.update_one({}, {"$set": data})
     else:
-        await db.whatsapp_settings.insert_one(settings_dict)
-    
-    return {"message": "WhatsApp settings saved successfully"}
+        data["password"] = body.get("password", "")
+        await db.email_settings.insert_one(data)
+    return {"message": "Email settings saved"}
 
-@api_router.post("/whatsapp/send-daily-report")
-async def send_daily_whatsapp_report(current_user: User = Depends(get_current_user)):
+@api_router.post("/settings/email/test")
+async def test_email(body: dict, current_user: User = Depends(get_current_user)):
+    import aiosmtplib
+    from email.mime.text import MIMEText
+    settings = await db.email_settings.find_one({}, {"_id": 0})
+    if not settings or not settings.get("smtp_host"):
+        raise HTTPException(status_code=400, detail="Email not configured. Save settings first.")
     try:
-        # Get WhatsApp settings
-        settings = await db.whatsapp_settings.find_one({"user_id": current_user.id}, {"_id": 0})
-        if not settings or not settings.get("enabled"):
-            raise HTTPException(status_code=400, detail="WhatsApp notifications not configured")
-        
-        # Get today's data
-        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-        today_end = today_start + timedelta(days=1)
-        
-        sales = await db.sales.find({
-            "date": {"$gte": today_start.isoformat(), "$lt": today_end.isoformat()}
-        }, {"_id": 0}).to_list(1000)
-        
-        expenses = await db.expenses.find({
-            "date": {"$gte": today_start.isoformat(), "$lt": today_end.isoformat()}
-        }, {"_id": 0}).to_list(1000)
-        
-        branches = await db.branches.find({}, {"_id": 0}).to_list(100)
-        
-        # Calculate stats
-        total_sales = sum(sale["amount"] for sale in sales)
-        total_expenses = sum(expense["amount"] for expense in expenses)
-        
-        # Branch-wise breakdown
-        branch_sales = {}
-        for branch in branches:
-            branch_total = sum(sale["amount"] for sale in sales if sale.get("branch_id") == branch["id"])
-            if branch_total > 0:
-                branch_sales[branch["name"]] = branch_total
-        
-        # Create message
-        message = f"📊 *Daily Sales Report - {datetime.now().strftime('%d %b %Y')}*\\n\\n"
-        message += f"💰 Total Sales: ${total_sales:.2f}\\n"
-        message += f"💸 Total Expenses: ${total_expenses:.2f}\\n"
-        message += f"📈 Net: ${(total_sales - total_expenses):.2f}\\n\\n"
-        
-        if branch_sales:
-            message += "*Branch-wise Sales:*\\n"
-            for branch_name, amount in branch_sales.items():
-                message += f"• {branch_name}: ${amount:.2f}\\n"
-        
-        # Send via Twilio
-        twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID")
-        twilio_token = os.environ.get("TWILIO_AUTH_TOKEN")
-        twilio_phone = os.environ.get("TWILIO_PHONE_NUMBER")
-        
-        if not all([twilio_sid, twilio_token, twilio_phone]):
-            raise HTTPException(status_code=500, detail="Twilio credentials not configured")
-        
-        client = Client(twilio_sid, twilio_token)
-        
-        # Send WhatsApp message
-        whatsapp_message = client.messages.create(
-            from_=f'whatsapp:{twilio_phone}',
-            body=message,
-            to=f'whatsapp:{settings["phone_number"]}'
-        )
-        
-        return {"message": "Daily report sent successfully", "sid": whatsapp_message.sid}
-    
+        to_email = body.get("to_email", current_user.email)
+        msg = MIMEText("This is a test email from DataEntry Hub. Your email settings are working correctly!")
+        msg["Subject"] = "DataEntry Hub - Test Email"
+        msg["From"] = settings.get("from_email", settings["username"])
+        msg["To"] = to_email
+        await aiosmtplib.send(msg, hostname=settings["smtp_host"], port=settings["smtp_port"],
+                              username=settings["username"], password=settings["password"],
+                              use_tls=settings.get("use_tls", True))
+        return {"message": f"Test email sent to {to_email}"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to send WhatsApp message: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Email failed: {str(e)}")
+
+# WhatsApp Settings
+@api_router.get("/settings/whatsapp")
+async def get_whatsapp_settings(current_user: User = Depends(get_current_user)):
+    settings = await db.whatsapp_config.find_one({}, {"_id": 0})
+    if settings and settings.get("auth_token"):
+        settings["auth_token"] = "••••••••"
+    return settings
+
+@api_router.post("/settings/whatsapp")
+async def save_whatsapp_settings(body: dict, current_user: User = Depends(get_current_user)):
+    existing = await db.whatsapp_config.find_one({})
+    data = {
+        "account_sid": body.get("account_sid", ""),
+        "phone_number": body.get("phone_number", ""),
+        "recipient_number": body.get("recipient_number", ""),
+        "enabled": body.get("enabled", True),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    if body.get("auth_token") and body["auth_token"] != "••••••••":
+        data["auth_token"] = body["auth_token"]
+    if existing:
+        await db.whatsapp_config.update_one({}, {"$set": data})
+    else:
+        data["auth_token"] = body.get("auth_token", "")
+        await db.whatsapp_config.insert_one(data)
+    return {"message": "WhatsApp settings saved"}
+
+# Notification Preferences
+@api_router.get("/settings/notifications")
+async def get_notification_prefs(current_user: User = Depends(get_current_user)):
+    prefs = await db.notification_prefs.find_one({}, {"_id": 0})
+    return prefs or {
+        "email_daily_sales": False,
+        "email_document_expiry": True,
+        "email_leave_updates": False,
+        "whatsapp_daily_sales": False,
+        "whatsapp_document_expiry": False,
+    }
+
+@api_router.post("/settings/notifications")
+async def save_notification_prefs(body: dict, current_user: User = Depends(get_current_user)):
+    existing = await db.notification_prefs.find_one({})
+    data = {
+        "email_daily_sales": body.get("email_daily_sales", False),
+        "email_document_expiry": body.get("email_document_expiry", True),
+        "email_leave_updates": body.get("email_leave_updates", False),
+        "whatsapp_daily_sales": body.get("whatsapp_daily_sales", False),
+        "whatsapp_document_expiry": body.get("whatsapp_document_expiry", False),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    if existing:
+        await db.notification_prefs.update_one({}, {"$set": data})
+    else:
+        await db.notification_prefs.insert_one(data)
+    return {"message": "Notification preferences saved"}
+
+# Send email notification helper
+async def send_email_notification(subject: str, body_text: str, to_email: str = None):
+    import aiosmtplib
+    from email.mime.text import MIMEText
+    settings = await db.email_settings.find_one({}, {"_id": 0})
+    if not settings or not settings.get("smtp_host") or not settings.get("password"):
+        return False
+    try:
+        recipient = to_email or settings.get("from_email", settings["username"])
+        msg = MIMEText(body_text)
+        msg["Subject"] = subject
+        msg["From"] = settings.get("from_email", settings["username"])
+        msg["To"] = recipient
+        await aiosmtplib.send(msg, hostname=settings["smtp_host"], port=settings["smtp_port"],
+                              username=settings["username"], password=settings["password"],
+                              use_tls=settings.get("use_tls", True))
+        return True
+    except:
+        return False
+
+# Send test WhatsApp
+@api_router.post("/settings/whatsapp/test")
+async def test_whatsapp(current_user: User = Depends(get_current_user)):
+    config = await db.whatsapp_config.find_one({}, {"_id": 0})
+    if not config or not config.get("account_sid") or not config.get("auth_token"):
+        raise HTTPException(status_code=400, detail="WhatsApp not configured")
+    try:
+        client = Client(config["account_sid"], config["auth_token"])
+        message = client.messages.create(
+            from_=f'whatsapp:{config["phone_number"]}',
+            body="Test message from DataEntry Hub. Your WhatsApp settings are working!",
+            to=f'whatsapp:{config["recipient_number"]}'
+        )
+        return {"message": "Test WhatsApp sent", "sid": message.sid}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"WhatsApp failed: {str(e)}")
+
+# Send daily sales report via configured channels
+@api_router.post("/send-daily-report")
+async def send_daily_report(current_user: User = Depends(get_current_user)):
+    prefs = await db.notification_prefs.find_one({}, {"_id": 0}) or {}
+    
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = today_start + timedelta(days=1)
+    
+    sales = await db.sales.find({"date": {"$gte": today_start.isoformat(), "$lt": today_end.isoformat()}}, {"_id": 0}).to_list(1000)
+    expenses = await db.expenses.find({"date": {"$gte": today_start.isoformat(), "$lt": today_end.isoformat()}}, {"_id": 0}).to_list(1000)
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    
+    total_sales = sum(s.get("final_amount", s["amount"]) for s in sales)
+    total_expenses = sum(e["amount"] for e in expenses)
+    
+    branch_lines = ""
+    for b in branches:
+        bt = sum(s.get("final_amount", s["amount"]) for s in sales if s.get("branch_id") == b["id"])
+        if bt > 0:
+            branch_lines += f"  {b['name']}: ${bt:.2f}\n"
+    
+    report = f"Daily Sales Report - {datetime.now().strftime('%d %b %Y')}\n\nTotal Sales: ${total_sales:.2f}\nTotal Expenses: ${total_expenses:.2f}\nNet: ${(total_sales - total_expenses):.2f}\n"
+    if branch_lines:
+        report += f"\nBranch-wise Sales:\n{branch_lines}"
+    
+    results = []
+    
+    if prefs.get("email_daily_sales"):
+        sent = await send_email_notification("DataEntry Hub - Daily Sales Report", report)
+        results.append(f"Email: {'sent' if sent else 'failed (check email settings)'}")
+    
+    if prefs.get("whatsapp_daily_sales"):
+        config = await db.whatsapp_config.find_one({}, {"_id": 0})
+        if config and config.get("account_sid") and config.get("auth_token"):
+            try:
+                client = Client(config["account_sid"], config["auth_token"])
+                client.messages.create(from_=f'whatsapp:{config["phone_number"]}', body=report, to=f'whatsapp:{config["recipient_number"]}')
+                results.append("WhatsApp: sent")
+            except Exception as e:
+                results.append(f"WhatsApp: failed ({str(e)[:50]})")
+        else:
+            results.append("WhatsApp: not configured")
+    
+    if not results:
+        return {"message": "No notification channels enabled. Go to Settings to configure."}
+    
+    return {"message": "Report sent", "details": results}
 
 # Export Routes
 @api_router.post("/export/reports")
