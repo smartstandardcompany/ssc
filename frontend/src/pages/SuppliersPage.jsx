@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 export default function SuppliersPage() {
   const [suppliers, setSuppliers] = useState([]);
   const [branches, setBranches] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [showPayDialog, setShowPayDialog] = useState(false);
@@ -20,6 +21,7 @@ export default function SuppliersPage() {
   const [payingSupplier, setPayingSupplier] = useState(null);
   const [formData, setFormData] = useState({ name: '', category: '', branch_id: '', phone: '', email: '', credit_limit: 0 });
   const [paymentData, setPaymentData] = useState({ payment_mode: 'cash', amount: '' });
+  const [newCategory, setNewCategory] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -27,16 +29,31 @@ export default function SuppliersPage() {
 
   const fetchData = async () => {
     try {
-      const [suppliersRes, branchesRes] = await Promise.all([
+      const [suppliersRes, branchesRes, categoriesRes] = await Promise.all([
         api.get('/suppliers'),
         api.get('/branches'),
+        api.get('/categories?category_type=supplier'),
       ]);
       setSuppliers(suppliersRes.data);
       setBranches(branchesRes.data);
+      setCategories(categoriesRes.data);
     } catch (error) {
       toast.error('Failed to fetch data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCategory.trim()) return;
+    try {
+      await api.post('/categories', { name: newCategory.trim(), type: 'supplier' });
+      toast.success('Category added');
+      setNewCategory('');
+      const res = await api.get('/categories?category_type=supplier');
+      setCategories(res.data);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to add category');
     }
   };
 
@@ -140,12 +157,32 @@ export default function SuppliersPage() {
                 </div>
                 <div>
                   <Label>Category</Label>
-                  <Input
-                    value={formData.category}
-                    data-testid="supplier-category-input"
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    placeholder="e.g., Raw Materials, Services, Equipment"
-                  />
+                  <Select value={formData.category} onValueChange={(val) => setFormData({ ...formData, category: val })}>
+                    <SelectTrigger data-testid="supplier-category-select">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No Category</SelectItem>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.name}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex gap-2 mt-2">
+                    <Input
+                      value={newCategory}
+                      onChange={(e) => setNewCategory(e.target.value)}
+                      placeholder="New category name"
+                      className="h-8 text-xs"
+                      data-testid="new-category-input"
+                    />
+                    <Button type="button" size="sm" variant="outline" onClick={handleAddCategory} className="h-8 text-xs whitespace-nowrap" data-testid="add-category-button">
+                      <Plus size={12} className="mr-1" />
+                      Add
+                    </Button>
+                  </div>
                 </div>
                 <div>
                   <Label>Branch</Label>
