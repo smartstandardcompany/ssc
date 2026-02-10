@@ -138,6 +138,7 @@ class Supplier(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
+    category: Optional[str] = None  # Category of supplier (e.g., "Raw Materials", "Services", etc.)
     branch_id: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
@@ -147,6 +148,7 @@ class Supplier(BaseModel):
 
 class SupplierCreate(BaseModel):
     name: str
+    category: Optional[str] = None
     branch_id: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
