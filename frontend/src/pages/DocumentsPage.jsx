@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, AlertTriangle, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, AlertTriangle, Clock, CheckCircle, XCircle, Upload, Download } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
