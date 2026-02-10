@@ -1832,7 +1832,7 @@ async def download_document_file(doc_id: str, current_user: User = Depends(get_c
         raise HTTPException(status_code=404, detail="No file attached")
     if not os.path.exists(doc["file_path"]):
         raise HTTPException(status_code=404, detail="File not found on disk")
-    return FileResponse(doc["file_path"], filename=doc.get("file_name", "document"), media_disposition_type="attachment")
+    return FileResponse(doc["file_path"], filename=doc.get("file_name", "document"))
 
 # Company Logo Upload
 @api_router.post("/settings/upload-logo")
