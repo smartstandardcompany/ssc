@@ -346,12 +346,15 @@ class Leave(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     employee_id: str
     employee_name: str
-    leave_type: str  # "annual", "sick", "unpaid", "other"
+    leave_type: str
     start_date: datetime
     end_date: datetime
     days: int
     reason: Optional[str] = None
-    status: str = "approved"  # "pending", "approved", "rejected"
+    status: str = "pending"  # "pending", "approved", "rejected"
+    approved_by: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    rejection_reason: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class LeaveCreate(BaseModel):
@@ -361,7 +364,19 @@ class LeaveCreate(BaseModel):
     end_date: datetime
     days: int
     reason: Optional[str] = None
-    status: Optional[str] = "approved"
+    status: Optional[str] = "pending"
+
+# Notification Model
+class Notification(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str  # Target user
+    title: str
+    message: str
+    type: str  # "leave_approved", "leave_rejected", "salary_paid", "document_expiry"
+    read: bool = False
+    related_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 # Helper functions
 def hash_password(password: str) -> str:
