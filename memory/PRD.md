@@ -3,42 +3,37 @@
 ## Architecture
 FastAPI + MongoDB | React + TailwindCSS + Shadcn/UI + Recharts | JWT Auth
 
-## Implemented Features
+## All Implemented Features
 
 ### Sales & Customers
-- Sales with split payments (cash/bank/credit), discounts | Credit tracking
+- Sales: split payments, discounts, branch/online, credit tracking
 - Customer CRUD with branch assignment
+- **Customer balance**: total sales, cash, bank, credit breakdown per customer
+- **Receive credit** directly from customer page (auto-applies to oldest credit sales)
 
-### Suppliers & Expenses
+### Suppliers & Expenses  
 - Supplier CRUD with **categories + sub-categories** + credit tracking
 - Expense tracking with **categories + sub-categories** + branch selection
-- Supplier payments (cash/bank/credit + branch)
+- Supplier payments with branch selection | Pay credit from branch cash/bank
+- Empty strings auto-cleaned to null (no more branch errors)
 
 ### Employee & Payroll
-- Employee CRUD (name, doc ID, salary, position, branch, doc expiry, leave entitlements)
+- Employee CRUD with salary, doc ID, position, leave entitlements
 - 6 payment types: Salary, Advance/Loan, Loan Repayment, Overtime, Tickets, ID Card
-- Loan tracking (advance increases, repayment decreases)
-- Leave management: Annual, Sick, Unpaid, Other
-- **Payslip PDF** with employee details, payment breakdown, signature/stamp area
-- **Employee Portal** with self-service (view payments, apply leave, acknowledge salary)
-- **Leave approval flow**: Employee applies → Admin approves/rejects → Notification
-- **Salary acknowledgment**: "I Confirm Receipt" with timestamp
+- Loan tracking | Leave management (Annual/Sick/Unpaid)
+- **Payslip PDF** with signature/stamp area | Employee can download
+- **Employee Portal** (self-service) | Leave approval flow | Salary acknowledgment
+- In-app notifications
 
 ### Document Management
-- Document CRUD with expiry tracking
-- **File attachments**: Upload/download actual documents as backup
+- Document CRUD with expiry tracking + **custom type categories**
+- **File attachments**: upload/download actual documents
 - Alerts on Dashboard + Documents page
 
 ### Reporting & Charts
-- Reports with pie/bar charts + branch-wise cash/bank breakdown
-- Supplier Report with period filter + Category Report with charts
-- Date filter on Sales, Expenses, Supplier Payments
+- Reports with charts + branch-wise cash/bank + date filters
+- Credit Report with **discount + final amount** columns
 - PDF/Excel export on ALL pages
-
-### Notifications
-- In-app notification system (bell with unread count)
-- Leave approval/rejection notifications
-- Salary payment notifications
 
 ### User Management
 - Roles: admin, manager, operator, employee
@@ -47,7 +42,3 @@ FastAPI + MongoDB | React + TailwindCSS + Shadcn/UI + Recharts | JWT Auth
 ## Credentials
 - Admin: test@example.com / password123
 - Employee: ahmed@test.com / emp@123
-
-## Backlog
-- WhatsApp notifications (needs Twilio credentials)
-- Email alerts for document expiry
