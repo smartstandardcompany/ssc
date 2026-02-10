@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="2" tests="28" time="38.989" timestamp="2026-02-10T11:39:09.431923+00:00" hostname="agent-env-cd4e4a73-70d0-4612-869d-b83f00621fd3"><testcase classname="backend.tests.test_api.TestApiHealth" name="test_api_root_returns_200" time="0.487" /><testcase classname="backend.tests.test_api.TestAuth" name="test_login_with_valid_credentials" time="0.709" /><testcase classname="backend.tests.test_api.TestAuth" name="test_login_with_invalid_credentials" time="0.996" /><testcase classname="backend.tests.test_api.TestAuth" name="test_register_duplicate_email_rejected" time="0.450" /><testcase classname="backend.tests.test_api.TestAuthenticatedEndpoints" name="test_get_current_user" time="1.435" /><testcase classname="backend.tests.test_api.TestAuthenticatedEndpoints" name="test_dashboard_stats_returns_correct_structure" time="1.020" /><testcase classname="backend.tests.test_api.TestBranches" name="test_get_branches" time="1.167" /><testcase classname="backend.tests.test_api.TestBranches" name="test_create_branch" time="1.852" /><testcase classname="backend.tests.test_api.TestCustomers" name="test_create_and_get_customer" time="2.273" /><testcase classname="backend.tests.test_api.TestCustomers" name="test_update_customer" time="1.953" /><testcase classname="backend.tests.test_api.TestCustomers" name="test_delete_customer" time="1.366" /><testcase classname="backend.tests.test_api.TestSuppliers" name="test_create_supplier_with_category" time="1.276" /><testcase classname="backend.tests.test_api.TestSuppliers" name="test_pay_supplier_credit" time="2.375" /><testcase classname="backend.tests.test_api.TestCategories" name="test_get_supplier_categories" time="1.366" /><testcase classname="backend.tests.test_api.TestCategories" name="test_get_expense_categories" time="1.121" /><testcase classname="backend.tests.test_api.TestCategories" name="test_create_category" time="1.415" /><testcase classname="backend.tests.test_api.TestSales" name="test_create_sale_with_split_payment" time="2.494"><failure message="assert 520 == 200&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_api.py:363: in test_create_sale_with_split_payment
+    assert response.status_code == 200
+E   assert 520 == 200
+E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_api.TestSales" name="test_create_credit_sale" time="2.303"><failure message="assert 520 == 200&#10; +  where 520 = &lt;Response [520]&gt;.status_code">backend/tests/test_api.py:385: in test_create_credit_sale
+    assert response.status_code == 200
+E   assert 520 == 200
+E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_api.TestSales" name="test_receive_credit_payment" time="1.735"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_api.py:405: in test_receive_credit_payment
+    sale_id = sale_response.json()["id"]
+              ^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_api.TestExpenses" name="test_create_expense" time="2.352" /><testcase classname="backend.tests.test_api.TestExpenses" name="test_get_expenses" time="1.348" /><testcase classname="backend.tests.test_api.TestReports" name="test_credit_sales_report" time="1.454" /><testcase classname="backend.tests.test_api.TestReports" name="test_supplier_report" time="1.325" /><testcase classname="backend.tests.test_api.TestReports" name="test_category_report" time="1.337" /><testcase classname="backend.tests.test_api.TestUsers" name="test_get_users_as_admin" time="0.668"><skipped type="pytest.skip" message="User is not admin">/app/backend/tests/test_api.py:531: User is not admin</skipped></testcase><testcase classname="backend.tests.test_api.TestUsers" name="test_create_user_as_admin" time="0.572"><skipped type="pytest.skip" message="User is not admin">/app/backend/tests/test_api.py:543: User is not admin</skipped></testcase><testcase classname="backend.tests.test_api.TestExport" name="test_export_pdf" time="1.049" /><testcase classname="backend.tests.test_api.TestExport" name="test_export_excel" time="0.931" /></testsuite></testsuites>
