@@ -1428,6 +1428,20 @@ async def create_salary_payment(data: SalaryPaymentCreate, current_user: User = 
         e_dict["created_at"] = e_dict["created_at"].isoformat()
         await db.expenses.insert_one(e_dict)
     
+    # Send notification to employee if they have a linked user account
+    if emp.get("user_id"):
+        type_label = data.payment_type.replace("_", " ").title()
+        notif = Notification(
+            user_id=emp["user_id"],
+            title=f"{type_label} Payment Received",
+            message=f"${data.amount:.2f} {type_label} for {data.period} via {data.payment_mode}. Please acknowledge receipt.",
+            type="salary_paid",
+            related_id=payment.id
+        )
+        n_dict = notif.model_dump()
+        n_dict["created_at"] = n_dict["created_at"].isoformat()
+        await db.notifications.insert_one(n_dict)
+    
     return {k: v for k, v in p_dict.items() if k != '_id'}
 
 # Employee payment summary
