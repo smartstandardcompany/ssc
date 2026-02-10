@@ -140,6 +140,49 @@ export default function ReportsPage() {
     return categoryExpenses;
   };
 
+  const handleExport = async (format) => {
+    try {
+      toast.loading(`Generating ${format.toUpperCase()} report...`);
+      
+      const response = await api.post('/export/reports', {
+        format: format,
+        start_date: filters.startDate || null,
+        end_date: filters.endDate || null,
+        branch_id: filters.branchId !== 'all' ? filters.branchId : null
+      }, {
+        responseType: 'blob'
+      });
+
+      const blob = new Blob([response.data]);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `sales_report_${new Date().toISOString().split('T')[0]}.${format === 'pdf' ? 'pdf' : 'xlsx'}`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.dismiss();
+      toast.success(`${format.toUpperCase()} report downloaded successfully`);
+    } catch (error) {
+      toast.dismiss();
+      toast.error('Failed to export report');
+    }
+  };
+
+  const handleSendWhatsApp = async () => {
+    try {
+      toast.loading('Sending WhatsApp report...');
+      await api.post('/whatsapp/send-daily-report');
+      toast.dismiss();
+      toast.success('WhatsApp report sent successfully!');
+    } catch (error) {
+      toast.dismiss();
+      toast.error(error.response?.data?.detail || 'Failed to send WhatsApp report. Please configure Twilio credentials.');
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
