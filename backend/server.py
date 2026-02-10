@@ -317,7 +317,7 @@ class SalaryPayment(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     employee_id: str
     employee_name: str
-    payment_type: str = "salary"  # "salary", "advance", "overtime", "tickets", "id_card"
+    payment_type: str = "salary"  # "salary", "advance", "overtime", "tickets", "id_card", "loan_repayment"
     amount: float
     payment_mode: str  # "cash", "bank"
     branch_id: Optional[str] = None
@@ -336,6 +336,29 @@ class SalaryPaymentCreate(BaseModel):
     period: str
     date: datetime
     notes: Optional[str] = None
+
+# Leave Management
+class Leave(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    employee_id: str
+    employee_name: str
+    leave_type: str  # "annual", "sick", "unpaid", "other"
+    start_date: datetime
+    end_date: datetime
+    days: int
+    reason: Optional[str] = None
+    status: str = "approved"  # "pending", "approved", "rejected"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class LeaveCreate(BaseModel):
+    employee_id: str
+    leave_type: str
+    start_date: datetime
+    end_date: datetime
+    days: int
+    reason: Optional[str] = None
+    status: Optional[str] = "approved"
 
 # Helper functions
 def hash_password(password: str) -> str:
