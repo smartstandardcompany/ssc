@@ -139,8 +139,8 @@ class Supplier(BaseModel):
     branch_id: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
-    credit_limit: float = 0
-    current_credit: float = 0  # Amount owed to supplier
+    credit_limit: Optional[float] = 0
+    current_credit: Optional[float] = 0  # Amount owed to supplier
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class SupplierCreate(BaseModel):
