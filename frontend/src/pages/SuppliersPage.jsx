@@ -114,6 +114,7 @@ export default function SuppliersPage() {
     setFormData({
       name: supplier.name,
       category: supplier.category || '',
+      sub_category: supplier.sub_category || '',
       branch_id: supplier.branch_id || '',
       phone: supplier.phone || '',
       email: supplier.email || '',
@@ -135,7 +136,7 @@ export default function SuppliersPage() {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', category: '', branch_id: '', phone: '', email: '', credit_limit: 0 });
+    setFormData({ name: '', category: '', sub_category: '', branch_id: '', phone: '', email: '', credit_limit: 0 });
     setEditingSupplier(null);
   };
 
