@@ -1509,13 +1509,15 @@ async def delete_salary_payment(payment_id: str, current_user: User = Depends(ge
 
 # Leave Routes
 @api_router.get("/leaves")
-async def get_leaves(employee_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+async def get_leaves(employee_id: Optional[str] = None, status: Optional[str] = None, current_user: User = Depends(get_current_user)):
     query = {}
     if employee_id:
         query["employee_id"] = employee_id
+    if status:
+        query["status"] = status
     leaves = await db.leaves.find(query, {"_id": 0}).sort("start_date", -1).to_list(1000)
     for l in leaves:
-        for f in ['start_date', 'end_date', 'created_at']:
+        for f in ['start_date', 'end_date', 'created_at', 'approved_at']:
             if isinstance(l.get(f), str):
                 l[f] = datetime.fromisoformat(l[f])
     return leaves
@@ -1527,11 +1529,85 @@ async def create_leave(data: LeaveCreate, current_user: User = Depends(get_curre
         raise HTTPException(status_code=404, detail="Employee not found")
     leave = Leave(**data.model_dump(), employee_name=emp["name"])
     l_dict = leave.model_dump()
-    l_dict["start_date"] = l_dict["start_date"].isoformat()
-    l_dict["end_date"] = l_dict["end_date"].isoformat()
-    l_dict["created_at"] = l_dict["created_at"].isoformat()
+    for f in ['start_date', 'end_date', 'created_at', 'approved_at']:
+        if l_dict.get(f):
+            l_dict[f] = l_dict[f].isoformat()
     await db.leaves.insert_one(l_dict)
+    
+    # Notify admins about pending leave request
+    if data.status == "pending":
+        admins = await db.users.find({"role": "admin"}, {"_id": 0}).to_list(100)
+        for admin in admins:
+            notif = Notification(
+                user_id=admin["id"],
+                title="New Leave Request",
+                message=f"{emp['name']} has requested {data.days} days {data.leave_type} leave",
+                type="leave_request",
+                related_id=leave.id
+            )
+            n_dict = notif.model_dump()
+            n_dict["created_at"] = n_dict["created_at"].isoformat()
+            await db.notifications.insert_one(n_dict)
+    
     return {k: v for k, v in l_dict.items() if k != '_id'}
+
+@api_router.put("/leaves/{leave_id}/approve")
+async def approve_leave(leave_id: str, current_user: User = Depends(get_current_user)):
+    leave = await db.leaves.find_one({"id": leave_id}, {"_id": 0})
+    if not leave:
+        raise HTTPException(status_code=404, detail="Leave not found")
+    
+    await db.leaves.update_one({"id": leave_id}, {"$set": {
+        "status": "approved",
+        "approved_by": current_user.id,
+        "approved_at": datetime.now(timezone.utc).isoformat()
+    }})
+    
+    # Notify employee
+    emp = await db.employees.find_one({"id": leave["employee_id"]}, {"_id": 0})
+    if emp and emp.get("user_id"):
+        notif = Notification(
+            user_id=emp["user_id"],
+            title="Leave Approved",
+            message=f"Your {leave['days']} days {leave['leave_type']} leave has been approved",
+            type="leave_approved",
+            related_id=leave_id
+        )
+        n_dict = notif.model_dump()
+        n_dict["created_at"] = n_dict["created_at"].isoformat()
+        await db.notifications.insert_one(n_dict)
+    
+    return {"message": "Leave approved"}
+
+@api_router.put("/leaves/{leave_id}/reject")
+async def reject_leave(leave_id: str, reason: Optional[dict] = None, current_user: User = Depends(get_current_user)):
+    leave = await db.leaves.find_one({"id": leave_id}, {"_id": 0})
+    if not leave:
+        raise HTTPException(status_code=404, detail="Leave not found")
+    
+    rej_reason = reason.get("reason", "") if reason else ""
+    await db.leaves.update_one({"id": leave_id}, {"$set": {
+        "status": "rejected",
+        "approved_by": current_user.id,
+        "approved_at": datetime.now(timezone.utc).isoformat(),
+        "rejection_reason": rej_reason
+    }})
+    
+    # Notify employee
+    emp = await db.employees.find_one({"id": leave["employee_id"]}, {"_id": 0})
+    if emp and emp.get("user_id"):
+        notif = Notification(
+            user_id=emp["user_id"],
+            title="Leave Rejected",
+            message=f"Your {leave['leave_type']} leave request was rejected. {rej_reason}",
+            type="leave_rejected",
+            related_id=leave_id
+        )
+        n_dict = notif.model_dump()
+        n_dict["created_at"] = n_dict["created_at"].isoformat()
+        await db.notifications.insert_one(n_dict)
+    
+    return {"message": "Leave rejected"}
 
 @api_router.delete("/leaves/{leave_id}")
 async def delete_leave(leave_id: str, current_user: User = Depends(get_current_user)):
@@ -1539,6 +1615,79 @@ async def delete_leave(leave_id: str, current_user: User = Depends(get_current_u
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Leave not found")
     return {"message": "Leave deleted"}
+
+# Salary Acknowledgment
+@api_router.post("/salary-payments/{payment_id}/acknowledge")
+async def acknowledge_salary(payment_id: str, current_user: User = Depends(get_current_user)):
+    payment = await db.salary_payments.find_one({"id": payment_id}, {"_id": 0})
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    
+    await db.salary_payments.update_one({"id": payment_id}, {"$set": {
+        "acknowledged": True,
+        "acknowledged_at": datetime.now(timezone.utc).isoformat()
+    }})
+    return {"message": "Payment acknowledged"}
+
+# Notification Routes
+@api_router.get("/notifications")
+async def get_notifications(current_user: User = Depends(get_current_user)):
+    notifs = await db.notifications.find({"user_id": current_user.id}, {"_id": 0}).sort("created_at", -1).to_list(50)
+    for n in notifs:
+        if isinstance(n.get('created_at'), str):
+            n['created_at'] = datetime.fromisoformat(n['created_at'])
+    return notifs
+
+@api_router.get("/notifications/unread-count")
+async def get_unread_count(current_user: User = Depends(get_current_user)):
+    count = await db.notifications.count_documents({"user_id": current_user.id, "read": False})
+    return {"count": count}
+
+@api_router.post("/notifications/mark-read")
+async def mark_notifications_read(current_user: User = Depends(get_current_user)):
+    await db.notifications.update_many({"user_id": current_user.id, "read": False}, {"$set": {"read": True}})
+    return {"message": "Notifications marked as read"}
+
+# Employee Portal - My Data
+@api_router.get("/my/employee-profile")
+async def get_my_employee_profile(current_user: User = Depends(get_current_user)):
+    emp = await db.employees.find_one({"user_id": current_user.id}, {"_id": 0})
+    if not emp:
+        raise HTTPException(status_code=404, detail="No employee profile linked")
+    return emp
+
+@api_router.get("/my/payments")
+async def get_my_payments(current_user: User = Depends(get_current_user)):
+    emp = await db.employees.find_one({"user_id": current_user.id}, {"_id": 0})
+    if not emp:
+        raise HTTPException(status_code=404, detail="No employee profile linked")
+    payments = await db.salary_payments.find({"employee_id": emp["id"]}, {"_id": 0}).sort("date", -1).to_list(1000)
+    for p in payments:
+        for f in ['date', 'created_at', 'acknowledged_at']:
+            if isinstance(p.get(f), str):
+                p[f] = datetime.fromisoformat(p[f])
+    return payments
+
+@api_router.get("/my/leaves")
+async def get_my_leaves(current_user: User = Depends(get_current_user)):
+    emp = await db.employees.find_one({"user_id": current_user.id}, {"_id": 0})
+    if not emp:
+        raise HTTPException(status_code=404, detail="No employee profile linked")
+    leaves = await db.leaves.find({"employee_id": emp["id"]}, {"_id": 0}).sort("start_date", -1).to_list(1000)
+    for l in leaves:
+        for f in ['start_date', 'end_date', 'created_at', 'approved_at']:
+            if isinstance(l.get(f), str):
+                l[f] = datetime.fromisoformat(l[f])
+    return leaves
+
+@api_router.post("/my/apply-leave")
+async def apply_leave(data: LeaveCreate, current_user: User = Depends(get_current_user)):
+    emp = await db.employees.find_one({"user_id": current_user.id}, {"_id": 0})
+    if not emp:
+        raise HTTPException(status_code=404, detail="No employee profile linked")
+    data.employee_id = emp["id"]
+    data.status = "pending"
+    return await create_leave(data, current_user)
 
 # Document Routes
 @api_router.get("/documents")
