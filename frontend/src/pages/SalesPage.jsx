@@ -324,9 +324,28 @@ export default function SalesPage() {
                               <div className="font-bold text-credit">${totals.credit.toFixed(2)}</div>
                             </div>
                           </div>
-                          <div className="flex justify-between text-lg font-bold pt-2 border-t">
-                            <span>Total Sale Amount:</span>
-                            <span className="text-primary">${totals.total.toFixed(2)}</span>
+                          
+                          <div className="space-y-2 pt-2 border-t">
+                            <div className="flex justify-between text-sm">
+                              <span>Subtotal:</span>
+                              <span className="font-medium">${totals.subtotal.toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm">Discount:</span>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={formData.discount}
+                                onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
+                                placeholder="0.00"
+                                className="h-8 max-w-[120px]"
+                                data-testid="discount-input"
+                              />
+                            </div>
+                            <div className="flex justify-between text-lg font-bold pt-2 border-t">
+                              <span>Final Amount:</span>
+                              <span className="text-primary">${totals.total.toFixed(2)}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
