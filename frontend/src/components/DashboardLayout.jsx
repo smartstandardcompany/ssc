@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, ShoppingCart, Store, Users, Truck, Receipt, BarChart3, LogOut, Shield, CreditCard, FileText, Tags, UserCheck, FileWarning, Bell, User as UserIcon } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Store, Users, Truck, Receipt, BarChart3, LogOut, Shield, CreditCard, FileText, Tags, UserCheck, FileWarning, Bell, User as UserIcon, Settings } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { toast } from 'sonner';
@@ -48,6 +48,7 @@ export const DashboardLayout = ({ children }) => {
     { path: '/credit-report', icon: CreditCard, label: 'Credit Report' },
     { path: '/supplier-report', icon: FileText, label: 'Supplier Report' },
     { path: '/category-report', icon: Tags, label: 'Category Report' },
+    { path: '/settings', icon: Settings, label: 'Settings' },
     { path: '/users', icon: Shield, label: 'Users', adminOnly: true },
   ];
 
