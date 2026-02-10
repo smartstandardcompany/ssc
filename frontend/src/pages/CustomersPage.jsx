@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { ExportButtons } from '@/components/ExportButtons';
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState([]);
@@ -94,7 +95,9 @@ export default function CustomersPage() {
             <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="customers-page-title">Customers</h1>
             <p className="text-muted-foreground">Manage your online sales customers</p>
           </div>
-          <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) resetForm(); }}>
+          <div className="flex gap-3 items-center">
+            <ExportButtons dataType="customers" />
+            <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button className="rounded-full" data-testid="add-customer-button">
                 <Plus size={18} className="mr-2" />
@@ -163,6 +166,7 @@ export default function CustomersPage() {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <Card className="border-border">
