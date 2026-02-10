@@ -318,13 +318,15 @@ class SalaryPayment(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     employee_id: str
     employee_name: str
-    payment_type: str = "salary"  # "salary", "advance", "overtime", "tickets", "id_card", "loan_repayment"
+    payment_type: str = "salary"
     amount: float
-    payment_mode: str  # "cash", "bank"
+    payment_mode: str
     branch_id: Optional[str] = None
-    period: str  # "Jan 2026", "Feb 2026"
+    period: str
     date: datetime
     notes: Optional[str] = None
+    acknowledged: bool = False
+    acknowledged_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     created_by: str
 
