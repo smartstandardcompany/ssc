@@ -655,8 +655,12 @@ async def create_sale(sale_data: SaleCreate, current_user: User = Depends(get_cu
     total_paid = sum(p["amount"] for p in sale_data.payment_details if p["mode"] in ["cash", "bank"])
     credit_amount = final_amount - total_paid
     
+    # Exclude discount from model_dump to avoid duplicate kwarg
+    sale_data_dict = sale_data.model_dump()
+    sale_data_dict.pop('discount', None)  # Remove discount since we're setting it explicitly
+    
     sale = Sale(
-        **sale_data.model_dump(),
+        **sale_data_dict,
         discount=discount,
         final_amount=final_amount,
         credit_amount=credit_amount,
