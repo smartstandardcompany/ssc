@@ -48,13 +48,6 @@ Build a data entry application to track sales, expenses, and supplier payments w
 - No frontend UI for configuration
 - Requires Twilio credentials (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER)
 
-### P3 - Code Refactoring
-- Break large page components into smaller reusable components
-- Separate state management from UI rendering
-
-### P3 - Accessibility
-- Add aria-describedby to all DialogContent components
-
 ## API Endpoints
 - `/api/auth/`: register, login, me
 - `/api/users/`: CRUD (admin only)
