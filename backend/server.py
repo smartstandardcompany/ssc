@@ -972,6 +972,230 @@ async def get_supplier_category_report(current_user: User = Depends(get_current_
     
     return list(category_report.values())
 
+# Branch-wise Cash/Bank Report
+@api_router.get("/reports/branch-cashbank")
+async def get_branch_cashbank_report(current_user: User = Depends(get_current_user)):
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
+    supplier_payments = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
+    
+    branch_data = []
+    for branch in branches:
+        bid = branch["id"]
+        # Sales cash/bank by branch
+        branch_sales = [s for s in sales if s.get("branch_id") == bid]
+        sales_cash = sum(p["amount"] for s in branch_sales for p in s.get("payment_details", []) if p.get("mode") == "cash")
+        sales_bank = sum(p["amount"] for s in branch_sales for p in s.get("payment_details", []) if p.get("mode") == "bank")
+        sales_credit = sum(s.get("credit_amount", 0) - s.get("credit_received", 0) for s in branch_sales)
+        
+        # Expenses by branch
+        branch_expenses = [e for e in expenses if e.get("branch_id") == bid]
+        exp_cash = sum(e["amount"] for e in branch_expenses if e.get("payment_mode") == "cash")
+        exp_bank = sum(e["amount"] for e in branch_expenses if e.get("payment_mode") == "bank")
+        
+        # Supplier payments by branch
+        branch_sp = [p for p in supplier_payments if p.get("branch_id") == bid]
+        sp_cash = sum(p["amount"] for p in branch_sp if p.get("payment_mode") == "cash")
+        sp_bank = sum(p["amount"] for p in branch_sp if p.get("payment_mode") == "bank")
+        
+        branch_data.append({
+            "branch_id": bid,
+            "branch_name": branch["name"],
+            "sales_cash": sales_cash,
+            "sales_bank": sales_bank,
+            "sales_credit": sales_credit,
+            "sales_total": sales_cash + sales_bank + sales_credit,
+            "expenses_cash": exp_cash,
+            "expenses_bank": exp_bank,
+            "expenses_total": exp_cash + exp_bank,
+            "supplier_cash": sp_cash,
+            "supplier_bank": sp_bank,
+            "supplier_total": sp_cash + sp_bank,
+        })
+    
+    return branch_data
+
+# Supplier Balance Report with date filtering
+@api_router.get("/reports/supplier-balance")
+async def get_supplier_balance_report(
+    period: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+    
+    date_query = {}
+    if period == "today":
+        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        date_query = {"date": {"$gte": today.isoformat()}}
+    elif period == "month":
+        month_start = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        date_query = {"date": {"$gte": month_start.isoformat()}}
+    elif period == "year":
+        year_start = datetime.now(timezone.utc).replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        date_query = {"date": {"$gte": year_start.isoformat()}}
+    elif start_date and end_date:
+        date_query = {"date": {"$gte": start_date, "$lte": end_date}}
+    
+    sp_query = {"supplier_id": {"$exists": True, "$ne": None}}
+    if date_query:
+        sp_query.update(date_query)
+    
+    supplier_payments = await db.supplier_payments.find(sp_query, {"_id": 0}).to_list(10000)
+    
+    exp_query = {}
+    if date_query:
+        exp_query.update(date_query)
+    expenses = await db.expenses.find(exp_query, {"_id": 0}).to_list(10000)
+    
+    result = []
+    for supplier in suppliers:
+        sid = supplier["id"]
+        payments = [p for p in supplier_payments if p.get("supplier_id") == sid]
+        cash_paid = sum(p["amount"] for p in payments if p.get("payment_mode") == "cash")
+        bank_paid = sum(p["amount"] for p in payments if p.get("payment_mode") == "bank")
+        credit_added = sum(p["amount"] for p in payments if p.get("payment_mode") == "credit")
+        
+        sup_expenses = [e for e in expenses if e.get("supplier_id") == sid]
+        total_expenses = sum(e["amount"] for e in sup_expenses)
+        
+        result.append({
+            "id": sid,
+            "name": supplier["name"],
+            "category": supplier.get("category", "-"),
+            "cash_paid": cash_paid,
+            "bank_paid": bank_paid,
+            "credit_added": credit_added,
+            "total_paid": cash_paid + bank_paid,
+            "total_expenses": total_expenses,
+            "current_credit": supplier.get("current_credit", 0),
+            "credit_limit": supplier.get("credit_limit", 0),
+            "transaction_count": len(payments) + len(sup_expenses)
+        })
+    
+    return result
+
+# Generic Data Export
+@api_router.post("/export/data")
+async def export_data(request: dict, current_user: User = Depends(get_current_user)):
+    data_type = request.get("type", "sales")
+    fmt = request.get("format", "excel")
+    
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branch_map = {b["id"]: b["name"] for b in branches}
+    
+    buffer = BytesIO()
+    
+    if data_type == "sales":
+        sales = await db.sales.find({}, {"_id": 0}).sort("date", -1).to_list(10000)
+        customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
+        cust_map = {c["id"]: c["name"] for c in customers}
+        rows = []
+        for s in sales:
+            modes = ", ".join(f'{p["mode"]}:${p["amount"]:.2f}' for p in s.get("payment_details", []))
+            rows.append([
+                datetime.fromisoformat(s["date"]).strftime("%Y-%m-%d") if isinstance(s["date"], str) else s["date"].strftime("%Y-%m-%d"),
+                s["sale_type"].capitalize(),
+                branch_map.get(s.get("branch_id"), "-"),
+                cust_map.get(s.get("customer_id"), "-"),
+                s["amount"],
+                s.get("discount", 0),
+                s.get("final_amount", s["amount"] - s.get("discount", 0)),
+                modes,
+                s.get("credit_amount", 0) - s.get("credit_received", 0)
+            ])
+        headers = ["Date", "Type", "Branch", "Customer", "Amount", "Discount", "Final", "Payments", "Credit Remaining"]
+        title = "Sales Report"
+    elif data_type == "expenses":
+        expenses = await db.expenses.find({}, {"_id": 0}).sort("date", -1).to_list(10000)
+        suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+        sup_map = {s["id"]: s["name"] for s in suppliers}
+        rows = []
+        for e in expenses:
+            rows.append([
+                datetime.fromisoformat(e["date"]).strftime("%Y-%m-%d") if isinstance(e["date"], str) else e["date"].strftime("%Y-%m-%d"),
+                e["category"].capitalize(),
+                e["description"],
+                sup_map.get(e.get("supplier_id"), "-"),
+                branch_map.get(e.get("branch_id"), "-"),
+                e["amount"],
+                e["payment_mode"].capitalize()
+            ])
+        headers = ["Date", "Category", "Description", "Supplier", "Branch", "Amount", "Payment Mode"]
+        title = "Expenses Report"
+    elif data_type == "supplier-payments":
+        payments = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).sort("date", -1).to_list(10000)
+        rows = []
+        for p in payments:
+            rows.append([
+                datetime.fromisoformat(p["date"]).strftime("%Y-%m-%d") if isinstance(p["date"], str) else p["date"].strftime("%Y-%m-%d"),
+                p["supplier_name"],
+                branch_map.get(p.get("branch_id"), "-"),
+                p["amount"],
+                p["payment_mode"].capitalize(),
+                p.get("notes", "")
+            ])
+        headers = ["Date", "Supplier", "Branch", "Amount", "Payment Mode", "Notes"]
+        title = "Supplier Payments Report"
+    elif data_type == "customers":
+        customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
+        rows = [[c["name"], branch_map.get(c.get("branch_id"), "All Branches"), c.get("phone", "-"), c.get("email", "-")] for c in customers]
+        headers = ["Name", "Branch", "Phone", "Email"]
+        title = "Customers Report"
+    elif data_type == "suppliers":
+        suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+        rows = [[s["name"], s.get("category", "-"), branch_map.get(s.get("branch_id"), "All"), s.get("phone", "-"), s.get("current_credit", 0), s.get("credit_limit", 0)] for s in suppliers]
+        headers = ["Name", "Category", "Branch", "Phone", "Current Credit", "Credit Limit"]
+        title = "Suppliers Report"
+    else:
+        raise HTTPException(status_code=400, detail="Invalid data type")
+    
+    if fmt == "excel":
+        wb = Workbook()
+        ws = wb.active
+        ws.title = title
+        ws.append(headers)
+        for col in ws[1]:
+            col.font = Font(bold=True)
+            col.fill = PatternFill(start_color="7C3AED", end_color="7C3AED", fill_type="solid")
+            col.font = Font(bold=True, color="FFFFFF")
+        for row in rows:
+            ws.append(row)
+        for col_cells in ws.columns:
+            max_len = max(len(str(cell.value or "")) for cell in col_cells)
+            ws.column_dimensions[col_cells[0].column_letter].width = min(max_len + 4, 30)
+        wb.save(buffer)
+        buffer.seek(0)
+        return StreamingResponse(buffer, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                 headers={"Content-Disposition": f"attachment; filename={data_type}_report.xlsx"})
+    else:
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        elements = []
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle('T', parent=styles['Heading1'], fontSize=18, textColor=colors.HexColor('#7C3AED'), alignment=1)
+        elements.append(Paragraph(title, title_style))
+        elements.append(Spacer(1, 0.2*inch))
+        
+        table_data = [headers] + [[str(c) for c in row] for row in rows[:50]]
+        col_count = len(headers)
+        col_width = 7.5 * inch / col_count
+        t = Table(table_data, colWidths=[col_width] * col_count)
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#7C3AED')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 7),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F5F3FF')])
+        ]))
+        elements.append(t)
+        doc.build(elements)
+        buffer.seek(0)
+        return StreamingResponse(buffer, media_type="application/pdf",
+                                 headers={"Content-Disposition": f"attachment; filename={data_type}_report.pdf"})
+
 # WhatsApp Settings Routes
 @api_router.get("/whatsapp/settings")
 async def get_whatsapp_settings(current_user: User = Depends(get_current_user)):
