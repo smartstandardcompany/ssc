@@ -926,9 +926,15 @@ async def get_expenses(current_user: User = Depends(get_current_user)):
 
 @api_router.post("/expenses", response_model=Expense)
 async def create_expense(expense_data: ExpenseCreate, current_user: User = Depends(get_current_user)):
+    # Clean empty strings
+    data = expense_data.model_dump()
+    for f in ['branch_id', 'supplier_id', 'sub_category']:
+        if data.get(f) == '':
+            data[f] = None
+    
     # Validate credit limit BEFORE inserting expense
-    if expense_data.supplier_id and expense_data.payment_mode == "credit":
-        supplier = await db.suppliers.find_one({"id": expense_data.supplier_id}, {"_id": 0})
+    if data.get('supplier_id') and expense_data.payment_mode == "credit":
+        supplier = await db.suppliers.find_one({"id": data['supplier_id']}, {"_id": 0})
         if supplier:
             credit_limit = supplier.get("credit_limit", 0)
             current_credit = supplier.get("current_credit", 0)
@@ -937,7 +943,7 @@ async def create_expense(expense_data: ExpenseCreate, current_user: User = Depen
                 available = credit_limit - current_credit
                 raise HTTPException(status_code=400, detail=f"Expense exceeds supplier credit limit. Available: ${available:.2f}")
     
-    expense = Expense(**expense_data.model_dump(), created_by=current_user.id)
+    expense = Expense(**data, created_by=current_user.id)
     expense_dict = expense.model_dump()
     expense_dict["date"] = expense_dict["date"].isoformat()
     expense_dict["created_at"] = expense_dict["created_at"].isoformat()
