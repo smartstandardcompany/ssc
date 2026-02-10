@@ -537,11 +537,45 @@ async def get_sales(current_user: User = Depends(get_current_user)):
         query["branch_id"] = current_user.branch_id
     
     sales = await db.sales.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
+    
+    # Migrate old sales to new format
     for sale in sales:
         if isinstance(sale.get('date'), str):
             sale['date'] = datetime.fromisoformat(sale['date'])
         if isinstance(sale.get('created_at'), str):
             sale['created_at'] = datetime.fromisoformat(sale['created_at'])
+        
+        # Convert old format to new format
+        if 'payment_details' not in sale or sale['payment_details'] is None:
+            payment_mode = sale.get('payment_mode', 'cash')
+            payment_status = sale.get('payment_status', 'received')
+            amount = sale.get('amount', 0)
+            
+            if payment_mode == 'credit':
+                if payment_status == 'pending':
+                    sale['payment_details'] = []
+                    sale['credit_amount'] = amount
+                    sale['credit_received'] = 0
+                else:
+                    received_mode = sale.get('received_mode', 'cash')
+                    sale['payment_details'] = [{"mode": received_mode, "amount": amount}]
+                    sale['credit_amount'] = 0
+                    sale['credit_received'] = 0
+            else:
+                sale['payment_details'] = [{"mode": payment_mode, "amount": amount}]
+                sale['credit_amount'] = 0
+                sale['credit_received'] = 0
+            
+            # Update the database with new format
+            await db.sales.update_one(
+                {"id": sale['id']},
+                {"$set": {
+                    "payment_details": sale['payment_details'],
+                    "credit_amount": sale['credit_amount'],
+                    "credit_received": sale['credit_received']
+                }}
+            )
+    
     return sales
 
 @api_router.post("/sales", response_model=Sale)
