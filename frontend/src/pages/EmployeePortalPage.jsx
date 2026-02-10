@@ -141,6 +141,7 @@ export default function EmployeePortalPage() {
                       <th className="text-right p-3 font-medium text-sm">Amount</th>
                       <th className="text-left p-3 font-medium text-sm">Mode</th>
                       <th className="text-center p-3 font-medium text-sm">Status</th>
+                      <th className="text-center p-3 font-medium text-sm">Payslip</th>
                     </tr></thead>
                     <tbody>
                       {payments.map(p => (
