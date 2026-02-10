@@ -142,8 +142,12 @@ export default function DocumentsPage() {
                   <div><Label>Type *</Label>
                     <Select value={formData.document_type} onValueChange={(v) => setFormData({ ...formData, document_type: v })}>
                       <SelectTrigger data-testid="doc-type-select"><SelectValue /></SelectTrigger>
-                      <SelectContent>{DOC_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                      <SelectContent>{allDocTypes.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
                     </Select>
+                    <div className="flex gap-2 mt-2">
+                      <Input value={newDocType} onChange={(e) => setNewDocType(e.target.value)} placeholder="New type" className="h-8 text-xs" data-testid="new-doc-type-input" />
+                      <Button type="button" size="sm" variant="outline" onClick={handleAddDocType} className="h-8 text-xs whitespace-nowrap"><Plus size={12} className="mr-1" />Add</Button>
+                    </div>
                   </div>
                   <div><Label>Document Number</Label><Input value={formData.document_number} onChange={(e) => setFormData({ ...formData, document_number: e.target.value })} /></div>
                   <div><Label>Related To</Label><Input value={formData.related_to} onChange={(e) => setFormData({ ...formData, related_to: e.target.value })} placeholder="Employee, Supplier, Branch..." /></div>
