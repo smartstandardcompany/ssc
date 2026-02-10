@@ -11,6 +11,7 @@ import { DollarSign } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { ExportButtons } from '@/components/ExportButtons';
 
 export default function CreditReportPage() {
   const [reportData, setReportData] = useState(null);
@@ -76,6 +77,7 @@ export default function CreditReportPage() {
           <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="credit-report-title">Credit Sales Report</h1>
           <p className="text-muted-foreground">Track credit sales, received payments, and outstanding balances</p>
         </div>
+        <ExportButtons dataType="sales" />
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
