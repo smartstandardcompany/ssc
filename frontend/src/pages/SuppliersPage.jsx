@@ -75,6 +75,7 @@ export default function SuppliersPage() {
     setEditingSupplier(supplier);
     setFormData({
       name: supplier.name,
+      category: supplier.category || '',
       branch_id: supplier.branch_id || '',
       phone: supplier.phone || '',
       email: supplier.email || '',
