@@ -756,6 +756,56 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
         credit_sales=credit_sales
     )
 
+# Credit Sales Report
+@api_router.get("/reports/credit-sales")
+async def get_credit_sales_report(current_user: User = Depends(get_current_user)):
+    query = {}
+    if current_user.branch_id and current_user.role != "admin":
+        query["branch_id"] = current_user.branch_id
+    
+    sales = await db.sales.find(query, {"_id": 0}).to_list(10000)
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
+    
+    credit_sales = []
+    total_credit_given = 0
+    total_credit_received = 0
+    total_credit_remaining = 0
+    
+    for sale in sales:
+        credit_amount = sale.get('credit_amount', 0)
+        credit_received = sale.get('credit_received', 0)
+        remaining = credit_amount - credit_received
+        
+        if credit_amount > 0:
+            branch_name = next((b["name"] for b in branches if b["id"] == sale.get("branch_id")), "-")
+            customer_name = next((c["name"] for c in customers if c["id"] == sale.get("customer_id")), "-")
+            
+            credit_sales.append({
+                "id": sale["id"],
+                "date": sale["date"],
+                "sale_type": sale["sale_type"],
+                "reference": branch_name if sale["sale_type"] == "branch" else customer_name,
+                "total_amount": sale["amount"],
+                "credit_given": credit_amount,
+                "credit_received": credit_received,
+                "remaining": remaining,
+                "status": "paid" if remaining == 0 else "partial" if credit_received > 0 else "pending"
+            })
+            
+            total_credit_given += credit_amount
+            total_credit_received += credit_received
+            total_credit_remaining += remaining
+    
+    return {
+        "credit_sales": credit_sales,
+        "summary": {
+            "total_credit_given": total_credit_given,
+            "total_credit_received": total_credit_received,
+            "total_credit_remaining": total_credit_remaining
+        }
+    }
+
 # WhatsApp Settings Routes
 @api_router.get("/whatsapp/settings")
 async def get_whatsapp_settings(current_user: User = Depends(get_current_user)):
