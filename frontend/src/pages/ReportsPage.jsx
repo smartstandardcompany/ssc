@@ -200,8 +200,48 @@ export default function ReportsPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="reports-page-title">Reports & Analytics</h1>
-          <p className="text-muted-foreground">View detailed reports and insights</p>
+          <p className="text-muted-foreground">View detailed reports and export data</p>
         </div>
+
+        {/* Export Actions */}
+        <Card className="border-border bg-gradient-to-r from-primary/5 to-accent/5">
+          <CardHeader>
+            <CardTitle className="font-outfit">Export & Share</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                onClick={() => handleExport('pdf')}
+                data-testid="export-pdf-button"
+                className="rounded-full"
+                variant="outline"
+              >
+                <FileText size={18} className="mr-2" />
+                Export PDF
+              </Button>
+              <Button
+                onClick={() => handleExport('excel')}
+                data-testid="export-excel-button"
+                className="rounded-full"
+                variant="outline"
+              >
+                <FileSpreadsheet size={18} className="mr-2" />
+                Export Excel
+              </Button>
+              <Button
+                onClick={handleSendWhatsApp}
+                data-testid="send-whatsapp-button"
+                className="rounded-full"
+              >
+                <Send size={18} className="mr-2" />
+                Send to WhatsApp
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Export includes all filtered data. WhatsApp requires Twilio configuration.
+            </p>
+          </CardContent>
+        </Card>
 
         {/* Filters */}
         <Card className="border-border" data-testid="filters-card">
