@@ -12,7 +12,7 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
-const DOC_TYPES = [
+const DEFAULT_DOC_TYPES = [
   { value: 'license', label: 'License' },
   { value: 'insurance', label: 'Insurance' },
   { value: 'permit', label: 'Permit' },
@@ -26,9 +26,11 @@ const DOC_TYPES = [
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState([]);
   const [alerts, setAlerts] = useState([]);
+  const [customDocTypes, setCustomDocTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [editingDoc, setEditingDoc] = useState(null);
+  const [newDocType, setNewDocType] = useState('');
   const [formData, setFormData] = useState({ name: '', document_type: 'license', document_number: '', related_to: '', issue_date: '', expiry_date: '', alert_days: 30, notes: '' });
 
   useEffect(() => { fetchData(); }, []);
