@@ -260,12 +260,13 @@ class Employee(BaseModel):
     email: Optional[str] = None
     position: Optional[str] = None
     branch_id: Optional[str] = None
+    user_id: Optional[str] = None  # Linked user account for portal access
     salary: float = 0
     pay_frequency: str = "monthly"
     join_date: Optional[datetime] = None
     document_expiry: Optional[datetime] = None
-    loan_balance: float = 0  # Outstanding advance/loan amount
-    annual_leave_entitled: int = 30  # Days per year
+    loan_balance: float = 0
+    annual_leave_entitled: int = 30
     sick_leave_entitled: int = 15
     notes: Optional[str] = None
     active: bool = True
