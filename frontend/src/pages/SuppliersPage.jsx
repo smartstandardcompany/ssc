@@ -139,13 +139,22 @@ export default function SuppliersPage() {
                   />
                 </div>
                 <div>
+                  <Label>Category</Label>
+                  <Input
+                    value={formData.category}
+                    data-testid="supplier-category-input"
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    placeholder="e.g., Raw Materials, Services, Equipment"
+                  />
+                </div>
+                <div>
                   <Label>Branch</Label>
                   <Select value={formData.branch_id} onValueChange={(val) => setFormData({ ...formData, branch_id: val })}>
                     <SelectTrigger data-testid="branch-select">
                       <SelectValue placeholder="Select branch" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No Branch</SelectItem>
+                      <SelectItem value="">All Branches</SelectItem>
                       {branches.map((branch) => (
                         <SelectItem key={branch.id} value={branch.id}>
                           {branch.name}
