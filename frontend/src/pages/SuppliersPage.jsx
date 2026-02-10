@@ -97,7 +97,7 @@ export default function SuppliersPage() {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', branch_id: '', phone: '', email: '', credit_limit: 0 });
+    setFormData({ name: '', category: '', branch_id: '', phone: '', email: '', credit_limit: 0 });
     setEditingSupplier(null);
   };
 
