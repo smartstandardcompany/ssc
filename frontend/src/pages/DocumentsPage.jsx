@@ -182,6 +182,7 @@ export default function DocumentsPage() {
                   <th className="text-left p-3 font-medium text-sm">Expiry Date</th>
                   <th className="text-center p-3 font-medium text-sm">Days Left</th>
                   <th className="text-center p-3 font-medium text-sm">Status</th>
+                  <th className="text-left p-3 font-medium text-sm">File</th>
                   <th className="text-right p-3 font-medium text-sm">Actions</th>
                 </tr></thead>
                 <tbody>
@@ -198,15 +199,33 @@ export default function DocumentsPage() {
                         </span>
                       </td>
                       <td className="p-3 text-center">{getStatusBadge(doc)}</td>
+                      <td className="p-3">
+                        {doc.file_name ? (
+                          <Button size="sm" variant="outline" onClick={() => handleFileDownload(doc.id, doc.file_name)} className="h-7 text-xs" data-testid="download-file-btn">
+                            <Download size={12} className="mr-1" />{doc.file_name.length > 15 ? doc.file_name.slice(0, 15) + '...' : doc.file_name}
+                          </Button>
+                        ) : (
+                          <label className="cursor-pointer">
+                            <input type="file" className="hidden" onChange={(e) => e.target.files[0] && handleFileUpload(doc.id, e.target.files[0])} />
+                            <span className="inline-flex items-center gap-1 text-xs text-primary hover:underline"><Upload size={12} />Attach</span>
+                          </label>
+                        )}
+                      </td>
                       <td className="p-3 text-right">
                         <div className="flex gap-1 justify-end">
+                          {doc.file_name && (
+                            <label className="cursor-pointer">
+                              <input type="file" className="hidden" onChange={(e) => e.target.files[0] && handleFileUpload(doc.id, e.target.files[0])} />
+                              <Button size="sm" variant="ghost" className="h-8" asChild><span><Upload size={14} /></span></Button>
+                            </label>
+                          )}
                           <Button size="sm" variant="outline" onClick={() => handleEdit(doc)} className="h-8"><Edit size={14} /></Button>
                           <Button size="sm" variant="outline" onClick={() => handleDelete(doc.id)} className="h-8 text-error hover:text-error"><Trash2 size={14} /></Button>
                         </div>
                       </td>
                     </tr>
                   ))}
-                  {documents.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">No documents tracked yet</td></tr>}
+                  {documents.length === 0 && <tr><td colSpan={9} className="p-8 text-center text-muted-foreground">No documents tracked yet</td></tr>}
                 </tbody>
               </table>
             </div>
