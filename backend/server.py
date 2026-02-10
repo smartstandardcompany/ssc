@@ -250,6 +250,86 @@ class CategoryCreate(BaseModel):
     type: str
     description: Optional[str] = None
 
+# Employee / Payroll Models
+class Employee(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    document_id: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    position: Optional[str] = None
+    branch_id: Optional[str] = None
+    salary: float = 0
+    pay_frequency: str = "monthly"  # monthly, weekly, biweekly
+    join_date: Optional[datetime] = None
+    document_expiry: Optional[datetime] = None
+    notes: Optional[str] = None
+    active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class EmployeeCreate(BaseModel):
+    name: str
+    document_id: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    position: Optional[str] = None
+    branch_id: Optional[str] = None
+    salary: float = 0
+    pay_frequency: Optional[str] = "monthly"
+    join_date: Optional[datetime] = None
+    document_expiry: Optional[datetime] = None
+    notes: Optional[str] = None
+
+# Document Expiry Tracking
+class Document(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    document_type: str  # "license", "insurance", "permit", "contract", "employee_id", "other"
+    document_number: Optional[str] = None
+    related_to: Optional[str] = None  # employee name, supplier name, branch name
+    issue_date: Optional[datetime] = None
+    expiry_date: datetime
+    alert_days: int = 30  # days before expiry to alert
+    notes: Optional[str] = None
+    status: str = "active"  # "active", "expired", "renewed"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class DocumentCreate(BaseModel):
+    name: str
+    document_type: str
+    document_number: Optional[str] = None
+    related_to: Optional[str] = None
+    issue_date: Optional[datetime] = None
+    expiry_date: datetime
+    alert_days: Optional[int] = 30
+    notes: Optional[str] = None
+
+# Salary Payment Tracking
+class SalaryPayment(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    employee_id: str
+    employee_name: str
+    amount: float
+    payment_mode: str  # "cash", "bank"
+    branch_id: Optional[str] = None
+    period: str  # "Jan 2026", "Feb 2026"
+    date: datetime
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+
+class SalaryPaymentCreate(BaseModel):
+    employee_id: str
+    amount: float
+    payment_mode: str
+    branch_id: Optional[str] = None
+    period: str
+    date: datetime
+    notes: Optional[str] = None
+
 # Helper functions
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
