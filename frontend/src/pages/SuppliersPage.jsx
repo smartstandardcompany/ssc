@@ -157,12 +157,12 @@ export default function SuppliersPage() {
                 </div>
                 <div>
                   <Label>Category</Label>
-                  <Select value={formData.category} onValueChange={(val) => setFormData({ ...formData, category: val })}>
+                  <Select value={formData.category || "none"} onValueChange={(val) => setFormData({ ...formData, category: val === "none" ? "" : val })}>
                     <SelectTrigger data-testid="supplier-category-select">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No Category</SelectItem>
+                      <SelectItem value="none">No Category</SelectItem>
                       {categories.map((cat) => (
                         <SelectItem key={cat.id} value={cat.name}>
                           {cat.name}
@@ -186,12 +186,12 @@ export default function SuppliersPage() {
                 </div>
                 <div>
                   <Label>Branch</Label>
-                  <Select value={formData.branch_id} onValueChange={(val) => setFormData({ ...formData, branch_id: val })}>
+                  <Select value={formData.branch_id || "all"} onValueChange={(val) => setFormData({ ...formData, branch_id: val === "all" ? "" : val })}>
                     <SelectTrigger data-testid="branch-select">
                       <SelectValue placeholder="Select branch" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Branches</SelectItem>
+                      <SelectItem value="all">All Branches</SelectItem>
                       {branches.map((branch) => (
                         <SelectItem key={branch.id} value={branch.id}>
                           {branch.name}
