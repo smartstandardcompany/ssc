@@ -141,17 +141,19 @@ class Supplier(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
-    category: Optional[str] = None  # Category of supplier (e.g., "Raw Materials", "Services", etc.)
+    category: Optional[str] = None
+    sub_category: Optional[str] = None
     branch_id: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
     credit_limit: Optional[float] = 0
-    current_credit: Optional[float] = 0  # Amount owed to supplier
+    current_credit: Optional[float] = 0
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class SupplierCreate(BaseModel):
     name: str
     category: Optional[str] = None
+    sub_category: Optional[str] = None
     branch_id: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
@@ -187,10 +189,11 @@ class Expense(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     category: str
+    sub_category: Optional[str] = None
     description: str
     amount: float
-    payment_mode: str  # "cash" or "bank"
-    branch_id: Optional[str] = None  # Which branch cash/bank is used
+    payment_mode: str
+    branch_id: Optional[str] = None
     supplier_id: Optional[str] = None
     date: datetime
     notes: Optional[str] = None
@@ -199,6 +202,7 @@ class Expense(BaseModel):
 
 class ExpenseCreate(BaseModel):
     category: str
+    sub_category: Optional[str] = None
     description: str
     amount: float
     payment_mode: str
@@ -242,12 +246,14 @@ class Category(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     type: str  # "supplier" or "expense"
+    parent_id: Optional[str] = None  # For sub-categories
     description: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class CategoryCreate(BaseModel):
     name: str
     type: str
+    parent_id: Optional[str] = None
     description: Optional[str] = None
 
 # Employee / Payroll Models
