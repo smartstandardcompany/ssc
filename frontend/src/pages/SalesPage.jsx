@@ -466,7 +466,7 @@ export default function SalesPage() {
                   })}
                   {sales.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                      <td colSpan={10} className="p-8 text-center text-muted-foreground">
                         No sales recorded yet. Add your first sale above!
                       </td>
                     </tr>
