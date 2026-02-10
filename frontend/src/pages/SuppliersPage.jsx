@@ -214,6 +214,11 @@ export default function SuppliersPage() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <CardTitle className="font-outfit text-lg">{supplier.name}</CardTitle>
+                      {supplier.category && (
+                        <span className="inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
+                          {supplier.category}
+                        </span>
+                      )}
                       <p className="text-sm text-muted-foreground mt-1">{branchName}</p>
                     </div>
                     <div className="flex gap-1">
