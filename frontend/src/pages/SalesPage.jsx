@@ -27,7 +27,6 @@ export default function SalesPage() {
     sale_type: 'branch',
     branch_id: '',
     customer_id: '',
-    amount: '',
     payment_details: [{ mode: 'cash', amount: '' }],
     date: new Date().toISOString().split('T')[0],
     notes: '',
@@ -74,35 +73,40 @@ export default function SalesPage() {
     setFormData({ ...formData, payment_details: newPayments });
   };
 
-  const calculateTotalPayment = () => {
-    return formData.payment_details.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-  };
+  const calculateTotals = () => {
+    let cash = 0, bank = 0, credit = 0;
+    
+    formData.payment_details.forEach(p => {
+      const amount = parseFloat(p.amount) || 0;
+      if (p.mode === 'cash') cash += amount;
+      else if (p.mode === 'bank') bank += amount;
+      else if (p.mode === 'credit') credit += amount;
+    });
 
-  const calculateCredit = () => {
-    const total = parseFloat(formData.amount) || 0;
-    const paid = calculateTotalPayment();
-    return Math.max(0, total - paid);
+    const total = cash + bank + credit;
+    return { cash, bank, credit, total };
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    const totalAmount = parseFloat(formData.amount);
-    const totalPayment = calculateTotalPayment();
+    const totals = calculateTotals();
     
-    if (totalPayment > totalAmount) {
-      toast.error('Total payment cannot exceed sale amount');
+    if (totals.total === 0) {
+      toast.error('Please add at least one payment entry');
       return;
     }
 
     try {
       const payload = {
         ...formData,
-        amount: totalAmount,
-        payment_details: formData.payment_details.map(p => ({
-          mode: p.mode,
-          amount: parseFloat(p.amount) || 0
-        })),
+        amount: totals.total,
+        payment_details: formData.payment_details
+          .filter(p => parseFloat(p.amount) > 0)
+          .map(p => ({
+            mode: p.mode,
+            amount: parseFloat(p.amount)
+          })),
         date: new Date(formData.date).toISOString(),
       };
 
@@ -121,7 +125,6 @@ export default function SalesPage() {
       sale_type: activeTab,
       branch_id: '',
       customer_id: '',
-      amount: '',
       payment_details: [{ mode: 'cash', amount: '' }],
       date: new Date().toISOString().split('T')[0],
       notes: '',
@@ -143,7 +146,10 @@ export default function SalesPage() {
   const handleReceiveCredit = async (e) => {
     e.preventDefault();
     try {
-      await api.post(`/sales/${receivingSale.id}/receive-credit`, receivePayment);
+      await api.post(`/sales/${receivingSale.id}/receive-credit`, {
+        payment_mode: receivePayment.payment_mode,
+        amount: parseFloat(receivePayment.amount)
+      });
       toast.success('Credit payment received');
       setShowReceiveDialog(false);
       setReceivePayment({ payment_mode: 'cash', amount: '' });
@@ -164,6 +170,8 @@ export default function SalesPage() {
       </DashboardLayout>
     );
   }
+
+  const totals = calculateTotals();
 
   return (
     <DashboardLayout>
@@ -197,7 +205,7 @@ export default function SalesPage() {
 
                 <form onSubmit={handleSubmit}>
                   <div className="space-y-6">
-                    <TabsContent value="branch" className="mt-0">
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>Branch *</Label>
                         <Select value={formData.branch_id} onValueChange={(val) => setFormData({ ...formData, branch_id: val })} required>
@@ -213,38 +221,25 @@ export default function SalesPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                    </TabsContent>
 
-                    <TabsContent value="online" className="mt-0">
-                      <div>
-                        <Label>Customer *</Label>
-                        <Select value={formData.customer_id} onValueChange={(val) => setFormData({ ...formData, customer_id: val })} required>
-                          <SelectTrigger data-testid="customer-select">
-                            <SelectValue placeholder="Select customer" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {customers.map((customer) => (
-                              <SelectItem key={customer.id} value={customer.id}>
-                                {customer.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </TabsContent>
+                      <TabsContent value="online" className="mt-0">
+                        <div>
+                          <Label>Customer *</Label>
+                          <Select value={formData.customer_id} onValueChange={(val) => setFormData({ ...formData, customer_id: val })} required={activeTab === 'online'}>
+                            <SelectTrigger data-testid="customer-select">
+                              <SelectValue placeholder="Select customer" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {customers.map((customer) => (
+                                <SelectItem key={customer.id} value={customer.id}>
+                                  {customer.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </TabsContent>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Total Amount *</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          data-testid="amount-input"
-                          value={formData.amount}
-                          onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                          required
-                        />
-                      </div>
                       <div>
                         <Label>Date *</Label>
                         <Input
@@ -259,7 +254,7 @@ export default function SalesPage() {
 
                     <div>
                       <div className="flex justify-between items-center mb-3">
-                        <Label>Payment Details</Label>
+                        <Label>Payment Details *</Label>
                         <Button type="button" size="sm" variant="outline" onClick={addPaymentRow} className="rounded-full">
                           <Plus size={14} className="mr-1" />
                           Add Payment
@@ -280,6 +275,7 @@ export default function SalesPage() {
                                 <SelectContent>
                                   <SelectItem value="cash">Cash</SelectItem>
                                   <SelectItem value="bank">Bank</SelectItem>
+                                  <SelectItem value="credit">Credit</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -306,16 +302,27 @@ export default function SalesPage() {
                             )}
                           </div>
                         ))}
-                        <div className="pt-3 border-t flex justify-between text-sm">
-                          <span className="font-medium">Total Paid:</span>
-                          <span className="font-bold">${calculateTotalPayment().toFixed(2)}</span>
-                        </div>
-                        {calculateCredit() > 0 && (
-                          <div className="flex justify-between text-sm text-warning">
-                            <span className="font-medium">Credit Amount:</span>
-                            <span className="font-bold">${calculateCredit().toFixed(2)}</span>
+                        
+                        <div className="pt-3 border-t space-y-2">
+                          <div className="grid grid-cols-3 gap-4 text-sm">
+                            <div className="p-2 bg-cash/10 rounded border border-cash/30">
+                              <div className="text-xs text-muted-foreground">Cash</div>
+                              <div className="font-bold text-cash">${totals.cash.toFixed(2)}</div>
+                            </div>
+                            <div className="p-2 bg-bank/10 rounded border border-bank/30">
+                              <div className="text-xs text-muted-foreground">Bank</div>
+                              <div className="font-bold text-bank">${totals.bank.toFixed(2)}</div>
+                            </div>
+                            <div className="p-2 bg-credit/10 rounded border border-credit/30">
+                              <div className="text-xs text-muted-foreground">Credit</div>
+                              <div className="font-bold text-credit">${totals.credit.toFixed(2)}</div>
+                            </div>
                           </div>
-                        )}
+                          <div className="flex justify-between text-lg font-bold pt-2 border-t">
+                            <span>Total Sale Amount:</span>
+                            <span className="text-primary">${totals.total.toFixed(2)}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
@@ -353,7 +360,8 @@ export default function SalesPage() {
                   <tr className="border-b border-border">
                     <th className="text-left p-3 font-medium text-sm">Date</th>
                     <th className="text-left p-3 font-medium text-sm">Type</th>
-                    <th className="text-left p-3 font-medium text-sm">Branch/Customer</th>
+                    <th className="text-left p-3 font-medium text-sm">Branch</th>
+                    <th className="text-left p-3 font-medium text-sm">Customer</th>
                     <th className="text-right p-3 font-medium text-sm">Amount</th>
                     <th className="text-left p-3 font-medium text-sm">Payment</th>
                     <th className="text-left p-3 font-medium text-sm">Credit</th>
@@ -370,13 +378,16 @@ export default function SalesPage() {
                       <tr key={sale.id} className="border-b border-border hover:bg-secondary/50" data-testid="sale-row">
                         <td className="p-3 text-sm">{format(new Date(sale.date), 'MMM dd, yyyy')}</td>
                         <td className="p-3 text-sm capitalize">{sale.sale_type}</td>
-                        <td className="p-3 text-sm">{sale.sale_type === 'branch' ? branchName : customerName}</td>
+                        <td className="p-3 text-sm">{branchName}</td>
+                        <td className="p-3 text-sm">{sale.sale_type === 'online' ? customerName : '-'}</td>
                         <td className="p-3 text-sm text-right font-medium">${sale.amount.toFixed(2)}</td>
                         <td className="p-3">
                           <div className="flex gap-1 flex-wrap">
                             {sale.payment_details?.map((p, i) => (
                               <span key={i} className={`inline-block px-2 py-0.5 rounded text-xs font-medium border ${
-                                p.mode === 'cash' ? 'bg-cash/20 text-cash border-cash/30' : 'bg-bank/20 text-bank border-bank/30'
+                                p.mode === 'cash' ? 'bg-cash/20 text-cash border-cash/30' : 
+                                p.mode === 'bank' ? 'bg-bank/20 text-bank border-bank/30' :
+                                'bg-credit/20 text-credit border-credit/30'
                               }`}>
                                 {p.mode}: ${p.amount.toFixed(2)}
                               </span>
@@ -422,7 +433,7 @@ export default function SalesPage() {
                   })}
                   {sales.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                      <td colSpan={8} className="p-8 text-center text-muted-foreground">
                         No sales recorded yet. Add your first sale above!
                       </td>
                     </tr>
