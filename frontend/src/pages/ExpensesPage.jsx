@@ -86,6 +86,19 @@ export default function ExpensesPage() {
     }
   };
 
+  const handleAddExpSubCategory = async () => {
+    if (!newSubCategory.trim()) return;
+    try {
+      await api.post('/categories', { name: newSubCategory.trim(), type: 'expense', parent_id: null });
+      toast.success('Sub-category added');
+      setNewSubCategory('');
+      const res = await api.get('/categories?category_type=expense');
+      setCustomCategories(res.data);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
