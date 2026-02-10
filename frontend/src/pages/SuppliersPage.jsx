@@ -20,9 +20,10 @@ export default function SuppliersPage() {
   const [showPayDialog, setShowPayDialog] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [payingSupplier, setPayingSupplier] = useState(null);
-  const [formData, setFormData] = useState({ name: '', category: '', branch_id: '', phone: '', email: '', credit_limit: 0 });
+  const [formData, setFormData] = useState({ name: '', category: '', sub_category: '', branch_id: '', phone: '', email: '', credit_limit: 0 });
   const [paymentData, setPaymentData] = useState({ payment_mode: 'cash', amount: '', branch_id: '' });
   const [newCategory, setNewCategory] = useState('');
+  const [newSubCategory, setNewSubCategory] = useState('');
 
   useEffect(() => {
     fetchData();
