@@ -790,6 +790,7 @@ async def get_credit_sales_report(current_user: User = Depends(get_current_user)
                 "date": sale["date"],
                 "sale_type": sale["sale_type"],
                 "reference": branch_name if sale["sale_type"] == "branch" else customer_name,
+                "branch": branch_name,
                 "total_amount": sale["amount"],
                 "credit_given": credit_amount,
                 "credit_received": credit_received,
@@ -809,6 +810,73 @@ async def get_credit_sales_report(current_user: User = Depends(get_current_user)
             "total_credit_remaining": total_credit_remaining
         }
     }
+
+# Supplier Reports
+@api_router.get("/reports/suppliers")
+async def get_supplier_report(current_user: User = Depends(get_current_user)):
+    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+    supplier_payments = await db.supplier_payments.find({}, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
+    
+    supplier_report = []
+    
+    for supplier in suppliers:
+        # Calculate total payments to this supplier
+        payments = [p for p in supplier_payments if p.get("supplier_id") == supplier["id"]]
+        total_paid = sum(p["amount"] for p in payments if p.get("payment_mode") != "credit")
+        
+        # Calculate supplier expenses
+        supplier_expenses = [e for e in expenses if e.get("supplier_id") == supplier["id"]]
+        total_expenses = sum(e["amount"] for e in supplier_expenses)
+        
+        supplier_report.append({
+            "id": supplier["id"],
+            "name": supplier["name"],
+            "category": supplier.get("category", "-"),
+            "total_expenses": total_expenses,
+            "total_paid": total_paid,
+            "current_credit": supplier.get("current_credit", 0),
+            "credit_limit": supplier.get("credit_limit", 0),
+            "transaction_count": len(payments) + len(supplier_expenses)
+        })
+    
+    return supplier_report
+
+# Category-wise Supplier Report
+@api_router.get("/reports/supplier-categories")
+async def get_supplier_category_report(current_user: User = Depends(get_current_user)):
+    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+    supplier_payments = await db.supplier_payments.find({}, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
+    
+    category_report = {}
+    
+    for supplier in suppliers:
+        category = supplier.get("category", "Uncategorized")
+        
+        if category not in category_report:
+            category_report[category] = {
+                "category": category,
+                "supplier_count": 0,
+                "total_expenses": 0,
+                "total_paid": 0,
+                "total_credit": 0
+            }
+        
+        category_report[category]["supplier_count"] += 1
+        
+        # Calculate expenses for this supplier
+        supplier_expenses = [e for e in expenses if e.get("supplier_id") == supplier["id"]]
+        category_report[category]["total_expenses"] += sum(e["amount"] for e in supplier_expenses)
+        
+        # Calculate payments for this supplier
+        payments = [p for p in supplier_payments if p.get("supplier_id") == supplier["id"]]
+        category_report[category]["total_paid"] += sum(p["amount"] for p in payments if p.get("payment_mode") != "credit")
+        
+        # Add current credit
+        category_report[category]["total_credit"] += supplier.get("current_credit", 0)
+    
+    return list(category_report.values())
 
 # WhatsApp Settings Routes
 @api_router.get("/whatsapp/settings")
