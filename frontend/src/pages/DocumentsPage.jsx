@@ -37,11 +37,28 @@ export default function DocumentsPage() {
 
   const fetchData = async () => {
     try {
-      const [docsRes, alertsRes] = await Promise.all([api.get('/documents'), api.get('/documents/alerts/upcoming')]);
+      const [docsRes, alertsRes, catRes] = await Promise.all([api.get('/documents'), api.get('/documents/alerts/upcoming'), api.get('/categories?category_type=document')]);
       setDocuments(docsRes.data);
       setAlerts(alertsRes.data);
+      setCustomDocTypes(catRes.data);
     } catch { toast.error('Failed to fetch data'); }
     finally { setLoading(false); }
+  };
+
+  const allDocTypes = [
+    ...DEFAULT_DOC_TYPES,
+    ...customDocTypes.filter(c => !DEFAULT_DOC_TYPES.find(d => d.value === c.name.toLowerCase())).map(c => ({ value: c.name.toLowerCase(), label: c.name }))
+  ];
+
+  const handleAddDocType = async () => {
+    if (!newDocType.trim()) return;
+    try {
+      await api.post('/categories', { name: newDocType.trim(), type: 'document' });
+      toast.success('Document type added');
+      setNewDocType('');
+      const res = await api.get('/categories?category_type=document');
+      setCustomDocTypes(res.data);
+    } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
   };
 
   const handleSubmit = async (e) => {
