@@ -365,6 +365,20 @@ export default function SuppliersPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div>
+                <Label>From Branch</Label>
+                <Select value={paymentData.branch_id || "all"} onValueChange={(val) => setPaymentData({ ...paymentData, branch_id: val === "all" ? "" : val })}>
+                  <SelectTrigger data-testid="pay-branch-select">
+                    <SelectValue placeholder="Select branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">No Branch</SelectItem>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex gap-3">
                 <Button type="submit" data-testid="submit-payment-button" className="rounded-full">Pay Credit</Button>
                 <Button type="button" variant="outline" onClick={() => setShowPayDialog(false)} className="rounded-full">
