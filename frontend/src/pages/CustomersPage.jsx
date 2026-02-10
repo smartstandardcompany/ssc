@@ -175,17 +175,21 @@ export default function CustomersPage() {
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left p-3 font-medium text-sm">Name</th>
+                    <th className="text-left p-3 font-medium text-sm">Branch</th>
                     <th className="text-left p-3 font-medium text-sm">Phone</th>
                     <th className="text-left p-3 font-medium text-sm">Email</th>
                     <th className="text-right p-3 font-medium text-sm">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {customers.map((customer) => (
-                    <tr key={customer.id} className="border-b border-border hover:bg-secondary/50" data-testid="customer-row">
-                      <td className="p-3 text-sm font-medium">{customer.name}</td>
-                      <td className="p-3 text-sm">{customer.phone || '-'}</td>
-                      <td className="p-3 text-sm">{customer.email || '-'}</td>
+                  {customers.map((customer) => {
+                    const branchName = branches.find((b) => b.id === customer.branch_id)?.name || 'All Branches';
+                    return (
+                      <tr key={customer.id} className="border-b border-border hover:bg-secondary/50" data-testid="customer-row">
+                        <td className="p-3 text-sm font-medium">{customer.name}</td>
+                        <td className="p-3 text-sm">{branchName}</td>
+                        <td className="p-3 text-sm">{customer.phone || '-'}</td>
+                        <td className="p-3 text-sm">{customer.email || '-'}</td>
                       <td className="p-3 text-right">
                         <div className="flex gap-2 justify-end">
                           <Button
