@@ -14,6 +14,8 @@ import ReportsPage from "./pages/ReportsPage";
 import CreditReportPage from "./pages/CreditReportPage";
 import SupplierReportPage from "./pages/SupplierReportPage";
 import CategoryReportPage from "./pages/CategoryReportPage";
+import EmployeesPage from "./pages/EmployeesPage";
+import DocumentsPage from "./pages/DocumentsPage";
 import UsersPage from "./pages/UsersPage";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -50,6 +52,8 @@ function App() {
           <Route path="/credit-report" element={isAuthenticated ? <CreditReportPage /> : <Navigate to="/login" />} />
           <Route path="/supplier-report" element={isAuthenticated ? <SupplierReportPage /> : <Navigate to="/login" />} />
           <Route path="/category-report" element={isAuthenticated ? <CategoryReportPage /> : <Navigate to="/login" />} />
+          <Route path="/employees" element={isAuthenticated ? <EmployeesPage /> : <Navigate to="/login" />} />
+          <Route path="/documents" element={isAuthenticated ? <DocumentsPage /> : <Navigate to="/login" />} />
           <Route path="/users" element={isAuthenticated ? <UsersPage /> : <Navigate to="/login" />} />
         </Routes>
       </BrowserRouter>
