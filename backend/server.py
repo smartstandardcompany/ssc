@@ -540,6 +540,7 @@ async def pay_supplier_credit(supplier_id: str, payment: SupplierCreditPayment, 
         supplier_name=supplier["name"],
         amount=payment.amount,
         payment_mode=payment.payment_mode,
+        branch_id=payment.branch_id,
         date=datetime.now(timezone.utc),
         notes=f"Credit payment - Remaining: ${new_credit:.2f}",
         created_by=current_user.id
