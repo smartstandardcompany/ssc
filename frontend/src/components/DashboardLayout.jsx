@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ShoppingCart, Store, Users, Truck, Receipt, BarChart3, LogOut, Shield, CreditCard, FileText, Tags } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Store, Users, Truck, Receipt, BarChart3, LogOut, Shield, CreditCard, FileText, Tags, UserCheck, FileWarning } from 'lucide-react';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
 
@@ -23,6 +23,8 @@ export const DashboardLayout = ({ children }) => {
     { path: '/suppliers', icon: Truck, label: 'Suppliers' },
     { path: '/supplier-payments', icon: Receipt, label: 'Supplier Payments' },
     { path: '/expenses', icon: Receipt, label: 'Expenses' },
+    { path: '/employees', icon: UserCheck, label: 'Employees' },
+    { path: '/documents', icon: FileWarning, label: 'Documents' },
     { path: '/reports', icon: BarChart3, label: 'Reports' },
     { path: '/credit-report', icon: CreditCard, label: 'Credit Report' },
     { path: '/supplier-report', icon: FileText, label: 'Supplier Report' },
