@@ -649,7 +649,11 @@ async def update_supplier(supplier_id: str, supplier_data: SupplierCreate, curre
     if not result:
         raise HTTPException(status_code=404, detail="Supplier not found")
     
-    await db.suppliers.update_one({"id": supplier_id}, {"$set": supplier_data.model_dump()})
+    update_data = supplier_data.model_dump()
+    for f in ['branch_id', 'category', 'sub_category', 'phone', 'email']:
+        if update_data.get(f) == '':
+            update_data[f] = None
+    await db.suppliers.update_one({"id": supplier_id}, {"$set": update_data})
     updated = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
     if isinstance(updated.get('created_at'), str):
         updated['created_at'] = datetime.fromisoformat(updated['created_at'])
