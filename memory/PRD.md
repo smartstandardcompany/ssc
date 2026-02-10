@@ -1,91 +1,54 @@
 # DataEntry Hub - Product Requirements Document
 
 ## Original Problem Statement
-Build a data entry application to track sales, expenses, supplier payments, employees/payroll, and documents with expiry tracking. Features include branch management, customer tracking, supplier management with categories, credit tracking, user roles, reporting with charts and exports, and document expiry alerts.
+Data entry application for sales, expenses, supplier payments, employees/payroll, and document expiry tracking.
 
 ## Architecture
-- **Backend:** FastAPI (Python) with MongoDB (motor async driver)
-- **Frontend:** React with TailwindCSS, Shadcn/UI, Recharts
-- **Auth:** JWT-based authentication with role-based access control
-- **Database:** MongoDB
+- **Backend:** FastAPI + MongoDB (motor) | **Frontend:** React + TailwindCSS + Shadcn/UI + Recharts
+- **Auth:** JWT with role-based access | **Database:** MongoDB
 
-## What's Been Implemented
+## Implemented Features
 
-### Core Features
-- [x] User authentication (register/login) with JWT
-- [x] Role-based access control (admin, manager, operator)
-- [x] Branch management (CRUD)
-- [x] Customer management with branch assignment
-- [x] Supplier management with managed categories
-- [x] Sales tracking with split payments (cash/bank/credit), discounts
-- [x] Expense tracking with managed categories + branch selection
-- [x] Supplier payments with credit tracking + branch selection
-- [x] Pay supplier credit with branch + cash/bank selection
-- [x] Dashboard with key metrics + document expiry alerts
+### Sales & Customers
+- [x] Sales with split payments (cash/bank/credit), discounts, branch/online types
+- [x] Customer CRUD with branch assignment
+- [x] Credit sales tracking + receive credit payments
+
+### Suppliers & Expenses
+- [x] Supplier CRUD with managed categories + credit tracking
+- [x] Pay supplier credit (cash/bank + branch selection)
+- [x] Expense tracking with categories + branch selection
+- [x] Supplier payments (cash/bank/credit + branch)
 
 ### Employee & Payroll Module
 - [x] Employee CRUD (name, doc ID, salary, position, pay frequency, branch, doc expiry)
-- [x] Salary payment tracking (amount, mode, branch, period)
-- [x] Document expiry tracking per employee
-- [x] Monthly payroll summary
+- [x] 5 payment types: Salary, Advance, Overtime, Tickets, ID Card
+- [x] Cash or Bank payment mode
+- [x] Tickets & ID Card payments auto-create Expense records
+- [x] Per-employee monthly summary: salary paid, balance, advance, overtime, tickets, id_card
+- [x] Payment history with View Summary dialog
 
 ### Document Expiry Module
-- [x] Document CRUD (name, type, number, related_to, issue/expiry dates, alert_days)
-- [x] Auto-calculated status (active, expiring_soon, expired)
-- [x] Days-left counter
-- [x] Expiry alerts on Dashboard and Documents page
-- [x] Alert endpoint combining documents + employee doc expiries
+- [x] Document CRUD with type, expiry date, alert_days
+- [x] Auto status: Active / Expiring Soon / Expired
+- [x] Alerts on Dashboard + Documents page
 
 ### Reporting & Charts
-- [x] Credit Sales Report with payment reception
-- [x] Supplier Report with charts, date period filter (day/month/year)
-- [x] Category Report with bar + pie charts
-- [x] Reports page with charts (pie, bar) + branch-wise cash/bank breakdown
-- [x] Branch-wise cash vs bank detailed table
+- [x] Reports page with pie/bar charts + branch-wise cash/bank breakdown
+- [x] Supplier Report with date period filter + charts
+- [x] Category Report with charts
+- [x] Credit Sales Report
 
-### Date Filtering
-- [x] DateFilter component (Today/This Month/This Year/Custom Range)
-- [x] Applied to Sales, Expenses, Supplier Payments pages
-
-### Export (All Pages)
-- [x] PDF/Excel export on Sales, Customers, Suppliers, Supplier Payments, Expenses, Employees pages
-- [x] PDF/Excel export on Credit Report, Supplier Report, Category Report
-- [x] Full report export from Reports page
+### Export & Filtering
+- [x] PDF/Excel export on ALL pages (Sales, Customers, Suppliers, Supplier Payments, Expenses, Employees, Reports)
+- [x] Date filter (Today/Month/Year/Custom) on Sales, Expenses, Supplier Payments
 
 ### User Management
-- [x] User CRUD (admin only)
-- [x] Role assignment + permissions + branch assignment
+- [x] User CRUD with roles (admin/manager/operator) + permissions
 
 ## Backlog
-
-### P1 - WhatsApp Daily Sales + Expiry Alerts
-- Backend Twilio integration exists but needs credentials (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER)
-- WhatsApp settings UI exists on Reports page
-- Needs: daily automated sending + document expiry alerts via WhatsApp
-
-### P2 - Email Alerts
-- Send email alerts when documents approach expiry
-- Needs email provider credentials (SendGrid/Gmail SMTP)
-
-## API Endpoints
-- `/api/auth/`: register, login, me
-- `/api/users/`: CRUD
-- `/api/branches/`: CRUD
-- `/api/customers/`: CRUD
-- `/api/suppliers/`: CRUD + pay-credit
-- `/api/sales/`: CRUD + receive-credit
-- `/api/expenses/`: CRUD
-- `/api/supplier-payments/`: CRUD
-- `/api/employees/`: CRUD
-- `/api/salary-payments/`: CRUD
-- `/api/documents/`: CRUD + alerts/upcoming
-- `/api/categories/`: CRUD
-- `/api/dashboard/stats`
-- `/api/reports/`: credit-sales, suppliers, supplier-categories, branch-cashbank, supplier-balance
-- `/api/export/`: reports, data
-- `/api/whatsapp/`: settings, send-daily-report
+- WhatsApp daily sales + document expiry alerts (needs Twilio credentials)
+- Email alerts for document expiry (needs email provider)
 
 ## Test Credentials
-- Email: test@example.com
-- Password: password123
-- Role: admin
+- Email: test@example.com | Password: password123 | Role: admin
