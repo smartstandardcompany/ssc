@@ -10,6 +10,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { ExportButtons } from '@/components/ExportButtons';
 
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState([]);
@@ -17,12 +18,14 @@ export default function ExpensesPage() {
   const [customCategories, setCustomCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [branches, setBranches] = useState([]);
   const [newCategory, setNewCategory] = useState('');
   const [formData, setFormData] = useState({
     category: 'salary',
     description: '',
     amount: '',
     payment_mode: 'cash',
+    branch_id: '',
     supplier_id: '',
     date: new Date().toISOString().split('T')[0],
     notes: '',
@@ -44,14 +47,16 @@ export default function ExpensesPage() {
 
   const fetchData = async () => {
     try {
-      const [expensesRes, suppliersRes, categoriesRes] = await Promise.all([
+      const [expensesRes, suppliersRes, categoriesRes, branchesRes] = await Promise.all([
         api.get('/expenses'),
         api.get('/suppliers'),
         api.get('/categories?category_type=expense'),
+        api.get('/branches'),
       ]);
       setExpenses(expensesRes.data);
       setSuppliers(suppliersRes.data);
       setCustomCategories(categoriesRes.data);
+      setBranches(branchesRes.data);
     } catch (error) {
       toast.error('Failed to fetch data');
     } finally {
@@ -84,6 +89,7 @@ export default function ExpensesPage() {
         ...formData,
         amount: parseFloat(formData.amount),
         supplier_id: formData.supplier_id || null,
+        branch_id: formData.branch_id || null,
         date: new Date(formData.date).toISOString(),
       };
       await api.post('/expenses', payload);
@@ -102,6 +108,7 @@ export default function ExpensesPage() {
       description: '',
       amount: '',
       payment_mode: 'cash',
+      branch_id: '',
       supplier_id: '',
       date: new Date().toISOString().split('T')[0],
       notes: '',
@@ -151,7 +158,9 @@ export default function ExpensesPage() {
             <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="expenses-page-title">Expenses</h1>
             <p className="text-muted-foreground">Track business expenses and supplier costs</p>
           </div>
-          <Button
+          <div className="flex gap-3 items-center">
+            <ExportButtons dataType="expenses" />
+            <Button
             onClick={() => setShowForm(!showForm)}
             data-testid="add-expense-button"
             className="rounded-full"
@@ -159,6 +168,7 @@ export default function ExpensesPage() {
             <Plus size={18} className="mr-2" />
             Add Expense
           </Button>
+          </div>
         </div>
 
         {showForm && (
