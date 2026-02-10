@@ -11,6 +11,7 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
+import { DateFilter } from '@/components/DateFilter';
 
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState([]);
@@ -30,6 +31,7 @@ export default function ExpensesPage() {
     date: new Date().toISOString().split('T')[0],
     notes: '',
   });
+  const [dateFilter, setDateFilter] = useState({ start: null, end: null, period: 'all' });
 
   const defaultCategories = [
     { value: 'salary', label: 'Salary' },
@@ -159,6 +161,7 @@ export default function ExpensesPage() {
             <p className="text-muted-foreground">Track business expenses and supplier costs</p>
           </div>
           <div className="flex gap-3 items-center">
+            <DateFilter onFilterChange={setDateFilter} />
             <ExportButtons dataType="expenses" />
             <Button
             onClick={() => setShowForm(!showForm)}
@@ -331,7 +334,13 @@ export default function ExpensesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {expenses.map((expense) => {
+                  {expenses.filter(e => {
+                    if (dateFilter.start && dateFilter.end) {
+                      const d = new Date(e.date);
+                      return d >= dateFilter.start && d <= dateFilter.end;
+                    }
+                    return true;
+                  }).map((expense) => {
                     const supplierName = suppliers.find((s) => s.id === expense.supplier_id)?.name || '-';
                     return (
                       <tr key={expense.id} className="border-b border-border hover:bg-secondary/50" data-testid="expense-row">
