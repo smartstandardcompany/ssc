@@ -21,8 +21,10 @@ export default function ExpensesPage() {
   const [showForm, setShowForm] = useState(false);
   const [branches, setBranches] = useState([]);
   const [newCategory, setNewCategory] = useState('');
+  const [newSubCategory, setNewSubCategory] = useState('');
   const [formData, setFormData] = useState({
     category: 'salary',
+    sub_category: '',
     description: '',
     amount: '',
     payment_mode: 'cash',
