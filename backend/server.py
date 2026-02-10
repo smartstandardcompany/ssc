@@ -107,7 +107,9 @@ class Sale(BaseModel):
     sale_type: str  # "branch" or "online"
     branch_id: Optional[str] = None
     customer_id: Optional[str] = None
-    amount: float
+    amount: float  # Original amount before discount
+    discount: float = 0  # Discount amount
+    final_amount: float = 0  # Amount after discount
     payment_details: Optional[List[dict]] = []  # [{"mode": "cash", "amount": 100}, {"mode": "bank", "amount": 50}]
     credit_amount: float = 0  # Amount still pending for credit sales
     credit_received: float = 0  # Amount received against credit
@@ -126,6 +128,7 @@ class SaleCreate(BaseModel):
     branch_id: Optional[str] = None
     customer_id: Optional[str] = None
     amount: float
+    discount: Optional[float] = 0
     payment_details: List[dict]
     date: datetime
     notes: Optional[str] = None
