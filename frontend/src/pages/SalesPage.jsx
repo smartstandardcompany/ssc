@@ -28,6 +28,7 @@ export default function SalesPage() {
     branch_id: '',
     customer_id: '',
     payment_details: [{ mode: 'cash', amount: '' }],
+    discount: '',
     date: new Date().toISOString().split('T')[0],
     notes: '',
   });
