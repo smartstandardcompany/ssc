@@ -1277,6 +1277,180 @@ async def export_data(request: dict, current_user: User = Depends(get_current_us
         return StreamingResponse(buffer, media_type="application/pdf",
                                  headers={"Content-Disposition": f"attachment; filename={data_type}_report.pdf"})
 
+# Employee Routes
+@api_router.get("/employees")
+async def get_employees(current_user: User = Depends(get_current_user)):
+    employees = await db.employees.find({}, {"_id": 0}).to_list(1000)
+    for emp in employees:
+        for f in ['created_at', 'join_date', 'document_expiry']:
+            if isinstance(emp.get(f), str):
+                emp[f] = datetime.fromisoformat(emp[f])
+    return employees
+
+@api_router.post("/employees")
+async def create_employee(data: EmployeeCreate, current_user: User = Depends(get_current_user)):
+    emp = Employee(**data.model_dump())
+    emp_dict = emp.model_dump()
+    for f in ['created_at', 'join_date', 'document_expiry']:
+        if emp_dict.get(f):
+            emp_dict[f] = emp_dict[f].isoformat()
+    await db.employees.insert_one(emp_dict)
+    return {k: v for k, v in emp_dict.items() if k != '_id'}
+
+@api_router.put("/employees/{emp_id}")
+async def update_employee(emp_id: str, data: EmployeeCreate, current_user: User = Depends(get_current_user)):
+    result = await db.employees.find_one({"id": emp_id})
+    if not result:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    update = data.model_dump()
+    for f in ['join_date', 'document_expiry']:
+        if update.get(f):
+            update[f] = update[f].isoformat()
+    await db.employees.update_one({"id": emp_id}, {"$set": update})
+    updated = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/employees/{emp_id}")
+async def delete_employee(emp_id: str, current_user: User = Depends(get_current_user)):
+    result = await db.employees.delete_one({"id": emp_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    return {"message": "Employee deleted"}
+
+# Salary Payment Routes
+@api_router.get("/salary-payments")
+async def get_salary_payments(current_user: User = Depends(get_current_user)):
+    payments = await db.salary_payments.find({}, {"_id": 0}).sort("date", -1).to_list(1000)
+    for p in payments:
+        for f in ['date', 'created_at']:
+            if isinstance(p.get(f), str):
+                p[f] = datetime.fromisoformat(p[f])
+    return payments
+
+@api_router.post("/salary-payments")
+async def create_salary_payment(data: SalaryPaymentCreate, current_user: User = Depends(get_current_user)):
+    emp = await db.employees.find_one({"id": data.employee_id}, {"_id": 0})
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    payment = SalaryPayment(**data.model_dump(), employee_name=emp["name"], created_by=current_user.id)
+    p_dict = payment.model_dump()
+    p_dict["date"] = p_dict["date"].isoformat()
+    p_dict["created_at"] = p_dict["created_at"].isoformat()
+    await db.salary_payments.insert_one(p_dict)
+    return {k: v for k, v in p_dict.items() if k != '_id'}
+
+@api_router.delete("/salary-payments/{payment_id}")
+async def delete_salary_payment(payment_id: str, current_user: User = Depends(get_current_user)):
+    result = await db.salary_payments.delete_one({"id": payment_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    return {"message": "Salary payment deleted"}
+
+# Document Routes
+@api_router.get("/documents")
+async def get_documents(current_user: User = Depends(get_current_user)):
+    docs = await db.documents.find({}, {"_id": 0}).to_list(1000)
+    now = datetime.now(timezone.utc)
+    for d in docs:
+        for f in ['created_at', 'issue_date', 'expiry_date']:
+            if isinstance(d.get(f), str):
+                d[f] = datetime.fromisoformat(d[f])
+        if d.get('expiry_date'):
+            exp = d['expiry_date'] if isinstance(d['expiry_date'], datetime) else datetime.fromisoformat(str(d['expiry_date']))
+            if exp.tzinfo is None:
+                exp = exp.replace(tzinfo=timezone.utc)
+            days_left = (exp - now).days
+            d['days_until_expiry'] = days_left
+            if days_left < 0:
+                d['status'] = 'expired'
+            elif days_left <= d.get('alert_days', 30):
+                d['status'] = 'expiring_soon'
+            else:
+                d['status'] = 'active'
+    return docs
+
+@api_router.post("/documents")
+async def create_document(data: DocumentCreate, current_user: User = Depends(get_current_user)):
+    doc = Document(**data.model_dump())
+    doc_dict = doc.model_dump()
+    for f in ['created_at', 'issue_date', 'expiry_date']:
+        if doc_dict.get(f):
+            doc_dict[f] = doc_dict[f].isoformat()
+    await db.documents.insert_one(doc_dict)
+    return {k: v for k, v in doc_dict.items() if k != '_id'}
+
+@api_router.put("/documents/{doc_id}")
+async def update_document(doc_id: str, data: DocumentCreate, current_user: User = Depends(get_current_user)):
+    result = await db.documents.find_one({"id": doc_id})
+    if not result:
+        raise HTTPException(status_code=404, detail="Document not found")
+    update = data.model_dump()
+    for f in ['issue_date', 'expiry_date']:
+        if update.get(f):
+            update[f] = update[f].isoformat()
+    await db.documents.update_one({"id": doc_id}, {"$set": update})
+    updated = await db.documents.find_one({"id": doc_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/documents/{doc_id}")
+async def delete_document(doc_id: str, current_user: User = Depends(get_current_user)):
+    result = await db.documents.delete_one({"id": doc_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return {"message": "Document deleted"}
+
+# Document Expiry Alerts
+@api_router.get("/documents/alerts/upcoming")
+async def get_expiry_alerts(current_user: User = Depends(get_current_user)):
+    docs = await db.documents.find({}, {"_id": 0}).to_list(1000)
+    employees = await db.employees.find({}, {"_id": 0}).to_list(1000)
+    now = datetime.now(timezone.utc)
+    alerts = []
+    
+    for d in docs:
+        exp = d.get('expiry_date')
+        if not exp:
+            continue
+        if isinstance(exp, str):
+            exp = datetime.fromisoformat(exp)
+        if exp.tzinfo is None:
+            exp = exp.replace(tzinfo=timezone.utc)
+        days_left = (exp - now).days
+        alert_days = d.get('alert_days', 30)
+        if days_left <= alert_days:
+            alerts.append({
+                "type": "document",
+                "name": d["name"],
+                "related_to": d.get("related_to", "-"),
+                "expiry_date": exp.isoformat(),
+                "days_left": days_left,
+                "status": "expired" if days_left < 0 else "expiring_soon",
+                "id": d["id"]
+            })
+    
+    for emp in employees:
+        exp = emp.get('document_expiry')
+        if not exp:
+            continue
+        if isinstance(exp, str):
+            exp = datetime.fromisoformat(exp)
+        if exp.tzinfo is None:
+            exp = exp.replace(tzinfo=timezone.utc)
+        days_left = (exp - now).days
+        if days_left <= 30:
+            alerts.append({
+                "type": "employee_document",
+                "name": f"{emp['name']} - ID Document",
+                "related_to": emp["name"],
+                "expiry_date": exp.isoformat(),
+                "days_left": days_left,
+                "status": "expired" if days_left < 0 else "expiring_soon",
+                "id": emp["id"]
+            })
+    
+    alerts.sort(key=lambda x: x["days_left"])
+    return alerts
+
 # WhatsApp Settings Routes
 @api_router.get("/whatsapp/settings")
 async def get_whatsapp_settings(current_user: User = Depends(get_current_user)):
