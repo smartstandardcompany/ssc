@@ -13,10 +13,11 @@ import { format } from 'date-fns';
 
 export default function SupplierPaymentsPage() {
   const [payments, setPayments] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
-    supplier_name: '',
+    supplier_id: '',
     amount: '',
     payment_mode: 'cash',
     date: new Date().toISOString().split('T')[0],
@@ -24,15 +25,19 @@ export default function SupplierPaymentsPage() {
   });
 
   useEffect(() => {
-    fetchPayments();
+    fetchData();
   }, []);
 
-  const fetchPayments = async () => {
+  const fetchData = async () => {
     try {
-      const response = await api.get('/supplier-payments');
-      setPayments(response.data);
+      const [paymentsRes, suppliersRes] = await Promise.all([
+        api.get('/supplier-payments'),
+        api.get('/suppliers'),
+      ]);
+      setPayments(paymentsRes.data);
+      setSuppliers(suppliersRes.data);
     } catch (error) {
-      toast.error('Failed to fetch supplier payments');
+      toast.error('Failed to fetch data');
     } finally {
       setLoading(false);
     }
@@ -50,7 +55,7 @@ export default function SupplierPaymentsPage() {
       toast.success('Supplier payment added successfully');
       setShowForm(false);
       resetForm();
-      fetchPayments();
+      fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to add payment');
     }
@@ -58,7 +63,7 @@ export default function SupplierPaymentsPage() {
 
   const resetForm = () => {
     setFormData({
-      supplier_name: '',
+      supplier_id: '',
       amount: '',
       payment_mode: 'cash',
       date: new Date().toISOString().split('T')[0],
@@ -71,7 +76,7 @@ export default function SupplierPaymentsPage() {
       try {
         await api.delete(`/supplier-payments/${id}`);
         toast.success('Payment deleted successfully');
-        fetchPayments();
+        fetchData();
       } catch (error) {
         toast.error('Failed to delete payment');
       }
@@ -126,14 +131,19 @@ export default function SupplierPaymentsPage() {
               <form onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label>Supplier Name *</Label>
-                    <Input
-                      value={formData.supplier_name}
-                      data-testid="supplier-name-input"
-                      onChange={(e) => setFormData({ ...formData, supplier_name: e.target.value })}
-                      required
-                      placeholder="e.g., ABC Suppliers"
-                    />
+                    <Label>Supplier *</Label>
+                    <Select value={formData.supplier_id} onValueChange={(val) => setFormData({ ...formData, supplier_id: val })} required>
+                      <SelectTrigger data-testid="supplier-select">
+                        <SelectValue placeholder="Select supplier" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {suppliers.map((supplier) => (
+                          <SelectItem key={supplier.id} value={supplier.id}>
+                            {supplier.name} {supplier.current_credit > 0 && `(Credit: $${supplier.current_credit.toFixed(2)})`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div>
