@@ -950,11 +950,11 @@ async def create_expense(expense_data: ExpenseCreate, current_user: User = Depen
     await db.expenses.insert_one(expense_dict)
     
     # Update supplier credit after successful insert
-    if expense_data.supplier_id and expense_data.payment_mode == "credit":
-        supplier = await db.suppliers.find_one({"id": expense_data.supplier_id}, {"_id": 0})
+    if data.get('supplier_id') and expense_data.payment_mode == "credit":
+        supplier = await db.suppliers.find_one({"id": data['supplier_id']}, {"_id": 0})
         if supplier:
             new_credit = supplier.get("current_credit", 0) + expense_data.amount
-            await db.suppliers.update_one({"id": expense_data.supplier_id}, {"$set": {"current_credit": new_credit}})
+            await db.suppliers.update_one({"id": data['supplier_id']}, {"$set": {"current_credit": new_credit}})
     
     return expense
 
