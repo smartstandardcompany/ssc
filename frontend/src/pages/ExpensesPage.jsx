@@ -227,6 +227,21 @@ export default function ExpensesPage() {
                     </div>
                   </div>
 
+                  <div>
+                    <Label>Sub-Category</Label>
+                    <Select value={formData.sub_category || "none"} onValueChange={(val) => setFormData({ ...formData, sub_category: val === "none" ? "" : val })}>
+                      <SelectTrigger data-testid="expense-subcategory-select"><SelectValue placeholder="Select sub-category" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No Sub-Category</SelectItem>
+                        {customCategories.filter(c => c.parent_id).map((cat) => <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex gap-2 mt-2">
+                      <Input value={newSubCategory} onChange={(e) => setNewSubCategory(e.target.value)} placeholder="New sub-category" className="h-8 text-xs" />
+                      <Button type="button" size="sm" variant="outline" onClick={handleAddExpSubCategory} className="h-8 text-xs whitespace-nowrap"><Plus size={12} className="mr-1" />Add</Button>
+                    </div>
+                  </div>
+
                   {isSupplierCategory && (
                     <div>
                       <Label>Supplier *</Label>
