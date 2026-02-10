@@ -18,6 +18,7 @@ export const DashboardLayout = ({ children }) => {
   const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/sales', icon: ShoppingCart, label: 'Sales' },
+    { path: '/credit-report', icon: CreditCard, label: 'Credit Report' },
     { path: '/branches', icon: Store, label: 'Branches' },
     { path: '/customers', icon: Users, label: 'Customers' },
     { path: '/suppliers', icon: Truck, label: 'Suppliers' },
