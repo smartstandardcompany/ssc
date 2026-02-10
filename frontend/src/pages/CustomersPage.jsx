@@ -116,6 +116,23 @@ export default function CustomersPage() {
                   />
                 </div>
                 <div>
+                  <Label>Branch</Label>
+                  <Select value={formData.branch_id} onValueChange={(val) => setFormData({ ...formData, branch_id: val })}>
+                    <SelectTrigger data-testid="customer-branch-select">
+                      <SelectValue placeholder="All branches" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All Branches</SelectItem>
+                      {branches.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">Leave empty for all branches</p>
+                </div>
+                <div>
                   <Label>Phone</Label>
                   <Input
                     value={formData.phone}
