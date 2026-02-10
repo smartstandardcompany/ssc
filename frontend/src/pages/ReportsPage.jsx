@@ -73,37 +73,19 @@ export default function ReportsPage() {
     const filteredExpenses = getFilteredExpenses();
     const filteredPayments = getFilteredSupplierPayments();
 
-    const totalSales = filteredSales.reduce((sum, s) => {
-      if (s.payment_status === 'received' || s.payment_mode !== 'credit') {
-        return sum + s.amount;
-      }
-      return sum;
-    }, 0);
-
+    const totalSales = filteredSales.reduce((sum, s) => sum + (s.final_amount || s.amount - (s.discount || 0)), 0);
     const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
     const totalSupplierPayments = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
     const netProfit = totalSales - totalExpenses - totalSupplierPayments;
 
-    const cashSales = filteredSales.reduce((sum, s) => {
-      if (s.payment_mode === 'cash' || (s.payment_mode === 'credit' && s.received_mode === 'cash')) {
-        return sum + s.amount;
-      }
-      return sum;
-    }, 0);
-
-    const bankSales = filteredSales.reduce((sum, s) => {
-      if (s.payment_mode === 'bank' || (s.payment_mode === 'credit' && s.received_mode === 'bank')) {
-        return sum + s.amount;
-      }
-      return sum;
-    }, 0);
-
-    const creditSales = filteredSales.reduce((sum, s) => {
-      if (s.payment_mode === 'credit' && s.payment_status === 'pending') {
-        return sum + s.amount;
-      }
-      return sum;
-    }, 0);
+    let cashSales = 0, bankSales = 0, creditSales = 0;
+    filteredSales.forEach((s) => {
+      (s.payment_details || []).forEach((p) => {
+        if (p.mode === 'cash') cashSales += p.amount;
+        else if (p.mode === 'bank') bankSales += p.amount;
+      });
+      creditSales += (s.credit_amount || 0) - (s.credit_received || 0);
+    });
 
     return { totalSales, totalExpenses, totalSupplierPayments, netProfit, cashSales, bankSales, creditSales };
   };
@@ -113,14 +95,9 @@ export default function ReportsPage() {
     const filteredSales = getFilteredSales().filter((s) => s.sale_type === 'branch');
 
     branches.forEach((branch) => {
-      const sales = filteredSales.filter((s) => s.branch_id === branch.id);
-      const total = sales.reduce((sum, s) => {
-        if (s.payment_status === 'received' || s.payment_mode !== 'credit') {
-          return sum + s.amount;
-        }
-        return sum;
-      }, 0);
-      branchSales[branch.name] = { total, count: sales.length };
+      const branchData = filteredSales.filter((s) => s.branch_id === branch.id);
+      const total = branchData.reduce((sum, s) => sum + (s.final_amount || s.amount - (s.discount || 0)), 0);
+      branchSales[branch.name] = { total, count: branchData.length };
     });
 
     return branchSales;
