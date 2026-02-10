@@ -605,12 +605,18 @@ async def get_sales(current_user: User = Depends(get_current_user)):
 
 @api_router.post("/sales", response_model=Sale)
 async def create_sale(sale_data: SaleCreate, current_user: User = Depends(get_current_user)):
+    # Calculate final amount after discount
+    discount = sale_data.discount or 0
+    final_amount = sale_data.amount - discount
+    
     # Calculate credit amount
     total_paid = sum(p["amount"] for p in sale_data.payment_details if p["mode"] in ["cash", "bank"])
-    credit_amount = sale_data.amount - total_paid
+    credit_amount = final_amount - total_paid
     
     sale = Sale(
         **sale_data.model_dump(),
+        discount=discount,
+        final_amount=final_amount,
         credit_amount=credit_amount,
         credit_received=0,
         created_by=current_user.id
