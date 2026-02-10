@@ -388,6 +388,8 @@ export default function SalesPage() {
                     <th className="text-left p-3 font-medium text-sm">Branch</th>
                     <th className="text-left p-3 font-medium text-sm">Customer</th>
                     <th className="text-right p-3 font-medium text-sm">Amount</th>
+                    <th className="text-right p-3 font-medium text-sm">Discount</th>
+                    <th className="text-right p-3 font-medium text-sm">Final</th>
                     <th className="text-left p-3 font-medium text-sm">Payment</th>
                     <th className="text-left p-3 font-medium text-sm">Credit</th>
                     <th className="text-right p-3 font-medium text-sm">Actions</th>
@@ -398,6 +400,8 @@ export default function SalesPage() {
                     const branchName = branches.find((b) => b.id === sale.branch_id)?.name || '-';
                     const customerName = customers.find((c) => c.id === sale.customer_id)?.name || '-';
                     const remainingCredit = getRemainingCredit(sale);
+                    const discount = sale.discount || 0;
+                    const finalAmount = sale.final_amount || (sale.amount - discount);
                     
                     return (
                       <tr key={sale.id} className="border-b border-border hover:bg-secondary/50" data-testid="sale-row">
@@ -406,6 +410,10 @@ export default function SalesPage() {
                         <td className="p-3 text-sm">{branchName}</td>
                         <td className="p-3 text-sm">{sale.sale_type === 'online' ? customerName : '-'}</td>
                         <td className="p-3 text-sm text-right font-medium">${sale.amount.toFixed(2)}</td>
+                        <td className="p-3 text-sm text-right text-error">
+                          {discount > 0 ? `-$${discount.toFixed(2)}` : '-'}
+                        </td>
+                        <td className="p-3 text-sm text-right font-bold text-primary">${finalAmount.toFixed(2)}</td>
                         <td className="p-3">
                           <div className="flex gap-1 flex-wrap">
                             {sale.payment_details?.map((p, i) => (
