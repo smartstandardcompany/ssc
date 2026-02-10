@@ -1041,6 +1041,8 @@ async def get_credit_sales_report(current_user: User = Depends(get_current_user)
                 "reference": branch_name if sale["sale_type"] == "branch" else customer_name,
                 "branch": branch_name,
                 "total_amount": sale["amount"],
+                "discount": sale.get("discount", 0),
+                "final_amount": sale.get("final_amount", sale["amount"] - sale.get("discount", 0)),
                 "credit_given": credit_amount,
                 "credit_received": credit_received,
                 "remaining": remaining,
