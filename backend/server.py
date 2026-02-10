@@ -1798,10 +1798,171 @@ async def update_document(doc_id: str, data: DocumentCreate, current_user: User 
 
 @api_router.delete("/documents/{doc_id}")
 async def delete_document(doc_id: str, current_user: User = Depends(get_current_user)):
-    result = await db.documents.delete_one({"id": doc_id})
-    if result.deleted_count == 0:
+    doc = await db.documents.find_one({"id": doc_id}, {"_id": 0})
+    if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
+    if doc.get("file_path") and os.path.exists(doc["file_path"]):
+        os.remove(doc["file_path"])
+    await db.documents.delete_one({"id": doc_id})
     return {"message": "Document deleted"}
+
+# Document File Upload
+@api_router.post("/documents/{doc_id}/upload")
+async def upload_document_file(doc_id: str, file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+    doc = await db.documents.find_one({"id": doc_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    upload_dir = ROOT_DIR / "uploads" / "documents"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    ext = Path(file.filename).suffix
+    file_path = upload_dir / f"{doc_id}{ext}"
+    
+    with open(file_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
+    
+    await db.documents.update_one({"id": doc_id}, {"$set": {"file_path": str(file_path), "file_name": file.filename}})
+    return {"message": "File uploaded", "file_name": file.filename}
+
+@api_router.get("/documents/{doc_id}/download")
+async def download_document_file(doc_id: str, current_user: User = Depends(get_current_user)):
+    doc = await db.documents.find_one({"id": doc_id}, {"_id": 0})
+    if not doc or not doc.get("file_path"):
+        raise HTTPException(status_code=404, detail="No file attached")
+    if not os.path.exists(doc["file_path"]):
+        raise HTTPException(status_code=404, detail="File not found on disk")
+    return FileResponse(doc["file_path"], filename=doc.get("file_name", "document"), media_disposition_type="attachment")
+
+# Company Logo Upload
+@api_router.post("/settings/upload-logo")
+async def upload_logo(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+    upload_dir = ROOT_DIR / "uploads" / "logos"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    file_path = upload_dir / "company_logo.png"
+    with open(file_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
+    return {"message": "Logo uploaded"}
+
+# Payslip PDF Generation
+@api_router.get("/salary-payments/{payment_id}/payslip")
+async def generate_payslip(payment_id: str, current_user: User = Depends(get_current_user)):
+    payment = await db.salary_payments.find_one({"id": payment_id}, {"_id": 0})
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    
+    emp = await db.employees.find_one({"id": payment["employee_id"]}, {"_id": 0})
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Get all payments for this employee in same period
+    period_payments = await db.salary_payments.find(
+        {"employee_id": payment["employee_id"], "period": payment["period"]}, {"_id": 0}
+    ).to_list(100)
+    
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=40, bottomMargin=40)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Header
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=20, textColor=colors.HexColor('#7C3AED'), alignment=1, spaceAfter=5)
+    sub_style = ParagraphStyle('Sub', parent=styles['Normal'], fontSize=10, textColor=colors.grey, alignment=1, spaceAfter=20)
+    
+    elements.append(Paragraph("DATAENTRY HUB", title_style))
+    elements.append(Paragraph("Pay Slip", sub_style))
+    elements.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#7C3AED')))
+    elements.append(Spacer(1, 0.2*inch))
+    
+    # Employee Details
+    emp_data = [
+        ["Employee Name:", emp["name"], "Period:", payment.get("period", "-")],
+        ["Position:", emp.get("position", "-"), "Document ID:", emp.get("document_id", "-")],
+        ["Date:", datetime.fromisoformat(payment["date"]).strftime("%d %b %Y") if isinstance(payment["date"], str) else payment["date"].strftime("%d %b %Y"), "Payment Mode:", payment.get("payment_mode", "-").upper()],
+    ]
+    emp_table = Table(emp_data, colWidths=[1.2*inch, 2.3*inch, 1.2*inch, 2.3*inch])
+    emp_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    elements.append(emp_table)
+    elements.append(Spacer(1, 0.2*inch))
+    elements.append(HRFlowable(width="100%", thickness=1, color=colors.grey))
+    elements.append(Spacer(1, 0.15*inch))
+    
+    # Payment Breakdown
+    elements.append(Paragraph("Payment Details", ParagraphStyle('H2', parent=styles['Heading2'], fontSize=12, textColor=colors.HexColor('#7C3AED'))))
+    
+    salary_total = sum(p["amount"] for p in period_payments if p.get("payment_type") == "salary")
+    overtime = sum(p["amount"] for p in period_payments if p.get("payment_type") == "overtime")
+    advance = sum(p["amount"] for p in period_payments if p.get("payment_type") == "advance")
+    loan_repay = sum(p["amount"] for p in period_payments if p.get("payment_type") == "loan_repayment")
+    tickets = sum(p["amount"] for p in period_payments if p.get("payment_type") == "tickets")
+    id_card = sum(p["amount"] for p in period_payments if p.get("payment_type") == "id_card")
+    
+    pay_rows = [["Description", "Amount"]]
+    pay_rows.append(["Monthly Salary", f"${emp.get('salary', 0):.2f}"])
+    if salary_total > 0: pay_rows.append(["Salary Paid", f"${salary_total:.2f}"])
+    if overtime > 0: pay_rows.append(["Overtime", f"${overtime:.2f}"])
+    if advance > 0: pay_rows.append(["Advance / Loan", f"${advance:.2f}"])
+    if loan_repay > 0: pay_rows.append(["Loan Repayment (Deduction)", f"-${loan_repay:.2f}"])
+    if tickets > 0: pay_rows.append(["Tickets", f"${tickets:.2f}"])
+    if id_card > 0: pay_rows.append(["ID Card", f"${id_card:.2f}"])
+    
+    net = salary_total + overtime - loan_repay
+    balance = emp.get("salary", 0) - salary_total
+    pay_rows.append(["", ""])
+    pay_rows.append(["Net Payment", f"${net:.2f}"])
+    pay_rows.append(["Salary Balance", f"${balance:.2f}"])
+    
+    pay_table = Table(pay_rows, colWidths=[4.5*inch, 2.5*inch])
+    pay_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#7C3AED')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ('FONTNAME', (0, -2), (-1, -1), 'Helvetica-Bold'),
+        ('BACKGROUND', (0, -2), (-1, -1), colors.HexColor('#F5F3FF')),
+    ]))
+    elements.append(pay_table)
+    elements.append(Spacer(1, 0.4*inch))
+    
+    # Acknowledgment section
+    ack_text = "I acknowledge receipt of the above payment."
+    elements.append(Paragraph(ack_text, ParagraphStyle('Ack', parent=styles['Normal'], fontSize=10)))
+    elements.append(Spacer(1, 0.3*inch))
+    
+    sig_data = [
+        ["Employee Signature:", "____________________", "Date:", "____________________"],
+        ["", "", "", ""],
+        ["Authorized By:", "____________________", "Company Stamp:", ""],
+    ]
+    sig_table = Table(sig_data, colWidths=[1.3*inch, 2.2*inch, 1.3*inch, 2.2*inch])
+    sig_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
+    ]))
+    elements.append(sig_table)
+    
+    if payment.get("acknowledged"):
+        ack_at = payment.get("acknowledged_at", "")
+        if isinstance(ack_at, str) and ack_at:
+            ack_at = datetime.fromisoformat(ack_at).strftime("%d %b %Y %H:%M")
+        elements.append(Spacer(1, 0.2*inch))
+        elements.append(Paragraph(f"Digitally acknowledged on: {ack_at}", ParagraphStyle('Dig', parent=styles['Normal'], fontSize=8, textColor=colors.green)))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    fname = f"payslip_{emp['name'].replace(' ', '_')}_{payment.get('period', '').replace(' ', '_')}.pdf"
+    return StreamingResponse(buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename={fname}"})
 
 # Document Expiry Alerts
 @api_router.get("/documents/alerts/upcoming")
