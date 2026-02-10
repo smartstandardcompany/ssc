@@ -130,6 +130,8 @@ export default function CreditReportPage() {
                     <th className="text-left p-3 font-medium text-sm">Branch</th>
                     <th className="text-left p-3 font-medium text-sm">Customer</th>
                     <th className="text-right p-3 font-medium text-sm">Total</th>
+                    <th className="text-right p-3 font-medium text-sm">Discount</th>
+                    <th className="text-right p-3 font-medium text-sm">Final</th>
                     <th className="text-right p-3 font-medium text-sm">Credit Given</th>
                     <th className="text-right p-3 font-medium text-sm">Received</th>
                     <th className="text-right p-3 font-medium text-sm">Remaining</th>
@@ -145,6 +147,8 @@ export default function CreditReportPage() {
                       <td className="p-3 text-sm">{sale.branch}</td>
                       <td className="p-3 text-sm">{sale.sale_type === 'online' ? sale.reference : '-'}</td>
                       <td className="p-3 text-sm text-right font-medium">${sale.total_amount.toFixed(2)}</td>
+                      <td className="p-3 text-sm text-right text-error">{(sale.discount || 0) > 0 ? `-$${sale.discount.toFixed(2)}` : '-'}</td>
+                      <td className="p-3 text-sm text-right font-medium text-primary">${(sale.final_amount || sale.total_amount).toFixed(2)}</td>
                       <td className="p-3 text-sm text-right text-credit font-bold">${sale.credit_given.toFixed(2)}</td>
                       <td className="p-3 text-sm text-right text-success">${sale.credit_received.toFixed(2)}</td>
                       <td className="p-3 text-sm text-right text-error font-bold">${sale.remaining.toFixed(2)}</td>
@@ -167,7 +171,7 @@ export default function CreditReportPage() {
                   ))}
                   {(!reportData?.credit_sales || reportData.credit_sales.length === 0) && (
                     <tr>
-                      <td colSpan={10} className="p-8 text-center text-muted-foreground">
+                      <td colSpan={12} className="p-8 text-center text-muted-foreground">
                         No credit sales found
                       </td>
                     </tr>
