@@ -109,6 +109,7 @@ export default function ExpensesPage() {
   const resetForm = () => {
     setFormData({
       category: 'salary',
+      sub_category: '',
       description: '',
       amount: '',
       payment_mode: 'cash',
