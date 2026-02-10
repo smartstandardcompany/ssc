@@ -499,7 +499,12 @@ async def pay_supplier_credit(supplier_id: str, payment: SupplierCreditPayment, 
 # Customer Routes
 @api_router.get("/customers", response_model=List[Customer])
 async def get_customers(current_user: User = Depends(get_current_user)):
-    customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
+    query = {}
+    # Show customers that belong to user's branch or all branches (branch_id = None)
+    if current_user.branch_id and current_user.role != "admin":
+        query["$or"] = [{"branch_id": current_user.branch_id}, {"branch_id": None}]
+    
+    customers = await db.customers.find(query, {"_id": 0}).to_list(1000)
     for customer in customers:
         if isinstance(customer.get('created_at'), str):
             customer['created_at'] = datetime.fromisoformat(customer['created_at'])
