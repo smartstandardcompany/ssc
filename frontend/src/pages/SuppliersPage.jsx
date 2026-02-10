@@ -59,6 +59,25 @@ export default function SuppliersPage() {
     }
   };
 
+  const handleAddSubCategory = async () => {
+    if (!newSubCategory.trim() || !formData.category) return;
+    try {
+      const parent = categories.find(c => c.name === formData.category);
+      await api.post('/categories', { name: newSubCategory.trim(), type: 'supplier', parent_id: parent?.id || null });
+      toast.success('Sub-category added');
+      setNewSubCategory('');
+      const res = await api.get('/categories?category_type=supplier');
+      setCategories(res.data);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed');
+    }
+  };
+
+  const subCategories = categories.filter(c => {
+    const parent = categories.find(p => p.name === formData.category && !p.parent_id);
+    return c.parent_id && parent && c.parent_id === parent.id;
+  });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
