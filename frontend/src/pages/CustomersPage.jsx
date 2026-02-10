@@ -190,31 +190,32 @@ export default function CustomersPage() {
                         <td className="p-3 text-sm">{branchName}</td>
                         <td className="p-3 text-sm">{customer.phone || '-'}</td>
                         <td className="p-3 text-sm">{customer.email || '-'}</td>
-                      <td className="p-3 text-right">
-                        <div className="flex gap-2 justify-end">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleEdit(customer)}
-                            data-testid="edit-customer-button"
-                            className="h-8"
-                          >
-                            <Edit size={14} className="mr-1" />
-                            Edit
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDelete(customer.id)}
-                            data-testid="delete-customer-button"
-                            className="h-8 text-error hover:text-error"
-                          >
-                            <Trash2 size={14} />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        <td className="p-3 text-right">
+                          <div className="flex gap-2 justify-end">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEdit(customer)}
+                              data-testid="edit-customer-button"
+                              className="h-8"
+                            >
+                              <Edit size={14} className="mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDelete(customer.id)}
+                              data-testid="delete-customer-button"
+                              className="h-8 text-error hover:text-error"
+                            >
+                              <Trash2 size={14} />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {customers.length === 0 && (
                     <tr>
                       <td colSpan={5} className="p-8 text-center text-muted-foreground">
