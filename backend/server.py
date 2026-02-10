@@ -106,13 +106,18 @@ class Sale(BaseModel):
     branch_id: Optional[str] = None
     customer_id: Optional[str] = None
     amount: float
-    payment_details: List[dict]  # [{"mode": "cash", "amount": 100}, {"mode": "bank", "amount": 50}]
+    payment_details: Optional[List[dict]] = []  # [{"mode": "cash", "amount": 100}, {"mode": "bank", "amount": 50}]
     credit_amount: float = 0  # Amount still pending for credit sales
     credit_received: float = 0  # Amount received against credit
     date: datetime
     notes: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     created_by: str
+    
+    # Legacy fields for backward compatibility
+    payment_mode: Optional[str] = None
+    payment_status: Optional[str] = None
+    received_mode: Optional[str] = None
 
 class SaleCreate(BaseModel):
     sale_type: str
