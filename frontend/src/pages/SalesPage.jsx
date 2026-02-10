@@ -84,8 +84,11 @@ export default function SalesPage() {
       else if (p.mode === 'credit') credit += amount;
     });
 
-    const total = cash + bank + credit;
-    return { cash, bank, credit, total };
+    const subtotal = cash + bank + credit;
+    const discount = parseFloat(formData.discount) || 0;
+    const total = subtotal - discount;
+    
+    return { cash, bank, credit, subtotal, discount, total };
   };
 
   const handleSubmit = async (e) => {
