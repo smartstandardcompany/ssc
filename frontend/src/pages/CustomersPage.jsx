@@ -48,7 +48,7 @@ export default function CustomersPage() {
       }
       setShowDialog(false);
       resetForm();
-      fetchCustomers();
+      fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to save customer');
     }
