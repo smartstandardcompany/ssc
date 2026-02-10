@@ -1383,6 +1383,15 @@ async def create_salary_payment(data: SalaryPaymentCreate, current_user: User = 
     p_dict["created_at"] = p_dict["created_at"].isoformat()
     await db.salary_payments.insert_one(p_dict)
     
+    # Update loan balance: advance increases, loan_repayment decreases
+    loan_balance = emp.get("loan_balance", 0)
+    if data.payment_type == "advance":
+        loan_balance += data.amount
+        await db.employees.update_one({"id": data.employee_id}, {"$set": {"loan_balance": loan_balance}})
+    elif data.payment_type == "loan_repayment":
+        loan_balance = max(0, loan_balance - data.amount)
+        await db.employees.update_one({"id": data.employee_id}, {"$set": {"loan_balance": loan_balance}})
+    
     # If payment type is tickets or id_card, also create an expense record
     if data.payment_type in ("tickets", "id_card"):
         cat = "Tickets" if data.payment_type == "tickets" else "ID Card"
@@ -1403,7 +1412,7 @@ async def create_salary_payment(data: SalaryPaymentCreate, current_user: User = 
     
     return {k: v for k, v in p_dict.items() if k != '_id'}
 
-# Employee payment summary (per employee, per month balance)
+# Employee payment summary
 @api_router.get("/employees/{emp_id}/summary")
 async def get_employee_summary(emp_id: str, current_user: User = Depends(get_current_user)):
     emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
@@ -1411,33 +1420,30 @@ async def get_employee_summary(emp_id: str, current_user: User = Depends(get_cur
         raise HTTPException(status_code=404, detail="Employee not found")
     
     payments = await db.salary_payments.find({"employee_id": emp_id}, {"_id": 0}).sort("date", -1).to_list(1000)
+    leaves = await db.leaves.find({"employee_id": emp_id}, {"_id": 0}).to_list(1000)
     
-    # Group by period
+    # Group payments by period
     monthly = {}
+    total_advance = 0
+    total_repaid = 0
     for p in payments:
         period = p.get("period", "Unknown")
         if period not in monthly:
-            monthly[period] = {"salary_paid": 0, "advance": 0, "overtime": 0, "tickets": 0, "id_card": 0, "total": 0, "payments": []}
+            monthly[period] = {"salary_paid": 0, "advance": 0, "overtime": 0, "tickets": 0, "id_card": 0, "loan_repayment": 0, "total": 0, "payments": []}
         pt = p.get("payment_type", "salary")
         amount = p.get("amount", 0)
-        if pt == "salary":
+        if pt in monthly[period]:
+            monthly[period][pt] += amount
+        else:
             monthly[period]["salary_paid"] += amount
-        elif pt == "advance":
-            monthly[period]["advance"] += amount
-        elif pt == "overtime":
-            monthly[period]["overtime"] += amount
-        elif pt == "tickets":
-            monthly[period]["tickets"] += amount
-        elif pt == "id_card":
-            monthly[period]["id_card"] += amount
         monthly[period]["total"] += amount
+        if pt == "advance":
+            total_advance += amount
+        if pt == "loan_repayment":
+            total_repaid += amount
         monthly[period]["payments"].append({
-            "id": p["id"],
-            "payment_type": pt,
-            "amount": amount,
-            "payment_mode": p.get("payment_mode", "cash"),
-            "date": p["date"],
-            "notes": p.get("notes", "")
+            "id": p["id"], "payment_type": pt, "amount": amount,
+            "payment_mode": p.get("payment_mode", "cash"), "date": p["date"], "notes": p.get("notes", "")
         })
     
     salary = emp.get("salary", 0)
@@ -1445,22 +1451,35 @@ async def get_employee_summary(emp_id: str, current_user: User = Depends(get_cur
     for period, data in monthly.items():
         balance = salary - data["salary_paid"]
         summary.append({
-            "period": period,
-            "monthly_salary": salary,
-            "salary_paid": data["salary_paid"],
-            "advance": data["advance"],
-            "overtime": data["overtime"],
-            "tickets": data["tickets"],
-            "id_card": data["id_card"],
-            "total_paid": data["total"],
-            "balance": balance,
+            "period": period, "monthly_salary": salary,
+            "salary_paid": data["salary_paid"], "advance": data["advance"],
+            "overtime": data["overtime"], "tickets": data["tickets"],
+            "id_card": data["id_card"], "loan_repayment": data["loan_repayment"],
+            "total_paid": data["total"], "balance": balance,
             "payments": data["payments"]
         })
     
+    # Leave summary
+    annual_used = sum(l.get("days", 0) for l in leaves if l.get("leave_type") == "annual")
+    sick_used = sum(l.get("days", 0) for l in leaves if l.get("leave_type") == "sick")
+    unpaid_used = sum(l.get("days", 0) for l in leaves if l.get("leave_type") == "unpaid")
+    
     return {
-        "employee": {"id": emp["id"], "name": emp["name"], "salary": salary, "position": emp.get("position", "")},
+        "employee": {
+            "id": emp["id"], "name": emp["name"], "salary": salary,
+            "position": emp.get("position", ""),
+            "loan_balance": emp.get("loan_balance", 0),
+            "annual_leave_entitled": emp.get("annual_leave_entitled", 30),
+            "sick_leave_entitled": emp.get("sick_leave_entitled", 15),
+        },
         "monthly_summary": summary,
-        "total_all_time": sum(p.get("amount", 0) for p in payments)
+        "total_all_time": sum(p.get("amount", 0) for p in payments),
+        "loan": {"total_advance": total_advance, "total_repaid": total_repaid, "balance": emp.get("loan_balance", 0)},
+        "leave": {
+            "annual_used": annual_used, "annual_remaining": emp.get("annual_leave_entitled", 30) - annual_used,
+            "sick_used": sick_used, "sick_remaining": emp.get("sick_leave_entitled", 15) - sick_used,
+            "unpaid_used": unpaid_used
+        }
     }
 
 @api_router.delete("/salary-payments/{payment_id}")
@@ -1469,6 +1488,39 @@ async def delete_salary_payment(payment_id: str, current_user: User = Depends(ge
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Payment not found")
     return {"message": "Salary payment deleted"}
+
+# Leave Routes
+@api_router.get("/leaves")
+async def get_leaves(employee_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {}
+    if employee_id:
+        query["employee_id"] = employee_id
+    leaves = await db.leaves.find(query, {"_id": 0}).sort("start_date", -1).to_list(1000)
+    for l in leaves:
+        for f in ['start_date', 'end_date', 'created_at']:
+            if isinstance(l.get(f), str):
+                l[f] = datetime.fromisoformat(l[f])
+    return leaves
+
+@api_router.post("/leaves")
+async def create_leave(data: LeaveCreate, current_user: User = Depends(get_current_user)):
+    emp = await db.employees.find_one({"id": data.employee_id}, {"_id": 0})
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    leave = Leave(**data.model_dump(), employee_name=emp["name"])
+    l_dict = leave.model_dump()
+    l_dict["start_date"] = l_dict["start_date"].isoformat()
+    l_dict["end_date"] = l_dict["end_date"].isoformat()
+    l_dict["created_at"] = l_dict["created_at"].isoformat()
+    await db.leaves.insert_one(l_dict)
+    return {k: v for k, v in l_dict.items() if k != '_id'}
+
+@api_router.delete("/leaves/{leave_id}")
+async def delete_leave(leave_id: str, current_user: User = Depends(get_current_user)):
+    result = await db.leaves.delete_one({"id": leave_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Leave not found")
+    return {"message": "Leave deleted"}
 
 # Document Routes
 @api_router.get("/documents")
