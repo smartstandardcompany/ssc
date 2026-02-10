@@ -12,6 +12,7 @@ import { Plus, Trash2, DollarSign, X } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { ExportButtons } from '@/components/ExportButtons';
 
 export default function SalesPage() {
   const [sales, setSales] = useState([]);
@@ -187,7 +188,9 @@ export default function SalesPage() {
             <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="sales-page-title">Sales Management</h1>
             <p className="text-muted-foreground">Track sales with flexible payment options</p>
           </div>
-          <Button
+          <div className="flex gap-3 items-center">
+            <ExportButtons dataType="sales" />
+            <Button
             onClick={() => setShowForm(!showForm)}
             data-testid="add-sale-button"
             className="rounded-full"
@@ -195,6 +198,7 @@ export default function SalesPage() {
             <Plus size={18} className="mr-2" />
             Add Sale
           </Button>
+          </div>
         </div>
 
         {showForm && (
