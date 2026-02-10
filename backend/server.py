@@ -633,7 +633,11 @@ async def get_suppliers(current_user: User = Depends(get_current_user)):
 
 @api_router.post("/suppliers", response_model=Supplier)
 async def create_supplier(supplier_data: SupplierCreate, current_user: User = Depends(get_current_user)):
-    supplier = Supplier(**supplier_data.model_dump())
+    data = supplier_data.model_dump()
+    for f in ['branch_id', 'category', 'sub_category', 'phone', 'email']:
+        if data.get(f) == '':
+            data[f] = None
+    supplier = Supplier(**data)
     supplier_dict = supplier.model_dump()
     supplier_dict["created_at"] = supplier_dict["created_at"].isoformat()
     await db.suppliers.insert_one(supplier_dict)
