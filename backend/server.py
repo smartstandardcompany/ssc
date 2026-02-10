@@ -261,9 +261,12 @@ class Employee(BaseModel):
     position: Optional[str] = None
     branch_id: Optional[str] = None
     salary: float = 0
-    pay_frequency: str = "monthly"  # monthly, weekly, biweekly
+    pay_frequency: str = "monthly"
     join_date: Optional[datetime] = None
     document_expiry: Optional[datetime] = None
+    loan_balance: float = 0  # Outstanding advance/loan amount
+    annual_leave_entitled: int = 30  # Days per year
+    sick_leave_entitled: int = 15
     notes: Optional[str] = None
     active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -279,6 +282,8 @@ class EmployeeCreate(BaseModel):
     pay_frequency: Optional[str] = "monthly"
     join_date: Optional[datetime] = None
     document_expiry: Optional[datetime] = None
+    annual_leave_entitled: Optional[int] = 30
+    sick_leave_entitled: Optional[int] = 15
     notes: Optional[str] = None
 
 # Document Expiry Tracking
