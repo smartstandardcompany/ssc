@@ -118,12 +118,12 @@ export default function CustomersPage() {
                 </div>
                 <div>
                   <Label>Branch</Label>
-                  <Select value={formData.branch_id} onValueChange={(val) => setFormData({ ...formData, branch_id: val })}>
+                  <Select value={formData.branch_id || "all"} onValueChange={(val) => setFormData({ ...formData, branch_id: val === "all" ? "" : val })}>
                     <SelectTrigger data-testid="customer-branch-select">
                       <SelectValue placeholder="All branches" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Branches</SelectItem>
+                      <SelectItem value="all">All Branches</SelectItem>
                       {branches.map((branch) => (
                         <SelectItem key={branch.id} value={branch.id}>
                           {branch.name}
