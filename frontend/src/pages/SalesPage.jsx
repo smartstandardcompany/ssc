@@ -96,7 +96,7 @@ export default function SalesPage() {
     
     const totals = calculateTotals();
     
-    if (totals.total === 0) {
+    if (totals.subtotal === 0) {
       toast.error('Please add at least one payment entry');
       return;
     }
@@ -104,7 +104,8 @@ export default function SalesPage() {
     try {
       const payload = {
         ...formData,
-        amount: totals.total,
+        amount: totals.subtotal,
+        discount: totals.discount,
         payment_details: formData.payment_details
           .filter(p => parseFloat(p.amount) > 0)
           .map(p => ({
