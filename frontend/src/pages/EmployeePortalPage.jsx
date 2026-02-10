@@ -57,6 +57,20 @@ export default function EmployeePortalPage() {
     } catch { toast.error('Failed to acknowledge'); }
   };
 
+  const downloadPayslip = async (paymentId) => {
+    try {
+      const res = await api.get(`/salary-payments/${paymentId}/payslip`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `payslip_${paymentId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Payslip downloaded');
+    } catch { toast.error('Failed'); }
+  };
+
   const getStatusBadge = (status) => {
     if (status === 'approved') return <Badge className="bg-success/20 text-success"><CheckCircle size={12} className="mr-1" />Approved</Badge>;
     if (status === 'rejected') return <Badge className="bg-error/20 text-error"><XCircle size={12} className="mr-1" />Rejected</Badge>;
