@@ -56,7 +56,7 @@ export default function CustomersPage() {
 
   const handleEdit = (customer) => {
     setEditingCustomer(customer);
-    setFormData({ name: customer.name, phone: customer.phone || '', email: customer.email || '' });
+    setFormData({ name: customer.name, branch_id: customer.branch_id || '', phone: customer.phone || '', email: customer.email || '' });
     setShowDialog(true);
   };
 
