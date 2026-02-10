@@ -186,7 +186,7 @@ export default function SuppliersPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">No Category</SelectItem>
-                      {categories.map((cat) => (
+                      {categories.filter(c => !c.parent_id).map((cat) => (
                         <SelectItem key={cat.id} value={cat.name}>
                           {cat.name}
                         </SelectItem>
@@ -207,6 +207,22 @@ export default function SuppliersPage() {
                     </Button>
                   </div>
                 </div>
+                {formData.category && (
+                  <div>
+                    <Label>Sub-Category</Label>
+                    <Select value={formData.sub_category || "none"} onValueChange={(val) => setFormData({ ...formData, sub_category: val === "none" ? "" : val })}>
+                      <SelectTrigger data-testid="supplier-subcategory-select"><SelectValue placeholder="Select sub-category" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No Sub-Category</SelectItem>
+                        {subCategories.map((cat) => <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex gap-2 mt-2">
+                      <Input value={newSubCategory} onChange={(e) => setNewSubCategory(e.target.value)} placeholder="New sub-category" className="h-8 text-xs" data-testid="new-subcategory-input" />
+                      <Button type="button" size="sm" variant="outline" onClick={handleAddSubCategory} className="h-8 text-xs whitespace-nowrap"><Plus size={12} className="mr-1" />Add</Button>
+                    </div>
+                  </div>
+                )}
                 <div>
                   <Label>Branch</Label>
                   <Select value={formData.branch_id || "all"} onValueChange={(val) => setFormData({ ...formData, branch_id: val === "all" ? "" : val })}>
