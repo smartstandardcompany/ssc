@@ -1230,6 +1230,21 @@ async def export_data(request: dict, current_user: User = Depends(get_current_us
         rows = [[s["name"], s.get("category", "-"), branch_map.get(s.get("branch_id"), "All"), s.get("phone", "-"), s.get("current_credit", 0), s.get("credit_limit", 0)] for s in suppliers]
         headers = ["Name", "Category", "Branch", "Phone", "Current Credit", "Credit Limit"]
         title = "Suppliers Report"
+    elif data_type == "employees":
+        employees = await db.employees.find({}, {"_id": 0}).to_list(1000)
+        rows = []
+        for emp in employees:
+            rows.append([
+                emp["name"],
+                emp.get("position", "-"),
+                emp.get("document_id", "-"),
+                branch_map.get(emp.get("branch_id"), "-"),
+                emp.get("salary", 0),
+                emp.get("pay_frequency", "monthly"),
+                datetime.fromisoformat(emp["document_expiry"]).strftime("%Y-%m-%d") if emp.get("document_expiry") else "-"
+            ])
+        headers = ["Name", "Position", "Document ID", "Branch", "Salary", "Pay Frequency", "Doc Expiry"]
+        title = "Employees Report"
     else:
         raise HTTPException(status_code=400, detail="Invalid data type")
     
