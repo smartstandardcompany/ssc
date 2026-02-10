@@ -711,7 +711,7 @@ async def delete_sale(sale_id: str, current_user: User = Depends(get_current_use
 # Supplier Payment Routes
 @api_router.get("/supplier-payments", response_model=List[SupplierPayment])
 async def get_supplier_payments(current_user: User = Depends(get_current_user)):
-    payments = await db.supplier_payments.find({}, {"_id": 0}).sort("date", -1).to_list(1000)
+    payments = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).sort("date", -1).to_list(1000)
     for payment in payments:
         if isinstance(payment.get('date'), str):
             payment['date'] = datetime.fromisoformat(payment['date'])
