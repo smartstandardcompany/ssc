@@ -721,10 +721,19 @@ async def get_supplier_payments(current_user: User = Depends(get_current_user)):
 
 @api_router.post("/supplier-payments", response_model=SupplierPayment)
 async def create_supplier_payment(payment_data: SupplierPaymentCreate, current_user: User = Depends(get_current_user)):
-    # Get supplier details
     supplier = await db.suppliers.find_one({"id": payment_data.supplier_id}, {"_id": 0})
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
+    
+    # Validate credit limit BEFORE inserting payment
+    if payment_data.payment_mode == "credit":
+        credit_limit = supplier.get("credit_limit", 0)
+        current_credit = supplier.get("current_credit", 0)
+        new_credit = current_credit + payment_data.amount
+        # Only enforce limit if credit_limit > 0 (0 means no limit set)
+        if credit_limit > 0 and new_credit > credit_limit:
+            available = credit_limit - current_credit
+            raise HTTPException(status_code=400, detail=f"Payment exceeds credit limit. Available: ${available:.2f}")
     
     payment = SupplierPayment(
         **payment_data.model_dump(),
@@ -736,11 +745,9 @@ async def create_supplier_payment(payment_data: SupplierPaymentCreate, current_u
     payment_dict["created_at"] = payment_dict["created_at"].isoformat()
     await db.supplier_payments.insert_one(payment_dict)
     
-    # If payment mode is credit, update supplier's current credit
+    # Update supplier's current credit after successful insert
     if payment_data.payment_mode == "credit":
         new_credit = supplier.get("current_credit", 0) + payment_data.amount
-        if new_credit > supplier.get("credit_limit", 0):
-            raise HTTPException(status_code=400, detail=f"Payment exceeds credit limit. Available: ${supplier.get('credit_limit', 0) - supplier.get('current_credit', 0):.2f}")
         await db.suppliers.update_one({"id": payment_data.supplier_id}, {"$set": {"current_credit": new_credit}})
     
     return payment
