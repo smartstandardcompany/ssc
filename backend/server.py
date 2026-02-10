@@ -298,14 +298,16 @@ class Document(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
-    document_type: str  # "license", "insurance", "permit", "contract", "employee_id", "other"
+    document_type: str
     document_number: Optional[str] = None
-    related_to: Optional[str] = None  # employee name, supplier name, branch name
+    related_to: Optional[str] = None
     issue_date: Optional[datetime] = None
     expiry_date: datetime
-    alert_days: int = 30  # days before expiry to alert
+    alert_days: int = 30
+    file_path: Optional[str] = None  # Stored file path
+    file_name: Optional[str] = None  # Original file name
     notes: Optional[str] = None
-    status: str = "active"  # "active", "expired", "renewed"
+    status: str = "active"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class DocumentCreate(BaseModel):
