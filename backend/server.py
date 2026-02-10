@@ -1078,7 +1078,6 @@ def generate_pdf_report(sales, expenses, supplier_payments, branches, customers)
     elements = []
     styles = getSampleStyleSheet()
     
-    # Title
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Heading1'],
@@ -1090,8 +1089,7 @@ def generate_pdf_report(sales, expenses, supplier_payments, branches, customers)
     elements.append(Paragraph("DataEntry Hub - Sales Report", title_style))
     elements.append(Spacer(1, 0.2*inch))
     
-    # Summary Stats
-    total_sales = sum(s["amount"] for s in sales if s["payment_status"] == "received" or s["payment_mode"] != "credit")
+    total_sales = sum(s.get("final_amount", s["amount"] - s.get("discount", 0)) for s in sales)
     total_expenses = sum(e["amount"] for e in expenses)
     total_supplier = sum(p["amount"] for p in supplier_payments)
     net_profit = total_sales - total_expenses - total_supplier
@@ -1118,18 +1116,20 @@ def generate_pdf_report(sales, expenses, supplier_payments, branches, customers)
     elements.append(summary_table)
     elements.append(Spacer(1, 0.3*inch))
     
-    # Sales Table
     elements.append(Paragraph("Sales Transactions", styles['Heading2']))
     elements.append(Spacer(1, 0.1*inch))
     
     sales_data = [["Date", "Type", "Amount", "Payment"]]
-    for sale in sales[:20]:  # Limit to 20 for PDF
+    for sale in sales[:20]:
         date_str = datetime.fromisoformat(sale["date"]).strftime("%Y-%m-%d")
+        modes = ", ".join(p["mode"].capitalize() for p in sale.get("payment_details", []))
+        if not modes:
+            modes = sale.get("payment_mode", "N/A").capitalize()
         sales_data.append([
             date_str,
             sale["sale_type"].capitalize(),
             f"${sale['amount']:.2f}",
-            sale["payment_mode"].capitalize()
+            modes
         ])
     
     sales_table = Table(sales_data, colWidths=[1.5*inch, 1.5*inch, 1.5*inch, 1.5*inch])
@@ -1161,11 +1161,10 @@ def generate_excel_report(sales, expenses, supplier_payments, branches, customer
     ws_summary = wb.active
     ws_summary.title = "Summary"
     
-    # Add headers
     ws_summary['A1'] = "DataEntry Hub - Sales Report"
     ws_summary['A1'].font = Font(size=16, bold=True, color="7C3AED")
     
-    total_sales = sum(s["amount"] for s in sales if s["payment_status"] == "received" or s["payment_mode"] != "credit")
+    total_sales = sum(s.get("final_amount", s["amount"] - s.get("discount", 0)) for s in sales)
     total_expenses = sum(e["amount"] for e in expenses)
     total_supplier = sum(p["amount"] for p in supplier_payments)
     net_profit = total_sales - total_expenses - total_supplier
@@ -1201,14 +1200,20 @@ def generate_excel_report(sales, expenses, supplier_payments, branches, customer
         branch_name = next((b["name"] for b in branches if b["id"] == sale.get("branch_id")), "-")
         customer_name = next((c["name"] for c in customers if c["id"] == sale.get("customer_id")), "-")
         ref = branch_name if sale["sale_type"] == "branch" else customer_name
+        modes = ", ".join(p["mode"].capitalize() for p in sale.get("payment_details", []))
+        if not modes:
+            modes = sale.get("payment_mode", "N/A").capitalize()
+        has_credit = sale.get("credit_amount", 0) > 0
+        remaining = sale.get("credit_amount", 0) - sale.get("credit_received", 0)
+        status = "Paid" if remaining <= 0 else ("Partial" if sale.get("credit_received", 0) > 0 else "Pending") if has_credit else "Received"
         
         ws_sales.append([
             date_str,
             sale["sale_type"].capitalize(),
             ref,
             sale["amount"],
-            sale["payment_mode"].capitalize(),
-            sale["payment_status"].capitalize()
+            modes,
+            status
         ])
     
     # Expenses Sheet
