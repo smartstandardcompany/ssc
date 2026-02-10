@@ -403,7 +403,13 @@ export default function SalesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sales.map((sale) => {
+                  {sales.filter(s => {
+                    if (dateFilter.start && dateFilter.end) {
+                      const d = new Date(s.date);
+                      return d >= dateFilter.start && d <= dateFilter.end;
+                    }
+                    return true;
+                  }).map((sale) => {
                     const branchName = branches.find((b) => b.id === sale.branch_id)?.name || '-';
                     const customerName = customers.find((c) => c.id === sale.customer_id)?.name || '-';
                     const remainingCredit = getRemainingCredit(sale);
