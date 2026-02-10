@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -20,6 +21,7 @@ export default function ExpensesPage() {
     description: '',
     amount: '',
     payment_mode: 'cash',
+    supplier_id: '',
     date: new Date().toISOString().split('T')[0],
     notes: '',
   });
@@ -30,19 +32,24 @@ export default function ExpensesPage() {
     { value: 'maintenance', label: 'Maintenance' },
     { value: 'vat', label: 'VAT' },
     { value: 'insurance', label: 'Insurance' },
+    { value: 'supplier', label: 'Supplier Expense' },
     { value: 'other', label: 'Other' },
   ];
 
   useEffect(() => {
-    fetchExpenses();
+    fetchData();
   }, []);
 
-  const fetchExpenses = async () => {
+  const fetchData = async () => {
     try {
-      const response = await api.get('/expenses');
-      setExpenses(response.data);
+      const [expensesRes, suppliersRes] = await Promise.all([
+        api.get('/expenses'),
+        api.get('/suppliers'),
+      ]);
+      setExpenses(expensesRes.data);
+      setSuppliers(suppliersRes.data);
     } catch (error) {
-      toast.error('Failed to fetch expenses');
+      toast.error('Failed to fetch data');
     } finally {
       setLoading(false);
     }
@@ -54,13 +61,14 @@ export default function ExpensesPage() {
       const payload = {
         ...formData,
         amount: parseFloat(formData.amount),
+        supplier_id: formData.supplier_id || null,
         date: new Date(formData.date).toISOString(),
       };
       await api.post('/expenses', payload);
       toast.success('Expense added successfully');
       setShowForm(false);
       resetForm();
-      fetchExpenses();
+      fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to add expense');
     }
@@ -72,6 +80,7 @@ export default function ExpensesPage() {
       description: '',
       amount: '',
       payment_mode: 'cash',
+      supplier_id: '',
       date: new Date().toISOString().split('T')[0],
       notes: '',
     });
@@ -82,7 +91,7 @@ export default function ExpensesPage() {
       try {
         await api.delete(`/expenses/${id}`);
         toast.success('Expense deleted successfully');
-        fetchExpenses();
+        fetchData();
       } catch (error) {
         toast.error('Failed to delete expense');
       }
@@ -95,6 +104,8 @@ export default function ExpensesPage() {
         return 'bg-cash/20 text-cash border-cash/30';
       case 'bank':
         return 'bg-bank/20 text-bank border-bank/30';
+      case 'credit':
+        return 'bg-credit/20 text-credit border-credit/30';
       default:
         return 'bg-secondary text-secondary-foreground';
     }
@@ -108,13 +119,15 @@ export default function ExpensesPage() {
     );
   }
 
+  const isSupplierCategory = formData.category === 'supplier';
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="expenses-page-title">Expenses</h1>
-            <p className="text-muted-foreground">Track all business expenses</p>
+            <p className="text-muted-foreground">Track business expenses and supplier costs</p>
           </div>
           <Button
             onClick={() => setShowForm(!showForm)}
@@ -136,7 +149,7 @@ export default function ExpensesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label>Category *</Label>
-                    <Select value={formData.category} onValueChange={(val) => setFormData({ ...formData, category: val })}>
+                    <Select value={formData.category} onValueChange={(val) => setFormData({ ...formData, category: val, supplier_id: '' })}>
                       <SelectTrigger data-testid="category-select">
                         <SelectValue />
                       </SelectTrigger>
@@ -150,7 +163,25 @@ export default function ExpensesPage() {
                     </Select>
                   </div>
 
-                  <div>
+                  {isSupplierCategory && (
+                    <div>
+                      <Label>Supplier *</Label>
+                      <Select value={formData.supplier_id} onValueChange={(val) => setFormData({ ...formData, supplier_id: val })} required={isSupplierCategory}>
+                        <SelectTrigger data-testid="supplier-select">
+                          <SelectValue placeholder="Select supplier" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {suppliers.map((supplier) => (
+                            <SelectItem key={supplier.id} value={supplier.id}>
+                              {supplier.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div className={isSupplierCategory ? '' : 'md:col-span-2'}>
                     <Label>Description *</Label>
                     <Input
                       value={formData.description}
@@ -183,6 +214,7 @@ export default function ExpensesPage() {
                       <SelectContent>
                         <SelectItem value="cash">Cash</SelectItem>
                         <SelectItem value="bank">Bank</SelectItem>
+                        {isSupplierCategory && <SelectItem value="credit">Credit</SelectItem>}
                       </SelectContent>
                     </Select>
                   </div>
@@ -232,43 +264,48 @@ export default function ExpensesPage() {
                     <th className="text-left p-3 font-medium text-sm">Date</th>
                     <th className="text-left p-3 font-medium text-sm">Category</th>
                     <th className="text-left p-3 font-medium text-sm">Description</th>
+                    <th className="text-left p-3 font-medium text-sm">Supplier</th>
                     <th className="text-right p-3 font-medium text-sm">Amount</th>
-                    <th className="text-left p-3 font-medium text-sm">Payment Mode</th>
+                    <th className="text-left p-3 font-medium text-sm">Payment</th>
                     <th className="text-right p-3 font-medium text-sm">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {expenses.map((expense) => (
-                    <tr key={expense.id} className="border-b border-border hover:bg-secondary/50" data-testid="expense-row">
-                      <td className="p-3 text-sm">{format(new Date(expense.date), 'MMM dd, yyyy')}</td>
-                      <td className="p-3">
-                        <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-primary/10 text-primary capitalize">
-                          {expense.category}
-                        </span>
-                      </td>
-                      <td className="p-3 text-sm">{expense.description}</td>
-                      <td className="p-3 text-sm text-right font-medium">${expense.amount.toFixed(2)}</td>
-                      <td className="p-3">
-                        <span className={`inline-block px-2 py-1 rounded text-xs font-medium border ${getPaymentBadgeClass(expense.payment_mode)}`}>
-                          {expense.payment_mode}
-                        </span>
-                      </td>
-                      <td className="p-3 text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDelete(expense.id)}
-                          data-testid="delete-expense-button"
-                          className="h-8 text-error hover:text-error"
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
+                  {expenses.map((expense) => {
+                    const supplierName = suppliers.find((s) => s.id === expense.supplier_id)?.name || '-';
+                    return (
+                      <tr key={expense.id} className="border-b border-border hover:bg-secondary/50" data-testid="expense-row">
+                        <td className="p-3 text-sm">{format(new Date(expense.date), 'MMM dd, yyyy')}</td>
+                        <td className="p-3">
+                          <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-primary/10 text-primary capitalize">
+                            {expense.category}
+                          </span>
+                        </td>
+                        <td className="p-3 text-sm">{expense.description}</td>
+                        <td className="p-3 text-sm">{supplierName}</td>
+                        <td className="p-3 text-sm text-right font-medium">${expense.amount.toFixed(2)}</td>
+                        <td className="p-3">
+                          <span className={`inline-block px-2 py-1 rounded text-xs font-medium border ${getPaymentBadgeClass(expense.payment_mode)}`}>
+                            {expense.payment_mode}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDelete(expense.id)}
+                            data-testid="delete-expense-button"
+                            className="h-8 text-error hover:text-error"
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {expenses.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                      <td colSpan={7} className="p-8 text-center text-muted-foreground">
                         No expenses recorded yet. Add your first expense above!
                       </td>
                     </tr>
