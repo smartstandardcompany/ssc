@@ -65,6 +65,30 @@ export default function DocumentsPage() {
     }
   };
 
+  const handleFileUpload = async (docId, file) => {
+    try {
+      const formPayload = new FormData();
+      formPayload.append('file', file);
+      await api.post(`/documents/${docId}/upload`, formPayload, { headers: { 'Content-Type': 'multipart/form-data' } });
+      toast.success('File uploaded');
+      fetchData();
+    } catch { toast.error('Upload failed'); }
+  };
+
+  const handleFileDownload = async (docId, fileName) => {
+    try {
+      const res = await api.get(`/documents/${docId}/download`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName || 'document');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch { toast.error('Download failed'); }
+  };
+
   const resetForm = () => { setFormData({ name: '', document_type: 'license', document_number: '', related_to: '', issue_date: '', expiry_date: '', alert_days: 30, notes: '' }); setEditingDoc(null); };
 
   const getStatusBadge = (doc) => {
