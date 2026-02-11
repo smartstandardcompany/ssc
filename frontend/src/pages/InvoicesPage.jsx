@@ -38,8 +38,8 @@ export default function InvoicesPage() {
 
   const fetchData = async () => {
     try {
-      const [iRes, bRes, cRes] = await Promise.all([api.get('/invoices'), api.get('/branches'), api.get('/customers')]);
-      setInvoices(iRes.data); setBranches(bRes.data); setCustomers(cRes.data);
+      const [iRes, bRes, cRes, itemsRes] = await Promise.all([api.get('/invoices'), api.get('/branches'), api.get('/customers'), api.get('/items')]);
+      setInvoices(iRes.data); setBranches(bRes.data); setCustomers(cRes.data); setMasterItems(itemsRes.data);
     } catch { toast.error('Failed to fetch data'); }
     finally { setLoading(false); }
   };
