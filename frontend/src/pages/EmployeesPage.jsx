@@ -36,6 +36,7 @@ export default function EmployeesPage() {
   const [branches, setBranches] = useState([]);
   const [salaryPayments, setSalaryPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [branchFilter, setBranchFilter] = useState([]);
   const [showDialog, setShowDialog] = useState(false);
   const [showPayDialog, setShowPayDialog] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
