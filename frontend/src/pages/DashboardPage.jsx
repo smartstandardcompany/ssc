@@ -196,6 +196,77 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Spending Breakdown */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="border-border">
+            <CardHeader><CardTitle className="font-outfit text-base">Cash vs Bank Spending</CardTitle></CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center p-3 bg-cash/10 rounded-lg"><span className="text-sm">Expenses (Cash)</span><span className="font-bold text-cash">${(stats?.expenses_cash || 0).toFixed(2)}</span></div>
+                <div className="flex justify-between items-center p-3 bg-bank/10 rounded-lg"><span className="text-sm">Expenses (Bank)</span><span className="font-bold text-bank">${(stats?.expenses_bank || 0).toFixed(2)}</span></div>
+                <div className="flex justify-between items-center p-3 bg-cash/10 rounded-lg"><span className="text-sm">Supplier Pay (Cash)</span><span className="font-bold text-cash">${(stats?.sp_cash || 0).toFixed(2)}</span></div>
+                <div className="flex justify-between items-center p-3 bg-bank/10 rounded-lg"><span className="text-sm">Supplier Pay (Bank)</span><span className="font-bold text-bank">${(stats?.sp_bank || 0).toFixed(2)}</span></div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border">
+            <CardHeader><CardTitle className="font-outfit text-base">Expense Categories</CardTitle></CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {stats?.expense_by_category && Object.entries(stats.expense_by_category).sort((a, b) => b[1] - a[1]).map(([cat, amt]) => (
+                  <div key={cat} className="flex justify-between items-center p-2 bg-secondary/50 rounded" data-testid="expense-cat-item">
+                    <span className="text-sm capitalize">{cat.replace('_', ' ')}</span>
+                    <span className="font-bold text-sm">${amt.toFixed(2)}</span>
+                  </div>
+                ))}
+                {(!stats?.expense_by_category || Object.keys(stats.expense_by_category).length === 0) && <p className="text-sm text-muted-foreground text-center py-4">No expenses</p>}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Supplier Dues & Branch Dues */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Card className="border-border border-warning/30 bg-warning/5">
+            <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Supplier Dues</CardTitle></CardHeader>
+            <CardContent><div className="text-2xl font-bold font-outfit text-warning" data-testid="supplier-dues">${(stats?.supplier_dues || 0).toFixed(2)}</div><p className="text-xs text-muted-foreground mt-1">Total owed to suppliers</p></CardContent>
+          </Card>
+
+          {stats?.branch_dues && Object.keys(stats.branch_dues).length > 0 && (
+            <Card className="border-border md:col-span-2">
+              <CardHeader className="pb-2"><CardTitle className="font-outfit text-base">Branch Dues</CardTitle></CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {Object.entries(stats.branch_dues).map(([key, amt]) => (
+                    <div key={key} className="flex justify-between items-center p-2 bg-info/10 rounded" data-testid="branch-due-item">
+                      <span className="text-sm">{key}</span>
+                      <span className="font-bold text-info">${amt.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Upcoming Recurring Expenses */}
+        {stats?.upcoming_expenses?.length > 0 && (
+          <Card className="border-border border-error/30 bg-error/5">
+            <CardHeader><CardTitle className="font-outfit flex items-center gap-2"><AlertTriangle size={18} className="text-error" />Upcoming Expenses ({stats.upcoming_expenses.length})</CardTitle></CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {stats.upcoming_expenses.map((e, i) => (
+                  <div key={i} className="flex justify-between items-center p-3 bg-background rounded-lg border" data-testid="upcoming-expense">
+                    <div><div className="font-medium text-sm">{e.name}</div><div className="text-xs text-muted-foreground capitalize">{e.category} | Due: {format(new Date(e.due_date), 'MMM dd, yyyy')}</div></div>
+                    <div className="text-right"><div className="font-bold">${e.amount.toFixed(2)}</div><Badge className={e.days_left < 0 ? 'bg-error/20 text-error' : 'bg-warning/20 text-warning'}>{e.days_left < 0 ? `${Math.abs(e.days_left)}d overdue` : `${e.days_left}d left`}</Badge></div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Document Expiry Alerts */}
         {alerts.length > 0 && (
           <Card className="border-border border-warning/50 bg-warning/5">
