@@ -308,7 +308,7 @@ export default function UsersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => {
+                  {users.filter(u => branchFilter.length === 0 || branchFilter.includes(u.branch_id) || !u.branch_id).map((user) => {
                     const branchName = branches.find((b) => b.id === user.branch_id)?.name || 'All Branches';
                     return (
                       <tr key={user.id} className="border-b border-border hover:bg-secondary/50" data-testid="user-row">
