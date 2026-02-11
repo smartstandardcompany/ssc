@@ -3,6 +3,13 @@ import ReactDOM from "react-dom/client";
 import "@/index.css";
 import App from "@/App";
 
+// Suppress ResizeObserver loop warning (harmless, from Recharts/Radix UI)
+const origError = window.onerror;
+window.onerror = (msg, ...args) => {
+  if (typeof msg === 'string' && msg.includes('ResizeObserver')) return true;
+  return origError ? origError(msg, ...args) : false;
+};
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
