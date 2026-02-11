@@ -16,6 +16,7 @@ export default function SupplierReportPage() {
   const [reportData, setReportData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState('all');
+  const [branchFilter, setBranchFilter] = useState([]);
 
   useEffect(() => {
     fetchReport();
@@ -69,7 +70,8 @@ export default function SupplierReportPage() {
             <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="supplier-report-title">Supplier Report</h1>
             <p className="text-muted-foreground">Supplier balance, expenses & payment breakdown</p>
           </div>
-          <div className="flex gap-3 items-center">
+          <div className="flex gap-3 items-center flex-wrap">
+            <BranchFilter onChange={setBranchFilter} />
             <Select value={period} onValueChange={setPeriod}>
               <SelectTrigger className="w-[140px]" data-testid="period-select">
                 <SelectValue />
