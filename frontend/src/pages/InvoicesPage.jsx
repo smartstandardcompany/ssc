@@ -21,6 +21,9 @@ export default function InvoicesPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showItemForm, setShowItemForm] = useState(false);
+  const [showReceiveDialog, setShowReceiveDialog] = useState(false);
+  const [receivingInvoice, setReceivingInvoice] = useState(null);
+  const [receiveData, setReceiveData] = useState({ payment_mode: 'cash', amount: '', discount: '' });
   const [newItem, setNewItem] = useState({ name: '', unit_price: '', category: '' });
   const [customerSearch, setCustomerSearch] = useState('');
   const [branchFilter, setBranchFilter] = useState([]);
