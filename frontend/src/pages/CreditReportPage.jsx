@@ -12,9 +12,11 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
+import { BranchFilter } from '@/components/BranchFilter';
 
 export default function CreditReportPage() {
   const [reportData, setReportData] = useState(null);
+  const [branchFilter, setBranchFilter] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showReceiveDialog, setShowReceiveDialog] = useState(false);
   const [receivingSale, setReceivingSale] = useState(null);
