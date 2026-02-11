@@ -146,6 +146,7 @@ export default function EmployeesPage() {
             <p className="text-muted-foreground">Payroll, loans, leaves & document tracking</p>
           </div>
           <div className="flex gap-3 items-center">
+            <BranchFilter onChange={setBranchFilter} />
             <ExportButtons dataType="employees" />
             <Dialog open={showDialog} onOpenChange={(o) => { setShowDialog(o); if (!o) resetForm(); }}>
               <DialogTrigger asChild><Button className="rounded-full" data-testid="add-employee-button"><Plus size={18} className="mr-2" />Add Employee</Button></DialogTrigger>
