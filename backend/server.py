@@ -137,6 +137,7 @@ class SaleCreate(BaseModel):
 class SalePayment(BaseModel):
     payment_mode: str  # "cash" or "bank"
     amount: float
+    discount: Optional[float] = 0  # Discount when receiving credit
 
 class Supplier(BaseModel):
     model_config = ConfigDict(extra="ignore")
