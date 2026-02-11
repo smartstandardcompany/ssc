@@ -274,9 +274,44 @@ export default function EmployeePortalPage() {
                 <div><Label>End Date *</Label><Input type="date" value={leaveData.end_date} onChange={(e) => setLeaveData({ ...leaveData, end_date: e.target.value })} required /></div>
               </div>
               <div><Label>Reason</Label><Textarea value={leaveData.reason} onChange={(e) => setLeaveData({ ...leaveData, reason: e.target.value })} placeholder="Reason for leave" /></div>
+              {(profile?.ticket_entitled || 1) - (profile?.ticket_used || 0) > 0 && (
+                <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                  <Checkbox checked={leaveData.with_ticket} onCheckedChange={(v) => setLeaveData({ ...leaveData, with_ticket: v })} data-testid="with-ticket-checkbox" />
+                  <div><Label className="cursor-pointer">Request ticket with this leave</Label><p className="text-xs text-muted-foreground">Ticket balance: {(profile?.ticket_entitled || 1) - (profile?.ticket_used || 0)} remaining</p></div>
+                </div>
+              )}
               <div className="flex gap-3">
                 <Button type="submit" className="rounded-full" data-testid="submit-leave-request">Submit Request</Button>
                 <Button type="button" variant="outline" onClick={() => setShowLeaveForm(false)} className="rounded-full">Cancel</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Submit Request Dialog */}
+        <Dialog open={showRequestForm} onOpenChange={setShowRequestForm}>
+          <DialogContent data-testid="request-dialog">
+            <DialogHeader><DialogTitle className="font-outfit">Submit Request</DialogTitle></DialogHeader>
+            <form onSubmit={handleRequest} className="space-y-4">
+              <div><Label>Request Type *</Label>
+                <Select value={requestData.request_type} onValueChange={(v) => setRequestData({ ...requestData, request_type: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="letter">Letter Request</SelectItem>
+                    <SelectItem value="loan">Loan Request</SelectItem>
+                    <SelectItem value="salary_advance">Salary Advance</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div><Label>Subject *</Label><Input value={requestData.subject} onChange={(e) => setRequestData({ ...requestData, subject: e.target.value })} required placeholder="Brief description" /></div>
+              {['loan', 'salary_advance'].includes(requestData.request_type) && (
+                <div><Label>Amount</Label><Input type="number" step="0.01" value={requestData.amount} onChange={(e) => setRequestData({ ...requestData, amount: e.target.value })} placeholder="0.00" /></div>
+              )}
+              <div><Label>Details</Label><Textarea value={requestData.details} onChange={(e) => setRequestData({ ...requestData, details: e.target.value })} placeholder="Provide details..." /></div>
+              <div className="flex gap-3">
+                <Button type="submit" className="rounded-full">Submit Request</Button>
+                <Button type="button" variant="outline" onClick={() => setShowRequestForm(false)} className="rounded-full">Cancel</Button>
               </div>
             </form>
           </DialogContent>
