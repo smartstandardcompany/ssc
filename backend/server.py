@@ -2233,6 +2233,144 @@ async def get_expiry_alerts(current_user: User = Depends(get_current_user)):
     alerts.sort(key=lambda x: x["days_left"])
     return alerts
 
+# Cash Transfer Routes
+@api_router.get("/cash-transfers")
+async def get_cash_transfers(current_user: User = Depends(get_current_user)):
+    transfers = await db.cash_transfers.find({}, {"_id": 0}).sort("date", -1).to_list(1000)
+    for t in transfers:
+        for f in ['date', 'created_at']:
+            if isinstance(t.get(f), str):
+                t[f] = datetime.fromisoformat(t[f])
+    return transfers
+
+@api_router.post("/cash-transfers")
+async def create_cash_transfer(data: CashTransferCreate, current_user: User = Depends(get_current_user)):
+    branches = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
+    from_name = branches.get(data.from_branch_id, "Office") if data.from_branch_id else "Office"
+    to_name = branches.get(data.to_branch_id, "Office") if data.to_branch_id else "Office"
+    
+    transfer = CashTransfer(
+        **data.model_dump(),
+        from_branch_name=from_name, to_branch_name=to_name,
+        created_by=current_user.id
+    )
+    t_dict = transfer.model_dump()
+    t_dict["date"] = t_dict["date"].isoformat()
+    t_dict["created_at"] = t_dict["created_at"].isoformat()
+    for f in ['from_branch_id', 'to_branch_id']:
+        if t_dict.get(f) == '':
+            t_dict[f] = None
+    await db.cash_transfers.insert_one(t_dict)
+    return {k: v for k, v in t_dict.items() if k != '_id'}
+
+@api_router.delete("/cash-transfers/{transfer_id}")
+async def delete_cash_transfer(transfer_id: str, current_user: User = Depends(get_current_user)):
+    result = await db.cash_transfers.delete_one({"id": transfer_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Transfer not found")
+    return {"message": "Transfer deleted"}
+
+# Invoice Routes
+@api_router.get("/invoices")
+async def get_invoices(current_user: User = Depends(get_current_user)):
+    invoices = await db.invoices.find({}, {"_id": 0}).sort("date", -1).to_list(1000)
+    for inv in invoices:
+        for f in ['date', 'created_at']:
+            if isinstance(inv.get(f), str):
+                inv[f] = datetime.fromisoformat(inv[f])
+    return invoices
+
+@api_router.post("/invoices")
+async def create_invoice(data: InvoiceCreate, current_user: User = Depends(get_current_user)):
+    # Get customer name
+    customer_name = None
+    if data.customer_id:
+        cust = await db.customers.find_one({"id": data.customer_id}, {"_id": 0})
+        customer_name = cust["name"] if cust else None
+    
+    # Calculate totals
+    items = []
+    subtotal = 0
+    for item in data.items:
+        qty = float(item.get("quantity", 1))
+        price = float(item.get("unit_price", 0))
+        item_total = qty * price
+        items.append({"description": item["description"], "quantity": qty, "unit_price": price, "total": item_total})
+        subtotal += item_total
+    
+    discount = data.discount or 0
+    total = subtotal - discount
+    
+    # Generate invoice number
+    count = await db.invoices.count_documents({})
+    inv_number = f"INV-{count + 1:05d}"
+    
+    # Build payment details
+    if data.payment_details:
+        payment_details = data.payment_details
+    else:
+        payment_details = [{"mode": data.payment_mode, "amount": total}]
+    
+    invoice = Invoice(
+        invoice_number=inv_number,
+        branch_id=data.branch_id or None,
+        customer_id=data.customer_id or None,
+        customer_name=customer_name,
+        items=items,
+        subtotal=subtotal,
+        discount=discount,
+        total=total,
+        payment_mode=data.payment_mode,
+        payment_details=payment_details,
+        date=data.date,
+        notes=data.notes,
+        created_by=current_user.id
+    )
+    inv_dict = invoice.model_dump()
+    inv_dict["date"] = inv_dict["date"].isoformat()
+    inv_dict["created_at"] = inv_dict["created_at"].isoformat()
+    await db.invoices.insert_one(inv_dict)
+    
+    # Auto-create sale entry
+    cash_bank_paid = sum(p["amount"] for p in payment_details if p.get("mode") in ["cash", "bank"])
+    credit_in_details = sum(p["amount"] for p in payment_details if p.get("mode") == "credit")
+    credit_amount = max(0, credit_in_details if credit_in_details > 0 else total - cash_bank_paid)
+    
+    sale = Sale(
+        sale_type="branch" if not data.customer_id else "online",
+        branch_id=data.branch_id or None,
+        customer_id=data.customer_id or None,
+        amount=subtotal,
+        discount=discount,
+        final_amount=total,
+        payment_details=payment_details,
+        credit_amount=credit_amount,
+        credit_received=0,
+        date=data.date,
+        notes=f"Invoice {inv_number}",
+        created_by=current_user.id
+    )
+    sale_dict = sale.model_dump()
+    sale_dict["date"] = sale_dict["date"].isoformat()
+    sale_dict["created_at"] = sale_dict["created_at"].isoformat()
+    await db.sales.insert_one(sale_dict)
+    
+    # Link sale to invoice
+    await db.invoices.update_one({"id": invoice.id}, {"$set": {"sale_id": sale.id}})
+    inv_dict["sale_id"] = sale.id
+    
+    return {k: v for k, v in inv_dict.items() if k != '_id'}
+
+@api_router.delete("/invoices/{invoice_id}")
+async def delete_invoice(invoice_id: str, current_user: User = Depends(get_current_user)):
+    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if inv and inv.get("sale_id"):
+        await db.sales.delete_one({"id": inv["sale_id"]})
+    result = await db.invoices.delete_one({"id": invoice_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    return {"message": "Invoice and linked sale deleted"}
+
 # ===== SETTINGS & NOTIFICATION ROUTES =====
 
 # Email Settings
