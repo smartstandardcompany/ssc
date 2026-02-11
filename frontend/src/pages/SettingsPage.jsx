@@ -15,7 +15,7 @@ export default function SettingsPage() {
   const [emailSettings, setEmailSettings] = useState({ smtp_host: '', smtp_port: 587, username: '', password: '', from_email: '', use_tls: true });
   const [whatsappSettings, setWhatsappSettings] = useState({ account_sid: '', auth_token: '', phone_number: '', recipient_number: '', enabled: true });
   const [notifPrefs, setNotifPrefs] = useState({ email_daily_sales: false, email_document_expiry: true, email_leave_updates: false, whatsapp_daily_sales: false, whatsapp_document_expiry: false });
-  const [companyInfo, setCompanyInfo] = useState({ company_name: 'Smart Standard Company', address_line1: '', address_line2: '', city: '', country: '', phone: '', email: '', cr_number: '', vat_number: '' });
+  const [companyInfo, setCompanyInfo] = useState({ company_name: 'Smart Standard Company', address_line1: '', address_line2: '', city: '', country: '', phone: '', email: '', cr_number: '', vat_number: '', vat_enabled: false, vat_rate: 15 });
   const [testEmail, setTestEmail] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -199,6 +199,12 @@ export default function SettingsPage() {
                     <div><Label>Email</Label><Input value={companyInfo.email} onChange={(e) => setCompanyInfo({ ...companyInfo, email: e.target.value })} /></div>
                     <div><Label>CR Number</Label><Input value={companyInfo.cr_number} onChange={(e) => setCompanyInfo({ ...companyInfo, cr_number: e.target.value })} placeholder="Commercial Registration" /></div>
                     <div><Label>VAT Number</Label><Input value={companyInfo.vat_number} onChange={(e) => setCompanyInfo({ ...companyInfo, vat_number: e.target.value })} /></div>
+                    <div className="col-span-2 flex items-center gap-4 p-3 bg-stone-50 rounded-xl border">
+                      <Checkbox checked={companyInfo.vat_enabled} onCheckedChange={(v) => setCompanyInfo({ ...companyInfo, vat_enabled: v })} />
+                      <Label>Enable VAT Calculation on Dashboard</Label>
+                      {companyInfo.vat_enabled && <Input type="number" value={companyInfo.vat_rate} onChange={(e) => setCompanyInfo({ ...companyInfo, vat_rate: e.target.value })} className="w-20 h-8" />}
+                      {companyInfo.vat_enabled && <span className="text-sm text-muted-foreground">%</span>}
+                    </div>
                   </div>
                   <Button onClick={async () => {
                     try { await api.post('/settings/company', companyInfo); toast.success('Company info saved'); }
