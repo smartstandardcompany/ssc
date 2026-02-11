@@ -129,6 +129,46 @@ export default function DashboardPage() {
               <Card key={card.title} className="stat-card border-border" data-testid={card.testId}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">{card.title}</CardTitle>
+                  <div className={`${card.bgColor} p-2 rounded-lg`}><Icon className={`h-5 w-5 ${card.color}`} strokeWidth={2} /></div>
+                </CardHeader>
+                <CardContent><div className="text-3xl font-bold font-outfit" data-testid={`${card.testId}-value`}>{card.value}</div></CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* Cash & Bank In Hand */}
+        <div>
+          <h2 className="text-2xl font-bold font-outfit mb-4">Cash & Bank In Hand</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="stat-card border-border border-cash/30 bg-gradient-to-br from-cash/5 to-cash/10" data-testid="cash-in-hand-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Cash In Hand</CardTitle>
+                <div className="bg-cash/20 p-2 rounded-lg"><Wallet className="h-5 w-5 text-cash" strokeWidth={2} /></div>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-3xl font-bold font-outfit ${(stats?.cash_in_hand || 0) >= 0 ? 'text-cash' : 'text-error'}`} data-testid="cash-in-hand-value">${(stats?.cash_in_hand || 0).toFixed(2)}</div>
+                <p className="text-xs text-muted-foreground mt-1">Cash Sales - Cash Expenses - Cash Supplier Payments</p>
+              </CardContent>
+            </Card>
+            <Card className="stat-card border-border border-bank/30 bg-gradient-to-br from-bank/5 to-bank/10" data-testid="bank-in-hand-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Bank In Hand</CardTitle>
+                <div className="bg-bank/20 p-2 rounded-lg"><Building2 className="h-5 w-5 text-bank" strokeWidth={2} /></div>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-3xl font-bold font-outfit ${(stats?.bank_in_hand || 0) >= 0 ? 'text-bank' : 'text-error'}`} data-testid="bank-in-hand-value">${(stats?.bank_in_hand || 0).toFixed(2)}</div>
+                <p className="text-xs text-muted-foreground mt-1">Bank Sales - Bank Expenses - Bank Supplier Payments</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+          {statCards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <Card key={card.title} className="stat-card border-border" data-testid={card.testId}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">{card.title}</CardTitle>
                   <div className={`${card.bgColor} p-2 rounded-lg`}>
                     <Icon className={`h-5 w-5 ${card.color}`} strokeWidth={2} />
                   </div>
