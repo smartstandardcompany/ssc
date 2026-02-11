@@ -16,6 +16,7 @@ import { BranchFilter } from '@/components/BranchFilter';
 
 export default function CreditReportPage() {
   const [reportData, setReportData] = useState(null);
+  const [branches, setBranches] = useState([]);
   const [branchFilter, setBranchFilter] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showReceiveDialog, setShowReceiveDialog] = useState(false);
@@ -28,14 +29,17 @@ export default function CreditReportPage() {
 
   const fetchReport = async () => {
     try {
-      const response = await api.get('/reports/credit-sales');
-      setReportData(response.data);
+      const [res, brRes] = await Promise.all([api.get('/reports/credit-sales'), api.get('/branches')]);
+      setReportData(res.data);
+      setBranches(brRes.data);
     } catch (error) {
       toast.error('Failed to fetch credit report');
     } finally {
       setLoading(false);
     }
   };
+
+  const getBranchNames = () => branchFilter.map(bid => branches.find(b => b.id === bid)?.name).filter(Boolean);
 
   const handleReceiveCredit = async (e) => {
     e.preventDefault();
