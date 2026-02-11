@@ -2894,13 +2894,37 @@ async def get_employees_pending(current_user: User = Depends(get_current_user)):
         
         result.append({
             "id": eid, "name": emp["name"], "position": emp.get("position", ""),
+            "branch_id": emp.get("branch_id"),
             "salary": emp.get("salary", 0), "salary_paid": salary_paid, "pending_salary": max(0, pending),
             "loan_balance": emp.get("loan_balance", 0),
             "annual_leave_remaining": emp.get("annual_leave_entitled", 30) - annual_used,
             "sick_leave_remaining": emp.get("sick_leave_entitled", 15) - sick_used,
             "pending_leave_requests": pending_leaves
         })
-    return result
+    
+    # Branch-wise salary summary
+    branch_map = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
+    branch_summary = {}
+    for emp in result:
+        bid = emp.get("branch_id")
+        bname = branch_map.get(bid, "No Branch") if bid else "No Branch"
+        if bname not in branch_summary:
+            branch_summary[bname] = {"total_salary": 0, "total_paid": 0, "total_pending": 0, "count": 0}
+        branch_summary[bname]["total_salary"] += emp["salary"]
+        branch_summary[bname]["total_paid"] += emp["salary_paid"]
+        branch_summary[bname]["total_pending"] += emp["pending_salary"]
+        branch_summary[bname]["count"] += 1
+    
+    total_salary = sum(e["salary"] for e in result)
+    total_paid = sum(e["salary_paid"] for e in result)
+    total_pending = sum(e["pending_salary"] for e in result)
+    
+    return {
+        "employees": result,
+        "branch_summary": branch_summary,
+        "totals": {"total_salary": total_salary, "total_paid": total_paid, "total_pending": total_pending, "employee_count": len(result)},
+        "period": current_period
+    }
 
 # Cash Transfer Routes
 @api_router.get("/cash-transfers")
