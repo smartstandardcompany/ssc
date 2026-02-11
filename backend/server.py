@@ -2931,6 +2931,21 @@ async def create_salary_deduction(data: SalaryDeductionCreate, current_user: Use
     for k in ['branch_id', 'fine_id']:
         if d_dict.get(k) == '': d_dict[k] = None
     await db.salary_deductions.insert_one(d_dict)
+    
+    # Notify employee about deduction
+    if emp.get("user_id"):
+        type_label = data.deduction_type.replace('_', ' ').title()
+        n = Notification(
+            user_id=emp["user_id"],
+            title=f"Salary Deduction: {type_label}",
+            message=f"SAR {data.amount:.2f} deducted from your salary ({data.period}). Reason: {data.reason}",
+            type="salary_deduction",
+            related_id=deduction.id
+        )
+        n_dict = n.model_dump()
+        n_dict["created_at"] = n_dict["created_at"].isoformat()
+        await db.notifications.insert_one(n_dict)
+    
     return {k: v for k, v in d_dict.items() if k != '_id'}
 
 @api_router.delete("/salary-deductions/{ded_id}")
