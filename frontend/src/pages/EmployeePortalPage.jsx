@@ -121,8 +121,14 @@ export default function EmployeePortalPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
           <Card className="border-stone-100"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Salary</CardTitle></CardHeader><CardContent><div className="text-xl font-bold font-outfit">${(profile?.salary || 0).toFixed(2)}</div></CardContent></Card>
+          <Card className={`border-stone-100 ${(() => { const currentPeriod = new Date().toLocaleDateString('en-US', {month:'short', year:'numeric'}); const paidThisMonth = payments.filter(p => p.period === currentPeriod && p.payment_type === 'salary').reduce((s,p) => s + p.amount, 0); const due = (profile?.salary || 0) - paidThisMonth; return due > 0 ? 'bg-error/5 border-error/30' : ''; })()}`}>
+            <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Due Balance</CardTitle></CardHeader>
+            <CardContent><div className={`text-xl font-bold font-outfit ${(() => { const currentPeriod = new Date().toLocaleDateString('en-US', {month:'short', year:'numeric'}); const paidThisMonth = payments.filter(p => p.period === currentPeriod && p.payment_type === 'salary').reduce((s,p) => s + p.amount, 0); const due = (profile?.salary || 0) - paidThisMonth; return due > 0 ? 'text-error' : 'text-success'; })()}`}>
+              ${(() => { const currentPeriod = new Date().toLocaleDateString('en-US', {month:'short', year:'numeric'}); const paidThisMonth = payments.filter(p => p.period === currentPeriod && p.payment_type === 'salary').reduce((s,p) => s + p.amount, 0); return Math.max(0, (profile?.salary || 0) - paidThisMonth).toFixed(2); })()}
+            </div></CardContent>
+          </Card>
           <Card className="border-stone-100"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Loan</CardTitle></CardHeader><CardContent><div className="text-xl font-bold font-outfit text-warning">${(profile?.loan_balance || 0).toFixed(2)}</div></CardContent></Card>
           <Card className="border-stone-100"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Annual Leave</CardTitle></CardHeader><CardContent><div className="text-xl font-bold text-success">{(profile?.annual_leave_entitled || 30) - annualUsed} left</div></CardContent></Card>
           <Card className="border-stone-100"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Sick Leave</CardTitle></CardHeader><CardContent><div className="text-xl font-bold text-info">{(profile?.sick_leave_entitled || 15) - sickUsed} left</div></CardContent></Card>
