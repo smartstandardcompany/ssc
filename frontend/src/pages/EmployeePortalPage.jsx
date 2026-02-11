@@ -47,10 +47,21 @@ export default function EmployeePortalPage() {
   const handleApplyLeave = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/my/apply-leave', { ...leaveData, employee_id: '', days: parseInt(leaveData.days), start_date: new Date(leaveData.start_date).toISOString(), end_date: new Date(leaveData.end_date).toISOString() });
-      toast.success('Leave request submitted for approval');
+      await api.post('/my/apply-leave', { ...leaveData, employee_id: '', days: parseInt(leaveData.days), with_ticket: leaveData.with_ticket, start_date: new Date(leaveData.start_date).toISOString(), end_date: new Date(leaveData.end_date).toISOString() });
+      toast.success(leaveData.with_ticket ? 'Leave + ticket request submitted' : 'Leave request submitted');
       setShowLeaveForm(false);
-      setLeaveData({ leave_type: 'annual', start_date: '', end_date: '', days: '', reason: '' });
+      setLeaveData({ leave_type: 'annual', start_date: '', end_date: '', days: '', reason: '', with_ticket: false });
+      fetchData();
+    } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+  };
+
+  const handleRequest = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/my/request', { ...requestData, amount: requestData.amount ? parseFloat(requestData.amount) : null });
+      toast.success('Request submitted');
+      setShowRequestForm(false);
+      setRequestData({ request_type: 'letter', subject: '', details: '', amount: '' });
       fetchData();
     } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
   };
