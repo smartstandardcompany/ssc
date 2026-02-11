@@ -1554,7 +1554,10 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
         "sp_pct_of_sales": round(total_supplier_payments / total_sales * 100, 1) if total_sales > 0 else 0,
         "profit_pct_of_sales": round(net_profit / total_sales * 100, 1) if total_sales > 0 else 0,
         "due_fines": due_fines,
-        "due_fines_list": due_fines_list
+        "due_fines_list": due_fines_list,
+        "vat_on_sales": round(total_sales * 0.15, 2),
+        "vat_on_purchases": round(total_supplier_payments * 0.15, 2),
+        "vat_payable": round((total_sales - total_supplier_payments) * 0.15, 2)
     }
 
 # Credit Sales Report
