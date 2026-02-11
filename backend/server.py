@@ -2298,7 +2298,7 @@ async def generate_payslip(payment_id: str, current_user: User = Depends(get_cur
     title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=20, textColor=colors.HexColor('#F5841F'), alignment=1, spaceAfter=5)
     sub_style = ParagraphStyle('Sub', parent=styles['Normal'], fontSize=10, textColor=colors.grey, alignment=1, spaceAfter=20)
     
-    elements.append(Paragraph("DATAENTRY HUB", title_style))
+    elements.append(Paragraph("SMART STANDARD COMPANY", title_style))
     elements.append(Paragraph("Pay Slip", sub_style))
     elements.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#F5841F')))
     elements.append(Spacer(1, 0.2*inch))
