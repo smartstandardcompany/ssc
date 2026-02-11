@@ -11,11 +11,13 @@ import { Plus, Edit, Trash2, DollarSign } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { ExportButtons } from '@/components/ExportButtons';
+import { BranchFilter } from '@/components/BranchFilter';
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState([]);
   const [balances, setBalances] = useState([]);
   const [branches, setBranches] = useState([]);
+  const [branchFilter, setBranchFilter] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [showReceiveDialog, setShowReceiveDialog] = useState(false);
@@ -104,7 +106,8 @@ export default function CustomersPage() {
             <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="customers-page-title">Customers</h1>
             <p className="text-muted-foreground">Manage customers and track balances</p>
           </div>
-          <div className="flex gap-3 items-center">
+          <div className="flex gap-3 items-center flex-wrap">
+            <BranchFilter onChange={setBranchFilter} />
             <ExportButtons dataType="customers" />
             <Dialog open={showDialog} onOpenChange={(o) => { setShowDialog(o); if (!o) resetForm(); }}>
               <DialogTrigger asChild><Button className="rounded-full" data-testid="add-customer-button"><Plus size={18} className="mr-2" />Add Customer</Button></DialogTrigger>
@@ -152,7 +155,10 @@ export default function CustomersPage() {
                   <th className="text-right p-3 font-medium text-sm">Actions</th>
                 </tr></thead>
                 <tbody>
-                  {customers.map((c) => {
+                  {customers.filter(c => {
+                    if (branchFilter.length > 0 && !branchFilter.includes(c.branch_id) && c.branch_id) return false;
+                    return true;
+                  }).map((c) => {
                     const bal = getBalance(c.id);
                     const brName = branches.find(b => b.id === c.branch_id)?.name || 'All';
                     return (
