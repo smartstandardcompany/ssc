@@ -92,7 +92,7 @@ export default function SupplierReportPage() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card className="border-border">
             <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total Suppliers</CardTitle></CardHeader>
-            <CardContent><div className="text-2xl font-bold font-outfit text-primary" data-testid="total-suppliers">{reportData.length}</div></CardContent>
+            <CardContent><div className="text-2xl font-bold font-outfit text-primary" data-testid="total-suppliers">{filtered.length}</div></CardContent>
           </Card>
           <Card className="border-border">
             <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total Expenses</CardTitle></CardHeader>
@@ -165,7 +165,7 @@ export default function SupplierReportPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {reportData.map((supplier) => (
+                  {filtered.map((supplier) => (
                     <tr key={supplier.id} className="border-b border-border hover:bg-secondary/50" data-testid="supplier-report-row">
                       <td className="p-3 text-sm font-medium">{supplier.name}</td>
                       <td className="p-3"><span className="px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">{supplier.category || 'N/A'}</span></td>
@@ -176,7 +176,7 @@ export default function SupplierReportPage() {
                       <td className="p-3 text-center"><Badge variant="secondary">{supplier.transaction_count}</Badge></td>
                     </tr>
                   ))}
-                  {reportData.length === 0 && (
+                  {filtered.length === 0 && (
                     <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">No supplier data available</td></tr>
                   )}
                 </tbody>
