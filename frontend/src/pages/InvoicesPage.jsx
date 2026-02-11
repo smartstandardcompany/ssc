@@ -176,7 +176,16 @@ export default function InvoicesPage() {
                       <tbody>
                         {formData.items.map((item, i) => (
                           <tr key={i} className="border-b">
-                            <td className="p-1"><Input value={item.description} onChange={(e) => updateItem(i, 'description', e.target.value)} placeholder="Item description" className="h-8 border-0" data-testid={`item-desc-${i}`} /></td>
+                            <td className="p-1">
+                              {masterItems.length > 0 ? (
+                                <Select value="" onValueChange={(v) => selectMasterItem(i, v)}>
+                                  <SelectTrigger className="h-8 border-0"><SelectValue placeholder={item.description || "Select item"} /></SelectTrigger>
+                                  <SelectContent>{masterItems.filter(m => m.active !== false).map(m => <SelectItem key={m.id} value={m.id}>{m.name} - ${m.unit_price}</SelectItem>)}</SelectContent>
+                                </Select>
+                              ) : (
+                                <Input value={item.description} onChange={(e) => updateItem(i, 'description', e.target.value)} placeholder="Item description" className="h-8 border-0" data-testid={`item-desc-${i}`} />
+                              )}
+                            </td>
                             <td className="p-1"><Input type="number" value={item.quantity} onChange={(e) => updateItem(i, 'quantity', e.target.value)} className="h-8 border-0 text-center" /></td>
                             <td className="p-1"><Input type="number" step="0.01" value={item.unit_price} onChange={(e) => updateItem(i, 'unit_price', e.target.value)} placeholder="0.00" className="h-8 border-0 text-right" data-testid={`item-price-${i}`} /></td>
                             <td className="p-2 text-right text-sm font-medium">${((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)).toFixed(2)}</td>
