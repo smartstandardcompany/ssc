@@ -135,8 +135,8 @@ export default function CustomersPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Total Customers</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-primary">{customers.length}</div></CardContent></Card>
-          <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Total Sales</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-success">${balances.reduce((s, b) => s + (b.total_sales || 0), 0).toFixed(2)}</div></CardContent></Card>
-          <Card className="border-border bg-warning/5"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Outstanding Credit</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-warning">${totalCredit.toFixed(2)}</div></CardContent></Card>
+          <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Total Sales</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-success"> SAR {balances.reduce((s, b) => s + (b.total_sales || 0), 0).toFixed(2)}</div></CardContent></Card>
+          <Card className="border-border bg-warning/5"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Outstanding Credit</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-warning"> SAR {totalCredit.toFixed(2)}</div></CardContent></Card>
         </div>
 
         <Card className="border-border">
@@ -166,11 +166,11 @@ export default function CustomersPage() {
                         <td className="p-3 text-sm font-medium">{c.name}</td>
                         <td className="p-3 text-sm">{brName}</td>
                         <td className="p-3 text-sm">{c.phone || '-'}</td>
-                        <td className="p-3 text-sm text-right">${(bal.total_sales || 0).toFixed(2)}</td>
-                        <td className="p-3 text-sm text-right text-cash">${(bal.cash || 0).toFixed(2)}</td>
-                        <td className="p-3 text-sm text-right text-bank">${(bal.bank || 0).toFixed(2)}</td>
+                        <td className="p-3 text-sm text-right"> SAR {(bal.total_sales || 0).toFixed(2)}</td>
+                        <td className="p-3 text-sm text-right text-cash"> SAR {(bal.cash || 0).toFixed(2)}</td>
+                        <td className="p-3 text-sm text-right text-bank"> SAR {(bal.bank || 0).toFixed(2)}</td>
                         <td className="p-3 text-sm text-right">
-                          {(bal.credit_balance || 0) > 0 ? <span className="font-bold text-warning">${bal.credit_balance.toFixed(2)}</span> : <span className="text-muted-foreground">$0.00</span>}
+                          {(bal.credit_balance || 0) > 0 ? <span className="font-bold text-warning"> SAR {bal.credit_balance.toFixed(2)}</span> : <span className="text-muted-foreground">$0.00</span>}
                         </td>
                         <td className="p-3 text-right">
                           <div className="flex gap-1 justify-end">
@@ -197,7 +197,7 @@ export default function CustomersPage() {
         <Dialog open={showReceiveDialog} onOpenChange={setShowReceiveDialog}>
           <DialogContent data-testid="receive-credit-dialog">
             <DialogHeader><DialogTitle className="font-outfit">Receive Credit - {receivingCustomer?.name}</DialogTitle></DialogHeader>
-            <p className="text-sm text-muted-foreground">Outstanding: <span className="font-bold text-warning">${receivingCustomer?.credit_balance?.toFixed(2)}</span></p>
+            <p className="text-sm text-muted-foreground">Outstanding: <span className="font-bold text-warning"> SAR {receivingCustomer?.credit_balance?.toFixed(2)}</span></p>
             <form onSubmit={handleReceiveCredit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div><Label>Payment Amount</Label><Input type="number" step="0.01" value={receiveData.amount} data-testid="receive-amount-input" onChange={(e) => setReceiveData({ ...receiveData, amount: e.target.value })} placeholder="0.00" /></div>
@@ -205,10 +205,10 @@ export default function CustomersPage() {
               </div>
               {(parseFloat(receiveData.amount) > 0 || parseFloat(receiveData.discount) > 0) && (
                 <div className="p-3 bg-secondary/50 rounded-lg space-y-1 text-sm">
-                  <div className="flex justify-between"><span>Payment:</span><span className="font-medium">${(parseFloat(receiveData.amount) || 0).toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span>Payment:</span><span className="font-medium"> SAR {(parseFloat(receiveData.amount) || 0).toFixed(2)}</span></div>
                   {parseFloat(receiveData.discount) > 0 && <div className="flex justify-between"><span>Discount:</span><span className="font-medium text-error">-SAR {(parseFloat(receiveData.discount) || 0).toFixed(2)}</span></div>}
-                  <div className="flex justify-between border-t pt-1 font-bold"><span>Total Settled:</span><span className="text-success">${((parseFloat(receiveData.amount) || 0) + (parseFloat(receiveData.discount) || 0)).toFixed(2)}</span></div>
-                  <div className="flex justify-between text-xs text-muted-foreground"><span>Remaining after:</span><span>${(receivingCustomer?.credit_balance - (parseFloat(receiveData.amount) || 0) - (parseFloat(receiveData.discount) || 0)).toFixed(2)}</span></div>
+                  <div className="flex justify-between border-t pt-1 font-bold"><span>Total Settled:</span><span className="text-success"> SAR {((parseFloat(receiveData.amount) || 0) + (parseFloat(receiveData.discount) || 0)).toFixed(2)}</span></div>
+                  <div className="flex justify-between text-xs text-muted-foreground"><span>Remaining after:</span><span> SAR {(receivingCustomer?.credit_balance - (parseFloat(receiveData.amount) || 0) - (parseFloat(receiveData.discount) || 0)).toFixed(2)}</span></div>
                 </div>
               )}
               <div><Label>Payment Mode</Label>

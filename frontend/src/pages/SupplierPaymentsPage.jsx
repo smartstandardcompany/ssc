@@ -266,7 +266,7 @@ export default function SupplierPaymentsPage() {
                     <tr key={payment.id} className="border-b border-border hover:bg-secondary/50" data-testid="payment-row">
                       <td className="p-3 text-sm">{format(new Date(payment.date), 'MMM dd, yyyy')}</td>
                       <td className="p-3 text-sm font-medium">{payment.supplier_name}</td>
-                      <td className="p-3 text-sm text-right font-medium">${payment.amount.toFixed(2)}</td>
+                      <td className="p-3 text-sm text-right font-medium"> SAR {payment.amount.toFixed(2)}</td>
                       <td className="p-3">
                         <span className={`inline-block px-2 py-1 rounded text-xs font-medium border ${getPaymentBadgeClass(payment.payment_mode)}`}>
                           {payment.payment_mode}

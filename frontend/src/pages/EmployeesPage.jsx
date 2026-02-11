@@ -205,8 +205,8 @@ export default function EmployeesPage() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Total Employees</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-primary">{employees.length}</div></CardContent></Card>
-          <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Monthly Payroll</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-error">${totalSalary.toFixed(2)}</div></CardContent></Card>
-          <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Outstanding Loans</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-warning">${totalLoan.toFixed(2)}</div></CardContent></Card>
+          <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Monthly Payroll</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-error"> SAR {totalSalary.toFixed(2)}</div></CardContent></Card>
+          <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Outstanding Loans</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-warning"> SAR {totalLoan.toFixed(2)}</div></CardContent></Card>
           <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Expiring Docs</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-info">{employees.filter(e => isExpiryNear(e.document_expiry)).length}</div></CardContent></Card>
         </div>
 
@@ -231,12 +231,12 @@ export default function EmployeesPage() {
                     <tr key={emp.id} className="border-b border-border hover:bg-secondary/50" data-testid="employee-row">
                       <td className="p-3 text-sm font-medium">{emp.name}<div className="text-xs text-muted-foreground">{emp.document_id || ''}</div></td>
                       <td className="p-3 text-sm">{emp.position || '-'}</td>
-                      <td className="p-3 text-sm text-right font-medium">${(emp.salary || 0).toFixed(2)}</td>
+                      <td className="p-3 text-sm text-right font-medium"> SAR {(emp.salary || 0).toFixed(2)}</td>
                       <td className="p-3 text-sm text-right">
-                        {(pend.pending_salary || 0) > 0 ? <span className="font-bold text-error">${pend.pending_salary.toFixed(2)}</span> : <span className="text-success font-medium">Paid</span>}
+                        {(pend.pending_salary || 0) > 0 ? <span className="font-bold text-error"> SAR {pend.pending_salary.toFixed(2)}</span> : <span className="text-success font-medium">Paid</span>}
                       </td>
                       <td className="p-3 text-sm text-right">
-                        {(emp.loan_balance || 0) > 0 ? <span className="font-bold text-warning">${emp.loan_balance.toFixed(2)}</span> : <span className="text-muted-foreground">-</span>}
+                        {(emp.loan_balance || 0) > 0 ? <span className="font-bold text-warning"> SAR {emp.loan_balance.toFixed(2)}</span> : <span className="text-muted-foreground">-</span>}
                       </td>
                       <td className="p-3 text-center">
                         <div className="text-xs"><span className="text-success">{pend.annual_leave_remaining || 0}A</span> <span className="text-info">{pend.sick_leave_remaining || 0}S</span>{pend.pending_leave_requests > 0 && <Badge className="ml-1 bg-warning/20 text-warning text-xs">{pend.pending_leave_requests}P</Badge>}</div>
@@ -264,8 +264,8 @@ export default function EmployeesPage() {
           <DialogContent data-testid="pay-salary-dialog">
             <DialogHeader><DialogTitle className="font-outfit">Record Payment - {payingEmp?.name}</DialogTitle></DialogHeader>
             <div className="flex gap-4 text-sm mb-2">
-              <span>Salary: <span className="font-bold">${payingEmp?.salary?.toFixed(2)}</span></span>
-              {(payingEmp?.loan_balance || 0) > 0 && <span>Loan: <span className="font-bold text-warning">${payingEmp?.loan_balance?.toFixed(2)}</span></span>}
+              <span>Salary: <span className="font-bold"> SAR {payingEmp?.salary?.toFixed(2)}</span></span>
+              {(payingEmp?.loan_balance || 0) > 0 && <span>Loan: <span className="font-bold text-warning"> SAR {payingEmp?.loan_balance?.toFixed(2)}</span></span>}
             </div>
             <form onSubmit={handlePaySalary} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -338,9 +338,9 @@ export default function EmployeesPage() {
 
                 <TabsContent value="payments" className="space-y-4">
                   <div className="grid grid-cols-3 gap-3">
-                    <div className="p-3 bg-secondary/50 rounded-lg"><div className="text-xs text-muted-foreground">Monthly Salary</div><div className="text-xl font-bold">${empSummary.employee.salary.toFixed(2)}</div></div>
-                    <div className="p-3 bg-success/10 rounded-lg"><div className="text-xs text-muted-foreground">Total Paid</div><div className="text-xl font-bold text-success">${empSummary.total_all_time.toFixed(2)}</div></div>
-                    <div className="p-3 bg-warning/10 rounded-lg"><div className="text-xs text-muted-foreground">Loan Balance</div><div className="text-xl font-bold text-warning">${empSummary.loan.balance.toFixed(2)}</div></div>
+                    <div className="p-3 bg-secondary/50 rounded-lg"><div className="text-xs text-muted-foreground">Monthly Salary</div><div className="text-xl font-bold"> SAR {empSummary.employee.salary.toFixed(2)}</div></div>
+                    <div className="p-3 bg-success/10 rounded-lg"><div className="text-xs text-muted-foreground">Total Paid</div><div className="text-xl font-bold text-success"> SAR {empSummary.total_all_time.toFixed(2)}</div></div>
+                    <div className="p-3 bg-warning/10 rounded-lg"><div className="text-xs text-muted-foreground">Loan Balance</div><div className="text-xl font-bold text-warning"> SAR {empSummary.loan.balance.toFixed(2)}</div></div>
                   </div>
                   {empSummary.monthly_summary.map((m) => (
                     <Card key={m.period} className="border-border">
@@ -348,8 +348,8 @@ export default function EmployeesPage() {
                         <div className="flex justify-between items-center">
                           <CardTitle className="font-outfit text-base">{m.period}</CardTitle>
                           <div className="flex gap-3 text-sm">
-                            <span>Paid: <span className="font-bold text-success">${m.salary_paid.toFixed(2)}</span></span>
-                            <span>Balance: <span className={`font-bold ${m.balance > 0 ? 'text-error' : 'text-success'}`}>${m.balance.toFixed(2)}</span></span>
+                            <span>Paid: <span className="font-bold text-success"> SAR {m.salary_paid.toFixed(2)}</span></span>
+                            <span>Balance: <span className={`font-bold ${m.balance > 0 ? 'text-error' : 'text-success'}`}> SAR {m.balance.toFixed(2)}</span></span>
                           </div>
                         </div>
                       </CardHeader>
@@ -367,7 +367,7 @@ export default function EmployeesPage() {
                             <div key={p.id} className="flex justify-between items-center text-xs p-2 bg-secondary/30 rounded">
                               <span>{format(new Date(p.date), 'MMM dd')} - <span className="capitalize font-medium">{p.payment_type.replace('_', ' ')}</span> ({p.payment_mode}){p.notes ? ` - ${p.notes}` : ''}</span>
                               <div className="flex items-center gap-2">
-                                <span className="font-bold">${p.amount.toFixed(2)}</span>
+                                <span className="font-bold"> SAR {p.amount.toFixed(2)}</span>
                                 <Button size="sm" variant="ghost" onClick={() => downloadPayslip(p.id)} className="h-6 w-6 p-0" title="Download Payslip"><FileText size={12} /></Button>
                               </div>
                             </div>
@@ -381,9 +381,9 @@ export default function EmployeesPage() {
 
                 <TabsContent value="loan" className="space-y-4">
                   <div className="grid grid-cols-3 gap-3">
-                    <div className="p-3 bg-info/10 rounded-lg"><div className="text-xs text-muted-foreground">Total Advance Taken</div><div className="text-xl font-bold text-info">${empSummary.loan.total_advance.toFixed(2)}</div></div>
-                    <div className="p-3 bg-success/10 rounded-lg"><div className="text-xs text-muted-foreground">Total Repaid</div><div className="text-xl font-bold text-success">${empSummary.loan.total_repaid.toFixed(2)}</div></div>
-                    <div className="p-3 bg-warning/10 rounded-lg border border-warning/30"><div className="text-xs text-muted-foreground">Outstanding Balance</div><div className="text-xl font-bold text-warning">${empSummary.loan.balance.toFixed(2)}</div></div>
+                    <div className="p-3 bg-info/10 rounded-lg"><div className="text-xs text-muted-foreground">Total Advance Taken</div><div className="text-xl font-bold text-info"> SAR {empSummary.loan.total_advance.toFixed(2)}</div></div>
+                    <div className="p-3 bg-success/10 rounded-lg"><div className="text-xs text-muted-foreground">Total Repaid</div><div className="text-xl font-bold text-success"> SAR {empSummary.loan.total_repaid.toFixed(2)}</div></div>
+                    <div className="p-3 bg-warning/10 rounded-lg border border-warning/30"><div className="text-xs text-muted-foreground">Outstanding Balance</div><div className="text-xl font-bold text-warning"> SAR {empSummary.loan.balance.toFixed(2)}</div></div>
                   </div>
                   <p className="text-sm text-muted-foreground">Advance/loan payments and repayments are tracked automatically. Use "Advance / Loan" type to give advance, and "Loan Repayment" to deduct from balance.</p>
                 </TabsContent>

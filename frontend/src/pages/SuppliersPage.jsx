@@ -335,11 +335,11 @@ export default function SuppliersPage() {
                       <div className="flex gap-2">
                         <div className="flex-1 p-2 bg-cash/10 rounded text-center">
                           <div className="text-xs text-muted-foreground">Cash Paid</div>
-                          <div className="text-sm font-bold text-cash">${paySummaries[supplier.id].cash.toFixed(2)}</div>
+                          <div className="text-sm font-bold text-cash"> SAR {paySummaries[supplier.id].cash.toFixed(2)}</div>
                         </div>
                         <div className="flex-1 p-2 bg-bank/10 rounded text-center">
                           <div className="text-xs text-muted-foreground">Bank Paid</div>
-                          <div className="text-sm font-bold text-bank">${paySummaries[supplier.id].bank.toFixed(2)}</div>
+                          <div className="text-sm font-bold text-bank"> SAR {paySummaries[supplier.id].bank.toFixed(2)}</div>
                         </div>
                       </div>
                       {Object.keys(paySummaries[supplier.id].by_branch || {}).length > 0 && (
@@ -358,7 +358,7 @@ export default function SuppliersPage() {
                   <div className="pt-3 border-t">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm font-medium">Credit Status</span>
-                      <span className="text-sm font-bold">${supplier.current_credit?.toFixed(2) || '0.00'} / ${supplier.credit_limit?.toFixed(2) || '0.00'}</span>
+                      <span className="text-sm font-bold"> SAR {supplier.current_credit?.toFixed(2) || '0.00'} / ${supplier.credit_limit?.toFixed(2) || '0.00'}</span>
                     </div>
                     <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
                       <div
@@ -407,7 +407,7 @@ export default function SuppliersPage() {
                   Paying to: <span className="font-medium text-foreground">{payingSupplier?.name}</span>
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Current Credit: <span className="font-bold text-error">${payingSupplier?.current_credit?.toFixed(2)}</span>
+                  Current Credit: <span className="font-bold text-error"> SAR {payingSupplier?.current_credit?.toFixed(2)}</span>
                 </p>
               </div>
               <div>

@@ -55,9 +55,9 @@ export default function CategoryReportPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Category Expenses</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold font-outfit text-error">${totalExpenses.toFixed(2)}</div></CardContent></Card>
-          <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Paid</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold font-outfit text-success">${totalPaid.toFixed(2)}</div></CardContent></Card>
-          <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Outstanding Credit</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold font-outfit text-warning">${totalCredit.toFixed(2)}</div></CardContent></Card>
+          <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Category Expenses</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold font-outfit text-error"> SAR {totalExpenses.toFixed(2)}</div></CardContent></Card>
+          <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Paid</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold font-outfit text-success"> SAR {totalPaid.toFixed(2)}</div></CardContent></Card>
+          <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Outstanding Credit</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold font-outfit text-warning"> SAR {totalCredit.toFixed(2)}</div></CardContent></Card>
         </div>
 
         {barData.length > 0 && (
@@ -115,9 +115,9 @@ export default function CategoryReportPage() {
                     <tr key={cat.category} className="border-b border-border hover:bg-secondary/50" data-testid="category-report-row">
                       <td className="p-3 text-sm font-medium"><span className="px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">{cat.category}</span></td>
                       <td className="p-3 text-center"><Badge variant="secondary">{cat.supplier_count}</Badge></td>
-                      <td className="p-3 text-sm text-right font-medium text-error">${cat.total_expenses.toFixed(2)}</td>
-                      <td className="p-3 text-sm text-right text-success">${cat.total_paid.toFixed(2)}</td>
-                      <td className="p-3 text-sm text-right font-bold text-warning">${cat.total_credit.toFixed(2)}</td>
+                      <td className="p-3 text-sm text-right font-medium text-error"> SAR {cat.total_expenses.toFixed(2)}</td>
+                      <td className="p-3 text-sm text-right text-success"> SAR {cat.total_paid.toFixed(2)}</td>
+                      <td className="p-3 text-sm text-right font-bold text-warning"> SAR {cat.total_credit.toFixed(2)}</td>
                     </tr>
                   ))}
                   {reportData.length === 0 && (

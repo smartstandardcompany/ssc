@@ -171,10 +171,10 @@ export default function ReportsPage() {
             </CardContent></Card>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card className="border-stone-100 stat-card"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Total Sales</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-success">${stats.totalSales.toFixed(2)}</div></CardContent></Card>
-              <Card className="border-stone-100 stat-card"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Total Expenses</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-error">${stats.totalExpenses.toFixed(2)}</div></CardContent></Card>
-              <Card className="border-stone-100 stat-card"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Supplier Pay</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-info">${stats.totalSP.toFixed(2)}</div></CardContent></Card>
-              <Card className="border-stone-100 stat-card"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Net Profit</CardTitle></CardHeader><CardContent><div className={`text-2xl font-bold ${stats.netProfit >= 0 ? 'text-success' : 'text-error'}`}>${stats.netProfit.toFixed(2)}</div></CardContent></Card>
+              <Card className="border-stone-100 stat-card"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Total Sales</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-success"> SAR {stats.totalSales.toFixed(2)}</div></CardContent></Card>
+              <Card className="border-stone-100 stat-card"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Total Expenses</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-error"> SAR {stats.totalExpenses.toFixed(2)}</div></CardContent></Card>
+              <Card className="border-stone-100 stat-card"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Supplier Pay</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-info"> SAR {stats.totalSP.toFixed(2)}</div></CardContent></Card>
+              <Card className="border-stone-100 stat-card"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Net Profit</CardTitle></CardHeader><CardContent><div className={`text-2xl font-bold ${stats.netProfit >= 0 ? 'text-success' : 'text-error'}`}> SAR {stats.netProfit.toFixed(2)}</div></CardContent></Card>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -195,14 +195,14 @@ export default function ReportsPage() {
                 {['day', 'month', 'year'].map(p => <Button key={p} size="sm" variant={comparePeriod === p ? 'default' : 'outline'} onClick={() => setComparePeriod(p)} className="capitalize rounded-xl">{p}</Button>)}
               </div>
               <div className="grid grid-cols-2 gap-6 mb-6">
-                <div className="p-4 bg-primary/5 rounded-xl border border-primary/20"><div className="text-sm font-medium text-primary mb-1">Current: {periodLabel(0)}</div><div className="text-2xl font-bold font-outfit">${p1.totalSales.toFixed(2)} sales</div></div>
-                <div className="p-4 bg-stone-50 rounded-xl border"><div className="text-sm font-medium text-muted-foreground mb-1">Previous: {periodLabel(1)}</div><div className="text-2xl font-bold font-outfit">${p2.totalSales.toFixed(2)} sales</div></div>
+                <div className="p-4 bg-primary/5 rounded-xl border border-primary/20"><div className="text-sm font-medium text-primary mb-1">Current: {periodLabel(0)}</div><div className="text-2xl font-bold font-outfit"> SAR {p1.totalSales.toFixed(2)} sales</div></div>
+                <div className="p-4 bg-stone-50 rounded-xl border"><div className="text-sm font-medium text-muted-foreground mb-1">Previous: {periodLabel(1)}</div><div className="text-2xl font-bold font-outfit"> SAR {p2.totalSales.toFixed(2)} sales</div></div>
               </div>
               <ResponsiveContainer width="100%" height={350}>
                 <BarChart data={periodCompare}><CartesianGrid strokeDasharray="3 3" opacity={0.3} /><XAxis dataKey="metric" tick={{ fontSize: 11 }} /><YAxis tick={{ fontSize: 11 }} /><Tooltip formatter={(v) => `$${v.toFixed(2)}`} /><Legend /><Bar dataKey="current" name={periodLabel(0)} fill="#F5841F" radius={[4, 4, 0, 0]} /><Bar dataKey="previous" name={periodLabel(1)} fill="#94A3B8" radius={[4, 4, 0, 0]} /></BarChart>
               </ResponsiveContainer>
               <div className="mt-4 overflow-x-auto"><table className="w-full"><thead><tr className="border-b"><th className="text-left p-3 text-sm font-medium">Metric</th><th className="text-right p-3 text-sm font-medium">{periodLabel(0)}</th><th className="text-right p-3 text-sm font-medium">{periodLabel(1)}</th><th className="text-right p-3 text-sm font-medium">Change</th></tr></thead>
-              <tbody>{periodCompare.map(r => { const change = r.previous > 0 ? ((r.current - r.previous) / r.previous * 100).toFixed(1) : '0'; const up = r.current >= r.previous; return (<tr key={r.metric} className="border-b hover:bg-stone-50"><td className="p-3 text-sm font-medium">{r.metric}</td><td className="p-3 text-sm text-right font-bold">${r.current.toFixed(2)}</td><td className="p-3 text-sm text-right">${r.previous.toFixed(2)}</td><td className="p-3 text-sm text-right"><Badge className={up ? 'bg-success/20 text-success' : 'bg-error/20 text-error'}>{up ? '+' : ''}{change}%</Badge></td></tr>); })}</tbody></table></div>
+              <tbody>{periodCompare.map(r => { const change = r.previous > 0 ? ((r.current - r.previous) / r.previous * 100).toFixed(1) : '0'; const up = r.current >= r.previous; return (<tr key={r.metric} className="border-b hover:bg-stone-50"><td className="p-3 text-sm font-medium">{r.metric}</td><td className="p-3 text-sm text-right font-bold"> SAR {r.current.toFixed(2)}</td><td className="p-3 text-sm text-right"> SAR {r.previous.toFixed(2)}</td><td className="p-3 text-sm text-right"><Badge className={up ? 'bg-success/20 text-success' : 'bg-error/20 text-error'}>{up ? '+' : ''}{change}%</Badge></td></tr>); })}</tbody></table></div>
             </CardContent></Card>
           </TabsContent>
 
@@ -218,7 +218,7 @@ export default function ReportsPage() {
                   <BarChart data={branchCompare}><CartesianGrid strokeDasharray="3 3" opacity={0.3} /><XAxis dataKey="metric" tick={{ fontSize: 11 }} /><YAxis tick={{ fontSize: 11 }} /><Tooltip formatter={(v) => `$${v.toFixed(2)}`} /><Legend /><Bar dataKey={b1Name} fill="#F5841F" radius={[4, 4, 0, 0]} /><Bar dataKey={b2Name} fill="#0EA5E9" radius={[4, 4, 0, 0]} /></BarChart>
                 </ResponsiveContainer>
                 <div className="mt-4 overflow-x-auto"><table className="w-full"><thead><tr className="border-b"><th className="text-left p-3 text-sm font-medium">Metric</th><th className="text-right p-3 text-sm font-medium">{b1Name}</th><th className="text-right p-3 text-sm font-medium">{b2Name}</th><th className="text-right p-3 text-sm font-medium">Difference</th></tr></thead>
-                <tbody>{branchCompare.map(r => (<tr key={r.metric} className="border-b hover:bg-stone-50"><td className="p-3 text-sm font-medium">{r.metric}</td><td className="p-3 text-sm text-right font-bold">${r[b1Name].toFixed(2)}</td><td className="p-3 text-sm text-right font-bold">${r[b2Name].toFixed(2)}</td><td className="p-3 text-sm text-right"><Badge className={r[b1Name] >= r[b2Name] ? 'bg-primary/20 text-primary' : 'bg-info/20 text-info'}>${Math.abs(r[b1Name] - r[b2Name]).toFixed(2)}</Badge></td></tr>))}</tbody></table></div>
+                <tbody>{branchCompare.map(r => (<tr key={r.metric} className="border-b hover:bg-stone-50"><td className="p-3 text-sm font-medium">{r.metric}</td><td className="p-3 text-sm text-right font-bold"> SAR {r[b1Name].toFixed(2)}</td><td className="p-3 text-sm text-right font-bold"> SAR {r[b2Name].toFixed(2)}</td><td className="p-3 text-sm text-right"><Badge className={r[b1Name] >= r[b2Name] ? 'bg-primary/20 text-primary' : 'bg-info/20 text-info'}> SAR {Math.abs(r[b1Name] - r[b2Name]).toFixed(2)}</Badge></td></tr>))}</tbody></table></div>
               </>) : <p className="text-center text-muted-foreground py-12">Select two branches to compare</p>}
             </CardContent></Card>
           </TabsContent>
@@ -245,13 +245,13 @@ export default function ReportsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="border-stone-100"><CardHeader><CardTitle className="font-outfit text-base">Top Expense Categories</CardTitle></CardHeader><CardContent>
                 <div className="space-y-2">{catData.slice(0, 8).map((c, i) => (
-                  <div key={c.name} className="flex items-center gap-3"><div className="w-2 h-2 rounded-full" style={{ background: COLORS[i % COLORS.length] }} /><span className="text-sm flex-1">{c.name}</span><span className="font-bold text-sm">${c.value.toFixed(2)}</span><span className="text-xs text-muted-foreground">{stats.totalExpenses > 0 ? (c.value / stats.totalExpenses * 100).toFixed(1) : 0}%</span></div>
+                  <div key={c.name} className="flex items-center gap-3"><div className="w-2 h-2 rounded-full" style={{ background: COLORS[i % COLORS.length] }} /><span className="text-sm flex-1">{c.name}</span><span className="font-bold text-sm"> SAR {c.value.toFixed(2)}</span><span className="text-xs text-muted-foreground">{stats.totalExpenses > 0 ? (c.value / stats.totalExpenses * 100).toFixed(1) : 0}%</span></div>
                 ))}</div>
               </CardContent></Card>
               <Card className="border-stone-100"><CardHeader><CardTitle className="font-outfit text-base">Branch Performance</CardTitle></CardHeader><CardContent>
                 <div className="space-y-3">{branches.map(b => {
                   const bs = calcStats(filterByBranch(sales, b.id), filterByBranch(expenses, b.id), filterByBranch(supplierPayments, b.id));
-                  return (<div key={b.id} className="p-3 bg-stone-50 rounded-xl"><div className="flex justify-between items-center"><span className="font-medium text-sm">{b.name}</span><Badge className={bs.netProfit >= 0 ? 'bg-success/20 text-success' : 'bg-error/20 text-error'}>${bs.netProfit.toFixed(2)}</Badge></div>
+                  return (<div key={b.id} className="p-3 bg-stone-50 rounded-xl"><div className="flex justify-between items-center"><span className="font-medium text-sm">{b.name}</span><Badge className={bs.netProfit >= 0 ? 'bg-success/20 text-success' : 'bg-error/20 text-error'}> SAR {bs.netProfit.toFixed(2)}</Badge></div>
                   <div className="flex gap-4 mt-1 text-xs text-muted-foreground"><span>Sales: ${bs.totalSales.toFixed(0)}</span><span>Exp: ${bs.totalExpenses.toFixed(0)}</span><span>Txns: {bs.count}</span></div></div>);
                 })}</div>
               </CardContent></Card>

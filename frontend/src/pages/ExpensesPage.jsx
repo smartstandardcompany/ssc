@@ -387,7 +387,7 @@ export default function ExpensesPage() {
                         </td>
                         <td className="p-3 text-sm">{expense.description}</td>
                         <td className="p-3 text-sm">{supplierName}</td>
-                        <td className="p-3 text-sm text-right font-medium">${expense.amount.toFixed(2)}</td>
+                        <td className="p-3 text-sm text-right font-medium"> SAR {expense.amount.toFixed(2)}</td>
                         <td className="p-3">
                           <span className={`inline-block px-2 py-1 rounded text-xs font-medium border ${getPaymentBadgeClass(expense.payment_mode)}`}>
                             {expense.payment_mode}

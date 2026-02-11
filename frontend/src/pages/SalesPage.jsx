@@ -323,22 +323,22 @@ export default function SalesPage() {
                           <div className="grid grid-cols-3 gap-4 text-sm">
                             <div className="p-2 bg-cash/10 rounded border border-cash/30">
                               <div className="text-xs text-muted-foreground">Cash</div>
-                              <div className="font-bold text-cash">${totals.cash.toFixed(2)}</div>
+                              <div className="font-bold text-cash"> SAR {totals.cash.toFixed(2)}</div>
                             </div>
                             <div className="p-2 bg-bank/10 rounded border border-bank/30">
                               <div className="text-xs text-muted-foreground">Bank</div>
-                              <div className="font-bold text-bank">${totals.bank.toFixed(2)}</div>
+                              <div className="font-bold text-bank"> SAR {totals.bank.toFixed(2)}</div>
                             </div>
                             <div className="p-2 bg-credit/10 rounded border border-credit/30">
                               <div className="text-xs text-muted-foreground">Credit</div>
-                              <div className="font-bold text-credit">${totals.credit.toFixed(2)}</div>
+                              <div className="font-bold text-credit"> SAR {totals.credit.toFixed(2)}</div>
                             </div>
                           </div>
                           
                           <div className="space-y-2 pt-2 border-t">
                             <div className="flex justify-between text-sm">
                               <span>Subtotal:</span>
-                              <span className="font-medium">${totals.subtotal.toFixed(2)}</span>
+                              <span className="font-medium"> SAR {totals.subtotal.toFixed(2)}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="text-sm">Discount:</span>
@@ -354,7 +354,7 @@ export default function SalesPage() {
                             </div>
                             <div className="flex justify-between text-lg font-bold pt-2 border-t">
                               <span>Final Amount:</span>
-                              <span className="text-primary">${totals.total.toFixed(2)}</span>
+                              <span className="text-primary"> SAR {totals.total.toFixed(2)}</span>
                             </div>
                           </div>
                         </div>
@@ -426,11 +426,11 @@ export default function SalesPage() {
                         <td className="p-3 text-sm capitalize">{sale.sale_type}</td>
                         <td className="p-3 text-sm">{branchName}</td>
                         <td className="p-3 text-sm">{sale.sale_type === 'online' ? customerName : '-'}</td>
-                        <td className="p-3 text-sm text-right font-medium">${sale.amount.toFixed(2)}</td>
+                        <td className="p-3 text-sm text-right font-medium"> SAR {sale.amount.toFixed(2)}</td>
                         <td className="p-3 text-sm text-right text-error">
                           {discount > 0 ? `-SAR ${discount.toFixed(2)}` : '-'}
                         </td>
-                        <td className="p-3 text-sm text-right font-bold text-primary">${finalAmount.toFixed(2)}</td>
+                        <td className="p-3 text-sm text-right font-bold text-primary"> SAR {finalAmount.toFixed(2)}</td>
                         <td className="p-3">
                           <div className="flex gap-1 flex-wrap">
                             {sale.payment_details?.map((p, i) => (
@@ -503,10 +503,10 @@ export default function SalesPage() {
             <form onSubmit={handleReceiveCredit} className="space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground mb-2">
-                  Sale Amount: <span className="font-medium text-foreground">${receivingSale?.amount?.toFixed(2)}</span>
+                  Sale Amount: <span className="font-medium text-foreground"> SAR {receivingSale?.amount?.toFixed(2)}</span>
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Remaining Credit: <span className="font-bold text-credit">${getRemainingCredit(receivingSale || {}).toFixed(2)}</span>
+                  Remaining Credit: <span className="font-bold text-credit"> SAR {getRemainingCredit(receivingSale || {}).toFixed(2)}</span>
                 </p>
               </div>
               <div>

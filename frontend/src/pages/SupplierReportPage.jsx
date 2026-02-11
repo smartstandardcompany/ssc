@@ -96,19 +96,19 @@ export default function SupplierReportPage() {
           </Card>
           <Card className="border-border">
             <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total Expenses</CardTitle></CardHeader>
-            <CardContent><div className="text-2xl font-bold font-outfit text-error" data-testid="total-supplier-expenses">${totalExpenses.toFixed(2)}</div></CardContent>
+            <CardContent><div className="text-2xl font-bold font-outfit text-error" data-testid="total-supplier-expenses"> SAR {totalExpenses.toFixed(2)}</div></CardContent>
           </Card>
           <Card className="border-border">
             <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Cash Paid</CardTitle></CardHeader>
-            <CardContent><div className="text-2xl font-bold font-outfit text-cash">${totalCashPaid.toFixed(2)}</div></CardContent>
+            <CardContent><div className="text-2xl font-bold font-outfit text-cash"> SAR {totalCashPaid.toFixed(2)}</div></CardContent>
           </Card>
           <Card className="border-border">
             <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Bank Paid</CardTitle></CardHeader>
-            <CardContent><div className="text-2xl font-bold font-outfit text-bank">${totalBankPaid.toFixed(2)}</div></CardContent>
+            <CardContent><div className="text-2xl font-bold font-outfit text-bank"> SAR {totalBankPaid.toFixed(2)}</div></CardContent>
           </Card>
           <Card className="border-border">
             <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Outstanding Credit</CardTitle></CardHeader>
-            <CardContent><div className="text-2xl font-bold font-outfit text-warning">${totalCredit.toFixed(2)}</div></CardContent>
+            <CardContent><div className="text-2xl font-bold font-outfit text-warning"> SAR {totalCredit.toFixed(2)}</div></CardContent>
           </Card>
         </div>
 
@@ -169,10 +169,10 @@ export default function SupplierReportPage() {
                     <tr key={supplier.id} className="border-b border-border hover:bg-secondary/50" data-testid="supplier-report-row">
                       <td className="p-3 text-sm font-medium">{supplier.name}</td>
                       <td className="p-3"><span className="px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">{supplier.category || 'N/A'}</span></td>
-                      <td className="p-3 text-sm text-right text-error font-medium">${supplier.total_expenses.toFixed(2)}</td>
-                      <td className="p-3 text-sm text-right text-cash">${supplier.cash_paid.toFixed(2)}</td>
-                      <td className="p-3 text-sm text-right text-bank">${supplier.bank_paid.toFixed(2)}</td>
-                      <td className="p-3 text-sm text-right font-bold text-warning">${supplier.current_credit.toFixed(2)}</td>
+                      <td className="p-3 text-sm text-right text-error font-medium"> SAR {supplier.total_expenses.toFixed(2)}</td>
+                      <td className="p-3 text-sm text-right text-cash"> SAR {supplier.cash_paid.toFixed(2)}</td>
+                      <td className="p-3 text-sm text-right text-bank"> SAR {supplier.bank_paid.toFixed(2)}</td>
+                      <td className="p-3 text-sm text-right font-bold text-warning"> SAR {supplier.current_credit.toFixed(2)}</td>
                       <td className="p-3 text-center"><Badge variant="secondary">{supplier.transaction_count}</Badge></td>
                     </tr>
                   ))}

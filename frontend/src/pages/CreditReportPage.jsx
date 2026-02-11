@@ -158,12 +158,12 @@ export default function CreditReportPage() {
                       <td className="p-3 text-sm capitalize">{sale.sale_type}</td>
                       <td className="p-3 text-sm">{sale.branch}</td>
                       <td className="p-3 text-sm">{sale.sale_type === 'online' ? sale.reference : '-'}</td>
-                      <td className="p-3 text-sm text-right font-medium">${sale.total_amount.toFixed(2)}</td>
+                      <td className="p-3 text-sm text-right font-medium"> SAR {sale.total_amount.toFixed(2)}</td>
                       <td className="p-3 text-sm text-right text-error">{(sale.discount || 0) > 0 ? `-SAR ${sale.discount.toFixed(2)}` : '-'}</td>
-                      <td className="p-3 text-sm text-right font-medium text-primary">${(sale.final_amount || sale.total_amount).toFixed(2)}</td>
-                      <td className="p-3 text-sm text-right text-credit font-bold">${sale.credit_given.toFixed(2)}</td>
-                      <td className="p-3 text-sm text-right text-success">${sale.credit_received.toFixed(2)}</td>
-                      <td className="p-3 text-sm text-right text-error font-bold">${sale.remaining.toFixed(2)}</td>
+                      <td className="p-3 text-sm text-right font-medium text-primary"> SAR {(sale.final_amount || sale.total_amount).toFixed(2)}</td>
+                      <td className="p-3 text-sm text-right text-credit font-bold"> SAR {sale.credit_given.toFixed(2)}</td>
+                      <td className="p-3 text-sm text-right text-success"> SAR {sale.credit_received.toFixed(2)}</td>
+                      <td className="p-3 text-sm text-right text-error font-bold"> SAR {sale.remaining.toFixed(2)}</td>
                       <td className="p-3 text-center">{getStatusBadge(sale.status)}</td>
                       <td className="p-3 text-right">
                         {sale.remaining > 0 && (
@@ -203,10 +203,10 @@ export default function CreditReportPage() {
             <form onSubmit={handleReceiveCredit} className="space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground mb-2">
-                  Sale Amount: <span className="font-medium text-foreground">${receivingSale?.total_amount?.toFixed(2)}</span>
+                  Sale Amount: <span className="font-medium text-foreground"> SAR {receivingSale?.total_amount?.toFixed(2)}</span>
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Remaining Credit: <span className="font-bold text-credit">${receivingSale?.remaining?.toFixed(2)}</span>
+                  Remaining Credit: <span className="font-bold text-credit"> SAR {receivingSale?.remaining?.toFixed(2)}</span>
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -223,9 +223,9 @@ export default function CreditReportPage() {
               </div>
               {(parseFloat(receivePayment.amount) > 0 || parseFloat(receivePayment.discount) > 0) && (
                 <div className="p-3 bg-secondary/50 rounded-lg space-y-1 text-sm">
-                  <div className="flex justify-between"><span>Payment:</span><span>${(parseFloat(receivePayment.amount) || 0).toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span>Payment:</span><span> SAR {(parseFloat(receivePayment.amount) || 0).toFixed(2)}</span></div>
                   {parseFloat(receivePayment.discount) > 0 && <div className="flex justify-between"><span>Discount:</span><span className="text-error">-SAR {(parseFloat(receivePayment.discount) || 0).toFixed(2)}</span></div>}
-                  <div className="flex justify-between border-t pt-1 font-bold"><span>Total Settled:</span><span className="text-success">${((parseFloat(receivePayment.amount) || 0) + (parseFloat(receivePayment.discount) || 0)).toFixed(2)}</span></div>
+                  <div className="flex justify-between border-t pt-1 font-bold"><span>Total Settled:</span><span className="text-success"> SAR {((parseFloat(receivePayment.amount) || 0) + (parseFloat(receivePayment.discount) || 0)).toFixed(2)}</span></div>
                 </div>
               )}
               <div>

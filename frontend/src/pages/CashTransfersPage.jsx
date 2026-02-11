@@ -112,7 +112,7 @@ export default function CashTransfersPage() {
           </div>
         </div>
 
-        <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Total Transferred</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-primary">${totalTransferred.toFixed(2)}</div></CardContent></Card>
+        <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Total Transferred</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-primary"> SAR {totalTransferred.toFixed(2)}</div></CardContent></Card>
 
         <Card className="border-border">
           <CardHeader><CardTitle className="font-outfit">All Transfers</CardTitle></CardHeader>
@@ -138,7 +138,7 @@ export default function CashTransfersPage() {
                       <td className="p-3 text-sm font-medium">{t.from_branch_name || 'Office'}</td>
                       <td className="p-3 text-center"><ArrowRight size={16} className="text-primary mx-auto" /></td>
                       <td className="p-3 text-sm font-medium">{t.to_branch_name || 'Office'}</td>
-                      <td className="p-3 text-sm text-right font-bold">${t.amount.toFixed(2)}</td>
+                      <td className="p-3 text-sm text-right font-bold"> SAR {t.amount.toFixed(2)}</td>
                       <td className="p-3"><Badge variant="secondary" className="capitalize">{t.transfer_mode}</Badge></td>
                       <td className="p-3 text-sm">{t.sender_name}</td>
                       <td className="p-3 text-sm">{t.receiver_name}</td>
