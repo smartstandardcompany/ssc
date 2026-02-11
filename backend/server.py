@@ -2873,6 +2873,71 @@ async def get_branch_dues(current_user: User = Depends(get_current_user)):
     
     return {"dues": dues, "total_cross_branch": sum(dues.values())}
 
+# Fines & Penalties Routes
+@api_router.get("/fines")
+async def get_fines(current_user: User = Depends(get_current_user)):
+    fines = await db.fines.find({}, {"_id": 0}).sort("fine_date", -1).to_list(1000)
+    for f in fines:
+        for k in ['fine_date', 'due_date', 'paid_date', 'created_at']:
+            if isinstance(f.get(k), str): f[k] = datetime.fromisoformat(f[k])
+    return fines
+
+@api_router.post("/fines")
+async def create_fine(data: FineCreate, current_user: User = Depends(get_current_user)):
+    fine = Fine(**data.model_dump())
+    f_dict = fine.model_dump()
+    for k in ['fine_date', 'due_date', 'created_at']:
+        if f_dict.get(k): f_dict[k] = f_dict[k].isoformat()
+    for k in ['branch_id', 'employee_id']:
+        if f_dict.get(k) == '': f_dict[k] = None
+    await db.fines.insert_one(f_dict)
+    return {k: v for k, v in f_dict.items() if k != '_id'}
+
+@api_router.put("/fines/{fine_id}/pay")
+async def pay_fine(fine_id: str, body: dict, current_user: User = Depends(get_current_user)):
+    fine = await db.fines.find_one({"id": fine_id}, {"_id": 0})
+    if not fine: raise HTTPException(status_code=404, detail="Fine not found")
+    amount = float(body.get("amount", 0))
+    mode = body.get("payment_mode", "cash")
+    new_paid = fine.get("paid_amount", 0) + amount
+    status = "paid" if new_paid >= fine["amount"] else "partial"
+    await db.fines.update_one({"id": fine_id}, {"$set": {"paid_amount": new_paid, "payment_status": status, "payment_mode": mode, "paid_date": datetime.now(timezone.utc).isoformat()}})
+    return {"message": f"Fine payment recorded", "paid_amount": new_paid, "status": status}
+
+@api_router.delete("/fines/{fine_id}")
+async def delete_fine(fine_id: str, current_user: User = Depends(get_current_user)):
+    await db.fines.delete_one({"id": fine_id})
+    return {"message": "Fine deleted"}
+
+# Salary Deductions Routes
+@api_router.get("/salary-deductions")
+async def get_salary_deductions(employee_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {}
+    if employee_id: query["employee_id"] = employee_id
+    deductions = await db.salary_deductions.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
+    for d in deductions:
+        for k in ['date', 'created_at']:
+            if isinstance(d.get(k), str): d[k] = datetime.fromisoformat(d[k])
+    return deductions
+
+@api_router.post("/salary-deductions")
+async def create_salary_deduction(data: SalaryDeductionCreate, current_user: User = Depends(get_current_user)):
+    emp = await db.employees.find_one({"id": data.employee_id}, {"_id": 0})
+    if not emp: raise HTTPException(status_code=404, detail="Employee not found")
+    deduction = SalaryDeduction(**data.model_dump(), employee_name=emp["name"], created_by=current_user.id)
+    d_dict = deduction.model_dump()
+    d_dict["date"] = d_dict["date"].isoformat()
+    d_dict["created_at"] = d_dict["created_at"].isoformat()
+    for k in ['branch_id', 'fine_id']:
+        if d_dict.get(k) == '': d_dict[k] = None
+    await db.salary_deductions.insert_one(d_dict)
+    return {k: v for k, v in d_dict.items() if k != '_id'}
+
+@api_router.delete("/salary-deductions/{ded_id}")
+async def delete_salary_deduction(ded_id: str, current_user: User = Depends(get_current_user)):
+    await db.salary_deductions.delete_one({"id": ded_id})
+    return {"message": "Deduction deleted"}
+
 # Items Master (Products/Services)
 @api_router.get("/items")
 async def get_items(current_user: User = Depends(get_current_user)):
