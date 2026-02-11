@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { ExportButtons } from '@/components/ExportButtons';
+import { BranchFilter } from '@/components/BranchFilter';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 
