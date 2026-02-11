@@ -1660,7 +1660,7 @@ async def export_data(request: dict, current_user: User = Depends(get_current_us
         doc = SimpleDocTemplate(buffer, pagesize=A4)
         elements = []
         styles = getSampleStyleSheet()
-        title_style = ParagraphStyle('T', parent=styles['Heading1'], fontSize=18, textColor=colors.HexColor('#7C3AED'), alignment=1)
+        title_style = ParagraphStyle('T', parent=styles['Heading1'], fontSize=18, textColor=colors.HexColor('#F5841F'), alignment=1)
         elements.append(Paragraph(title, title_style))
         elements.append(Spacer(1, 0.2*inch))
         
@@ -1669,7 +1669,7 @@ async def export_data(request: dict, current_user: User = Depends(get_current_us
         col_width = 7.5 * inch / col_count
         t = Table(table_data, colWidths=[col_width] * col_count)
         t.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#7C3AED')),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F5841F')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 7),
@@ -2295,12 +2295,12 @@ async def generate_payslip(payment_id: str, current_user: User = Depends(get_cur
     styles = getSampleStyleSheet()
     
     # Header
-    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=20, textColor=colors.HexColor('#7C3AED'), alignment=1, spaceAfter=5)
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=20, textColor=colors.HexColor('#F5841F'), alignment=1, spaceAfter=5)
     sub_style = ParagraphStyle('Sub', parent=styles['Normal'], fontSize=10, textColor=colors.grey, alignment=1, spaceAfter=20)
     
     elements.append(Paragraph("DATAENTRY HUB", title_style))
     elements.append(Paragraph("Pay Slip", sub_style))
-    elements.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#7C3AED')))
+    elements.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#F5841F')))
     elements.append(Spacer(1, 0.2*inch))
     
     # Employee Details
@@ -2322,7 +2322,7 @@ async def generate_payslip(payment_id: str, current_user: User = Depends(get_cur
     elements.append(Spacer(1, 0.15*inch))
     
     # Payment Breakdown
-    elements.append(Paragraph("Payment Details", ParagraphStyle('H2', parent=styles['Heading2'], fontSize=12, textColor=colors.HexColor('#7C3AED'))))
+    elements.append(Paragraph("Payment Details", ParagraphStyle('H2', parent=styles['Heading2'], fontSize=12, textColor=colors.HexColor('#F5841F'))))
     
     salary_total = sum(p["amount"] for p in period_payments if p.get("payment_type") == "salary")
     overtime = sum(p["amount"] for p in period_payments if p.get("payment_type") == "overtime")
@@ -2348,7 +2348,7 @@ async def generate_payslip(payment_id: str, current_user: User = Depends(get_cur
     
     pay_table = Table(pay_rows, colWidths=[4.5*inch, 2.5*inch])
     pay_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#7C3AED')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F5841F')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 9),
@@ -3058,7 +3058,7 @@ def generate_pdf_report(sales, expenses, supplier_payments, branches, customers)
         'CustomTitle',
         parent=styles['Heading1'],
         fontSize=24,
-        textColor=colors.HexColor('#7C3AED'),
+        textColor=colors.HexColor('#F5841F'),
         spaceAfter=30,
         alignment=1
     )
@@ -3080,7 +3080,7 @@ def generate_pdf_report(sales, expenses, supplier_payments, branches, customers)
     
     summary_table = Table(summary_data, colWidths=[3*inch, 2*inch])
     summary_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#7C3AED')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F5841F')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
