@@ -294,20 +294,6 @@ export default function DashboardPage() {
           </Card>
         )}
 
-        {/* Quick Actions */}
-        <Card className="border-border">
-          <CardHeader>
-            <CardTitle className="font-outfit">Quick Tips</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>• Add your branches and customers before recording sales</li>
-              <li>• Record credit sales and mark them as received when payment comes in</li>
-              <li>• Track all expenses by category for better financial insights</li>
-              <li>• Use the Reports section to view detailed analytics</li>
-            </ul>
-          </CardContent>
-        </Card>
       </div>
     </DashboardLayout>
   );
