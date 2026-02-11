@@ -365,8 +365,9 @@ class Leave(BaseModel):
     start_date: datetime
     end_date: datetime
     days: int
+    with_ticket: bool = False  # Request ticket with leave
     reason: Optional[str] = None
-    status: str = "pending"  # "pending", "approved", "rejected"
+    status: str = "pending"  # "pending", "branch_approved", "manager_approved", "approved", "rejected"
     approved_by: Optional[str] = None
     approved_at: Optional[datetime] = None
     rejection_reason: Optional[str] = None
@@ -378,8 +379,30 @@ class LeaveCreate(BaseModel):
     start_date: datetime
     end_date: datetime
     days: int
+    with_ticket: Optional[bool] = False
     reason: Optional[str] = None
     status: Optional[str] = "pending"
+
+# Employee Request (letter, loan, etc.)
+class EmployeeRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    employee_id: str
+    employee_name: str
+    request_type: str  # "letter", "loan", "salary_advance", "other"
+    subject: str
+    details: Optional[str] = None
+    amount: Optional[float] = None  # For loan/advance requests
+    status: str = "pending"  # "pending", "approved", "rejected"
+    response: Optional[str] = None
+    processed_by: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class EmployeeRequestCreate(BaseModel):
+    request_type: str
+    subject: str
+    details: Optional[str] = None
+    amount: Optional[float] = None
 
 # Notification Model
 class Notification(BaseModel):
