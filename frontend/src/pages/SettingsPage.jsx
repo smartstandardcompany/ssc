@@ -92,11 +92,13 @@ export default function SettingsPage() {
 
         <Tabs defaultValue="email">
           <TabsList>
-            <TabsTrigger value="email"><Mail size={14} className="mr-2" />Email (SMTP)</TabsTrigger>
+            <TabsTrigger value="email"><Mail size={14} className="mr-2" />Email</TabsTrigger>
             <TabsTrigger value="whatsapp"><MessageCircle size={14} className="mr-2" />WhatsApp</TabsTrigger>
-            <TabsTrigger value="notifications"><Bell size={14} className="mr-2" />Notifications</TabsTrigger>
-            <TabsTrigger value="company">Company</TabsTrigger>
+            <TabsTrigger value="notifications"><Bell size={14} className="mr-2" />Alerts</TabsTrigger>
+            <TabsTrigger value="import"><Upload size={14} className="mr-2" />Import Data</TabsTrigger>
             <TabsTrigger value="backup"><Database size={14} className="mr-2" />Backup</TabsTrigger>
+            <TabsTrigger value="deploy"><Shield size={14} className="mr-2" />Deploy</TabsTrigger>
+            <TabsTrigger value="company">Company</TabsTrigger>
           </TabsList>
 
           <TabsContent value="email">
