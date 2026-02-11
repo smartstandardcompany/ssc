@@ -1238,6 +1238,41 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
     cash_in_hand = cash_sales - exp_cash - sp_cash
     bank_in_hand = bank_sales - exp_bank - sp_bank
     
+    # Expense breakdown by category
+    expense_by_category = {}
+    for e in expenses:
+        cat = e.get("category", "other")
+        expense_by_category[cat] = expense_by_category.get(cat, 0) + e["amount"]
+    
+    # Supplier dues (all suppliers credit)
+    all_suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+    supplier_dues = sum(s.get("current_credit", 0) for s in all_suppliers)
+    
+    # Recurring expense alerts
+    recurring = await db.recurring_expenses.find({"active": True}, {"_id": 0}).to_list(100)
+    now = datetime.now(timezone.utc)
+    upcoming_expenses = []
+    for r in recurring:
+        due = r.get("next_due_date")
+        if isinstance(due, str):
+            due = datetime.fromisoformat(due)
+        if due and due.tzinfo is None:
+            due = due.replace(tzinfo=timezone.utc)
+        if due:
+            days_left = (due - now).days
+            if days_left <= r.get("alert_days", 7):
+                upcoming_expenses.append({"name": r["name"], "category": r.get("category", ""), "amount": r["amount"], "due_date": due.isoformat(), "days_left": days_left})
+    
+    # Branch-to-branch dues from cash transfers
+    transfers = await db.cash_transfers.find({}, {"_id": 0}).to_list(10000)
+    branch_dues = {}
+    for t in transfers:
+        from_b = t.get("from_branch_name", "Office")
+        to_b = t.get("to_branch_name", "Office")
+        if from_b != to_b:
+            key = f"{to_b} → {from_b}"
+            branch_dues[key] = branch_dues.get(key, 0) + t["amount"]
+    
     return {
         "total_sales": total_sales,
         "total_expenses": total_expenses,
@@ -1248,7 +1283,15 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
         "bank_sales": bank_sales,
         "credit_sales": credit_sales,
         "cash_in_hand": cash_in_hand,
-        "bank_in_hand": bank_in_hand
+        "bank_in_hand": bank_in_hand,
+        "expenses_cash": exp_cash,
+        "expenses_bank": exp_bank,
+        "sp_cash": sp_cash,
+        "sp_bank": sp_bank,
+        "expense_by_category": expense_by_category,
+        "supplier_dues": supplier_dues,
+        "upcoming_expenses": upcoming_expenses,
+        "branch_dues": branch_dues
     }
 
 # Credit Sales Report
