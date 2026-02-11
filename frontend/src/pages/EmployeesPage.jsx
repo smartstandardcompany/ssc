@@ -205,23 +205,27 @@ export default function EmployeesPage() {
                   <th className="text-left p-3 font-medium text-sm">Name</th>
                   <th className="text-left p-3 font-medium text-sm">Position</th>
                   <th className="text-right p-3 font-medium text-sm">Salary</th>
-                  <th className="text-right p-3 font-medium text-sm">Total Paid</th>
-                  <th className="text-right p-3 font-medium text-sm">Loan Balance</th>
-                  <th className="text-left p-3 font-medium text-sm">Doc Expiry</th>
+                  <th className="text-right p-3 font-medium text-sm">Pending</th>
+                  <th className="text-right p-3 font-medium text-sm">Loan</th>
+                  <th className="text-center p-3 font-medium text-sm">Leave</th>
                   <th className="text-right p-3 font-medium text-sm">Actions</th>
                 </tr></thead>
                 <tbody>
-                  {employees.filter(emp => branchFilter.length === 0 || branchFilter.includes(emp.branch_id) || !emp.branch_id).map((emp) => (
+                  {employees.filter(emp => branchFilter.length === 0 || branchFilter.includes(emp.branch_id) || !emp.branch_id).map((emp) => {
+                    const pend = getPending(emp.id);
+                    return (
                     <tr key={emp.id} className="border-b border-border hover:bg-secondary/50" data-testid="employee-row">
                       <td className="p-3 text-sm font-medium">{emp.name}<div className="text-xs text-muted-foreground">{emp.document_id || ''}</div></td>
                       <td className="p-3 text-sm">{emp.position || '-'}</td>
                       <td className="p-3 text-sm text-right font-medium">${(emp.salary || 0).toFixed(2)}</td>
-                      <td className="p-3 text-sm text-right text-success font-medium">${getEmpTotalPaid(emp.id).toFixed(2)}</td>
                       <td className="p-3 text-sm text-right">
-                        {(emp.loan_balance || 0) > 0 ? <span className="font-bold text-warning">${(emp.loan_balance).toFixed(2)}</span> : <span className="text-muted-foreground">$0.00</span>}
+                        {(pend.pending_salary || 0) > 0 ? <span className="font-bold text-error">${pend.pending_salary.toFixed(2)}</span> : <span className="text-success font-medium">Paid</span>}
                       </td>
-                      <td className="p-3 text-sm">
-                        {emp.document_expiry ? <span className={isExpiryNear(emp.document_expiry) ? 'text-error font-bold flex items-center gap-1' : ''}>{isExpiryNear(emp.document_expiry) && <AlertTriangle size={14} />}{format(new Date(emp.document_expiry), 'MMM dd, yyyy')}</span> : '-'}
+                      <td className="p-3 text-sm text-right">
+                        {(emp.loan_balance || 0) > 0 ? <span className="font-bold text-warning">${emp.loan_balance.toFixed(2)}</span> : <span className="text-muted-foreground">-</span>}
+                      </td>
+                      <td className="p-3 text-center">
+                        <div className="text-xs"><span className="text-success">{pend.annual_leave_remaining || 0}A</span> <span className="text-info">{pend.sick_leave_remaining || 0}S</span>{pend.pending_leave_requests > 0 && <Badge className="ml-1 bg-warning/20 text-warning text-xs">{pend.pending_leave_requests}P</Badge>}</div>
                       </td>
                       <td className="p-3 text-right">
                         <div className="flex gap-1 justify-end flex-wrap">
