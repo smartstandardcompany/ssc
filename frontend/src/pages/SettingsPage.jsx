@@ -23,14 +23,16 @@ export default function SettingsPage() {
 
   const fetchSettings = async () => {
     try {
-      const [emailRes, waRes, prefRes] = await Promise.all([
+      const [emailRes, waRes, prefRes, coRes] = await Promise.all([
         api.get('/settings/email').catch(() => ({ data: null })),
         api.get('/settings/whatsapp').catch(() => ({ data: null })),
         api.get('/settings/notifications').catch(() => ({ data: null })),
+        api.get('/settings/company').catch(() => ({ data: null })),
       ]);
       if (emailRes.data) setEmailSettings(prev => ({ ...prev, ...emailRes.data }));
       if (waRes.data) setWhatsappSettings(prev => ({ ...prev, ...waRes.data }));
       if (prefRes.data) setNotifPrefs(prev => ({ ...prev, ...prefRes.data }));
+      if (coRes.data) setCompanyInfo(prev => ({ ...prev, ...coRes.data }));
     } catch {}
     finally { setLoading(false); }
   };
