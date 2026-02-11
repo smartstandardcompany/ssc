@@ -34,24 +34,24 @@ export const DashboardLayout = ({ children }) => {
     window.location.reload();
   };
 
-  const adminNav = [
-    { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/sales', icon: ShoppingCart, label: 'Sales' },
-    { path: '/invoices', icon: FileInput, label: 'Invoices' },
-    { path: '/branches', icon: Store, label: 'Branches' },
-    { path: '/customers', icon: Users, label: 'Customers' },
-    { path: '/suppliers', icon: Truck, label: 'Suppliers' },
-    { path: '/supplier-payments', icon: Receipt, label: 'Supplier Payments' },
-    { path: '/expenses', icon: Receipt, label: 'Expenses' },
-    { path: '/cash-transfers', icon: ArrowLeftRight, label: 'Cash Transfers' },
-    { path: '/employees', icon: UserCheck, label: 'Employees' },
-    { path: '/documents', icon: FileWarning, label: 'Documents' },
-    { path: '/reports', icon: BarChart3, label: 'Reports' },
-    { path: '/credit-report', icon: CreditCard, label: 'Credit Report' },
-    { path: '/supplier-report', icon: FileText, label: 'Supplier Report' },
-    { path: '/category-report', icon: Tags, label: 'Category Report' },
-    { path: '/settings', icon: Settings, label: 'Settings' },
-    { path: '/users', icon: Shield, label: 'Users', adminOnly: true },
+  const allNav = [
+    { path: '/', icon: LayoutDashboard, label: 'Dashboard', roles: ['admin', 'manager', 'operator'] },
+    { path: '/sales', icon: ShoppingCart, label: 'Sales', roles: ['admin', 'manager', 'operator'] },
+    { path: '/invoices', icon: FileInput, label: 'Invoices', roles: ['admin', 'manager', 'operator'] },
+    { path: '/branches', icon: Store, label: 'Branches', roles: ['admin', 'manager'] },
+    { path: '/customers', icon: Users, label: 'Customers', roles: ['admin', 'manager', 'operator'] },
+    { path: '/suppliers', icon: Truck, label: 'Suppliers', roles: ['admin', 'manager'] },
+    { path: '/supplier-payments', icon: Receipt, label: 'Supplier Payments', roles: ['admin', 'manager'] },
+    { path: '/expenses', icon: Receipt, label: 'Expenses', roles: ['admin', 'manager'] },
+    { path: '/cash-transfers', icon: ArrowLeftRight, label: 'Cash Transfers', roles: ['admin', 'manager'] },
+    { path: '/employees', icon: UserCheck, label: 'Employees', roles: ['admin', 'manager'] },
+    { path: '/documents', icon: FileWarning, label: 'Documents', roles: ['admin', 'manager'] },
+    { path: '/reports', icon: BarChart3, label: 'Reports', roles: ['admin', 'manager'] },
+    { path: '/credit-report', icon: CreditCard, label: 'Credit Report', roles: ['admin', 'manager'] },
+    { path: '/supplier-report', icon: FileText, label: 'Supplier Report', roles: ['admin', 'manager'] },
+    { path: '/category-report', icon: Tags, label: 'Category Report', roles: ['admin', 'manager'] },
+    { path: '/settings', icon: Settings, label: 'Settings', roles: ['admin'] },
+    { path: '/users', icon: Shield, label: 'Users', roles: ['admin'] },
   ];
 
   const employeeNav = [
@@ -59,7 +59,7 @@ export const DashboardLayout = ({ children }) => {
     { path: '/notifications', icon: Bell, label: 'Notifications' },
   ];
 
-  const navItems = isEmployee ? employeeNav : adminNav;
+  const navItems = isEmployee ? employeeNav : allNav.filter(item => !item.roles || item.roles.includes(user.role || 'operator'));
 
   return (
     <div className="flex min-h-screen bg-background">
