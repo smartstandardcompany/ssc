@@ -193,7 +193,18 @@ export default function CustomersPage() {
             <DialogHeader><DialogTitle className="font-outfit">Receive Credit - {receivingCustomer?.name}</DialogTitle></DialogHeader>
             <p className="text-sm text-muted-foreground">Outstanding: <span className="font-bold text-warning">${receivingCustomer?.credit_balance?.toFixed(2)}</span></p>
             <form onSubmit={handleReceiveCredit} className="space-y-4">
-              <div><Label>Amount *</Label><Input type="number" step="0.01" value={receiveData.amount} data-testid="receive-amount-input" onChange={(e) => setReceiveData({ ...receiveData, amount: e.target.value })} required max={receivingCustomer?.credit_balance} /></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><Label>Payment Amount</Label><Input type="number" step="0.01" value={receiveData.amount} data-testid="receive-amount-input" onChange={(e) => setReceiveData({ ...receiveData, amount: e.target.value })} placeholder="0.00" /></div>
+                <div><Label>Discount</Label><Input type="number" step="0.01" value={receiveData.discount} data-testid="receive-discount-input" onChange={(e) => setReceiveData({ ...receiveData, discount: e.target.value })} placeholder="0.00" /></div>
+              </div>
+              {(parseFloat(receiveData.amount) > 0 || parseFloat(receiveData.discount) > 0) && (
+                <div className="p-3 bg-secondary/50 rounded-lg space-y-1 text-sm">
+                  <div className="flex justify-between"><span>Payment:</span><span className="font-medium">${(parseFloat(receiveData.amount) || 0).toFixed(2)}</span></div>
+                  {parseFloat(receiveData.discount) > 0 && <div className="flex justify-between"><span>Discount:</span><span className="font-medium text-error">-${(parseFloat(receiveData.discount) || 0).toFixed(2)}</span></div>}
+                  <div className="flex justify-between border-t pt-1 font-bold"><span>Total Settled:</span><span className="text-success">${((parseFloat(receiveData.amount) || 0) + (parseFloat(receiveData.discount) || 0)).toFixed(2)}</span></div>
+                  <div className="flex justify-between text-xs text-muted-foreground"><span>Remaining after:</span><span>${(receivingCustomer?.credit_balance - (parseFloat(receiveData.amount) || 0) - (parseFloat(receiveData.discount) || 0)).toFixed(2)}</span></div>
+                </div>
+              )}
               <div><Label>Payment Mode</Label>
                 <Select value={receiveData.payment_mode} onValueChange={(v) => setReceiveData({ ...receiveData, payment_mode: v })}>
                   <SelectTrigger data-testid="receive-mode-select"><SelectValue /></SelectTrigger>
