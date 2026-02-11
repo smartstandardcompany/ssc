@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
 import { DateFilter } from '@/components/DateFilter';
+import { BranchFilter } from '@/components/BranchFilter';
 
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState([]);
@@ -34,6 +35,7 @@ export default function ExpensesPage() {
     notes: '',
   });
   const [dateFilter, setDateFilter] = useState({ start: null, end: null, period: 'all' });
+  const [branchFilter, setBranchFilter] = useState([]);
 
   const defaultCategories = [
     { value: 'salary', label: 'Salary' },
@@ -366,6 +368,7 @@ export default function ExpensesPage() {
                 </thead>
                 <tbody>
                   {expenses.filter(e => {
+                    if (branchFilter.length > 0 && !branchFilter.includes(e.branch_id)) return false;
                     if (dateFilter.start && dateFilter.end) {
                       const d = new Date(e.date);
                       return d >= dateFilter.start && d <= dateFilter.end;
