@@ -27,14 +27,26 @@ export default function UsersPage() {
   });
 
   const allPermissions = [
-    { value: 'sales', label: 'Sales Management' },
-    { value: 'expenses', label: 'Expenses Management' },
-    { value: 'reports', label: 'View Reports' },
-    { value: 'branches', label: 'Branch Management' },
-    { value: 'customers', label: 'Customer Management' },
-    { value: 'suppliers', label: 'Supplier Management' },
-    { value: 'users', label: 'User Management' }
+    { value: 'dashboard', label: 'Dashboard', group: 'Core' },
+    { value: 'sales', label: 'Sales', group: 'Core' },
+    { value: 'invoices', label: 'Invoices', group: 'Core' },
+    { value: 'branches', label: 'Branches', group: 'Core' },
+    { value: 'customers', label: 'Customers', group: 'Core' },
+    { value: 'suppliers', label: 'Suppliers', group: 'Finance' },
+    { value: 'supplier_payments', label: 'Supplier Payments', group: 'Finance' },
+    { value: 'expenses', label: 'Expenses', group: 'Finance' },
+    { value: 'cash_transfers', label: 'Cash Transfers', group: 'Finance' },
+    { value: 'employees', label: 'Employees', group: 'HR' },
+    { value: 'documents', label: 'Documents', group: 'HR' },
+    { value: 'leave_approvals', label: 'Leave Approvals', group: 'HR' },
+    { value: 'reports', label: 'Reports', group: 'Reports' },
+    { value: 'credit_report', label: 'Credit Report', group: 'Reports' },
+    { value: 'supplier_report', label: 'Supplier Report', group: 'Reports' },
+    { value: 'settings', label: 'Settings', group: 'Admin' },
+    { value: 'users', label: 'User Management', group: 'Admin' },
   ];
+
+  const permissionGroups = [...new Set(allPermissions.map(p => p.group))];
 
   useEffect(() => {
     fetchData();
