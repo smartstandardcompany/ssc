@@ -287,6 +287,7 @@ export default function UsersPage() {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <Card className="border-border">
