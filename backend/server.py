@@ -453,7 +453,47 @@ class InvoiceCreate(BaseModel):
     date: datetime
     notes: Optional[str] = None
 
-# Helper functions
+# Product/Service Items Master
+class Item(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: Optional[str] = None
+    unit_price: float = 0
+    category: Optional[str] = None
+    active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ItemCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    unit_price: float = 0
+    category: Optional[str] = None
+
+# Recurring Expense
+class RecurringExpense(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    category: str
+    amount: float
+    frequency: str = "monthly"  # monthly, quarterly, yearly
+    branch_id: Optional[str] = None
+    next_due_date: datetime
+    alert_days: int = 7
+    notes: Optional[str] = None
+    active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class RecurringExpenseCreate(BaseModel):
+    name: str
+    category: str
+    amount: float
+    frequency: Optional[str] = "monthly"
+    branch_id: Optional[str] = None
+    next_due_date: datetime
+    alert_days: Optional[int] = 7
+    notes: Optional[str] = None
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
