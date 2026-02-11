@@ -2322,6 +2322,95 @@ async def get_expiry_alerts(current_user: User = Depends(get_current_user)):
     alerts.sort(key=lambda x: x["days_left"])
     return alerts
 
+# Items Master (Products/Services)
+@api_router.get("/items")
+async def get_items(current_user: User = Depends(get_current_user)):
+    items = await db.items.find({}, {"_id": 0}).to_list(1000)
+    return items
+
+@api_router.post("/items")
+async def create_item(data: ItemCreate, current_user: User = Depends(get_current_user)):
+    item = Item(**data.model_dump())
+    i_dict = item.model_dump()
+    i_dict["created_at"] = i_dict["created_at"].isoformat()
+    await db.items.insert_one(i_dict)
+    return {k: v for k, v in i_dict.items() if k != '_id'}
+
+@api_router.put("/items/{item_id}")
+async def update_item(item_id: str, data: ItemCreate, current_user: User = Depends(get_current_user)):
+    await db.items.update_one({"id": item_id}, {"$set": data.model_dump()})
+    updated = await db.items.find_one({"id": item_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/items/{item_id}")
+async def delete_item(item_id: str, current_user: User = Depends(get_current_user)):
+    await db.items.delete_one({"id": item_id})
+    return {"message": "Item deleted"}
+
+# Recurring Expenses
+@api_router.get("/recurring-expenses")
+async def get_recurring_expenses(current_user: User = Depends(get_current_user)):
+    recs = await db.recurring_expenses.find({}, {"_id": 0}).to_list(100)
+    now = datetime.now(timezone.utc)
+    for r in recs:
+        for f in ['next_due_date', 'created_at']:
+            if isinstance(r.get(f), str):
+                r[f] = datetime.fromisoformat(r[f])
+        due = r.get('next_due_date')
+        if due:
+            if due.tzinfo is None:
+                due = due.replace(tzinfo=timezone.utc)
+            r['days_until_due'] = (due - now).days
+    return recs
+
+@api_router.post("/recurring-expenses")
+async def create_recurring_expense(data: RecurringExpenseCreate, current_user: User = Depends(get_current_user)):
+    rec = RecurringExpense(**data.model_dump())
+    r_dict = rec.model_dump()
+    r_dict["next_due_date"] = r_dict["next_due_date"].isoformat()
+    r_dict["created_at"] = r_dict["created_at"].isoformat()
+    if r_dict.get("branch_id") == '':
+        r_dict["branch_id"] = None
+    await db.recurring_expenses.insert_one(r_dict)
+    return {k: v for k, v in r_dict.items() if k != '_id'}
+
+@api_router.delete("/recurring-expenses/{rec_id}")
+async def delete_recurring_expense(rec_id: str, current_user: User = Depends(get_current_user)):
+    await db.recurring_expenses.delete_one({"id": rec_id})
+    return {"message": "Recurring expense deleted"}
+
+# Employee Pending Salary Summary
+@api_router.get("/employees/pending-summary")
+async def get_employees_pending(current_user: User = Depends(get_current_user)):
+    employees = await db.employees.find({"active": {"$ne": False}}, {"_id": 0}).to_list(1000)
+    payments = await db.salary_payments.find({}, {"_id": 0}).to_list(10000)
+    leaves = await db.leaves.find({}, {"_id": 0}).to_list(10000)
+    
+    now = datetime.now(timezone.utc)
+    current_period = now.strftime("%b %Y")
+    
+    result = []
+    for emp in employees:
+        eid = emp["id"]
+        emp_payments = [p for p in payments if p.get("employee_id") == eid and p.get("period") == current_period]
+        salary_paid = sum(p["amount"] for p in emp_payments if p.get("payment_type") == "salary")
+        pending = emp.get("salary", 0) - salary_paid
+        
+        emp_leaves = [l for l in leaves if l.get("employee_id") == eid]
+        annual_used = sum(l.get("days", 0) for l in emp_leaves if l.get("leave_type") == "annual" and l.get("status") == "approved")
+        sick_used = sum(l.get("days", 0) for l in emp_leaves if l.get("leave_type") == "sick" and l.get("status") == "approved")
+        pending_leaves = sum(1 for l in emp_leaves if l.get("status") == "pending")
+        
+        result.append({
+            "id": eid, "name": emp["name"], "position": emp.get("position", ""),
+            "salary": emp.get("salary", 0), "salary_paid": salary_paid, "pending_salary": max(0, pending),
+            "loan_balance": emp.get("loan_balance", 0),
+            "annual_leave_remaining": emp.get("annual_leave_entitled", 30) - annual_used,
+            "sick_leave_remaining": emp.get("sick_leave_entitled", 15) - sick_used,
+            "pending_leave_requests": pending_leaves
+        })
+    return result
+
 # Cash Transfer Routes
 @api_router.get("/cash-transfers")
 async def get_cash_transfers(current_user: User = Depends(get_current_user)):
