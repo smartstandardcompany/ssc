@@ -6,20 +6,23 @@ import { Badge } from '@/components/ui/badge';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { BranchFilter } from '@/components/BranchFilter';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [branchFilter, setBranchFilter] = useState([]);
 
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [branchFilter]);
 
   const fetchStats = async () => {
     try {
+      const params = branchFilter.length > 0 ? `?branch_ids=${branchFilter.join(',')}` : '';
       const [statsRes, alertsRes] = await Promise.all([
-        api.get('/dashboard/stats'),
+        api.get(`/dashboard/stats${params}`),
         api.get('/documents/alerts/upcoming'),
       ]);
       setStats(statsRes.data);
