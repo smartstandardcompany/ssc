@@ -16,12 +16,25 @@ import { format } from 'date-fns';
 
 export default function LeaveApprovalsPage() {
   const [leaves, setLeaves] = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('pending');
   const [rejectReason, setRejectReason] = useState('');
   const [rejectingId, setRejectingId] = useState(null);
+  const [showAnnouncement, setShowAnnouncement] = useState(false);
+  const [announcement, setAnnouncement] = useState({ title: '', message: '', target: 'all' });
+  const [responseText, setResponseText] = useState('');
 
-  useEffect(() => { fetchLeaves(); }, [filter]);
+  useEffect(() => { fetchLeaves(); fetchRequests(); }, [filter]);
+
+  const fetchRequests = async () => {
+    try {
+      const [reqRes, empRes] = await Promise.all([api.get('/employee-requests'), api.get('/employees')]);
+      setRequests(reqRes.data);
+      setEmployees(empRes.data);
+    } catch {}
+  };
 
   const fetchLeaves = async () => {
     try {
