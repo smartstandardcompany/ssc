@@ -109,9 +109,14 @@ export default function EmployeePortalPage() {
             <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="portal-title">My Portal</h1>
             <p className="text-muted-foreground">Welcome, {profile?.name}</p>
           </div>
-          <Button onClick={() => setShowLeaveForm(true)} className="rounded-full" data-testid="apply-leave-btn">
-            <Calendar size={18} className="mr-2" />Apply for Leave
-          </Button>
+          <div className="flex gap-3">
+            <Button onClick={() => setShowLeaveForm(true)} className="rounded-full" data-testid="apply-leave-btn">
+              <Calendar size={18} className="mr-2" />Apply for Leave
+            </Button>
+            <Button onClick={() => setShowRequestForm(true)} variant="outline" className="rounded-full" data-testid="submit-request-btn">
+              <Send size={18} className="mr-2" />Submit Request
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
