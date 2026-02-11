@@ -266,7 +266,8 @@ export default function CustomersPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full"><thead><tr className="border-b"><th className="text-left p-2 text-xs font-medium">Date</th><th className="text-left p-2 text-xs font-medium">Branch</th><th className="text-right p-2 text-xs font-medium">Amount</th><th className="text-right p-2 text-xs font-medium">Discount</th><th className="text-left p-2 text-xs font-medium">Payment</th><th className="text-right p-2 text-xs font-medium">Credit Due</th></tr></thead>
                   <tbody>{customerReport.purchases.map((p, i) => (
-                    <tr key={i} className="border-b hover:bg-stone-50">
+                    <React.Fragment key={i}>
+                    <tr className="border-b hover:bg-stone-50">
                       <td className="p-2 text-xs">{new Date(p.date).toLocaleDateString()}</td>
                       <td className="p-2 text-xs">{p.branch}{p.invoice_number && <Badge variant="secondary" className="ml-1 text-xs">{p.invoice_number}</Badge>}</td>
                       <td className="p-2 text-xs text-right font-medium">SAR {p.amount.toFixed(2)}</td>
@@ -288,6 +289,7 @@ export default function CustomersPage() {
                         ))}</div>
                       </td></tr>
                     )}
+                    </React.Fragment>
                   ))}{customerReport.purchases.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No purchases</td></tr>}</tbody></table>
                 </div>
               </div>
