@@ -555,6 +555,66 @@ class EmployeeDocumentCreate(BaseModel):
     expiry_date: Optional[datetime] = None
     notes: Optional[str] = None
 
+# Government Fine / Penalty
+class Fine(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    fine_type: str  # "government", "traffic", "labor", "municipality", "other"
+    department: str
+    description: str
+    amount: float
+    branch_id: Optional[str] = None
+    employee_id: Optional[str] = None  # If fine is charged to employee
+    payment_status: str = "unpaid"  # "unpaid", "paid", "partial"
+    paid_amount: float = 0
+    payment_mode: Optional[str] = None
+    fine_date: datetime
+    due_date: Optional[datetime] = None
+    paid_date: Optional[datetime] = None
+    deduct_from_salary: bool = False
+    monthly_deduction: float = 0  # Monthly amount to deduct
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class FineCreate(BaseModel):
+    fine_type: str
+    department: str
+    description: str
+    amount: float
+    branch_id: Optional[str] = None
+    employee_id: Optional[str] = None
+    fine_date: datetime
+    due_date: Optional[datetime] = None
+    deduct_from_salary: Optional[bool] = False
+    monthly_deduction: Optional[float] = 0
+    notes: Optional[str] = None
+
+# Salary Deduction
+class SalaryDeduction(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    employee_id: str
+    employee_name: str
+    deduction_type: str  # "fine", "late", "absence", "misbehavior", "damage", "other"
+    amount: float
+    period: str
+    reason: str
+    fine_id: Optional[str] = None  # Linked fine if applicable
+    branch_id: Optional[str] = None
+    date: datetime
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+
+class SalaryDeductionCreate(BaseModel):
+    employee_id: str
+    deduction_type: str
+    amount: float
+    period: str
+    reason: str
+    fine_id: Optional[str] = None
+    branch_id: Optional[str] = None
+    date: datetime
+
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
