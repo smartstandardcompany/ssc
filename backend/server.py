@@ -2084,6 +2084,88 @@ async def apply_leave(data: LeaveCreate, current_user: User = Depends(get_curren
     data.status = "pending"
     return await create_leave(data, current_user)
 
+# Employee Requests (letter, loan, etc.)
+@api_router.get("/employee-requests")
+async def get_employee_requests(status: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {}
+    if status:
+        query["status"] = status
+    reqs = await db.employee_requests.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    for r in reqs:
+        if isinstance(r.get('created_at'), str):
+            r['created_at'] = datetime.fromisoformat(r['created_at'])
+    return reqs
+
+@api_router.post("/my/request")
+async def create_employee_request(data: EmployeeRequestCreate, current_user: User = Depends(get_current_user)):
+    emp = await db.employees.find_one({"user_id": current_user.id}, {"_id": 0})
+    if not emp:
+        raise HTTPException(status_code=404, detail="No employee profile linked")
+    req = EmployeeRequest(**data.model_dump(), employee_id=emp["id"], employee_name=emp["name"])
+    r_dict = req.model_dump()
+    r_dict["created_at"] = r_dict["created_at"].isoformat()
+    await db.employee_requests.insert_one(r_dict)
+    # Notify admins
+    admins = await db.users.find({"role": {"$in": ["admin", "manager"]}}, {"_id": 0}).to_list(100)
+    for admin in admins:
+        n = Notification(user_id=admin["id"], title=f"New Request: {data.request_type.replace('_',' ').title()}", message=f"{emp['name']}: {data.subject}", type="employee_request", related_id=req.id)
+        n_dict = n.model_dump()
+        n_dict["created_at"] = n_dict["created_at"].isoformat()
+        await db.notifications.insert_one(n_dict)
+    return {k: v for k, v in r_dict.items() if k != '_id'}
+
+@api_router.get("/my/requests")
+async def get_my_requests(current_user: User = Depends(get_current_user)):
+    emp = await db.employees.find_one({"user_id": current_user.id}, {"_id": 0})
+    if not emp:
+        raise HTTPException(status_code=404, detail="No employee profile linked")
+    reqs = await db.employee_requests.find({"employee_id": emp["id"]}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    for r in reqs:
+        if isinstance(r.get('created_at'), str):
+            r['created_at'] = datetime.fromisoformat(r['created_at'])
+    return reqs
+
+@api_router.put("/employee-requests/{req_id}/respond")
+async def respond_to_request(req_id: str, body: dict, current_user: User = Depends(get_current_user)):
+    req = await db.employee_requests.find_one({"id": req_id}, {"_id": 0})
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+    status = body.get("status", "approved")
+    response = body.get("response", "")
+    await db.employee_requests.update_one({"id": req_id}, {"$set": {"status": status, "response": response, "processed_by": current_user.id}})
+    # Notify employee
+    emp = await db.employees.find_one({"id": req["employee_id"]}, {"_id": 0})
+    if emp and emp.get("user_id"):
+        n = Notification(user_id=emp["user_id"], title=f"Request {status.title()}", message=f"Your {req['request_type'].replace('_',' ')} request: {response or status}", type="request_response", related_id=req_id)
+        n_dict = n.model_dump()
+        n_dict["created_at"] = n_dict["created_at"].isoformat()
+        await db.notifications.insert_one(n_dict)
+    return {"message": f"Request {status}"}
+
+# Send Announcement to employees
+@api_router.post("/announcements/send")
+async def send_announcement(body: dict, current_user: User = Depends(get_current_user)):
+    title = body.get("title", "Announcement")
+    message = body.get("message", "")
+    target = body.get("target", "all")  # "all" or specific employee_id
+    
+    if target == "all":
+        employees = await db.employees.find({"user_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(1000)
+        for emp in employees:
+            n = Notification(user_id=emp["user_id"], title=title, message=message, type="announcement")
+            n_dict = n.model_dump()
+            n_dict["created_at"] = n_dict["created_at"].isoformat()
+            await db.notifications.insert_one(n_dict)
+        return {"message": f"Announcement sent to {len(employees)} employees"}
+    else:
+        emp = await db.employees.find_one({"id": target}, {"_id": 0})
+        if emp and emp.get("user_id"):
+            n = Notification(user_id=emp["user_id"], title=title, message=message, type="announcement")
+            n_dict = n.model_dump()
+            n_dict["created_at"] = n_dict["created_at"].isoformat()
+            await db.notifications.insert_one(n_dict)
+        return {"message": f"Announcement sent to {emp['name'] if emp else 'unknown'}"}
+
 # Document Routes
 @api_router.get("/documents")
 async def get_documents(current_user: User = Depends(get_current_user)):
