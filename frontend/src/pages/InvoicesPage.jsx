@@ -162,7 +162,18 @@ export default function InvoicesPage() {
                 <div>
                   <div className="flex justify-between items-center mb-3">
                     <Label>Items</Label>
-                    <Button type="button" size="sm" variant="outline" onClick={addItem} className="rounded-full"><Plus size={14} className="mr-1" />Add Item</Button>
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm" variant="outline" onClick={addItem} className="rounded-full"><Plus size={14} className="mr-1" />Add Row</Button>
+                      {isAdmin && <Button type="button" size="sm" variant="outline" onClick={() => setShowItemForm(!showItemForm)} className="rounded-full text-primary"><Plus size={14} className="mr-1" />New Product</Button>}
+                    </div>
+                  </div>
+                  {showItemForm && isAdmin && (
+                    <div className="flex gap-2 items-end p-3 bg-primary/5 rounded-lg border border-primary/20">
+                      <div className="flex-1"><Label className="text-xs">Product Name</Label><Input value={newItem.name} onChange={(e) => setNewItem({ ...newItem, name: e.target.value })} placeholder="Product name" className="h-8" /></div>
+                      <div className="w-28"><Label className="text-xs">Price</Label><Input type="number" step="0.01" value={newItem.unit_price} onChange={(e) => setNewItem({ ...newItem, unit_price: e.target.value })} placeholder="0.00" className="h-8" /></div>
+                      <Button type="button" size="sm" onClick={handleAddMasterItem} className="h-8 rounded-full">Save</Button>
+                    </div>
+                  )}
                   </div>
                   <div className="border rounded-lg overflow-hidden">
                     <table className="w-full">
