@@ -522,6 +522,39 @@ class RecurringExpenseCreate(BaseModel):
     next_due_date: datetime
     alert_days: Optional[int] = 7
     notes: Optional[str] = None
+
+# Attendance Model
+class Attendance(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    employee_id: str
+    employee_name: str
+    date: str  # "2026-02-11"
+    time_in: Optional[datetime] = None
+    time_out: Optional[datetime] = None
+    status: str = "present"  # "present", "late", "absent"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Employee Document (multiple per employee)
+class EmployeeDocument(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    employee_id: str
+    document_type: str  # "passport", "visa", "labor_card", "emirates_id", "health_card", "other"
+    document_number: Optional[str] = None
+    issue_date: Optional[datetime] = None
+    expiry_date: Optional[datetime] = None
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class EmployeeDocumentCreate(BaseModel):
+    employee_id: str
+    document_type: str
+    document_number: Optional[str] = None
+    issue_date: Optional[datetime] = None
+    expiry_date: Optional[datetime] = None
+    notes: Optional[str] = None
+
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
