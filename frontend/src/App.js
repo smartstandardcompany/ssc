@@ -20,6 +20,8 @@ import EmployeePortalPage from "./pages/EmployeePortalPage";
 import LeaveApprovalsPage from "./pages/LeaveApprovalsPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import SettingsPage from "./pages/SettingsPage";
+import CashTransfersPage from "./pages/CashTransfersPage";
+import InvoicesPage from "./pages/InvoicesPage";
 import UsersPage from "./pages/UsersPage";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -62,6 +64,8 @@ function App() {
           <Route path="/leave-approvals" element={isAuthenticated ? <LeaveApprovalsPage /> : <Navigate to="/login" />} />
           <Route path="/notifications" element={isAuthenticated ? <NotificationsPage /> : <Navigate to="/login" />} />
           <Route path="/settings" element={isAuthenticated ? <SettingsPage /> : <Navigate to="/login" />} />
+          <Route path="/cash-transfers" element={isAuthenticated ? <CashTransfersPage /> : <Navigate to="/login" />} />
+          <Route path="/invoices" element={isAuthenticated ? <InvoicesPage /> : <Navigate to="/login" />} />
           <Route path="/users" element={isAuthenticated ? <UsersPage /> : <Navigate to="/login" />} />
         </Routes>
       </BrowserRouter>
