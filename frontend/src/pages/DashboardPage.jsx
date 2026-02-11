@@ -328,6 +328,28 @@ export default function DashboardPage() {
           )}
         </div>
 
+        {/* VAT Section (toggleable) */}
+        <div className="flex items-center gap-3 mt-2">
+          <Checkbox checked={showVat} onCheckedChange={setShowVat} id="vat-toggle" />
+          <Label htmlFor="vat-toggle" className="cursor-pointer text-sm font-medium">Show VAT 15% Calculation</Label>
+        </div>
+        {showVat && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="border-stone-100 bg-blue-50 border-blue-200">
+              <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">VAT on Sales (Output)</CardTitle></CardHeader>
+              <CardContent><div className="text-2xl font-bold font-outfit text-blue-600">SAR {(stats?.vat_on_sales || 0).toFixed(2)}</div><p className="text-xs text-muted-foreground mt-1">15% of SAR {(stats?.total_sales || 0).toFixed(0)}</p></CardContent>
+            </Card>
+            <Card className="border-stone-100 bg-green-50 border-green-200">
+              <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">VAT on Purchases (Input)</CardTitle></CardHeader>
+              <CardContent><div className="text-2xl font-bold font-outfit text-green-600">SAR {(stats?.vat_on_purchases || 0).toFixed(2)}</div><p className="text-xs text-muted-foreground mt-1">15% of SAR {(stats?.total_supplier_payments || 0).toFixed(0)}</p></CardContent>
+            </Card>
+            <Card className="border-stone-100 bg-orange-50 border-orange-200">
+              <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">VAT Payable</CardTitle></CardHeader>
+              <CardContent><div className="text-2xl font-bold font-outfit text-orange-600">SAR {(stats?.vat_payable || 0).toFixed(2)}</div><p className="text-xs text-muted-foreground mt-1">Output VAT - Input VAT</p></CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Upcoming Recurring Expenses */}
         {stats?.upcoming_expenses?.length > 0 && (
           <Card className="border-border border-error/30 bg-error/5">
