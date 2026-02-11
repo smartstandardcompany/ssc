@@ -42,13 +42,15 @@ export default function SupplierReportPage() {
     );
   }
 
-  const totalExpenses = reportData.reduce((sum, s) => sum + s.total_expenses, 0);
-  const totalPaid = reportData.reduce((sum, s) => sum + s.total_paid, 0);
-  const totalCredit = reportData.reduce((sum, s) => sum + s.current_credit, 0);
-  const totalCashPaid = reportData.reduce((sum, s) => sum + s.cash_paid, 0);
-  const totalBankPaid = reportData.reduce((sum, s) => sum + s.bank_paid, 0);
+  const filtered = reportData.filter(s => branchFilter.length === 0 || branchFilter.includes(s.branch_id) || !s.branch_id);
 
-  const chartData = reportData.filter(s => s.total_expenses > 0 || s.total_paid > 0).map(s => ({
+  const totalExpenses = filtered.reduce((sum, s) => sum + s.total_expenses, 0);
+  const totalPaid = filtered.reduce((sum, s) => sum + s.total_paid, 0);
+  const totalCredit = filtered.reduce((sum, s) => sum + s.current_credit, 0);
+  const totalCashPaid = filtered.reduce((sum, s) => sum + s.cash_paid, 0);
+  const totalBankPaid = filtered.reduce((sum, s) => sum + s.bank_paid, 0);
+
+  const chartData = filtered.filter(s => s.total_expenses > 0 || s.total_paid > 0).map(s => ({
     name: s.name.length > 12 ? s.name.slice(0, 12) + '...' : s.name,
     Expenses: s.total_expenses,
     'Cash Paid': s.cash_paid,
