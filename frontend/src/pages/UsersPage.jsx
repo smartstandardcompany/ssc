@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Edit, Trash2, Shield, User as UserIcon } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { BranchFilter } from '@/components/BranchFilter';
 
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
