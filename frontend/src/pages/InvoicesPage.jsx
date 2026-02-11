@@ -144,9 +144,10 @@ export default function InvoicesPage() {
                     </Select>
                   </div>
                   <div><Label>Customer</Label>
+                    <Input placeholder="Search customer..." value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)} className="h-9 mb-1" data-testid="customer-search" />
                     <Select value={formData.customer_id || "none"} onValueChange={(v) => setFormData({ ...formData, customer_id: v === "none" ? "" : v })}>
                       <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
-                      <SelectContent><SelectItem value="none">Walk-in</SelectItem>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                      <SelectContent><SelectItem value="none">Walk-in</SelectItem>{filteredCustomers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                   <div><Label>Payment Mode</Label>
