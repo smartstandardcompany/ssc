@@ -199,9 +199,9 @@ export default function EmployeePortalPage() {
             <form onSubmit={handleApplyLeave} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div><Label>Type *</Label><Select value={leaveData.leave_type} onValueChange={(v) => setLeaveData({ ...leaveData, leave_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="annual">Annual</SelectItem><SelectItem value="sick">Sick</SelectItem><SelectItem value="unpaid">Unpaid</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select></div>
-                <div><Label>Days *</Label><Input type="number" value={leaveData.days} onChange={(e) => setLeaveData({ ...leaveData, days: e.target.value })} required /></div>
-                <div><Label>From *</Label><Input type="date" value={leaveData.start_date} onChange={(e) => setLeaveData({ ...leaveData, start_date: e.target.value })} required /></div>
-                <div><Label>To *</Label><Input type="date" value={leaveData.end_date} onChange={(e) => setLeaveData({ ...leaveData, end_date: e.target.value })} required /></div>
+                <div><Label>From *</Label><Input type="date" value={leaveData.start_date} onChange={(e) => { const s = e.target.value; const days = s && leaveData.end_date ? Math.max(1, Math.round((new Date(leaveData.end_date) - new Date(s)) / 86400000) + 1) : ''; setLeaveData({ ...leaveData, start_date: s, days }); }} required /></div>
+                <div><Label>To *</Label><Input type="date" value={leaveData.end_date} onChange={(e) => { const en = e.target.value; const days = leaveData.start_date && en ? Math.max(1, Math.round((new Date(en) - new Date(leaveData.start_date)) / 86400000) + 1) : ''; setLeaveData({ ...leaveData, end_date: en, days }); }} required /></div>
+                <div><Label>Days</Label><Input type="number" value={leaveData.days} readOnly className="bg-stone-50 font-bold" /></div>
               </div>
               <div><Label>Reason</Label><Textarea value={leaveData.reason} onChange={(e) => setLeaveData({ ...leaveData, reason: e.target.value })} /></div>
               {(profile?.ticket_entitled || 1) - (profile?.ticket_used || 0) > 0 && (
