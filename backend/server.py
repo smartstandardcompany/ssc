@@ -1353,6 +1353,7 @@ async def get_supplier_balance_report(
             "id": sid,
             "name": supplier["name"],
             "category": supplier.get("category", "-"),
+            "branch_id": supplier.get("branch_id"),
             "cash_paid": cash_paid,
             "bank_paid": bank_paid,
             "credit_added": credit_added,
