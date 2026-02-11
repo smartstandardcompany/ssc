@@ -2014,7 +2014,12 @@ async def get_employee_summary(emp_id: str, current_user: User = Depends(get_cur
             "annual_used": annual_used, "annual_remaining": emp.get("annual_leave_entitled", 30) - annual_used,
             "sick_used": sick_used, "sick_remaining": emp.get("sick_leave_entitled", 15) - sick_used,
             "unpaid_used": unpaid_used
-        }
+        },
+        "deductions": [{"id": d["id"], "type": d.get("deduction_type",""), "amount": d["amount"], "period": d.get("period",""), "reason": d.get("reason",""), "date": d.get("date","")} for d in deductions],
+        "total_deductions": sum(d["amount"] for d in deductions),
+        "fines": [{"id": f["id"], "type": f.get("fine_type",""), "department": f.get("department",""), "amount": f["amount"], "paid": f.get("paid_amount",0), "status": f.get("payment_status","unpaid"), "description": f.get("description","")} for f in fines],
+        "total_fines": sum(f["amount"] for f in fines),
+        "unpaid_fines": sum(f["amount"] - f.get("paid_amount",0) for f in fines if f.get("payment_status") != "paid")
     }
 
 @api_router.delete("/salary-payments/{payment_id}")
