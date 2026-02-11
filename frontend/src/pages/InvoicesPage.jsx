@@ -51,6 +51,26 @@ export default function InvoicesPage() {
     items[i][field] = val;
     setFormData({ ...formData, items });
   };
+  const selectMasterItem = (i, itemId) => {
+    const mi = masterItems.find(m => m.id === itemId);
+    if (mi) {
+      const items = [...formData.items];
+      items[i] = { description: mi.name, quantity: items[i].quantity || 1, unit_price: mi.unit_price };
+      setFormData({ ...formData, items });
+    }
+  };
+  const handleAddMasterItem = async () => {
+    if (!newItem.name) return;
+    try {
+      await api.post('/items', { ...newItem, unit_price: parseFloat(newItem.unit_price) || 0 });
+      toast.success('Item added');
+      setNewItem({ name: '', unit_price: '', category: '' });
+      setShowItemForm(false);
+      const res = await api.get('/items');
+      setMasterItems(res.data);
+    } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+  };
+  const filteredCustomers = customers.filter(c => !customerSearch || c.name.toLowerCase().includes(customerSearch.toLowerCase()));
 
   const calcTotals = () => {
     const subtotal = formData.items.reduce((s, item) => s + (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0), 0);
