@@ -2819,6 +2819,88 @@ async def restore_database(current_user: User = Depends(get_current_user)):
     # This is a placeholder - actual restore requires file upload
     return {"message": "Use the backup JSON file to restore. Contact support for restore assistance."}
 
+# Database Import from XLS/CSV
+@api_router.post("/import/data")
+async def import_data(file: UploadFile = File(...), data_type: str = Form(...), current_user: User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    content = await file.read()
+    
+    try:
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(BytesIO(content))
+        else:
+            df = pd.read_excel(BytesIO(content))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Cannot read file: {str(e)}")
+    
+    records = df.where(df.notna(), None).to_dict('records')
+    imported = 0
+    errors = []
+    
+    for i, row in enumerate(records):
+        try:
+            clean = {k: (None if v is None or str(v).strip() == '' else v) for k, v in row.items()}
+            
+            if data_type == "customers":
+                doc = {"id": str(uuid.uuid4()), "name": str(clean.get("name", "")), "phone": str(clean.get("phone", "")) if clean.get("phone") else None, "email": str(clean.get("email", "")) if clean.get("email") else None, "branch_id": None, "created_at": datetime.now(timezone.utc).isoformat()}
+                if doc["name"]:
+                    await db.customers.insert_one(doc)
+                    imported += 1
+            elif data_type == "suppliers":
+                doc = {"id": str(uuid.uuid4()), "name": str(clean.get("name", "")), "category": str(clean.get("category", "")) if clean.get("category") else None, "phone": str(clean.get("phone", "")) if clean.get("phone") else None, "email": str(clean.get("email", "")) if clean.get("email") else None, "branch_id": None, "credit_limit": float(clean.get("credit_limit", 0) or 0), "current_credit": 0, "created_at": datetime.now(timezone.utc).isoformat()}
+                if doc["name"]:
+                    await db.suppliers.insert_one(doc)
+                    imported += 1
+            elif data_type == "employees":
+                doc = {"id": str(uuid.uuid4()), "name": str(clean.get("name", "")), "document_id": str(clean.get("document_id", "")) if clean.get("document_id") else None, "phone": str(clean.get("phone", "")) if clean.get("phone") else None, "email": str(clean.get("email", "")) if clean.get("email") else None, "position": str(clean.get("position", "")) if clean.get("position") else None, "salary": float(clean.get("salary", 0) or 0), "branch_id": None, "loan_balance": 0, "annual_leave_entitled": 30, "sick_leave_entitled": 15, "ticket_entitled": 1, "ticket_years": 2, "ticket_used": 0, "active": True, "created_at": datetime.now(timezone.utc).isoformat()}
+                if doc["name"]:
+                    await db.employees.insert_one(doc)
+                    imported += 1
+            elif data_type == "items":
+                doc = {"id": str(uuid.uuid4()), "name": str(clean.get("name", "")), "unit_price": float(clean.get("unit_price", clean.get("price", 0)) or 0), "category": str(clean.get("category", "")) if clean.get("category") else None, "active": True, "created_at": datetime.now(timezone.utc).isoformat()}
+                if doc["name"]:
+                    await db.items.insert_one(doc)
+                    imported += 1
+            elif data_type == "branches":
+                doc = {"id": str(uuid.uuid4()), "name": str(clean.get("name", "")), "location": str(clean.get("location", "")) if clean.get("location") else None, "created_at": datetime.now(timezone.utc).isoformat()}
+                if doc["name"]:
+                    await db.branches.insert_one(doc)
+                    imported += 1
+        except Exception as e:
+            errors.append(f"Row {i+1}: {str(e)[:50]}")
+    
+    return {"message": f"Imported {imported} records", "imported": imported, "total_rows": len(records), "errors": errors[:10]}
+
+# Download Import Template
+@api_router.get("/import/template/{data_type}")
+async def download_import_template(data_type: str, current_user: User = Depends(get_current_user)):
+    templates = {
+        "customers": ["name", "phone", "email"],
+        "suppliers": ["name", "category", "phone", "email", "credit_limit"],
+        "employees": ["name", "document_id", "phone", "email", "position", "salary"],
+        "items": ["name", "unit_price", "category"],
+        "branches": ["name", "location"],
+    }
+    if data_type not in templates:
+        raise HTTPException(status_code=400, detail="Invalid type")
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = data_type.capitalize()
+    ws.append(templates[data_type])
+    for col in ws[1]:
+        col.font = Font(bold=True, color="FFFFFF")
+        col.fill = PatternFill(start_color="F5841F", end_color="F5841F", fill_type="solid")
+    ws.append(["Example " + templates[data_type][0]] + ["" for _ in templates[data_type][1:]])
+    
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    return StreamingResponse(buffer, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                             headers={"Content-Disposition": f"attachment; filename={data_type}_import_template.xlsx"})
+
 # ===== SETTINGS & NOTIFICATION ROUTES =====
 
 # Email Settings
