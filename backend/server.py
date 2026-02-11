@@ -1964,6 +1964,12 @@ async def approve_leave(leave_id: str, current_user: User = Depends(get_current_
         "approved_at": datetime.now(timezone.utc).isoformat()
     }})
     
+    # If leave includes ticket, update ticket_used
+    if leave.get("with_ticket"):
+        emp_doc = await db.employees.find_one({"id": leave["employee_id"]}, {"_id": 0})
+        if emp_doc:
+            await db.employees.update_one({"id": leave["employee_id"]}, {"$set": {"ticket_used": emp_doc.get("ticket_used", 0) + 1}})
+    
     # Notify employee
     emp = await db.employees.find_one({"id": leave["employee_id"]}, {"_id": 0})
     if emp and emp.get("user_id"):
