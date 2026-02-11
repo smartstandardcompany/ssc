@@ -7,22 +7,28 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { BranchFilter } from '@/components/BranchFilter';
+import { DateFilter } from '@/components/DateFilter';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [branchFilter, setBranchFilter] = useState([]);
+  const [dateFilter, setDateFilter] = useState({ start: null, end: null, period: 'all' });
 
   useEffect(() => {
     fetchStats();
-  }, [branchFilter]);
+  }, [branchFilter, dateFilter]);
 
   const fetchStats = async () => {
     try {
-      const params = branchFilter.length > 0 ? `?branch_ids=${branchFilter.join(',')}` : '';
+      const params = new URLSearchParams();
+      if (branchFilter.length > 0) params.set('branch_ids', branchFilter.join(','));
+      if (dateFilter.start) params.set('start_date', dateFilter.start.toISOString());
+      if (dateFilter.end) params.set('end_date', dateFilter.end.toISOString());
+      const q = params.toString() ? `?${params.toString()}` : '';
       const [statsRes, alertsRes] = await Promise.all([
-        api.get(`/dashboard/stats${params}`),
+        api.get(`/dashboard/stats${q}`),
         api.get('/documents/alerts/upcoming'),
       ]);
       setStats(statsRes.data);
