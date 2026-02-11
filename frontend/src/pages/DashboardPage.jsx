@@ -54,10 +54,29 @@ export default function DashboardPage() {
     );
   }
 
+  const pctChange = (current, prev) => {
+    if (!prev || prev === 0) return current > 0 ? 100 : 0;
+    return ((current - prev) / Math.abs(prev) * 100).toFixed(1);
+  };
+  const pctOfSales = (val) => stats?.total_sales > 0 ? (val / stats.total_sales * 100).toFixed(1) : 0;
+  const ChangeIndicator = ({ current, previous, invert = false }) => {
+    if (!previous && previous !== 0) return null;
+    const change = pctChange(current, previous);
+    const isUp = parseFloat(change) > 0;
+    const isGood = invert ? !isUp : isUp;
+    return (
+      <span className={`inline-flex items-center text-xs font-medium ml-2 ${isGood ? 'text-success' : 'text-error'}`}>
+        {isUp ? '▲' : '▼'} {Math.abs(change)}%
+      </span>
+    );
+  };
+  const PctBadge = ({ value }) => value > 0 ? <span className="text-xs text-muted-foreground ml-1">({value}% of sales)</span> : null;
+
   const statCards = [
     {
       title: 'Total Sales',
       value: `$${stats?.total_sales?.toFixed(2) || '0.00'}`,
+      prev: stats?.prev_sales,
       icon: DollarSign,
       color: 'text-success',
       bgColor: 'bg-success/10',
@@ -66,6 +85,9 @@ export default function DashboardPage() {
     {
       title: 'Total Expenses',
       value: `$${stats?.total_expenses?.toFixed(2) || '0.00'}`,
+      prev: stats?.prev_expenses,
+      pct: stats?.expenses_pct_of_sales,
+      invert: true,
       icon: TrendingDown,
       color: 'text-error',
       bgColor: 'bg-error/10',
@@ -74,6 +96,7 @@ export default function DashboardPage() {
     {
       title: 'Supplier Payments',
       value: `$${stats?.total_supplier_payments?.toFixed(2) || '0.00'}`,
+      pct: stats?.sp_pct_of_sales,
       icon: Building2,
       color: 'text-info',
       bgColor: 'bg-info/10',
@@ -82,6 +105,8 @@ export default function DashboardPage() {
     {
       title: 'Net Profit',
       value: `$${stats?.net_profit?.toFixed(2) || '0.00'}`,
+      prev: stats?.prev_net,
+      pct: stats?.profit_pct_of_sales,
       icon: TrendingUp,
       color: stats?.net_profit >= 0 ? 'text-success' : 'text-error',
       bgColor: stats?.net_profit >= 0 ? 'bg-success/10' : 'bg-error/10',
