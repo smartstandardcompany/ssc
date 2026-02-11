@@ -1,0 +1,217 @@
+import { useEffect, useState } from 'react';
+import { DashboardLayout } from '@/components/DashboardLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Trash2, X, FileText } from 'lucide-react';
+import api from '@/lib/api';
+import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { BranchFilter } from '@/components/BranchFilter';
+import { DateFilter } from '@/components/DateFilter';
+
+export default function InvoicesPage() {
+  const [invoices, setInvoices] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [branchFilter, setBranchFilter] = useState([]);
+  const [dateFilter, setDateFilter] = useState({ start: null, end: null, period: 'all' });
+  const [formData, setFormData] = useState({
+    branch_id: '', customer_id: '', payment_mode: 'cash', discount: '',
+    date: new Date().toISOString().split('T')[0], notes: '',
+    items: [{ description: '', quantity: 1, unit_price: '' }]
+  });
+
+  useEffect(() => { fetchData(); }, []);
+
+  const fetchData = async () => {
+    try {
+      const [iRes, bRes, cRes] = await Promise.all([api.get('/invoices'), api.get('/branches'), api.get('/customers')]);
+      setInvoices(iRes.data); setBranches(bRes.data); setCustomers(cRes.data);
+    } catch { toast.error('Failed to fetch data'); }
+    finally { setLoading(false); }
+  };
+
+  const addItem = () => setFormData({ ...formData, items: [...formData.items, { description: '', quantity: 1, unit_price: '' }] });
+  const removeItem = (i) => setFormData({ ...formData, items: formData.items.filter((_, idx) => idx !== i) });
+  const updateItem = (i, field, val) => {
+    const items = [...formData.items];
+    items[i][field] = val;
+    setFormData({ ...formData, items });
+  };
+
+  const calcTotals = () => {
+    const subtotal = formData.items.reduce((s, item) => s + (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0), 0);
+    const discount = parseFloat(formData.discount) || 0;
+    return { subtotal, discount, total: subtotal - discount };
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const totals = calcTotals();
+    if (totals.subtotal === 0) { toast.error('Add at least one item'); return; }
+    try {
+      const payload = {
+        branch_id: formData.branch_id || null,
+        customer_id: formData.customer_id || null,
+        items: formData.items.filter(i => i.description && parseFloat(i.unit_price) > 0).map(i => ({ description: i.description, quantity: parseFloat(i.quantity) || 1, unit_price: parseFloat(i.unit_price) })),
+        discount: totals.discount,
+        payment_mode: formData.payment_mode,
+        date: new Date(formData.date).toISOString(),
+        notes: formData.notes || null
+      };
+      await api.post('/invoices', payload);
+      toast.success('Invoice created & sale recorded');
+      setShowForm(false);
+      setFormData({ branch_id: '', customer_id: '', payment_mode: 'cash', discount: '', date: new Date().toISOString().split('T')[0], notes: '', items: [{ description: '', quantity: 1, unit_price: '' }] });
+      fetchData();
+    } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Delete invoice and linked sale?')) {
+      try { await api.delete(`/invoices/${id}`); toast.success('Deleted'); fetchData(); }
+      catch { toast.error('Failed'); }
+    }
+  };
+
+  if (loading) return <DashboardLayout><div className="flex items-center justify-center h-64">Loading...</div></DashboardLayout>;
+
+  const totals = calcTotals();
+  const filtered = invoices.filter(inv => {
+    if (branchFilter.length > 0 && !branchFilter.includes(inv.branch_id)) return false;
+    if (dateFilter.start && dateFilter.end) { const d = new Date(inv.date); return d >= dateFilter.start && d <= dateFilter.end; }
+    return true;
+  });
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center flex-wrap gap-3">
+          <div>
+            <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="invoices-title">Invoices</h1>
+            <p className="text-muted-foreground">Create invoices with items - auto-added as sales</p>
+          </div>
+          <div className="flex gap-3 items-center flex-wrap">
+            <BranchFilter onChange={setBranchFilter} />
+            <DateFilter onFilterChange={setDateFilter} />
+            <Button onClick={() => setShowForm(!showForm)} className="rounded-full" data-testid="create-invoice-btn"><Plus size={18} className="mr-2" />New Invoice</Button>
+          </div>
+        </div>
+
+        {showForm && (
+          <Card className="border-border" data-testid="invoice-form">
+            <CardHeader><CardTitle className="font-outfit">Create Invoice</CardTitle></CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div><Label>Branch *</Label>
+                    <Select value={formData.branch_id || "none"} onValueChange={(v) => setFormData({ ...formData, branch_id: v === "none" ? "" : v })}>
+                      <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
+                      <SelectContent><SelectItem value="none">No Branch</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label>Customer</Label>
+                    <Select value={formData.customer_id || "none"} onValueChange={(v) => setFormData({ ...formData, customer_id: v === "none" ? "" : v })}>
+                      <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+                      <SelectContent><SelectItem value="none">Walk-in</SelectItem>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label>Payment Mode</Label>
+                    <Select value={formData.payment_mode} onValueChange={(v) => setFormData({ ...formData, payment_mode: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="cash">Cash</SelectItem><SelectItem value="bank">Bank</SelectItem><SelectItem value="credit">Credit</SelectItem></SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label>Date</Label><Input type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} /></div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-3">
+                    <Label>Items</Label>
+                    <Button type="button" size="sm" variant="outline" onClick={addItem} className="rounded-full"><Plus size={14} className="mr-1" />Add Item</Button>
+                  </div>
+                  <div className="border rounded-lg overflow-hidden">
+                    <table className="w-full">
+                      <thead><tr className="bg-secondary/50 border-b">
+                        <th className="text-left p-2 text-xs font-medium">Description</th>
+                        <th className="text-center p-2 text-xs font-medium w-20">Qty</th>
+                        <th className="text-right p-2 text-xs font-medium w-28">Unit Price</th>
+                        <th className="text-right p-2 text-xs font-medium w-28">Total</th>
+                        <th className="w-10"></th>
+                      </tr></thead>
+                      <tbody>
+                        {formData.items.map((item, i) => (
+                          <tr key={i} className="border-b">
+                            <td className="p-1"><Input value={item.description} onChange={(e) => updateItem(i, 'description', e.target.value)} placeholder="Item description" className="h-8 border-0" data-testid={`item-desc-${i}`} /></td>
+                            <td className="p-1"><Input type="number" value={item.quantity} onChange={(e) => updateItem(i, 'quantity', e.target.value)} className="h-8 border-0 text-center" /></td>
+                            <td className="p-1"><Input type="number" step="0.01" value={item.unit_price} onChange={(e) => updateItem(i, 'unit_price', e.target.value)} placeholder="0.00" className="h-8 border-0 text-right" data-testid={`item-price-${i}`} /></td>
+                            <td className="p-2 text-right text-sm font-medium">${((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)).toFixed(2)}</td>
+                            <td className="p-1">{formData.items.length > 1 && <Button type="button" size="sm" variant="ghost" onClick={() => removeItem(i)} className="h-6 w-6 p-0 text-error"><X size={14} /></Button>}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div className="p-3 bg-secondary/30 space-y-1 text-sm">
+                      <div className="flex justify-between"><span>Subtotal:</span><span className="font-medium">${totals.subtotal.toFixed(2)}</span></div>
+                      <div className="flex items-center gap-2"><span>Discount:</span><Input type="number" step="0.01" value={formData.discount} onChange={(e) => setFormData({ ...formData, discount: e.target.value })} className="h-7 w-24 text-right" placeholder="0.00" data-testid="invoice-discount" /></div>
+                      <div className="flex justify-between text-lg font-bold border-t pt-1"><span>Total:</span><span className="text-primary">${totals.total.toFixed(2)}</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div><Label>Notes</Label><Input value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Optional" /></div>
+                <div className="flex gap-3">
+                  <Button type="submit" className="rounded-full" data-testid="submit-invoice">Create Invoice & Record Sale</Button>
+                  <Button type="button" variant="outline" onClick={() => setShowForm(false)} className="rounded-full">Cancel</Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card className="border-border">
+          <CardHeader><CardTitle className="font-outfit">All Invoices</CardTitle></CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full" data-testid="invoices-table">
+                <thead><tr className="border-b border-border">
+                  <th className="text-left p-3 font-medium text-sm">Invoice #</th>
+                  <th className="text-left p-3 font-medium text-sm">Date</th>
+                  <th className="text-left p-3 font-medium text-sm">Customer</th>
+                  <th className="text-center p-3 font-medium text-sm">Items</th>
+                  <th className="text-right p-3 font-medium text-sm">Subtotal</th>
+                  <th className="text-right p-3 font-medium text-sm">Discount</th>
+                  <th className="text-right p-3 font-medium text-sm">Total</th>
+                  <th className="text-left p-3 font-medium text-sm">Payment</th>
+                  <th className="text-right p-3 font-medium text-sm">Actions</th>
+                </tr></thead>
+                <tbody>
+                  {filtered.map(inv => (
+                    <tr key={inv.id} className="border-b border-border hover:bg-secondary/50" data-testid="invoice-row">
+                      <td className="p-3 text-sm font-medium text-primary">{inv.invoice_number}</td>
+                      <td className="p-3 text-sm">{format(new Date(inv.date), 'MMM dd, yyyy')}</td>
+                      <td className="p-3 text-sm">{inv.customer_name || 'Walk-in'}</td>
+                      <td className="p-3 text-center"><Badge variant="secondary">{inv.items?.length || 0}</Badge></td>
+                      <td className="p-3 text-sm text-right">${inv.subtotal.toFixed(2)}</td>
+                      <td className="p-3 text-sm text-right text-error">{inv.discount > 0 ? `-$${inv.discount.toFixed(2)}` : '-'}</td>
+                      <td className="p-3 text-sm text-right font-bold">${inv.total.toFixed(2)}</td>
+                      <td className="p-3"><Badge className={inv.payment_mode === 'cash' ? 'bg-cash/20 text-cash' : inv.payment_mode === 'bank' ? 'bg-bank/20 text-bank' : 'bg-credit/20 text-credit'}>{inv.payment_mode}</Badge></td>
+                      <td className="p-3 text-right"><Button size="sm" variant="outline" onClick={() => handleDelete(inv.id)} className="h-8 text-error hover:text-error"><Trash2 size={14} /></Button></td>
+                    </tr>
+                  ))}
+                  {filtered.length === 0 && <tr><td colSpan={9} className="p-8 text-center text-muted-foreground">No invoices yet</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </DashboardLayout>
+  );
+}
