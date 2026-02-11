@@ -388,6 +388,71 @@ class Notification(BaseModel):
     related_id: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+# Cash Transfer Model
+class CashTransfer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    from_branch_id: Optional[str] = None
+    to_branch_id: Optional[str] = None
+    from_branch_name: Optional[str] = None
+    to_branch_name: Optional[str] = None
+    amount: float
+    transfer_mode: str = "cash"  # "cash", "bank"
+    sender_name: str
+    receiver_name: str
+    date: datetime
+    notes: Optional[str] = None
+    status: str = "completed"  # "pending", "completed"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+
+class CashTransferCreate(BaseModel):
+    from_branch_id: Optional[str] = None
+    to_branch_id: Optional[str] = None
+    amount: float
+    transfer_mode: Optional[str] = "cash"
+    sender_name: str
+    receiver_name: str
+    date: datetime
+    notes: Optional[str] = None
+
+# Invoice Model
+class InvoiceItem(BaseModel):
+    description: str
+    quantity: float = 1
+    unit_price: float
+    total: float = 0
+
+class Invoice(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    invoice_number: str
+    branch_id: Optional[str] = None
+    customer_id: Optional[str] = None
+    customer_name: Optional[str] = None
+    items: List[dict] = []
+    subtotal: float = 0
+    discount: float = 0
+    total: float = 0
+    payment_mode: str = "cash"  # "cash", "bank", "credit"
+    payment_details: List[dict] = []
+    sale_id: Optional[str] = None  # Linked sale entry
+    date: datetime
+    notes: Optional[str] = None
+    status: str = "paid"  # "draft", "paid", "cancelled"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+
+class InvoiceCreate(BaseModel):
+    branch_id: Optional[str] = None
+    customer_id: Optional[str] = None
+    items: List[dict]
+    discount: Optional[float] = 0
+    payment_mode: str = "cash"
+    payment_details: Optional[List[dict]] = None
+    date: datetime
+    notes: Optional[str] = None
+
 # Helper functions
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
