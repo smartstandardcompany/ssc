@@ -9,15 +9,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Clock, XCircle, Calendar, DollarSign, FileText } from 'lucide-react';
+import { CheckCircle, Clock, XCircle, Calendar, DollarSign, FileText, Send, Ticket } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function EmployeePortalPage() {
   const [profile, setProfile] = useState(null);
   const [payments, setPayments] = useState([]);
   const [leaves, setLeaves] = useState([]);
+  const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showLeaveForm, setShowLeaveForm] = useState(false);
   const [leaveData, setLeaveData] = useState({ leave_type: 'annual', start_date: '', end_date: '', days: '', reason: '' });
