@@ -615,6 +615,48 @@ class SalaryDeductionCreate(BaseModel):
     branch_id: Optional[str] = None
     date: datetime
 
+# Partner Model
+class Partner(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    share_percentage: float = 0
+    notes: Optional[str] = None
+    active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class PartnerCreate(BaseModel):
+    name: str
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    share_percentage: Optional[float] = 0
+    notes: Optional[str] = None
+
+class PartnerTransaction(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    partner_id: str
+    partner_name: str
+    transaction_type: str  # "investment", "withdrawal", "profit_share", "expense", "other"
+    amount: float
+    payment_mode: str = "cash"
+    branch_id: Optional[str] = None
+    description: Optional[str] = None
+    date: datetime
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+
+class PartnerTransactionCreate(BaseModel):
+    partner_id: str
+    transaction_type: str
+    amount: float
+    payment_mode: Optional[str] = "cash"
+    branch_id: Optional[str] = None
+    description: Optional[str] = None
+    date: datetime
+
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
