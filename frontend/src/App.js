@@ -28,6 +28,8 @@ import { Toaster } from "@/components/ui/sonner";
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [showInstall, setShowInstall] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
