@@ -2088,6 +2088,159 @@ async def mark_notifications_read(current_user: User = Depends(get_current_user)
     await db.notifications.update_many({"user_id": current_user.id, "read": False}, {"$set": {"read": True}})
     return {"message": "Notifications marked as read"}
 
+# Attendance Routes
+@api_router.post("/attendance/time-in")
+async def time_in(current_user: User = Depends(get_current_user)):
+    emp = await db.employees.find_one({"user_id": current_user.id}, {"_id": 0})
+    if not emp:
+        raise HTTPException(status_code=404, detail="No employee profile")
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    existing = await db.attendance.find_one({"employee_id": emp["id"], "date": today}, {"_id": 0})
+    if existing and existing.get("time_in"):
+        raise HTTPException(status_code=400, detail="Already timed in today")
+    now = datetime.now(timezone.utc)
+    if existing:
+        await db.attendance.update_one({"id": existing["id"]}, {"$set": {"time_in": now.isoformat()}})
+    else:
+        att = Attendance(employee_id=emp["id"], employee_name=emp["name"], date=today, time_in=now)
+        a_dict = att.model_dump()
+        a_dict["time_in"] = a_dict["time_in"].isoformat()
+        a_dict["created_at"] = a_dict["created_at"].isoformat()
+        await db.attendance.insert_one(a_dict)
+    return {"message": "Timed in", "time": now.isoformat()}
+
+@api_router.post("/attendance/time-out")
+async def time_out(current_user: User = Depends(get_current_user)):
+    emp = await db.employees.find_one({"user_id": current_user.id}, {"_id": 0})
+    if not emp:
+        raise HTTPException(status_code=404, detail="No employee profile")
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    existing = await db.attendance.find_one({"employee_id": emp["id"], "date": today}, {"_id": 0})
+    if not existing or not existing.get("time_in"):
+        raise HTTPException(status_code=400, detail="Not timed in today")
+    if existing.get("time_out"):
+        raise HTTPException(status_code=400, detail="Already timed out today")
+    now = datetime.now(timezone.utc)
+    await db.attendance.update_one({"id": existing["id"]}, {"$set": {"time_out": now.isoformat()}})
+    return {"message": "Timed out", "time": now.isoformat()}
+
+@api_router.get("/attendance")
+async def get_attendance(employee_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {}
+    if employee_id:
+        query["employee_id"] = employee_id
+    records = await db.attendance.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
+    return records
+
+@api_router.get("/my/attendance")
+async def get_my_attendance(current_user: User = Depends(get_current_user)):
+    emp = await db.employees.find_one({"user_id": current_user.id}, {"_id": 0})
+    if not emp:
+        return []
+    return await db.attendance.find({"employee_id": emp["id"]}, {"_id": 0}).sort("date", -1).to_list(100)
+
+# Employee Documents (multiple per employee)
+@api_router.get("/employee-documents")
+async def get_employee_documents(employee_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {}
+    if employee_id:
+        query["employee_id"] = employee_id
+    docs = await db.employee_documents.find(query, {"_id": 0}).to_list(1000)
+    now = datetime.now(timezone.utc)
+    for d in docs:
+        exp = d.get("expiry_date")
+        if exp:
+            if isinstance(exp, str): exp = datetime.fromisoformat(exp)
+            if exp.tzinfo is None: exp = exp.replace(tzinfo=timezone.utc)
+            d["days_until_expiry"] = (exp - now).days
+    return docs
+
+@api_router.post("/employee-documents")
+async def create_employee_document(data: EmployeeDocumentCreate, current_user: User = Depends(get_current_user)):
+    doc = EmployeeDocument(**data.model_dump())
+    d_dict = doc.model_dump()
+    for f in ['issue_date', 'expiry_date', 'created_at']:
+        if d_dict.get(f): d_dict[f] = d_dict[f].isoformat()
+    await db.employee_documents.insert_one(d_dict)
+    return {k: v for k, v in d_dict.items() if k != '_id'}
+
+@api_router.delete("/employee-documents/{doc_id}")
+async def delete_employee_document(doc_id: str, current_user: User = Depends(get_current_user)):
+    await db.employee_documents.delete_one({"id": doc_id})
+    return {"message": "Document deleted"}
+
+# Letter Generation
+@api_router.post("/letters/generate")
+async def generate_letter(body: dict, current_user: User = Depends(get_current_user)):
+    emp_id = body.get("employee_id")
+    letter_type = body.get("letter_type", "salary_certificate")
+    emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    buffer = BytesIO()
+    doc_pdf = SimpleDocTemplate(buffer, pagesize=A4, topMargin=50, bottomMargin=50, leftMargin=60, rightMargin=60)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    title_s = ParagraphStyle('T', parent=styles['Heading1'], fontSize=16, textColor=colors.HexColor('#F5841F'), alignment=1, spaceAfter=5)
+    body_s = ParagraphStyle('B', parent=styles['Normal'], fontSize=11, leading=18, spaceAfter=12)
+    right_s = ParagraphStyle('R', parent=styles['Normal'], fontSize=10, alignment=2)
+    
+    logo_path = ROOT_DIR / "uploads" / "logos" / "company_logo.jpg"
+    if not logo_path.exists(): logo_path = ROOT_DIR / "uploads" / "logos" / "company_logo.png"
+    if logo_path.exists():
+        from reportlab.platypus import Image as RLImage
+        try:
+            logo = RLImage(str(logo_path), width=1.5*inch, height=0.7*inch)
+            logo.hAlign = 'CENTER'
+            elements.append(logo)
+        except: pass
+    
+    elements.append(Paragraph("SMART STANDARD COMPANY", title_s))
+    elements.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#F5841F')))
+    elements.append(Spacer(1, 0.3*inch))
+    elements.append(Paragraph(f"Date: {datetime.now().strftime('%d %B %Y')}", right_s))
+    elements.append(Spacer(1, 0.2*inch))
+    
+    name = emp["name"]
+    doc_id = emp.get("document_id", "N/A")
+    position = emp.get("position", "N/A")
+    salary = emp.get("salary", 0)
+    join = emp.get("join_date", "")
+    if isinstance(join, str) and join: join = datetime.fromisoformat(join).strftime("%d %B %Y")
+    elif hasattr(join, 'strftime'): join = join.strftime("%d %B %Y")
+    else: join = "N/A"
+    
+    if letter_type == "salary_certificate":
+        elements.append(Paragraph("<b>TO WHOM IT MAY CONCERN</b>", ParagraphStyle('C', parent=body_s, alignment=1, fontSize=13, spaceAfter=20)))
+        elements.append(Paragraph(f"This is to certify that <b>{name}</b>, holding Document ID <b>{doc_id}</b>, is employed with Smart Standard Company as <b>{position}</b> since <b>{join}</b>.", body_s))
+        elements.append(Paragraph(f"His/Her current monthly salary is <b>AED {salary:,.2f}</b> (inclusive of all allowances).", body_s))
+        elements.append(Paragraph("This certificate is issued upon the employee's request for whatever purpose it may serve.", body_s))
+    elif letter_type == "employment":
+        elements.append(Paragraph("<b>EMPLOYMENT CERTIFICATE</b>", ParagraphStyle('C', parent=body_s, alignment=1, fontSize=13, spaceAfter=20)))
+        elements.append(Paragraph(f"This is to certify that <b>{name}</b>, Document ID: <b>{doc_id}</b>, has been employed with Smart Standard Company since <b>{join}</b> as <b>{position}</b>.", body_s))
+        elements.append(Paragraph("The employee is currently active and in good standing with the company.", body_s))
+        elements.append(Paragraph("This letter is issued upon the employee's request.", body_s))
+    elif letter_type == "noc":
+        elements.append(Paragraph("<b>NO OBJECTION CERTIFICATE</b>", ParagraphStyle('C', parent=body_s, alignment=1, fontSize=13, spaceAfter=20)))
+        elements.append(Paragraph(f"This is to confirm that we have No Objection for our employee <b>{name}</b>, Document ID: <b>{doc_id}</b>, Position: <b>{position}</b>.", body_s))
+        elements.append(Paragraph("This NOC is issued upon the employee's request.", body_s))
+    elif letter_type == "experience":
+        elements.append(Paragraph("<b>EXPERIENCE CERTIFICATE</b>", ParagraphStyle('C', parent=body_s, alignment=1, fontSize=13, spaceAfter=20)))
+        elements.append(Paragraph(f"This is to certify that <b>{name}</b>, Document ID: <b>{doc_id}</b>, has worked with Smart Standard Company as <b>{position}</b> from <b>{join}</b>.", body_s))
+        elements.append(Paragraph("During the tenure, the employee demonstrated professionalism and dedication. We wish them success in future endeavors.", body_s))
+    
+    elements.append(Spacer(1, 0.5*inch))
+    elements.append(Paragraph("Authorized Signatory", ParagraphStyle('Sig', parent=body_s, fontSize=10)))
+    elements.append(Paragraph("_________________________", body_s))
+    elements.append(Paragraph("Smart Standard Company", ParagraphStyle('Co', parent=body_s, fontSize=9, textColor=colors.grey)))
+    
+    doc_pdf.build(elements)
+    buffer.seek(0)
+    fname = f"{letter_type}_{name.replace(' ','_')}.pdf"
+    return StreamingResponse(buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename={fname}"})
+
 # Employee Portal - My Data
 @api_router.get("/my/employee-profile")
 async def get_my_employee_profile(current_user: User = Depends(get_current_user)):
