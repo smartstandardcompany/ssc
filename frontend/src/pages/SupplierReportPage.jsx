@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { ExportButtons } from '@/components/ExportButtons';
+import { BranchFilter } from '@/components/BranchFilter';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 
