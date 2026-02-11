@@ -22,7 +22,7 @@ export default function CustomersPage() {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [receivingCustomer, setReceivingCustomer] = useState(null);
   const [formData, setFormData] = useState({ name: '', branch_id: '', phone: '', email: '' });
-  const [receiveData, setReceiveData] = useState({ payment_mode: 'cash', amount: '' });
+  const [receiveData, setReceiveData] = useState({ payment_mode: 'cash', amount: '', discount: '' });
 
   useEffect(() => { fetchData(); }, []);
 
