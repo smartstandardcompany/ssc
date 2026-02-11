@@ -1035,15 +1035,24 @@ async def delete_expense(expense_id: str, current_user: User = Depends(get_curre
     return {"message": "Expense deleted successfully"}
 
 # Dashboard Stats
-@api_router.get("/dashboard/stats", response_model=DashboardStats)
-async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
+@api_router.get("/dashboard/stats")
+async def get_dashboard_stats(branch_ids: Optional[str] = None, current_user: User = Depends(get_current_user)):
     query = {}
-    if current_user.branch_id and current_user.role != "admin":
+    exp_query = {}
+    sp_query = {"supplier_id": {"$exists": True, "$ne": None}}
+    
+    if branch_ids:
+        bid_list = [b.strip() for b in branch_ids.split(",") if b.strip()]
+        if bid_list:
+            query["branch_id"] = {"$in": bid_list}
+            exp_query["branch_id"] = {"$in": bid_list}
+            sp_query["branch_id"] = {"$in": bid_list}
+    elif current_user.branch_id and current_user.role != "admin":
         query["branch_id"] = current_user.branch_id
     
     sales = await db.sales.find(query, {"_id": 0}).to_list(10000)
-    expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
-    supplier_payments = await db.supplier_payments.find({}, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find(exp_query, {"_id": 0}).to_list(10000)
+    supplier_payments = await db.supplier_payments.find(sp_query, {"_id": 0}).to_list(10000)
     
     # Calculate total sales (amount minus remaining credit)
     total_sales = sum(sale["amount"] - (sale.get("credit_amount", 0) - sale.get("credit_received", 0)) for sale in sales)
