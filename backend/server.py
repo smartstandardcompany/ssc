@@ -904,12 +904,21 @@ async def receive_credit_payment(sale_id: str, payment: SalePayment, current_use
         raise HTTPException(status_code=404, detail="Sale not found")
     
     remaining_credit = sale["credit_amount"] - sale["credit_received"]
-    if payment.amount > remaining_credit:
-        raise HTTPException(status_code=400, detail=f"Payment amount exceeds remaining credit of ${remaining_credit:.2f}")
+    discount = payment.discount or 0
+    total_settle = payment.amount + discount
     
-    # Update sale
-    new_credit_received = sale["credit_received"] + payment.amount
-    new_payment_details = sale["payment_details"] + [{"mode": payment.payment_mode, "amount": payment.amount}]
+    if total_settle > remaining_credit + 0.01:
+        raise HTTPException(status_code=400, detail=f"Payment + discount exceeds remaining credit of ${remaining_credit:.2f}")
+    
+    new_credit_received = sale["credit_received"] + total_settle
+    new_payment_details = list(sale.get("payment_details", []))
+    if payment.amount > 0:
+        new_payment_details.append({"mode": payment.payment_mode, "amount": payment.amount})
+    if discount > 0:
+        new_payment_details.append({"mode": "discount", "amount": discount})
+    
+    # Also update credit_amount if discount reduces it
+    new_credit_amount = sale["credit_amount"]
     
     await db.sales.update_one(
         {"id": sale_id},
