@@ -245,6 +245,41 @@ export default function CustomersPage() {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Customer Report Dialog */}
+        <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto" data-testid="customer-report-dialog">
+            <DialogHeader>
+              <DialogTitle className="font-outfit flex justify-between items-center">
+                <span>Customer Statement - {customerReport?.customer?.name}</span>
+                <Button size="sm" variant="outline" onClick={() => exportCustomerPDF(customerReport?.customer?.id)} className="rounded-xl"><FileText size={14} className="mr-2" />Export PDF</Button>
+              </DialogTitle>
+            </DialogHeader>
+            {customerReport && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-4 gap-3">
+                  <div className="p-3 bg-success/10 rounded-xl"><div className="text-xs text-muted-foreground">Total Purchases</div><div className="text-lg font-bold text-success">SAR {customerReport.total.toFixed(2)}</div></div>
+                  <div className="p-3 bg-error/10 rounded-xl"><div className="text-xs text-muted-foreground">Total Discount</div><div className="text-lg font-bold text-error">SAR {customerReport.total_discount.toFixed(2)}</div></div>
+                  <div className="p-3 bg-warning/10 rounded-xl"><div className="text-xs text-muted-foreground">Credit Balance</div><div className="text-lg font-bold text-warning">SAR {customerReport.credit_balance.toFixed(2)}</div></div>
+                  <div className="p-3 bg-stone-50 rounded-xl"><div className="text-xs text-muted-foreground">Transactions</div><div className="text-lg font-bold">{customerReport.count}</div></div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full"><thead><tr className="border-b"><th className="text-left p-2 text-xs font-medium">Date</th><th className="text-left p-2 text-xs font-medium">Branch</th><th className="text-right p-2 text-xs font-medium">Amount</th><th className="text-right p-2 text-xs font-medium">Discount</th><th className="text-left p-2 text-xs font-medium">Payment</th><th className="text-right p-2 text-xs font-medium">Credit Due</th></tr></thead>
+                  <tbody>{customerReport.purchases.map((p, i) => (
+                    <tr key={i} className="border-b hover:bg-stone-50">
+                      <td className="p-2 text-xs">{new Date(p.date).toLocaleDateString()}</td>
+                      <td className="p-2 text-xs">{p.branch}</td>
+                      <td className="p-2 text-xs text-right font-medium">SAR {p.amount.toFixed(2)}</td>
+                      <td className="p-2 text-xs text-right text-error">{p.discount > 0 ? `SAR ${p.discount.toFixed(2)}` : '-'}</td>
+                      <td className="p-2 text-xs capitalize">{p.payment}</td>
+                      <td className="p-2 text-xs text-right">{p.credit > 0 ? <span className="font-bold text-warning">SAR {p.credit.toFixed(2)}</span> : '-'}</td>
+                    </tr>
+                  ))}{customerReport.purchases.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No purchases</td></tr>}</tbody></table>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
