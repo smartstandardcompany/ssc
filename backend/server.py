@@ -276,6 +276,9 @@ class Employee(BaseModel):
     loan_balance: float = 0
     annual_leave_entitled: int = 30
     sick_leave_entitled: int = 15
+    ticket_entitled: int = 1  # Tickets per 2 years
+    ticket_years: int = 2  # Every X years
+    ticket_used: int = 0
     notes: Optional[str] = None
     active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -293,6 +296,8 @@ class EmployeeCreate(BaseModel):
     document_expiry: Optional[datetime] = None
     annual_leave_entitled: Optional[int] = 30
     sick_leave_entitled: Optional[int] = 15
+    ticket_entitled: Optional[int] = 1
+    ticket_years: Optional[int] = 2
     notes: Optional[str] = None
 
 # Document Expiry Tracking
