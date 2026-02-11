@@ -149,7 +149,7 @@ export default function EmployeePortalPage() {
         )}
 
         <Tabs defaultValue="payments">
-          <TabsList><TabsTrigger value="payments">My Payments</TabsTrigger><TabsTrigger value="leaves">My Leaves</TabsTrigger></TabsList>
+          <TabsList><TabsTrigger value="payments">My Payments</TabsTrigger><TabsTrigger value="leaves">My Leaves</TabsTrigger><TabsTrigger value="requests">My Requests</TabsTrigger></TabsList>
 
           <TabsContent value="payments">
             <Card className="border-border">
