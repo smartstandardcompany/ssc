@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, ShoppingCart, Store, Users, Truck, Receipt, BarChart3, LogOut, Shield, CreditCard, FileText, Tags, UserCheck, FileWarning, Bell, User as UserIcon, Settings, ArrowLeftRight, FileInput, AlertTriangle } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Store, Users, Truck, Receipt, BarChart3, LogOut, Shield, CreditCard, FileText, Tags, UserCheck, FileWarning, Bell, User as UserIcon, Settings, ArrowLeftRight, FileInput, AlertTriangle, Handshake } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { toast } from 'sonner';
@@ -45,6 +45,7 @@ export const DashboardLayout = ({ children }) => {
     { path: '/expenses', icon: Receipt, label: 'Expenses', roles: ['admin', 'manager'] },
     { path: '/cash-transfers', icon: ArrowLeftRight, label: 'Cash Transfers', roles: ['admin', 'manager'] },
     { path: '/fines', icon: AlertTriangle, label: 'Fines & Penalties', roles: ['admin', 'manager'] },
+    { path: '/partners', icon: Handshake, label: 'Partners', roles: ['admin'] },
     { path: '/employees', icon: UserCheck, label: 'Employees', roles: ['admin', 'manager'] },
     { path: '/documents', icon: FileWarning, label: 'Documents', roles: ['admin', 'manager'] },
     { path: '/reports', icon: BarChart3, label: 'Reports', roles: ['admin', 'manager'] },
