@@ -1645,7 +1645,7 @@ async def export_data(request: dict, current_user: User = Depends(get_current_us
         ws.append(headers)
         for col in ws[1]:
             col.font = Font(bold=True)
-            col.fill = PatternFill(start_color="7C3AED", end_color="7C3AED", fill_type="solid")
+            col.fill = PatternFill(start_color="F5841F", end_color="F5841F", fill_type="solid")
             col.font = Font(bold=True, color="FFFFFF")
         for row in rows:
             ws.append(row)
@@ -3138,7 +3138,7 @@ def generate_excel_report(sales, expenses, supplier_payments, branches, customer
     ws_summary.title = "Summary"
     
     ws_summary['A1'] = "SSC Track - Sales Report"
-    ws_summary['A1'].font = Font(size=16, bold=True, color="7C3AED")
+    ws_summary['A1'].font = Font(size=16, bold=True, color="F5841F")
     
     total_sales = sum(s.get("final_amount", s["amount"] - s.get("discount", 0)) for s in sales)
     total_expenses = sum(e["amount"] for e in expenses)
@@ -3168,7 +3168,7 @@ def generate_excel_report(sales, expenses, supplier_payments, branches, customer
     
     for col in ws_sales[1]:
         col.font = Font(bold=True)
-        col.fill = PatternFill(start_color="7C3AED", end_color="7C3AED", fill_type="solid")
+        col.fill = PatternFill(start_color="F5841F", end_color="F5841F", fill_type="solid")
         col.font = Font(bold=True, color="FFFFFF")
     
     for sale in sales:
