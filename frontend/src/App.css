@@ -3,12 +3,13 @@
 }
 
 .stat-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid rgba(0,0,0,0.04);
 }
 
 .stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px -5px rgba(245, 132, 31, 0.15);
+  transform: translateY(-3px);
+  box-shadow: 0 20px 40px -12px rgba(232, 80, 26, 0.12);
 }
 
 button:active {
@@ -17,12 +18,40 @@ button:active {
 
 .sidebar-link {
   transition: all 0.2s ease;
+  border-left: 3px solid transparent;
 }
 
 .sidebar-link:hover {
   transform: translateX(2px);
+  border-left-color: rgba(245, 132, 31, 0.3);
 }
 
 table {
   font-variant-numeric: tabular-nums;
 }
+
+/* Premium card glow */
+.card-glow {
+  position: relative;
+}
+.card-glow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #E8501A, #F5841F, #F5A623);
+  border-radius: 0.75rem 0.75rem 0 0;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.card-glow:hover::before {
+  opacity: 1;
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(245, 132, 31, 0.2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(245, 132, 31, 0.4); }
