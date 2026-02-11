@@ -96,6 +96,23 @@ export default function CustomersPage() {
   const resetForm = () => { setFormData({ name: '', branch_id: '', phone: '', email: '' }); setEditingCustomer(null); };
   const getBalance = (id) => balances.find(b => b.id === id) || {};
 
+  const viewReport = async (customerId) => {
+    try {
+      const res = await api.get(`/customers/${customerId}/report`);
+      setCustomerReport(res.data); setShowReportDialog(true);
+    } catch { toast.error('Failed to load report'); }
+  };
+
+  const exportCustomerPDF = async (customerId) => {
+    try {
+      const res = await api.get(`/customers/${customerId}/report/pdf`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a'); link.href = url; link.setAttribute('download', `customer_statement.pdf`);
+      document.body.appendChild(link); link.click(); link.remove();
+      toast.success('Statement downloaded');
+    } catch { toast.error('Failed'); }
+  };
+
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-64">Loading...</div></DashboardLayout>;
 
   const totalCredit = balances.reduce((s, b) => s + (b.credit_balance || 0), 0);
