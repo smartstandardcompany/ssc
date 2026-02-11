@@ -1954,6 +1954,8 @@ async def get_employee_summary(emp_id: str, current_user: User = Depends(get_cur
     
     payments = await db.salary_payments.find({"employee_id": emp_id}, {"_id": 0}).sort("date", -1).to_list(1000)
     leaves = await db.leaves.find({"employee_id": emp_id}, {"_id": 0}).to_list(1000)
+    deductions = await db.salary_deductions.find({"employee_id": emp_id}, {"_id": 0}).sort("date", -1).to_list(1000)
+    fines = await db.fines.find({"employee_id": emp_id}, {"_id": 0}).sort("fine_date", -1).to_list(1000)
     
     # Group payments by period
     monthly = {}
