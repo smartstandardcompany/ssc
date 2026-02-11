@@ -17,6 +17,7 @@ export default function SuppliersPage() {
   const [branches, setBranches] = useState([]);
   const [categories, setCategories] = useState([]);
   const [branchFilter, setBranchFilter] = useState([]);
+  const [paySummaries, setPaySummaries] = useState({});
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [showPayDialog, setShowPayDialog] = useState(false);
