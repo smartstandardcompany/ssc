@@ -236,17 +236,21 @@ export default function DashboardPage() {
             <CardContent><div className="text-2xl font-bold font-outfit text-warning" data-testid="supplier-dues">${(stats?.supplier_dues || 0).toFixed(2)}</div><p className="text-xs text-muted-foreground mt-1">Total owed to suppliers</p></CardContent>
           </Card>
 
-          {stats?.branch_dues && Object.keys(stats.branch_dues).length > 0 && (
+          {branchDues && Object.keys(branchDues.dues || {}).length > 0 && (
             <Card className="border-border md:col-span-2">
-              <CardHeader className="pb-2"><CardTitle className="font-outfit text-base">Branch Dues</CardTitle></CardHeader>
+              <CardHeader className="pb-2"><CardTitle className="font-outfit text-base">Branch-to-Branch Dues</CardTitle></CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {Object.entries(stats.branch_dues).map(([key, amt]) => (
-                    <div key={key} className="flex justify-between items-center p-2 bg-info/10 rounded" data-testid="branch-due-item">
-                      <span className="text-sm">{key}</span>
+                  {Object.entries(branchDues.dues).map(([key, amt]) => (
+                    <div key={key} className="flex justify-between items-center p-3 bg-info/10 rounded-lg border border-info/20" data-testid="branch-due-item">
+                      <span className="text-sm font-medium">{key}</span>
                       <span className="font-bold text-info">${amt.toFixed(2)}</span>
                     </div>
                   ))}
+                  <div className="flex justify-between items-center p-3 bg-primary/10 rounded-lg border border-primary/20 mt-2">
+                    <span className="text-sm font-bold">Total Cross-Branch</span>
+                    <span className="font-bold text-primary">${(branchDues.total_cross_branch || 0).toFixed(2)}</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
