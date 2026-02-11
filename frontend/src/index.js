@@ -9,12 +9,13 @@ window.onerror = (msg, ...args) => {
   if (typeof msg === 'string' && msg.includes('ResizeObserver')) return true;
   return origError ? origError(msg, ...args) : false;
 };
+window.addEventListener('error', (e) => {
+  if (e.message?.includes('ResizeObserver')) { e.stopImmediatePropagation(); e.preventDefault(); }
+});
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
+  <App />
 );
 
 // Register PWA Service Worker
