@@ -1608,12 +1608,13 @@ async def create_salary_payment(data: SalaryPaymentCreate, current_user: User = 
         loan_balance = max(0, loan_balance - data.amount)
         await db.employees.update_one({"id": data.employee_id}, {"$set": {"loan_balance": loan_balance}})
     
-    # If payment type is tickets or id_card, also create an expense record
-    if data.payment_type in ("tickets", "id_card"):
-        cat = "Tickets" if data.payment_type == "tickets" else "ID Card"
+    # Create expense record for all salary-related payments (except loan_repayment which is a deduction)
+    if data.payment_type != "loan_repayment":
+        cat_map = {"salary": "salary", "advance": "salary", "overtime": "salary", "tickets": "tickets", "id_card": "id_card"}
+        type_label = data.payment_type.replace("_", " ").title()
         expense = Expense(
-            category=cat.lower().replace(" ", "_"),
-            description=f"{cat} payment for {emp['name']} - {data.period}",
+            category=cat_map.get(data.payment_type, "salary"),
+            description=f"{type_label} - {emp['name']} - {data.period}",
             amount=data.amount,
             payment_mode=data.payment_mode,
             branch_id=data.branch_id,
