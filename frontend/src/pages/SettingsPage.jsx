@@ -96,6 +96,7 @@ export default function SettingsPage() {
             <TabsTrigger value="whatsapp"><MessageCircle size={14} className="mr-2" />WhatsApp</TabsTrigger>
             <TabsTrigger value="notifications"><Bell size={14} className="mr-2" />Notifications</TabsTrigger>
             <TabsTrigger value="company">Company</TabsTrigger>
+            <TabsTrigger value="backup"><Database size={14} className="mr-2" />Backup</TabsTrigger>
           </TabsList>
 
           <TabsContent value="email">
