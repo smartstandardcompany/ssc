@@ -118,6 +118,16 @@ export default function BranchesPage() {
                         <span className="text-xs font-medium">Net Profit</span>
                         <span className={`text-sm font-bold ${s.net_profit >= 0 ? 'text-success' : 'text-error'}`}>${s.net_profit.toFixed(2)}</span>
                       </div>
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <div className="flex items-center justify-between p-2 bg-cash/10 rounded">
+                          <span className="text-xs">Cash In Hand</span>
+                          <span className={`text-sm font-bold ${(s.cash_in_hand || 0) >= 0 ? 'text-cash' : 'text-error'}`}>${(s.cash_in_hand || 0).toFixed(2)}</span>
+                        </div>
+                        <div className="flex items-center justify-between p-2 bg-bank/10 rounded">
+                          <span className="text-xs">Bank In Hand</span>
+                          <span className={`text-sm font-bold ${(s.bank_in_hand || 0) >= 0 ? 'text-bank' : 'text-error'}`}>${(s.bank_in_hand || 0).toFixed(2)}</span>
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">Loading stats...</p>
