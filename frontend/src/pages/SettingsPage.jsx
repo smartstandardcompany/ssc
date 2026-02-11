@@ -303,6 +303,79 @@ export default function SettingsPage() {
               </Card>
             </div>
           </TabsContent>
+
+          <TabsContent value="deploy">
+            <div className="space-y-6">
+              <Card className="border-stone-100">
+                <CardHeader><CardTitle className="font-outfit">Deploy to Your Website</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">Follow these steps to deploy SSC Track on your own website/server:</p>
+                  
+                  <div className="space-y-4">
+                    <div className="p-4 border rounded-xl bg-stone-50">
+                      <h3 className="font-semibold text-sm mb-2">Step 1: Save Code to GitHub</h3>
+                      <p className="text-xs text-muted-foreground">In the Emergent chat, click <strong>"Save to Github"</strong> button. This pushes all your code to a GitHub repository.</p>
+                    </div>
+                    
+                    <div className="p-4 border rounded-xl bg-stone-50">
+                      <h3 className="font-semibold text-sm mb-2">Step 2: Setup MongoDB Atlas (Free)</h3>
+                      <ol className="text-xs text-muted-foreground space-y-1 ml-4 list-decimal">
+                        <li>Go to <a href="https://www.mongodb.com/atlas" target="_blank" rel="noreferrer" className="text-primary underline">mongodb.com/atlas</a></li>
+                        <li>Create free account → Create free cluster (M0)</li>
+                        <li>Click Connect → Get connection string</li>
+                      </ol>
+                    </div>
+                    
+                    <div className="p-4 border rounded-xl bg-stone-50">
+                      <h3 className="font-semibold text-sm mb-2">Step 3: Deploy (Choose One)</h3>
+                      <div className="space-y-3 mt-2">
+                        <div className="p-3 bg-white rounded-lg border">
+                          <div className="font-medium text-xs">Option A: Railway.app (Easiest)</div>
+                          <ol className="text-xs text-muted-foreground mt-1 ml-4 list-decimal">
+                            <li>Go to <a href="https://railway.app" target="_blank" rel="noreferrer" className="text-primary underline">railway.app</a> → Sign in with GitHub</li>
+                            <li>Click "New Project" → "Deploy from GitHub Repo"</li>
+                            <li>Select your repo → Set environment variables</li>
+                          </ol>
+                        </div>
+                        <div className="p-3 bg-white rounded-lg border">
+                          <div className="font-medium text-xs">Option B: VPS (DigitalOcean/Hetzner)</div>
+                          <ol className="text-xs text-muted-foreground mt-1 ml-4 list-decimal">
+                            <li>Get a VPS ($5-10/mo) → Install Docker</li>
+                            <li>Clone your GitHub repo</li>
+                            <li>Run: docker-compose up</li>
+                            <li>Point your domain to the server IP</li>
+                          </ol>
+                        </div>
+                        <div className="p-3 bg-white rounded-lg border">
+                          <div className="font-medium text-xs">Option C: Your Existing Website</div>
+                          <ol className="text-xs text-muted-foreground mt-1 ml-4 list-decimal">
+                            <li>Your hosting needs to support Node.js + Python</li>
+                            <li>Upload code via FTP/SSH</li>
+                            <li>Install dependencies and run</li>
+                          </ol>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="p-4 border rounded-xl bg-stone-50">
+                      <h3 className="font-semibold text-sm mb-2">Step 4: Set Environment Variables</h3>
+                      <div className="bg-stone-800 text-stone-100 p-3 rounded-lg text-xs font-mono space-y-1 mt-2">
+                        <p>MONGO_URL=mongodb+srv://user:pass@cluster.mongodb.net/ssctrack</p>
+                        <p>DB_NAME=ssctrack</p>
+                        <p>SECRET_KEY=your-secret-key-here</p>
+                        <p>REACT_APP_BACKEND_URL=https://yourdomain.com</p>
+                      </div>
+                    </div>
+                    
+                    <div className="p-4 border rounded-xl bg-orange-50 border-orange-200">
+                      <h3 className="font-semibold text-sm mb-2 text-orange-800">Step 5: Import Your Data</h3>
+                      <p className="text-xs text-orange-700">After deploying, go to Settings → Import Data tab to upload your existing data from Excel files.</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
         </Tabs>
       </div>
     </DashboardLayout>
