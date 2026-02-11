@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, ShoppingCart, Store, Users, Truck, Receipt, BarChart3, LogOut, Shield, CreditCard, FileText, Tags, UserCheck, FileWarning, Bell, User as UserIcon, Settings } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Store, Users, Truck, Receipt, BarChart3, LogOut, Shield, CreditCard, FileText, Tags, UserCheck, FileWarning, Bell, User as UserIcon, Settings, ArrowLeftRight, FileInput } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { toast } from 'sonner';
@@ -37,11 +37,13 @@ export const DashboardLayout = ({ children }) => {
   const adminNav = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/sales', icon: ShoppingCart, label: 'Sales' },
+    { path: '/invoices', icon: FileInput, label: 'Invoices' },
     { path: '/branches', icon: Store, label: 'Branches' },
     { path: '/customers', icon: Users, label: 'Customers' },
     { path: '/suppliers', icon: Truck, label: 'Suppliers' },
     { path: '/supplier-payments', icon: Receipt, label: 'Supplier Payments' },
     { path: '/expenses', icon: Receipt, label: 'Expenses' },
+    { path: '/cash-transfers', icon: ArrowLeftRight, label: 'Cash Transfers' },
     { path: '/employees', icon: UserCheck, label: 'Employees' },
     { path: '/documents', icon: FileWarning, label: 'Documents' },
     { path: '/reports', icon: BarChart3, label: 'Reports' },
