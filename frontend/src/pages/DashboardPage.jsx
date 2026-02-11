@@ -266,11 +266,23 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Supplier Dues & Branch Dues */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Supplier Dues, Due Fines & Due Salaries */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card className="border-border border-warning/30 bg-warning/5">
             <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Supplier Dues</CardTitle></CardHeader>
             <CardContent><div className="text-2xl font-bold font-outfit text-warning" data-testid="supplier-dues"> SAR {(stats?.supplier_dues || 0).toFixed(2)}</div><p className="text-xs text-muted-foreground mt-1">Total owed to suppliers</p></CardContent>
+          </Card>
+
+          <Card className="border-border border-orange-300 bg-orange-50">
+            <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Due Fines</CardTitle></CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold font-outfit text-orange-600" data-testid="due-fines">SAR {(stats?.due_fines || 0).toFixed(2)}</div>
+              {stats?.due_fines_list?.length > 0 && (
+                <div className="mt-2 space-y-1">{stats.due_fines_list.map((f, i) => (
+                  <div key={i} className="flex justify-between text-xs p-1.5 bg-background rounded"><span className="capitalize">{f.department}</span><span className="font-bold text-orange-600">SAR {f.amount.toFixed(0)}</span></div>
+                ))}</div>
+              )}
+            </CardContent>
           </Card>
 
           <Card className="border-border border-error/30 bg-error/5">
