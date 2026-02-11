@@ -854,7 +854,7 @@ async def pay_supplier_credit(supplier_id: str, payment: SupplierCreditPayment, 
         payment_mode=payment.payment_mode,
         branch_id=payment.branch_id,
         date=datetime.now(timezone.utc),
-        notes=f"Credit payment - Remaining: ${new_credit:.2f}",
+        notes=f"Credit payment - Remaining: SAR {new_credit:.2f}",
         created_by=current_user.id
     )
     payment_dict = payment_record.model_dump()
@@ -1133,7 +1133,7 @@ async def create_supplier_payment(payment_data: SupplierPaymentCreate, current_u
         # Only enforce limit if credit_limit > 0 (0 means no limit set)
         if credit_limit > 0 and new_credit > credit_limit:
             available = credit_limit - current_credit
-            raise HTTPException(status_code=400, detail=f"Payment exceeds credit limit. Available: ${available:.2f}")
+            raise HTTPException(status_code=400, detail=f"Payment exceeds credit limit. Available: SAR {available:.2f}")
     
     payment = SupplierPayment(
         **payment_data.model_dump(),
@@ -1187,7 +1187,7 @@ async def create_expense(expense_data: ExpenseCreate, current_user: User = Depen
             new_credit = current_credit + expense_data.amount
             if credit_limit > 0 and new_credit > credit_limit:
                 available = credit_limit - current_credit
-                raise HTTPException(status_code=400, detail=f"Expense exceeds supplier credit limit. Available: ${available:.2f}")
+                raise HTTPException(status_code=400, detail=f"Expense exceeds supplier credit limit. Available: SAR {available:.2f}")
     
     expense = Expense(**data, created_by=current_user.id)
     expense_dict = expense.model_dump()
@@ -2242,7 +2242,7 @@ async def generate_letter(body: dict, current_user: User = Depends(get_current_u
     if letter_type == "salary_certificate":
         elements.append(Paragraph("<b>TO WHOM IT MAY CONCERN</b>", ParagraphStyle('C', parent=body_s, alignment=1, fontSize=13, spaceAfter=20)))
         elements.append(Paragraph(f"This is to certify that <b>{name}</b>, holding Document ID <b>{doc_id}</b>, is employed with Smart Standard Company as <b>{position}</b> since <b>{join}</b>.", body_s))
-        elements.append(Paragraph(f"His/Her current monthly salary is <b>AED {salary:,.2f}</b> (inclusive of all allowances).", body_s))
+        elements.append(Paragraph(f"His/Her current monthly salary is <b>SAR {salary:,.2f}</b> (inclusive of all allowances).", body_s))
         elements.append(Paragraph("This certificate is issued upon the employee's request for whatever purpose it may serve.", body_s))
     elif letter_type == "employment":
         elements.append(Paragraph("<b>EMPLOYMENT CERTIFICATE</b>", ParagraphStyle('C', parent=body_s, alignment=1, fontSize=13, spaceAfter=20)))
