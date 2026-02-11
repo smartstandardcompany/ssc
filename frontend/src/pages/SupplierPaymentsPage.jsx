@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
 import { DateFilter } from '@/components/DateFilter';
+import { BranchFilter } from '@/components/BranchFilter';
 
 export default function SupplierPaymentsPage() {
   const [payments, setPayments] = useState([]);
@@ -28,6 +29,7 @@ export default function SupplierPaymentsPage() {
     notes: '',
   });
   const [dateFilter, setDateFilter] = useState({ start: null, end: null, period: 'all' });
+  const [branchFilter, setBranchFilter] = useState([]);
 
   useEffect(() => {
     fetchData();
@@ -122,6 +124,7 @@ export default function SupplierPaymentsPage() {
             <p className="text-muted-foreground">Track payments made to suppliers</p>
           </div>
           <div className="flex gap-3 items-center flex-wrap">
+            <BranchFilter onChange={setBranchFilter} />
             <DateFilter onFilterChange={setDateFilter} />
             <ExportButtons dataType="supplier-payments" />
             <Button
@@ -253,6 +256,7 @@ export default function SupplierPaymentsPage() {
                 </thead>
                 <tbody>
                   {payments.filter(p => {
+                    if (branchFilter.length > 0 && !branchFilter.includes(p.branch_id)) return false;
                     if (dateFilter.start && dateFilter.end) {
                       const d = new Date(p.date);
                       return d >= dateFilter.start && d <= dateFilter.end;
