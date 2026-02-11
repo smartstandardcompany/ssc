@@ -99,21 +99,24 @@ export const DashboardLayout = ({ children }) => {
           )}
         </nav>
 
-        <div className="absolute bottom-0 w-64 p-4 border-t border-border bg-card">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="text-sm font-medium" data-testid="user-name">{user.name}</p>
-              <p className="text-xs text-muted-foreground">{user.email}</p>
-              <Badge variant="secondary" className="mt-1 capitalize text-xs">{user.role}</Badge>
+        <div className="absolute bottom-0 w-64 p-4 border-t border-stone-100 bg-white">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-amber-400 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+              {user.name?.charAt(0)?.toUpperCase() || 'U'}
             </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-stone-800 truncate" data-testid="user-name">{user.name}</p>
+              <p className="text-xs text-stone-400 truncate">{user.email}</p>
+            </div>
+            <Badge className="bg-orange-50 text-orange-600 border-orange-200 capitalize text-xs">{user.role}</Badge>
           </div>
-          <Button variant="outline" size="sm" onClick={handleLogout} data-testid="logout-button" className="w-full">
-            <LogOut size={16} className="mr-2" />Logout
+          <Button variant="outline" size="sm" onClick={handleLogout} data-testid="logout-button" className="w-full rounded-xl border-stone-200 text-stone-500 hover:text-orange-600 hover:border-orange-200 hover:bg-orange-50 transition-all">
+            <LogOut size={15} className="mr-2" />Logout
           </Button>
         </div>
       </aside>
 
-      <main className="flex-1 ml-64">
+      <main className="flex-1 ml-64 bg-gradient-to-br from-[#FDFBF7] to-[#FFF8F0]">
         <div className="p-6 lg:p-8">{children}</div>
       </main>
     </div>
