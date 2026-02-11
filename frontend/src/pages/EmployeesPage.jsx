@@ -395,6 +395,39 @@ export default function EmployeesPage() {
                     <div className="p-3 bg-secondary rounded-lg"><div className="text-xs text-muted-foreground">Unpaid Leave</div><div className="text-lg font-bold">{empSummary.leave.unpaid_used} days</div></div>
                   </div>
                 </TabsContent>
+
+                <TabsContent value="docs" className="space-y-4">
+                  <div className="flex gap-2 items-end p-3 bg-stone-50 rounded-xl border">
+                    <div className="w-36"><Label className="text-xs">Type</Label>
+                      <Select value={newDoc.document_type} onValueChange={(v) => setNewDoc({ ...newDoc, document_type: v })}>
+                        <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectItem value="passport">Passport</SelectItem><SelectItem value="visa">Visa</SelectItem><SelectItem value="labor_card">Labor Card</SelectItem><SelectItem value="emirates_id">Emirates ID</SelectItem><SelectItem value="health_card">Health Card</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex-1"><Label className="text-xs">Number</Label><Input value={newDoc.document_number} onChange={(e) => setNewDoc({ ...newDoc, document_number: e.target.value })} className="h-8" placeholder="Doc number" /></div>
+                    <div className="w-36"><Label className="text-xs">Expiry</Label><Input type="date" value={newDoc.expiry_date} onChange={(e) => setNewDoc({ ...newDoc, expiry_date: e.target.value })} className="h-8" /></div>
+                    <Button size="sm" onClick={handleAddEmpDoc} className="h-8 rounded-xl">Add</Button>
+                  </div>
+                  <div className="space-y-2">
+                    {empDocs.map(d => (
+                      <div key={d.id} className={`flex justify-between items-center p-3 rounded-xl border ${d.days_until_expiry != null && d.days_until_expiry <= 30 ? 'bg-error/5 border-error/30' : 'bg-stone-50'}`}>
+                        <div>
+                          <Badge variant="secondary" className="capitalize mr-2">{d.document_type.replace('_', ' ')}</Badge>
+                          <span className="text-sm">{d.document_number || '-'}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {d.expiry_date && <span className="text-xs">{new Date(d.expiry_date).toLocaleDateString()}</span>}
+                          {d.days_until_expiry != null && (
+                            <Badge className={d.days_until_expiry < 0 ? 'bg-error/20 text-error' : d.days_until_expiry <= 30 ? 'bg-warning/20 text-warning' : 'bg-success/20 text-success'}>
+                              {d.days_until_expiry < 0 ? `${Math.abs(d.days_until_expiry)}d expired` : `${d.days_until_expiry}d left`}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {empDocs.length === 0 && <p className="text-center text-muted-foreground py-4">No documents added</p>}
+                  </div>
+                </TabsContent>
               </Tabs>
             )}
           </DialogContent>
