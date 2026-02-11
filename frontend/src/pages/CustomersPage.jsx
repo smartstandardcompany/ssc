@@ -271,8 +271,15 @@ export default function CustomersPage() {
                       <td className="p-2 text-xs">{p.branch}</td>
                       <td className="p-2 text-xs text-right font-medium">SAR {p.amount.toFixed(2)}</td>
                       <td className="p-2 text-xs text-right text-error">{p.discount > 0 ? `SAR ${p.discount.toFixed(2)}` : '-'}</td>
-                      <td className="p-2 text-xs capitalize">{p.payment}</td>
-                      <td className="p-2 text-xs text-right">{p.credit > 0 ? <span className="font-bold text-warning">SAR {p.credit.toFixed(2)}</span> : '-'}</td>
+                      <td className="p-2 text-xs">
+                        {p.payments?.map((pm, j) => (
+                          <span key={j} className="inline-block mr-1"><Badge variant="secondary" className="text-xs capitalize">{pm.mode}: SAR {pm.amount.toFixed(0)}</Badge></span>
+                        ))}
+                      </td>
+                      <td className="p-2 text-xs text-right">
+                        {p.credit > 0 ? <span className="font-bold text-warning">SAR {p.credit.toFixed(2)}</span> : '-'}
+                        {p.credit_received > 0 && <div className="text-success text-xs">Received: SAR {p.credit_received.toFixed(2)}</div>}
+                      </td>
                     </tr>
                   ))}{customerReport.purchases.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No purchases</td></tr>}</tbody></table>
                 </div>
