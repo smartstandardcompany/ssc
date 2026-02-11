@@ -76,11 +76,16 @@ export default function CreditReportPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="credit-report-title">Credit Sales Report</h1>
-          <p className="text-muted-foreground">Track credit sales, received payments, and outstanding balances</p>
+        <div className="flex justify-between items-start flex-wrap gap-4">
+          <div>
+            <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="credit-report-title">Credit Sales Report</h1>
+            <p className="text-muted-foreground">Track credit sales, received payments, and outstanding balances</p>
+          </div>
+          <div className="flex gap-3 items-center">
+            <BranchFilter onChange={setBranchFilter} />
+            <ExportButtons dataType="sales" />
+          </div>
         </div>
-        <ExportButtons dataType="sales" />
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
