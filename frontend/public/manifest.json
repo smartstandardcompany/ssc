@@ -1,11 +1,11 @@
 {
-  "name": "DataEntry Hub",
-  "short_name": "DataEntry",
-  "description": "Sales, Expenses & Business Management",
+  "name": "SSC Track",
+  "short_name": "SSC Track",
+  "description": "Smart Standard Company - Business Management",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F8F7FC",
-  "theme_color": "#7C3AED",
+  "background_color": "#FFF8F0",
+  "theme_color": "#F5841F",
   "orientation": "any",
   "icons": [
     {
