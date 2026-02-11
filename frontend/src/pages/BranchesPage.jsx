@@ -153,6 +153,10 @@ export default function BranchesPage() {
                   <div className="p-3 bg-info/10 rounded-lg"><div className="text-xs text-muted-foreground">Supplier Payments</div><div className="text-lg font-bold text-info">${showDetail.total_supplier_payments.toFixed(2)}</div><div className="text-xs">{showDetail.sp_count} transactions</div></div>
                   <div className="p-3 bg-primary/10 rounded-lg"><div className="text-xs text-muted-foreground">Net Profit</div><div className={`text-lg font-bold ${showDetail.net_profit >= 0 ? 'text-success' : 'text-error'}`}>${showDetail.net_profit.toFixed(2)}</div></div>
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-cash/10 rounded-lg border border-cash/30"><div className="text-xs text-muted-foreground">Cash In Hand</div><div className={`text-lg font-bold ${(showDetail.cash_in_hand || 0) >= 0 ? 'text-cash' : 'text-error'}`}>${(showDetail.cash_in_hand || 0).toFixed(2)}</div></div>
+                  <div className="p-3 bg-bank/10 rounded-lg border border-bank/30"><div className="text-xs text-muted-foreground">Bank In Hand</div><div className={`text-lg font-bold ${(showDetail.bank_in_hand || 0) >= 0 ? 'text-bank' : 'text-error'}`}>${(showDetail.bank_in_hand || 0).toFixed(2)}</div></div>
+                </div>
                 <div className="border-t pt-3">
                   <h4 className="text-sm font-medium mb-2">Sales Breakdown</h4>
                   <div className="grid grid-cols-3 gap-2">
