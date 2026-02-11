@@ -21,6 +21,8 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [showReceiveDialog, setShowReceiveDialog] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [customerReport, setCustomerReport] = useState(null);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [receivingCustomer, setReceivingCustomer] = useState(null);
   const [formData, setFormData] = useState({ name: '', branch_id: '', phone: '', email: '' });
