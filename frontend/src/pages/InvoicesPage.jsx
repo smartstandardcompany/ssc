@@ -178,12 +178,18 @@ export default function InvoicesPage() {
                     <div className="mb-3 p-3 bg-secondary/30 rounded-lg border">
                       <p className="text-xs text-muted-foreground mb-2">Click items to add to invoice:</p>
                       <div className="flex gap-2 flex-wrap">
-                        {masterItems.filter(m => m.active !== false).map(m => (
-                          <Button key={m.id} type="button" size="sm" variant="outline" className="h-8 text-xs rounded-full" data-testid={`quick-item-${m.id}`}
-                            onClick={() => setFormData({ ...formData, items: [...formData.items.filter(i => i.description), { description: m.name, quantity: 1, unit_price: m.unit_price }] })}>
-                            {m.name} - ${m.unit_price}
-                          </Button>
-                        ))}
+                        {masterItems.filter(m => m.active !== false).map((m, idx) => {
+                          const colors = ['bg-primary/10 border-primary/30 text-primary hover:bg-primary/20', 'bg-success/10 border-success/30 text-success hover:bg-success/20', 'bg-info/10 border-info/30 text-info hover:bg-info/20', 'bg-warning/10 border-warning/30 text-warning hover:bg-warning/20', 'bg-error/10 border-error/30 text-error hover:bg-error/20', 'bg-cash/10 border-cash/30 text-cash hover:bg-cash/20', 'bg-bank/10 border-bank/30 text-bank hover:bg-bank/20'];
+                          const isSelected = formData.items.some(i => i.description === m.name);
+                          return (
+                            <Button key={m.id} type="button" size="sm" variant="outline"
+                              className={`h-9 text-xs rounded-full border-2 transition-all ${isSelected ? 'ring-2 ring-primary ring-offset-1 font-bold' : ''} ${colors[idx % colors.length]}`}
+                              data-testid={`quick-item-${m.id}`}
+                              onClick={() => setFormData({ ...formData, items: [...formData.items.filter(i => i.description), { description: m.name, quantity: 1, unit_price: m.unit_price }] })}>
+                              {m.name} - ${m.unit_price}
+                            </Button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
