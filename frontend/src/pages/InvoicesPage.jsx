@@ -110,6 +110,32 @@ export default function InvoicesPage() {
     }
   };
 
+  const handleReceiveCredit = async (e) => {
+    e.preventDefault();
+    if (!receivingInvoice?.sale_id) return;
+    try {
+      const amount = parseFloat(receiveData.amount) || 0;
+      const discount = parseFloat(receiveData.discount) || 0;
+      await api.post(`/sales/${receivingInvoice.sale_id}/receive-credit`, { payment_mode: receiveData.payment_mode, amount, discount });
+      toast.success(`$${(amount + discount).toFixed(2)} settled`);
+      setShowReceiveDialog(false);
+      setReceiveData({ payment_mode: 'cash', amount: '', discount: '' });
+      fetchData();
+    } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+  };
+
+  // Get credit remaining for an invoice by checking its linked sale
+  const [salesData, setSalesData] = useState([]);
+  useEffect(() => {
+    api.get('/sales').then(r => setSalesData(r.data)).catch(() => {});
+  }, [invoices]);
+  const getCreditRemaining = (inv) => {
+    if (!inv.sale_id) return 0;
+    const sale = salesData.find(s => s.id === inv.sale_id);
+    if (!sale) return 0;
+    return (sale.credit_amount || 0) - (sale.credit_received || 0);
+  };
+
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-64">Loading...</div></DashboardLayout>;
 
   const totals = calcTotals();
