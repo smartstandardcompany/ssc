@@ -248,19 +248,25 @@ export default function UsersPage() {
                 </div>
 
                 <div>
-                  <Label className="mb-3 block">Permissions</Label>
-                  <div className="space-y-2 border rounded-lg p-4 bg-secondary/30">
-                    {allPermissions.map((perm) => (
-                      <div key={perm.value} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={perm.value}
-                          checked={formData.permissions.includes(perm.value)}
-                          onCheckedChange={() => togglePermission(perm.value)}
-                          data-testid={`permission-${perm.value}`}
-                        />
-                        <label htmlFor={perm.value} className="text-sm cursor-pointer">
-                          {perm.label}
-                        </label>
+                  <div className="flex justify-between items-center mb-3">
+                    <Label>Permissions</Label>
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm" variant="ghost" className="text-xs h-7" onClick={() => setFormData({ ...formData, permissions: allPermissions.map(p => p.value) })}>Select All</Button>
+                      <Button type="button" size="sm" variant="ghost" className="text-xs h-7" onClick={() => setFormData({ ...formData, permissions: [] })}>Clear All</Button>
+                    </div>
+                  </div>
+                  <div className="border rounded-xl p-4 bg-stone-50 space-y-4 max-h-64 overflow-y-auto">
+                    {permissionGroups.map(group => (
+                      <div key={group}>
+                        <p className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{group}</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {allPermissions.filter(p => p.group === group).map((perm) => (
+                            <div key={perm.value} className="flex items-center space-x-2 p-1.5 rounded-lg hover:bg-white transition-all">
+                              <Checkbox id={perm.value} checked={formData.permissions.includes(perm.value)} onCheckedChange={() => togglePermission(perm.value)} data-testid={`permission-${perm.value}`} />
+                              <label htmlFor={perm.value} className="text-sm cursor-pointer">{perm.label}</label>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     ))}
                   </div>
