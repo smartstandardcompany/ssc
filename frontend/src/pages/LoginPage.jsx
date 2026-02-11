@@ -90,20 +90,22 @@ export default function LoginPage({ setIsAuthenticated }) {
             <Button
               type="submit"
               data-testid="login-button"
-              className="w-full h-11 rounded-full"
+              className="w-full h-11 rounded-xl bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 shadow-lg shadow-orange-500/25 transition-all duration-300"
               disabled={loading}
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
           <div className="mt-6 text-center text-sm">
-            <span className="text-muted-foreground">Don't have an account? </span>
-            <Link to="/register" className="text-primary hover:underline font-medium" data-testid="register-link">
+            <span className="text-stone-400">Don't have an account? </span>
+            <Link to="/register" className="text-orange-600 hover:underline font-medium" data-testid="register-link">
               Sign up
             </Link>
           </div>
         </CardContent>
       </Card>
+        </div>
+      </div>
     </div>
   );
 }
