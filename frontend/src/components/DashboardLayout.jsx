@@ -63,38 +63,37 @@ export const DashboardLayout = ({ children }) => {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="w-64 bg-card border-r border-border fixed h-full overflow-y-auto">
-        <div className="p-4">
+      <aside className="w-64 bg-white border-r border-stone-100 fixed h-full overflow-y-auto shadow-sm">
+        <div className="p-5 border-b border-stone-100">
           <div className="flex items-center gap-3">
-            <img src="/logo.jpg" alt="SSC" className="w-10 h-10 rounded-lg object-contain" />
+            <img src="/logo.jpg" alt="SSC" className="w-11 h-11 rounded-xl object-contain shadow-sm" />
             <div>
-              <h1 className="text-lg font-bold text-primary font-outfit" data-testid="app-title">SSC Track</h1>
-              <p className="text-xs text-muted-foreground">{isEmployee ? 'Employee Portal' : 'Smart Standard Company'}</p>
+              <h1 className="text-lg font-bold font-outfit bg-gradient-to-r from-orange-600 to-amber-500 bg-clip-text text-transparent" data-testid="app-title">SSC Track</h1>
+              <p className="text-xs text-stone-400">{isEmployee ? 'Employee Portal' : 'Smart Standard Company'}</p>
             </div>
           </div>
         </div>
 
-        <nav className="px-3 space-y-1">
+        <nav className="px-3 py-3 space-y-0.5">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
             return (
               <Link key={item.path} to={item.path} data-testid={`nav-${item.label.toLowerCase().replace(/\s/g, '-')}`}
-                className={`sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium ${isActive ? 'bg-primary/10 text-primary' : 'text-foreground/70 hover:bg-secondary hover:text-foreground'}`}>
-                <Icon size={18} strokeWidth={2} />
+                className={`sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${isActive ? 'bg-gradient-to-r from-orange-50 to-amber-50 text-orange-700 border-l-[3px] border-orange-500 shadow-sm' : 'text-stone-500 hover:bg-stone-50 hover:text-stone-800'}`}>
+                <Icon size={18} strokeWidth={isActive ? 2.5 : 1.8} />
                 {item.label}
                 {item.path === '/notifications' && unreadCount > 0 && (
-                  <Badge className="ml-auto bg-error text-white text-xs h-5 w-5 p-0 flex items-center justify-center rounded-full">{unreadCount}</Badge>
+                  <Badge className="ml-auto bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs h-5 w-5 p-0 flex items-center justify-center rounded-full shadow-sm">{unreadCount}</Badge>
                 )}
               </Link>
             );
           })}
 
-          {/* Leave Approvals for admin */}
           {!isEmployee && (
             <Link to="/leave-approvals" data-testid="nav-leave-approvals"
-              className={`sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium ${location.pathname === '/leave-approvals' ? 'bg-primary/10 text-primary' : 'text-foreground/70 hover:bg-secondary hover:text-foreground'}`}>
-              <Bell size={18} strokeWidth={2} />
+              className={`sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${location.pathname === '/leave-approvals' ? 'bg-gradient-to-r from-orange-50 to-amber-50 text-orange-700 border-l-[3px] border-orange-500 shadow-sm' : 'text-stone-500 hover:bg-stone-50 hover:text-stone-800'}`}>
+              <Bell size={18} strokeWidth={1.8} />
               Leave Approvals
             </Link>
           )}
