@@ -1875,7 +1875,7 @@ async def create_salary_payment(data: SalaryPaymentCreate, current_user: User = 
         notif = Notification(
             user_id=emp["user_id"],
             title=f"{type_label} Payment Received",
-            message=f"${data.amount:.2f} {type_label} for {data.period} via {data.payment_mode}. Please acknowledge receipt.",
+            message=f"SAR {data.amount:.2f} {type_label} for {data.period} via {data.payment_mode}. Please acknowledge receipt.",
             type="salary_paid",
             related_id=payment.id
         )
@@ -2558,19 +2558,19 @@ async def generate_payslip(payment_id: str, current_user: User = Depends(get_cur
     id_card = sum(p["amount"] for p in period_payments if p.get("payment_type") == "id_card")
     
     pay_rows = [["Description", "Amount"]]
-    pay_rows.append(["Monthly Salary", f"${emp.get('salary', 0):.2f}"])
-    if salary_total > 0: pay_rows.append(["Salary Paid", f"${salary_total:.2f}"])
-    if overtime > 0: pay_rows.append(["Overtime", f"${overtime:.2f}"])
-    if advance > 0: pay_rows.append(["Advance / Loan", f"${advance:.2f}"])
+    pay_rows.append(["Monthly Salary", f"SAR {emp.get('salary', 0):.2f}"])
+    if salary_total > 0: pay_rows.append(["Salary Paid", f"SAR {salary_total:.2f}"])
+    if overtime > 0: pay_rows.append(["Overtime", f"SAR {overtime:.2f}"])
+    if advance > 0: pay_rows.append(["Advance / Loan", f"SAR {advance:.2f}"])
     if loan_repay > 0: pay_rows.append(["Loan Repayment (Deduction)", f"-${loan_repay:.2f}"])
-    if tickets > 0: pay_rows.append(["Tickets", f"${tickets:.2f}"])
-    if id_card > 0: pay_rows.append(["ID Card", f"${id_card:.2f}"])
+    if tickets > 0: pay_rows.append(["Tickets", f"SAR {tickets:.2f}"])
+    if id_card > 0: pay_rows.append(["ID Card", f"SAR {id_card:.2f}"])
     
     net = salary_total + overtime - loan_repay
     balance = emp.get("salary", 0) - salary_total
     pay_rows.append(["", ""])
-    pay_rows.append(["Net Payment", f"${net:.2f}"])
-    pay_rows.append(["Salary Balance", f"${balance:.2f}"])
+    pay_rows.append(["Net Payment", f"SAR {net:.2f}"])
+    pay_rows.append(["Salary Balance", f"SAR {balance:.2f}"])
     
     pay_table = Table(pay_rows, colWidths=[4.5*inch, 2.5*inch])
     pay_table.setStyle(TableStyle([
@@ -3380,10 +3380,10 @@ def generate_pdf_report(sales, expenses, supplier_payments, branches, customers)
     
     summary_data = [
         ["Metric", "Amount"],
-        ["Total Sales", f"${total_sales:.2f}"],
-        ["Total Expenses", f"${total_expenses:.2f}"],
-        ["Supplier Payments", f"${total_supplier:.2f}"],
-        ["Net Profit", f"${net_profit:.2f}"]
+        ["Total Sales", f"SAR {total_sales:.2f}"],
+        ["Total Expenses", f"SAR {total_expenses:.2f}"],
+        ["Supplier Payments", f"SAR {total_supplier:.2f}"],
+        ["Net Profit", f"SAR {net_profit:.2f}"]
     ]
     
     summary_table = Table(summary_data, colWidths=[3*inch, 2*inch])
@@ -3412,7 +3412,7 @@ def generate_pdf_report(sales, expenses, supplier_payments, branches, customers)
         sales_data.append([
             date_str,
             sale["sale_type"].capitalize(),
-            f"${sale['amount']:.2f}",
+            f"SAR {sale['amount']:.2f}",
             modes
         ])
     
@@ -3467,7 +3467,7 @@ def generate_excel_report(sales, expenses, supplier_payments, branches, customer
     
     for idx, (metric, amount) in enumerate(summary_data, start=4):
         ws_summary[f'A{idx}'] = metric
-        ws_summary[f'B{idx}'] = f"${amount:.2f}"
+        ws_summary[f'B{idx}'] = f"SAR {amount:.2f}"
     
     # Sales Sheet
     ws_sales = wb.create_sheet("Sales")
