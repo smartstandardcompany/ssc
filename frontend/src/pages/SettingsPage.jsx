@@ -184,21 +184,39 @@ export default function SettingsPage() {
           </TabsContent>
 
           <TabsContent value="company">
-            <Card className="border-border">
-              <CardHeader><CardTitle className="font-outfit">Company Settings</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>Company Logo (for payslips)</Label>
-                  <div className="mt-2">
-                    <label className="cursor-pointer">
-                      <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files[0] && handleLogoUpload(e.target.files[0])} />
-                      <Button variant="outline" className="rounded-full" asChild><span><Upload size={14} className="mr-2" />Upload Logo</span></Button>
-                    </label>
+            <div className="space-y-6">
+              <Card className="border-stone-100">
+                <CardHeader><CardTitle className="font-outfit">Company Information & Address</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">This information appears on letters, payslips, invoices and reports.</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2"><Label>Company Name</Label><Input value={companyInfo.company_name} onChange={(e) => setCompanyInfo({ ...companyInfo, company_name: e.target.value })} /></div>
+                    <div><Label>Address Line 1</Label><Input value={companyInfo.address_line1} onChange={(e) => setCompanyInfo({ ...companyInfo, address_line1: e.target.value })} placeholder="Building, Street" /></div>
+                    <div><Label>Address Line 2</Label><Input value={companyInfo.address_line2} onChange={(e) => setCompanyInfo({ ...companyInfo, address_line2: e.target.value })} placeholder="Area, District" /></div>
+                    <div><Label>City</Label><Input value={companyInfo.city} onChange={(e) => setCompanyInfo({ ...companyInfo, city: e.target.value })} /></div>
+                    <div><Label>Country</Label><Input value={companyInfo.country} onChange={(e) => setCompanyInfo({ ...companyInfo, country: e.target.value })} /></div>
+                    <div><Label>Phone</Label><Input value={companyInfo.phone} onChange={(e) => setCompanyInfo({ ...companyInfo, phone: e.target.value })} /></div>
+                    <div><Label>Email</Label><Input value={companyInfo.email} onChange={(e) => setCompanyInfo({ ...companyInfo, email: e.target.value })} /></div>
+                    <div><Label>CR Number</Label><Input value={companyInfo.cr_number} onChange={(e) => setCompanyInfo({ ...companyInfo, cr_number: e.target.value })} placeholder="Commercial Registration" /></div>
+                    <div><Label>VAT Number</Label><Input value={companyInfo.vat_number} onChange={(e) => setCompanyInfo({ ...companyInfo, vat_number: e.target.value })} /></div>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2">Upload your company logo (PNG/JPG). It will appear on payslips and exported documents.</p>
-                </div>
-              </CardContent>
-            </Card>
+                  <Button onClick={async () => {
+                    try { await api.post('/settings/company', companyInfo); toast.success('Company info saved'); }
+                    catch { toast.error('Failed'); }
+                  }} className="rounded-xl">Save Company Info</Button>
+                </CardContent>
+              </Card>
+              <Card className="border-stone-100">
+                <CardHeader><CardTitle className="font-outfit">Company Logo</CardTitle></CardHeader>
+                <CardContent>
+                  <label className="cursor-pointer">
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files[0] && handleLogoUpload(e.target.files[0])} />
+                    <Button variant="outline" className="rounded-xl" asChild><span><Upload size={14} className="mr-2" />Upload Logo</span></Button>
+                  </label>
+                  <p className="text-xs text-muted-foreground mt-2">Appears on payslips, letters and reports.</p>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="import">
