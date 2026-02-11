@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { FileText, FileSpreadsheet } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
+import { BranchFilter } from '@/components/BranchFilter';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -25,8 +26,9 @@ export default function ReportsPage() {
   const [compareBranch1, setCompareBranch1] = useState('');
   const [compareBranch2, setCompareBranch2] = useState('');
   const [comparePeriod, setComparePeriod] = useState('month');
+  const [branchFilter, setBranchFilter] = useState([]);
 
-  const [filters, setFilters] = useState({ startDate: '', endDate: '', branchId: 'all', type: 'all' });
+  const [filters, setFilters] = useState({ startDate: '', endDate: '', type: 'all' });
 
   useEffect(() => { fetchData(); }, []);
 
@@ -42,7 +44,7 @@ export default function ReportsPage() {
     const d = new Date(item.date);
     const sm = !filters.startDate || d >= new Date(filters.startDate);
     const em = !filters.endDate || d <= new Date(filters.endDate);
-    const bm = filters.branchId === 'all' || item.branch_id === filters.branchId;
+    const bm = branchFilter.length === 0 || branchFilter.includes(item.branch_id);
     return sm && em && bm;
   });
   const filterByBranch = (data, bid) => data.filter(d => d.branch_id === bid);
@@ -145,6 +147,7 @@ export default function ReportsPage() {
             <p className="text-muted-foreground">Compare branches, periods, and track performance</p>
           </div>
           <div className="flex gap-2">
+            <BranchFilter onChange={setBranchFilter} />
             <Button onClick={() => handleExport('pdf')} variant="outline" className="rounded-xl"><FileText size={16} className="mr-2" />PDF</Button>
             <Button onClick={() => handleExport('excel')} variant="outline" className="rounded-xl"><FileSpreadsheet size={16} className="mr-2" />Excel</Button>
           </div>
@@ -162,11 +165,10 @@ export default function ReportsPage() {
           {/* OVERVIEW */}
           <TabsContent value="overview" className="space-y-6">
             <Card className="border-stone-100"><CardHeader><CardTitle className="font-outfit text-base">Filters</CardTitle></CardHeader><CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div><Label>Start</Label><Input type="date" value={filters.startDate} onChange={(e) => setFilters({ ...filters, startDate: e.target.value })} /></div>
                 <div><Label>End</Label><Input type="date" value={filters.endDate} onChange={(e) => setFilters({ ...filters, endDate: e.target.value })} /></div>
-                <div><Label>Branch</Label><Select value={filters.branchId} onValueChange={(v) => setFilters({ ...filters, branchId: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></div>
-                <div className="flex items-end"><Button onClick={() => setFilters({ startDate: '', endDate: '', branchId: 'all', type: 'all' })} variant="outline" className="rounded-xl w-full">Clear</Button></div>
+                <div className="flex items-end"><Button onClick={() => setFilters({ startDate: '', endDate: '', type: 'all' })} variant="outline" className="rounded-xl w-full">Clear</Button></div>
               </div>
             </CardContent></Card>
 
