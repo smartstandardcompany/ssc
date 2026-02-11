@@ -132,6 +132,7 @@ export default function EmployeesPage() {
 
   const isExpiryNear = (d) => d && Math.floor((new Date(d) - new Date()) / 86400000) <= 30;
   const getEmpTotalPaid = (id) => salaryPayments.filter(p => p.employee_id === id).reduce((s, p) => s + p.amount, 0);
+  const getPending = (id) => pendingSummary.find(p => p.id === id) || {};
 
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-64">Loading...</div></DashboardLayout>;
 
