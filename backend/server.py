@@ -2780,6 +2780,45 @@ async def delete_invoice(invoice_id: str, current_user: User = Depends(get_curre
         raise HTTPException(status_code=404, detail="Invoice not found")
     return {"message": "Invoice and linked sale deleted"}
 
+# Database Backup
+@api_router.get("/backup/database")
+async def backup_database(current_user: User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    import json as json_module
+    
+    collections = ["users", "branches", "customers", "suppliers", "sales", "expenses", 
+                    "supplier_payments", "salary_payments", "employees", "leaves", "documents",
+                    "categories", "invoices", "items", "cash_transfers", "notifications",
+                    "employee_requests", "recurring_expenses", "email_settings", "whatsapp_config",
+                    "notification_prefs", "whatsapp_settings"]
+    
+    backup_data = {"backup_date": datetime.now(timezone.utc).isoformat(), "app": "DataEntry Hub", "collections": {}}
+    
+    for col_name in collections:
+        try:
+            col = db[col_name]
+            docs = await col.find({}, {"_id": 0}).to_list(100000)
+            backup_data["collections"][col_name] = docs
+        except:
+            backup_data["collections"][col_name] = []
+    
+    json_str = json_module.dumps(backup_data, default=str, indent=2)
+    buffer = BytesIO(json_str.encode('utf-8'))
+    buffer.seek(0)
+    
+    fname = f"dataentry_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    return StreamingResponse(buffer, media_type="application/json",
+                             headers={"Content-Disposition": f"attachment; filename={fname}"})
+
+@api_router.post("/backup/restore")
+async def restore_database(current_user: User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    # This is a placeholder - actual restore requires file upload
+    return {"message": "Use the backup JSON file to restore. Contact support for restore assistance."}
+
 # ===== SETTINGS & NOTIFICATION ROUTES =====
 
 # Email Settings
