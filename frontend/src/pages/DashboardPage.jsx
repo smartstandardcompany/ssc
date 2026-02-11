@@ -12,6 +12,7 @@ import { DateFilter } from '@/components/DateFilter';
 export default function DashboardPage() {
   const [stats, setStats] = useState(null);
   const [alerts, setAlerts] = useState([]);
+  const [branchDues, setBranchDues] = useState(null);
   const [loading, setLoading] = useState(true);
   const [branchFilter, setBranchFilter] = useState([]);
   const [dateFilter, setDateFilter] = useState({ start: null, end: null, period: 'all' });
@@ -27,12 +28,14 @@ export default function DashboardPage() {
       if (dateFilter.start) params.set('start_date', dateFilter.start.toISOString());
       if (dateFilter.end) params.set('end_date', dateFilter.end.toISOString());
       const q = params.toString() ? `?${params.toString()}` : '';
-      const [statsRes, alertsRes] = await Promise.all([
+      const [statsRes, alertsRes, duesRes] = await Promise.all([
         api.get(`/dashboard/stats${q}`),
         api.get('/documents/alerts/upcoming'),
+        api.get('/reports/branch-dues'),
       ]);
       setStats(statsRes.data);
       setAlerts(alertsRes.data);
+      setBranchDues(duesRes.data);
     } catch (error) {
       toast.error('Failed to fetch dashboard stats');
     } finally {
