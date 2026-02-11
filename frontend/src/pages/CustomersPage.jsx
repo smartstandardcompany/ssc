@@ -268,7 +268,7 @@ export default function CustomersPage() {
                   <tbody>{customerReport.purchases.map((p, i) => (
                     <tr key={i} className="border-b hover:bg-stone-50">
                       <td className="p-2 text-xs">{new Date(p.date).toLocaleDateString()}</td>
-                      <td className="p-2 text-xs">{p.branch}</td>
+                      <td className="p-2 text-xs">{p.branch}{p.invoice_number && <Badge variant="secondary" className="ml-1 text-xs">{p.invoice_number}</Badge>}</td>
                       <td className="p-2 text-xs text-right font-medium">SAR {p.amount.toFixed(2)}</td>
                       <td className="p-2 text-xs text-right text-error">{p.discount > 0 ? `SAR ${p.discount.toFixed(2)}` : '-'}</td>
                       <td className="p-2 text-xs">
@@ -281,6 +281,13 @@ export default function CustomersPage() {
                         {p.credit_received > 0 && <div className="text-success text-xs">Received: SAR {p.credit_received.toFixed(2)}</div>}
                       </td>
                     </tr>
+                    {p.items?.length > 0 && (
+                      <tr className="bg-stone-50/50"><td colSpan={6} className="px-4 py-1">
+                        <div className="flex gap-2 flex-wrap">{p.items.map((item, j) => (
+                          <span key={j} className="text-xs bg-white px-2 py-0.5 rounded border">{item.description} x{item.quantity} @ SAR {item.unit_price}</span>
+                        ))}</div>
+                      </td></tr>
+                    )}
                   ))}{customerReport.purchases.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No purchases</td></tr>}</tbody></table>
                 </div>
               </div>
