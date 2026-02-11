@@ -17,8 +17,12 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = useState([]);
   const [branches, setBranches] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const [masterItems, setMasterItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showItemForm, setShowItemForm] = useState(false);
+  const [newItem, setNewItem] = useState({ name: '', unit_price: '', category: '' });
+  const [customerSearch, setCustomerSearch] = useState('');
   const [branchFilter, setBranchFilter] = useState([]);
   const [dateFilter, setDateFilter] = useState({ start: null, end: null, period: 'all' });
   const [formData, setFormData] = useState({
@@ -26,6 +30,9 @@ export default function InvoicesPage() {
     date: new Date().toISOString().split('T')[0], notes: '',
     items: [{ description: '', quantity: 1, unit_price: '' }]
   });
+
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const isAdmin = user.role === 'admin' || user.role === 'manager';
 
   useEffect(() => { fetchData(); }, []);
 
