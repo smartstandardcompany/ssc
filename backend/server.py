@@ -2671,12 +2671,14 @@ async def download_document_file(doc_id: str, current_user: User = Depends(get_c
 @api_router.get("/settings/company")
 async def get_company_settings(current_user: User = Depends(get_current_user)):
     settings = await db.company_settings.find_one({}, {"_id": 0})
-    return settings or {"company_name": "Smart Standard Company", "address_line1": "", "address_line2": "", "city": "", "country": "", "phone": "", "email": "", "cr_number": "", "vat_number": ""}
+    return settings or {"company_name": "Smart Standard Company", "address_line1": "", "address_line2": "", "city": "", "country": "", "phone": "", "email": "", "cr_number": "", "vat_number": "", "vat_enabled": False, "vat_rate": 15}
 
 @api_router.post("/settings/company")
 async def save_company_settings(body: dict, current_user: User = Depends(get_current_user)):
     existing = await db.company_settings.find_one({})
     data = {k: body.get(k, "") for k in ["company_name", "address_line1", "address_line2", "city", "country", "phone", "email", "cr_number", "vat_number"]}
+    data["vat_enabled"] = body.get("vat_enabled", False)
+    data["vat_rate"] = float(body.get("vat_rate", 15) or 15)
     data["updated_at"] = datetime.now(timezone.utc).isoformat()
     if existing:
         await db.company_settings.update_one({}, {"$set": data})
