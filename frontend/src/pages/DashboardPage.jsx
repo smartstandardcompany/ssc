@@ -29,14 +29,16 @@ export default function DashboardPage() {
       if (dateFilter.start) params.set('start_date', dateFilter.start.toISOString());
       if (dateFilter.end) params.set('end_date', dateFilter.end.toISOString());
       const q = params.toString() ? `?${params.toString()}` : '';
-      const [statsRes, alertsRes, duesRes] = await Promise.all([
+      const [statsRes, alertsRes, duesRes, pendRes] = await Promise.all([
         api.get(`/dashboard/stats${q}`),
         api.get('/documents/alerts/upcoming'),
         api.get('/reports/branch-dues'),
+        api.get('/employees/pending-summary'),
       ]);
       setStats(statsRes.data);
       setAlerts(alertsRes.data);
       setBranchDues(duesRes.data);
+      setPendingSalaries(pendRes.data);
     } catch (error) {
       toast.error('Failed to fetch dashboard stats');
     } finally {
