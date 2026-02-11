@@ -2294,9 +2294,22 @@ async def generate_payslip(payment_id: str, current_user: User = Depends(get_cur
     elements = []
     styles = getSampleStyleSheet()
     
-    # Header
+    # Header with logo
     title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=20, textColor=colors.HexColor('#F5841F'), alignment=1, spaceAfter=5)
     sub_style = ParagraphStyle('Sub', parent=styles['Normal'], fontSize=10, textColor=colors.grey, alignment=1, spaceAfter=20)
+    
+    logo_path = ROOT_DIR / "uploads" / "logos" / "company_logo.jpg"
+    if not logo_path.exists():
+        logo_path = ROOT_DIR / "uploads" / "logos" / "company_logo.png"
+    if logo_path.exists():
+        from reportlab.platypus import Image as RLImage
+        try:
+            logo = RLImage(str(logo_path), width=1.5*inch, height=0.7*inch)
+            logo.hAlign = 'CENTER'
+            elements.append(logo)
+            elements.append(Spacer(1, 0.1*inch))
+        except:
+            pass
     
     elements.append(Paragraph("SMART STANDARD COMPANY", title_style))
     elements.append(Paragraph("Pay Slip", sub_style))
