@@ -2382,62 +2382,54 @@ async def get_all_supplier_summaries(current_user: User = Depends(get_current_us
         }
     return result
 
-# Branch-to-Branch Dues (expenses/payments made by one branch for another)
+# Branch-to-Branch Dues (ALL cross-branch payments: supplier, salary, expenses, transfers)
 @api_router.get("/reports/branch-dues")
 async def get_branch_dues(current_user: User = Depends(get_current_user)):
     branches = await db.branches.find({}, {"_id": 0}).to_list(100)
     branch_map = {b["id"]: b["name"] for b in branches}
     
-    # Get all expenses and supplier payments with branch info
-    expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
-    sp = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
-    salary_payments = await db.salary_payments.find({}, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find({"branch_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
+    sp = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}, "branch_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
+    salary_payments = await db.salary_payments.find({"branch_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
     employees = {e["id"]: e for e in await db.employees.find({}, {"_id": 0}).to_list(1000)}
-    
-    # Track: payment branch vs entity branch
-    dues = {}  # "Branch A → Branch B": amount (A paid for B's stuff)
-    
-    # Supplier payments: payment branch_id vs supplier branch_id  
     suppliers = {s["id"]: s for s in await db.suppliers.find({}, {"_id": 0}).to_list(1000)}
-    for p in sp:
-        pay_branch = p.get("branch_id")
-        sup = suppliers.get(p.get("supplier_id"), {})
-        sup_branch = sup.get("branch_id")
-        if pay_branch and sup_branch and pay_branch != sup_branch:
-            pay_name = branch_map.get(pay_branch, "Unknown")
-            sup_name = branch_map.get(sup_branch, "Unknown")
-            key = f"{pay_name} paid for {sup_name}"
-            dues[key] = dues.get(key, 0) + p["amount"]
-    
-    # Salary payments: payment branch vs employee branch
-    for p in salary_payments:
-        pay_branch = p.get("branch_id")
-        emp = employees.get(p.get("employee_id"), {})
-        emp_branch = emp.get("branch_id")
-        if pay_branch and emp_branch and pay_branch != emp_branch:
-            pay_name = branch_map.get(pay_branch, "Unknown")
-            emp_name = branch_map.get(emp_branch, "Unknown")
-            key = f"{pay_name} paid for {emp_name}"
-            dues[key] = dues.get(key, 0) + p["amount"]
-    
-    # Expenses: payment branch vs general (if branch mismatch tracked)
-    # Cash transfers as dues
     transfers = await db.cash_transfers.find({}, {"_id": 0}).to_list(10000)
+    
+    dues = {}
+    
+    for p in sp:
+        pay_b = p.get("branch_id")
+        sup = suppliers.get(p.get("supplier_id"), {})
+        sup_b = sup.get("branch_id")
+        if pay_b and sup_b and pay_b != sup_b:
+            key = f"{branch_map.get(pay_b, '?')} paid for {branch_map.get(sup_b, '?')} (supplier)"
+            dues[key] = dues.get(key, 0) + p["amount"]
+    
+    for p in salary_payments:
+        pay_b = p.get("branch_id")
+        emp = employees.get(p.get("employee_id"), {})
+        emp_b = emp.get("branch_id")
+        if pay_b and emp_b and pay_b != emp_b:
+            key = f"{branch_map.get(pay_b, '?')} paid for {branch_map.get(emp_b, '?')} (salary)"
+            dues[key] = dues.get(key, 0) + p["amount"]
+    
+    for e in expenses:
+        pay_b = e.get("branch_id")
+        if e.get("supplier_id"):
+            sup = suppliers.get(e["supplier_id"], {})
+            sup_b = sup.get("branch_id")
+            if pay_b and sup_b and pay_b != sup_b:
+                key = f"{branch_map.get(pay_b, '?')} paid for {branch_map.get(sup_b, '?')} (expense)"
+                dues[key] = dues.get(key, 0) + e["amount"]
+    
     for t in transfers:
         from_b = t.get("from_branch_id")
         to_b = t.get("to_branch_id")
         if from_b and to_b and from_b != to_b:
-            from_name = branch_map.get(from_b, "Office")
-            to_name = branch_map.get(to_b, "Office")
-            key = f"{from_name} sent to {to_name}"
+            key = f"{branch_map.get(from_b, 'Office')} sent to {branch_map.get(to_b, 'Office')} (transfer)"
             dues[key] = dues.get(key, 0) + t["amount"]
     
-    # Net dues between branches
-    net_dues = {}
-    for key, amount in dues.items():
-        net_dues[key] = amount
-    
-    return {"dues": net_dues, "total_cross_branch": sum(dues.values())}
+    return {"dues": dues, "total_cross_branch": sum(dues.values())}
 
 # Items Master (Products/Services)
 @api_router.get("/items")
