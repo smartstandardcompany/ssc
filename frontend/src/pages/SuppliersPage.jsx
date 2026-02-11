@@ -10,11 +10,13 @@ import { Plus, Edit, Trash2, DollarSign } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { ExportButtons } from '@/components/ExportButtons';
+import { BranchFilter } from '@/components/BranchFilter';
 
 export default function SuppliersPage() {
   const [suppliers, setSuppliers] = useState([]);
   const [branches, setBranches] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [branchFilter, setBranchFilter] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [showPayDialog, setShowPayDialog] = useState(false);
@@ -156,7 +158,8 @@ export default function SuppliersPage() {
             <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="suppliers-page-title">Suppliers</h1>
             <p className="text-muted-foreground">Manage suppliers and track credit</p>
           </div>
-          <div className="flex gap-3 items-center">
+          <div className="flex gap-3 items-center flex-wrap">
+            <BranchFilter onChange={setBranchFilter} />
             <ExportButtons dataType="suppliers" />
             <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
