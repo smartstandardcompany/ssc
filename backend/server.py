@@ -1119,15 +1119,26 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, current_user: Us
     
     net_profit = total_sales - total_expenses - total_supplier_payments
     
-    return DashboardStats(
-        total_sales=total_sales,
-        total_expenses=total_expenses,
-        total_supplier_payments=total_supplier_payments,
-        net_profit=net_profit,
-        pending_credits=pending_credits,
-        cash_sales=cash_sales,
-        bank_sales=bank_sales,
-        credit_sales=credit_sales
+    # Cash & Bank in hand (income - outgoing per mode)
+    exp_cash = sum(e["amount"] for e in expenses if e.get("payment_mode") == "cash")
+    exp_bank = sum(e["amount"] for e in expenses if e.get("payment_mode") == "bank")
+    sp_cash = sum(p["amount"] for p in supplier_payments if p.get("payment_mode") == "cash")
+    sp_bank = sum(p["amount"] for p in supplier_payments if p.get("payment_mode") == "bank")
+    cash_in_hand = cash_sales - exp_cash - sp_cash
+    bank_in_hand = bank_sales - exp_bank - sp_bank
+    
+    return {
+        "total_sales": total_sales,
+        "total_expenses": total_expenses,
+        "total_supplier_payments": total_supplier_payments,
+        "net_profit": net_profit,
+        "pending_credits": pending_credits,
+        "cash_sales": cash_sales,
+        "bank_sales": bank_sales,
+        "credit_sales": credit_sales,
+        "cash_in_hand": cash_in_hand,
+        "bank_in_hand": bank_in_hand
+    }
     )
 
 # Credit Sales Report
