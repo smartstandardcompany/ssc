@@ -22,6 +22,7 @@ import NotificationsPage from "./pages/NotificationsPage";
 import SettingsPage from "./pages/SettingsPage";
 import CashTransfersPage from "./pages/CashTransfersPage";
 import FinesPage from "./pages/FinesPage";
+import PartnersPage from "./pages/PartnersPage";
 import InvoicesPage from "./pages/InvoicesPage";
 import UsersPage from "./pages/UsersPage";
 import { Toaster } from "@/components/ui/sonner";
@@ -94,6 +95,7 @@ function App() {
           <Route path="/settings" element={isAuthenticated ? <SettingsPage /> : <Navigate to="/login" />} />
           <Route path="/cash-transfers" element={isAuthenticated ? <CashTransfersPage /> : <Navigate to="/login" />} />
           <Route path="/fines" element={isAuthenticated ? <FinesPage /> : <Navigate to="/login" />} />
+          <Route path="/partners" element={isAuthenticated ? <PartnersPage /> : <Navigate to="/login" />} />
           <Route path="/invoices" element={isAuthenticated ? <InvoicesPage /> : <Navigate to="/login" />} />
           <Route path="/users" element={isAuthenticated ? <UsersPage /> : <Navigate to="/login" />} />
         </Routes>
