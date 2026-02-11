@@ -195,6 +195,61 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="backup">
+            <div className="space-y-6">
+              <Card className="border-border">
+                <CardHeader><CardTitle className="font-outfit flex items-center gap-2"><Database size={18} />Database Backup</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">Download a complete backup of all your data as a JSON file. Save it to OneDrive, Google Drive, or any safe location.</p>
+                  <div className="p-4 bg-secondary/50 rounded-lg space-y-2">
+                    <div className="flex items-start gap-3">
+                      <Shield size={20} className="text-success mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">What's included in backup:</p>
+                        <p className="text-xs text-muted-foreground mt-1">All users, branches, customers, suppliers, sales, invoices, expenses, employees, salary payments, leaves, documents, categories, cash transfers, items, recurring expenses, settings, and notifications.</p>
+                      </div>
+                    </div>
+                  </div>
+                  <Button onClick={async () => {
+                    try {
+                      toast.loading('Generating backup...');
+                      const res = await api.get('/backup/database', { responseType: 'blob' });
+                      const url = window.URL.createObjectURL(new Blob([res.data]));
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.setAttribute('download', `dataentry_backup_${new Date().toISOString().slice(0,10)}.json`);
+                      document.body.appendChild(link);
+                      link.click();
+                      link.remove();
+                      window.URL.revokeObjectURL(url);
+                      toast.dismiss();
+                      toast.success('Backup downloaded! Save it to OneDrive or safe location.');
+                    } catch { toast.dismiss(); toast.error('Backup failed'); }
+                  }} className="rounded-full" data-testid="download-backup-btn">
+                    <Download size={18} className="mr-2" />Download Full Backup
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border">
+                <CardHeader><CardTitle className="font-outfit">MongoDB Atlas Setup Guide</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground">For production deployment, use MongoDB Atlas (free tier available):</p>
+                  <ol className="space-y-2 text-sm">
+                    <li className="flex gap-2"><span className="font-bold text-primary">1.</span> Go to <a href="https://www.mongodb.com/atlas" target="_blank" rel="noreferrer" className="text-primary underline">mongodb.com/atlas</a> and create a free account</li>
+                    <li className="flex gap-2"><span className="font-bold text-primary">2.</span> Create a free cluster (M0 - 512MB free forever)</li>
+                    <li className="flex gap-2"><span className="font-bold text-primary">3.</span> Click "Connect" then "Connect your application"</li>
+                    <li className="flex gap-2"><span className="font-bold text-primary">4.</span> Copy the connection string</li>
+                    <li className="flex gap-2"><span className="font-bold text-primary">5.</span> Set it as MONGO_URL in your deployment environment</li>
+                  </ol>
+                  <div className="p-3 bg-info/10 border border-info/20 rounded-lg">
+                    <p className="text-xs text-info">MongoDB Atlas free tier includes automatic daily backups, so your data is always safe!</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
         </Tabs>
       </div>
     </DashboardLayout>
