@@ -2322,6 +2322,123 @@ async def get_expiry_alerts(current_user: User = Depends(get_current_user)):
     alerts.sort(key=lambda x: x["days_left"])
     return alerts
 
+# Supplier Payment Breakdown (per supplier, cash/bank by branch)
+@api_router.get("/suppliers/{supplier_id}/payment-breakdown")
+async def get_supplier_payment_breakdown(supplier_id: str, current_user: User = Depends(get_current_user)):
+    supplier = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    
+    payments = await db.supplier_payments.find({"supplier_id": supplier_id}, {"_id": 0}).to_list(10000)
+    branches = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
+    
+    total_cash = sum(p["amount"] for p in payments if p.get("payment_mode") == "cash")
+    total_bank = sum(p["amount"] for p in payments if p.get("payment_mode") == "bank")
+    total_credit = sum(p["amount"] for p in payments if p.get("payment_mode") == "credit")
+    
+    by_branch = {}
+    for p in payments:
+        bid = p.get("branch_id")
+        bname = branches.get(bid, "No Branch") if bid else "No Branch"
+        if bname not in by_branch:
+            by_branch[bname] = {"cash": 0, "bank": 0, "credit": 0, "total": 0}
+        mode = p.get("payment_mode", "cash")
+        by_branch[bname][mode] = by_branch[bname].get(mode, 0) + p["amount"]
+        by_branch[bname]["total"] += p["amount"]
+    
+    return {
+        "supplier_id": supplier_id, "supplier_name": supplier["name"],
+        "total_cash": total_cash, "total_bank": total_bank, "total_credit": total_credit,
+        "total": total_cash + total_bank + total_credit,
+        "by_branch": by_branch
+    }
+
+# All Suppliers Payment Summary (for supplier cards)
+@api_router.get("/suppliers/payment-summaries")
+async def get_all_supplier_summaries(current_user: User = Depends(get_current_user)):
+    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+    payments = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
+    branches = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
+    
+    result = {}
+    for sup in suppliers:
+        sid = sup["id"]
+        sp = [p for p in payments if p.get("supplier_id") == sid]
+        by_branch = {}
+        for p in sp:
+            bid = p.get("branch_id")
+            bname = branches.get(bid, "No Branch") if bid else "No Branch"
+            if bname not in by_branch:
+                by_branch[bname] = {"cash": 0, "bank": 0}
+            if p.get("payment_mode") == "cash":
+                by_branch[bname]["cash"] += p["amount"]
+            elif p.get("payment_mode") == "bank":
+                by_branch[bname]["bank"] += p["amount"]
+        
+        result[sid] = {
+            "cash": sum(p["amount"] for p in sp if p.get("payment_mode") == "cash"),
+            "bank": sum(p["amount"] for p in sp if p.get("payment_mode") == "bank"),
+            "by_branch": by_branch
+        }
+    return result
+
+# Branch-to-Branch Dues (expenses/payments made by one branch for another)
+@api_router.get("/reports/branch-dues")
+async def get_branch_dues(current_user: User = Depends(get_current_user)):
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branch_map = {b["id"]: b["name"] for b in branches}
+    
+    # Get all expenses and supplier payments with branch info
+    expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
+    sp = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
+    salary_payments = await db.salary_payments.find({}, {"_id": 0}).to_list(10000)
+    employees = {e["id"]: e for e in await db.employees.find({}, {"_id": 0}).to_list(1000)}
+    
+    # Track: payment branch vs entity branch
+    dues = {}  # "Branch A → Branch B": amount (A paid for B's stuff)
+    
+    # Supplier payments: payment branch_id vs supplier branch_id  
+    suppliers = {s["id"]: s for s in await db.suppliers.find({}, {"_id": 0}).to_list(1000)}
+    for p in sp:
+        pay_branch = p.get("branch_id")
+        sup = suppliers.get(p.get("supplier_id"), {})
+        sup_branch = sup.get("branch_id")
+        if pay_branch and sup_branch and pay_branch != sup_branch:
+            pay_name = branch_map.get(pay_branch, "Unknown")
+            sup_name = branch_map.get(sup_branch, "Unknown")
+            key = f"{pay_name} paid for {sup_name}"
+            dues[key] = dues.get(key, 0) + p["amount"]
+    
+    # Salary payments: payment branch vs employee branch
+    for p in salary_payments:
+        pay_branch = p.get("branch_id")
+        emp = employees.get(p.get("employee_id"), {})
+        emp_branch = emp.get("branch_id")
+        if pay_branch and emp_branch and pay_branch != emp_branch:
+            pay_name = branch_map.get(pay_branch, "Unknown")
+            emp_name = branch_map.get(emp_branch, "Unknown")
+            key = f"{pay_name} paid for {emp_name}"
+            dues[key] = dues.get(key, 0) + p["amount"]
+    
+    # Expenses: payment branch vs general (if branch mismatch tracked)
+    # Cash transfers as dues
+    transfers = await db.cash_transfers.find({}, {"_id": 0}).to_list(10000)
+    for t in transfers:
+        from_b = t.get("from_branch_id")
+        to_b = t.get("to_branch_id")
+        if from_b and to_b and from_b != to_b:
+            from_name = branch_map.get(from_b, "Office")
+            to_name = branch_map.get(to_b, "Office")
+            key = f"{from_name} sent to {to_name}"
+            dues[key] = dues.get(key, 0) + t["amount"]
+    
+    # Net dues between branches
+    net_dues = {}
+    for key, amount in dues.items():
+        net_dues[key] = amount
+    
+    return {"dues": net_dues, "total_cross_branch": sum(dues.values())}
+
 # Items Master (Products/Services)
 @api_router.get("/items")
 async def get_items(current_user: User = Depends(get_current_user)):
