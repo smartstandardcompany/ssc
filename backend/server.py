@@ -1922,6 +1922,12 @@ async def create_leave(data: LeaveCreate, current_user: User = Depends(get_curre
     emp = await db.employees.find_one({"id": data.employee_id}, {"_id": 0})
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found")
+    # Validate ticket if requested
+    if data.with_ticket:
+        ticket_balance = emp.get("ticket_entitled", 1) - emp.get("ticket_used", 0)
+        if ticket_balance <= 0:
+            raise HTTPException(status_code=400, detail="No ticket balance available")
+    
     leave = Leave(**data.model_dump(), employee_name=emp["name"])
     l_dict = leave.model_dump()
     for f in ['start_date', 'end_date', 'created_at', 'approved_at']:
