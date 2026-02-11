@@ -168,6 +168,8 @@ export default function UsersPage() {
             <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="users-page-title">User Management</h1>
             <p className="text-muted-foreground">Manage users and access control</p>
           </div>
+          <div className="flex gap-3 items-center flex-wrap">
+            <BranchFilter onChange={setBranchFilter} />
           <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button className="rounded-full" data-testid="add-user-button">
