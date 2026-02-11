@@ -99,7 +99,17 @@ export default function FinesPage() {
               <DialogContent className="max-w-lg"><DialogHeader><DialogTitle className="font-outfit">Record Fine / Penalty</DialogTitle></DialogHeader>
                 <form onSubmit={handleAddFine} className="space-y-4 max-h-[65vh] overflow-y-auto pr-2">
                   <div className="grid grid-cols-2 gap-4">
-                    <div><Label>Type *</Label><Select value={fineData.fine_type} onValueChange={(v) => setFineData({ ...fineData, fine_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{FINE_TYPES.map(t => <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>)}</SelectContent></Select></div>
+                    <div><Label>Type *</Label>
+                      <Select value={fineData.fine_type} onValueChange={(v) => setFineData({ ...fineData, fine_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{fineTypes.map(t => <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>)}</SelectContent></Select>
+                      <div className="flex gap-2 mt-2">
+                        <Input value={newFineType} onChange={(e) => setNewFineType(e.target.value)} placeholder="New type" className="h-8 text-xs" />
+                        <Button type="button" size="sm" variant="outline" className="h-8 text-xs whitespace-nowrap" onClick={async () => {
+                          if (!newFineType.trim()) return;
+                          try { await api.post('/categories', { name: newFineType.trim(), type: 'fine' }); toast.success('Type added'); setNewFineType(''); fetchData(); }
+                          catch { toast.error('Failed'); }
+                        }}><Plus size={12} className="mr-1" />Add</Button>
+                      </div>
+                    </div>
                     <div><Label>Department *</Label><Input value={fineData.department} onChange={(e) => setFineData({ ...fineData, department: e.target.value })} required placeholder="e.g., Traffic Dept" /></div>
                     <div className="col-span-2"><Label>Description *</Label><Input value={fineData.description} onChange={(e) => setFineData({ ...fineData, description: e.target.value })} required /></div>
                     <div><Label>Amount *</Label><Input type="number" step="0.01" value={fineData.amount} onChange={(e) => setFineData({ ...fineData, amount: e.target.value })} required /></div>
