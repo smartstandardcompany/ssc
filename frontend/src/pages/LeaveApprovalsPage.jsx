@@ -69,18 +69,38 @@ export default function LeaveApprovalsPage() {
     return <Badge className="bg-warning/20 text-warning"><Clock size={12} className="mr-1" />Pending</Badge>;
   };
 
+  const handleRespondRequest = async (reqId, status) => {
+    try {
+      await api.put(`/employee-requests/${reqId}/respond`, { status, response: responseText });
+      toast.success(`Request ${status}`);
+      setResponseText('');
+      fetchRequests();
+    } catch { toast.error('Failed'); }
+  };
+
+  const sendAnnouncement = async () => {
+    try {
+      await api.post('/announcements/send', announcement);
+      toast.success('Announcement sent');
+      setShowAnnouncement(false);
+      setAnnouncement({ title: '', message: '', target: 'all' });
+    } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+  };
+
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-64">Loading...</div></DashboardLayout>;
 
   const pendingCount = leaves.filter(l => l.status === 'pending').length;
+  const pendingReqs = requests.filter(r => r.status === 'pending').length;
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="leave-approvals-title">Leave Approvals</h1>
-            <p className="text-muted-foreground">{pendingCount} pending request(s)</p>
+            <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="leave-approvals-title">Approvals & Announcements</h1>
+            <p className="text-muted-foreground">{pendingCount} leave + {pendingReqs} request(s) pending</p>
           </div>
+          <Button onClick={() => setShowAnnouncement(true)} className="rounded-full" data-testid="send-announcement-btn"><Send size={18} className="mr-2" />Send Announcement</Button>
           <div className="flex gap-2">
             {['pending', 'approved', 'rejected', 'all'].map(f => (
               <Button key={f} size="sm" variant={filter === f ? 'default' : 'outline'} onClick={() => { setFilter(f); setLoading(true); }} className="capitalize rounded-full" data-testid={`filter-${f}`}>{f}</Button>
