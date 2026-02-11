@@ -1144,7 +1144,7 @@ async def get_branch_summary(branch_id: str, current_user: User = Depends(get_cu
 
 # Dashboard Stats
 @api_router.get("/dashboard/stats")
-async def get_dashboard_stats(branch_ids: Optional[str] = None, current_user: User = Depends(get_current_user)):
+async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None, current_user: User = Depends(get_current_user)):
     query = {}
     exp_query = {}
     sp_query = {"supplier_id": {"$exists": True, "$ne": None}}
@@ -1157,6 +1157,12 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, current_user: Us
             sp_query["branch_id"] = {"$in": bid_list}
     elif current_user.branch_id and current_user.role != "admin":
         query["branch_id"] = current_user.branch_id
+    
+    if start_date and end_date:
+        date_filter = {"$gte": start_date, "$lte": end_date}
+        query["date"] = date_filter
+        exp_query["date"] = date_filter
+        sp_query["date"] = date_filter
     
     sales = await db.sales.find(query, {"_id": 0}).to_list(10000)
     expenses = await db.expenses.find(exp_query, {"_id": 0}).to_list(10000)
