@@ -328,7 +328,32 @@ export default function SuppliersPage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {supplier.phone && <p className="text-sm">Phone: {supplier.phone}</p>}
-                  {supplier.email && <p className="text-sm">Email: {supplier.email}</p>}
+                  
+                  {/* Cash/Bank Paid Breakdown */}
+                  {paySummaries[supplier.id] && (paySummaries[supplier.id].cash > 0 || paySummaries[supplier.id].bank > 0) && (
+                    <div className="pt-2 border-t space-y-2">
+                      <div className="flex gap-2">
+                        <div className="flex-1 p-2 bg-cash/10 rounded text-center">
+                          <div className="text-xs text-muted-foreground">Cash Paid</div>
+                          <div className="text-sm font-bold text-cash">${paySummaries[supplier.id].cash.toFixed(2)}</div>
+                        </div>
+                        <div className="flex-1 p-2 bg-bank/10 rounded text-center">
+                          <div className="text-xs text-muted-foreground">Bank Paid</div>
+                          <div className="text-sm font-bold text-bank">${paySummaries[supplier.id].bank.toFixed(2)}</div>
+                        </div>
+                      </div>
+                      {Object.keys(paySummaries[supplier.id].by_branch || {}).length > 0 && (
+                        <div className="space-y-1">
+                          {Object.entries(paySummaries[supplier.id].by_branch).map(([bName, bData]) => (
+                            <div key={bName} className="flex justify-between text-xs p-1.5 bg-secondary/50 rounded">
+                              <span className="font-medium">{bName}</span>
+                              <span><span className="text-cash">C:${bData.cash.toFixed(0)}</span> <span className="text-bank">B:${bData.bank.toFixed(0)}</span></span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   
                   <div className="pt-3 border-t">
                     <div className="flex justify-between items-center mb-2">
