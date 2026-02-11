@@ -108,11 +108,25 @@ export default function EmployeesPage() {
     } catch { toast.error('Failed to download payslip'); }
   };
 
+  const [empDocs, setEmpDocs] = useState([]);
+  const [newDoc, setNewDoc] = useState({ document_type: 'passport', document_number: '', expiry_date: '' });
+
   const viewSummary = async (emp) => {
     try {
-      const res = await api.get(`/employees/${emp.id}/summary`);
-      setEmpSummary(res.data); setShowSummary(true);
+      const [res, docsRes] = await Promise.all([api.get(`/employees/${emp.id}/summary`), api.get(`/employee-documents?employee_id=${emp.id}`)]);
+      setEmpSummary(res.data); setEmpDocs(docsRes.data); setShowSummary(true);
     } catch { toast.error('Failed to load summary'); }
+  };
+
+  const handleAddEmpDoc = async () => {
+    if (!empSummary?.employee?.id || !newDoc.document_type) return;
+    try {
+      await api.post('/employee-documents', { ...newDoc, employee_id: empSummary.employee.id, expiry_date: newDoc.expiry_date ? new Date(newDoc.expiry_date).toISOString() : null });
+      toast.success('Document added');
+      const docsRes = await api.get(`/employee-documents?employee_id=${empSummary.employee.id}`);
+      setEmpDocs(docsRes.data);
+      setNewDoc({ document_type: 'passport', document_number: '', expiry_date: '' });
+    } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
   };
 
   const handleEdit = (emp) => {
