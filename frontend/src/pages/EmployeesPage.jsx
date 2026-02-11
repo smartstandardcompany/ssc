@@ -396,6 +396,27 @@ export default function EmployeesPage() {
                   </div>
                 </TabsContent>
 
+                <TabsContent value="deductions" className="space-y-4">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="p-3 bg-error/10 rounded-xl"><div className="text-xs text-muted-foreground">Total Deductions</div><div className="text-lg font-bold text-error">SAR {(empSummary?.total_deductions || 0).toFixed(2)}</div></div>
+                    <div className="p-3 bg-orange-50 rounded-xl"><div className="text-xs text-muted-foreground">Total Fines</div><div className="text-lg font-bold text-orange-600">SAR {(empSummary?.total_fines || 0).toFixed(2)}</div></div>
+                    <div className="p-3 bg-warning/10 rounded-xl"><div className="text-xs text-muted-foreground">Unpaid Fines</div><div className="text-lg font-bold text-warning">SAR {(empSummary?.unpaid_fines || 0).toFixed(2)}</div></div>
+                  </div>
+                  {empSummary?.deductions?.length > 0 && (
+                    <div><p className="text-sm font-medium mb-2">Salary Deductions</p>
+                    <div className="space-y-1">{empSummary.deductions.map(d => (
+                      <div key={d.id} className="flex justify-between items-center text-xs p-2 bg-error/5 rounded-lg border border-error/20"><span><Badge variant="secondary" className="capitalize mr-2">{d.type}</Badge>{d.reason} ({d.period})</span><span className="font-bold text-error">SAR {d.amount.toFixed(2)}</span></div>
+                    ))}</div></div>
+                  )}
+                  {empSummary?.fines?.length > 0 && (
+                    <div><p className="text-sm font-medium mb-2">Fines Charged</p>
+                    <div className="space-y-1">{empSummary.fines.map(f => (
+                      <div key={f.id} className="flex justify-between items-center text-xs p-2 bg-orange-50 rounded-lg border border-orange-200"><span><Badge variant="secondary" className="capitalize mr-2">{f.type}</Badge>{f.department}: {f.description}</span><div className="text-right"><span className="font-bold">SAR {f.amount.toFixed(2)}</span>{f.status !== 'paid' && <Badge className="ml-2 bg-warning/20 text-warning">{f.status}</Badge>}</div></div>
+                    ))}</div></div>
+                  )}
+                  {(!empSummary?.deductions?.length && !empSummary?.fines?.length) && <p className="text-center text-muted-foreground py-4">No deductions or fines</p>}
+                </TabsContent>
+
                 <TabsContent value="docs" className="space-y-4">
                   <div className="flex gap-2 items-end p-3 bg-stone-50 rounded-xl border">
                     <div className="w-36"><Label className="text-xs">Type</Label>
