@@ -165,13 +165,22 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {statCards.map((card) => {
             const Icon = card.icon;
+            const rawVal = parseFloat(card.value.replace('$', '').replace(',', '')) || 0;
             return (
               <Card key={card.title} className="stat-card border-border" data-testid={card.testId}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">{card.title}</CardTitle>
                   <div className={`${card.bgColor} p-2 rounded-lg`}><Icon className={`h-5 w-5 ${card.color}`} strokeWidth={2} /></div>
                 </CardHeader>
-                <CardContent><div className="text-3xl font-bold font-outfit" data-testid={`${card.testId}-value`}>{card.value}</div></CardContent>
+                <CardContent>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-bold font-outfit" data-testid={`${card.testId}-value`}>{card.value}</span>
+                  </div>
+                  <div className="flex items-center mt-1 flex-wrap">
+                    {card.prev !== undefined && <ChangeIndicator current={rawVal} previous={card.prev} invert={card.invert} />}
+                    {card.pct !== undefined && card.pct > 0 && <PctBadge value={card.pct} />}
+                  </div>
+                </CardContent>
               </Card>
             );
           })}
