@@ -46,7 +46,7 @@ export default function LoginPage({ setIsAuthenticated }) {
       <Card className="w-full max-w-md z-20 border-border shadow-2xl" data-testid="login-card">
         <CardHeader className="space-y-1">
           <CardTitle className="text-3xl font-bold font-outfit text-center">Welcome Back</CardTitle>
-          <CardDescription className="text-center">Sign in to your DataEntry Hub account</CardDescription>
+          <CardDescription className="text-center">Sign in to your SSC Track account</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
