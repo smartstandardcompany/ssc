@@ -239,6 +239,24 @@ export default function DashboardPage() {
             <CardContent><div className="text-2xl font-bold font-outfit text-warning" data-testid="supplier-dues">${(stats?.supplier_dues || 0).toFixed(2)}</div><p className="text-xs text-muted-foreground mt-1">Total owed to suppliers</p></CardContent>
           </Card>
 
+          <Card className="border-border border-error/30 bg-error/5">
+            <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Due Salaries</CardTitle></CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold font-outfit text-error" data-testid="due-salaries">${pendingSalaries.reduce((s, e) => s + (e.pending_salary || 0), 0).toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground mt-1">{pendingSalaries.filter(e => e.pending_salary > 0).length} employee(s) pending</p>
+              {pendingSalaries.filter(e => e.pending_salary > 0).length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {pendingSalaries.filter(e => e.pending_salary > 0).slice(0, 5).map(e => (
+                    <div key={e.id} className="flex justify-between text-xs p-1.5 bg-background rounded">
+                      <span>{e.name}</span>
+                      <span className="font-bold text-error">${e.pending_salary.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {branchDues && Object.keys(branchDues.dues || {}).length > 0 && (
             <Card className="border-border md:col-span-2">
               <CardHeader className="pb-2"><CardTitle className="font-outfit text-base">Branch-to-Branch Dues</CardTitle></CardHeader>
