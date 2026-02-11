@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Mail, MessageCircle, Bell, Send, Upload } from 'lucide-react';
+import { Mail, MessageCircle, Bell, Send, Upload, Download, Database, Shield } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 
