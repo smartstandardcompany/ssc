@@ -118,7 +118,7 @@ export default function InvoicesPage() {
       const amount = parseFloat(receiveData.amount) || 0;
       const discount = parseFloat(receiveData.discount) || 0;
       await api.post(`/sales/${receivingInvoice.sale_id}/receive-credit`, { payment_mode: receiveData.payment_mode, amount, discount });
-      toast.success(`$${(amount + discount).toFixed(2)} settled`);
+      toast.success(`SAR ${(amount + discount).toFixed(2)} settled`);
       setShowReceiveDialog(false);
       setReceiveData({ payment_mode: 'cash', amount: '', discount: '' });
       fetchData();
@@ -298,7 +298,7 @@ export default function InvoicesPage() {
                       <td className="p-3 text-sm">{inv.customer_name || 'Walk-in'}</td>
                       <td className="p-3 text-center"><Badge variant="secondary">{inv.items?.length || 0}</Badge></td>
                       <td className="p-3 text-sm text-right">${inv.subtotal.toFixed(2)}</td>
-                      <td className="p-3 text-sm text-right text-error">{inv.discount > 0 ? `-$${inv.discount.toFixed(2)}` : '-'}</td>
+                      <td className="p-3 text-sm text-right text-error">{inv.discount > 0 ? `-SAR ${inv.discount.toFixed(2)}` : '-'}</td>
                       <td className="p-3 text-sm text-right font-bold">${inv.total.toFixed(2)}</td>
                       <td className="p-3"><Badge className={inv.payment_mode === 'cash' ? 'bg-cash/20 text-cash' : inv.payment_mode === 'bank' ? 'bg-bank/20 text-bank' : 'bg-credit/20 text-credit'}>{inv.payment_mode}</Badge></td>
                       <td className="p-3 text-right">{creditRem > 0 ? <span className="font-bold text-warning">${creditRem.toFixed(2)}</span> : <span className="text-muted-foreground">-</span>}</td>

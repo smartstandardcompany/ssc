@@ -179,7 +179,7 @@ export default function EmployeePortalPage() {
           <TabsContent value="requests">
             <Card className="border-stone-100"><CardHeader><CardTitle className="font-outfit text-base">My Requests</CardTitle></CardHeader><CardContent>
               <div className="space-y-3">{requests.map(r => (
-                <div key={r.id} className="p-3 border rounded-xl"><div className="flex justify-between"><div><div className="font-medium text-sm">{r.subject}</div><div className="text-xs text-muted-foreground mt-1"><Badge variant="secondary" className="capitalize mr-2">{r.request_type.replace('_', ' ')}</Badge>{r.amount ? `$${r.amount}` : ''}</div>{r.response && <p className="text-xs text-primary mt-1">Response: {r.response}</p>}</div>{getStatusBadge(r.status)}</div></div>
+                <div key={r.id} className="p-3 border rounded-xl"><div className="flex justify-between"><div><div className="font-medium text-sm">{r.subject}</div><div className="text-xs text-muted-foreground mt-1"><Badge variant="secondary" className="capitalize mr-2">{r.request_type.replace('_', ' ')}</Badge>{r.amount ? `SAR ${r.amount}` : ''}</div>{r.response && <p className="text-xs text-primary mt-1">Response: {r.response}</p>}</div>{getStatusBadge(r.status)}</div></div>
               ))}{requests.length === 0 && <p className="text-center text-muted-foreground py-4">No requests</p>}</div>
             </CardContent></Card>
           </TabsContent>

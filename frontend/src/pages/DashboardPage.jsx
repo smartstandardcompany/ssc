@@ -75,7 +75,7 @@ export default function DashboardPage() {
   const statCards = [
     {
       title: 'Total Sales',
-      value: `$${stats?.total_sales?.toFixed(2) || '0.00'}`,
+      value: `SAR ${stats?.total_sales?.toFixed(2) || '0.00'}`,
       prev: stats?.prev_sales,
       icon: DollarSign,
       color: 'text-success',
@@ -84,7 +84,7 @@ export default function DashboardPage() {
     },
     {
       title: 'Total Expenses',
-      value: `$${stats?.total_expenses?.toFixed(2) || '0.00'}`,
+      value: `SAR ${stats?.total_expenses?.toFixed(2) || '0.00'}`,
       prev: stats?.prev_expenses,
       pct: stats?.expenses_pct_of_sales,
       invert: true,
@@ -95,7 +95,7 @@ export default function DashboardPage() {
     },
     {
       title: 'Supplier Payments',
-      value: `$${stats?.total_supplier_payments?.toFixed(2) || '0.00'}`,
+      value: `SAR ${stats?.total_supplier_payments?.toFixed(2) || '0.00'}`,
       pct: stats?.sp_pct_of_sales,
       icon: Building2,
       color: 'text-info',
@@ -104,7 +104,7 @@ export default function DashboardPage() {
     },
     {
       title: 'Net Profit',
-      value: `$${stats?.net_profit?.toFixed(2) || '0.00'}`,
+      value: `SAR ${stats?.net_profit?.toFixed(2) || '0.00'}`,
       prev: stats?.prev_net,
       pct: stats?.profit_pct_of_sales,
       icon: TrendingUp,
@@ -114,7 +114,7 @@ export default function DashboardPage() {
     },
     {
       title: 'Pending Credits',
-      value: `$${stats?.pending_credits?.toFixed(2) || '0.00'}`,
+      value: `SAR ${stats?.pending_credits?.toFixed(2) || '0.00'}`,
       icon: AlertCircle,
       color: 'text-warning',
       bgColor: 'bg-warning/10',
@@ -125,7 +125,7 @@ export default function DashboardPage() {
   const paymentModeCards = [
     {
       title: 'Cash Sales',
-      value: `$${stats?.cash_sales?.toFixed(2) || '0.00'}`,
+      value: `SAR ${stats?.cash_sales?.toFixed(2) || '0.00'}`,
       icon: Wallet,
       color: 'text-cash',
       bgColor: 'bg-cash/10',
@@ -133,7 +133,7 @@ export default function DashboardPage() {
     },
     {
       title: 'Bank Sales',
-      value: `$${stats?.bank_sales?.toFixed(2) || '0.00'}`,
+      value: `SAR ${stats?.bank_sales?.toFixed(2) || '0.00'}`,
       icon: Building2,
       color: 'text-bank',
       bgColor: 'bg-bank/10',
@@ -141,7 +141,7 @@ export default function DashboardPage() {
     },
     {
       title: 'Credit Sales',
-      value: `$${stats?.credit_sales?.toFixed(2) || '0.00'}`,
+      value: `SAR ${stats?.credit_sales?.toFixed(2) || '0.00'}`,
       icon: CreditCard,
       color: 'text-credit',
       bgColor: 'bg-credit/10',

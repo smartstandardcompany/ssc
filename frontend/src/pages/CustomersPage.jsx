@@ -71,7 +71,7 @@ export default function CustomersPage() {
         remainingDisc -= discAmount;
       }
       const totalSettled = (parseFloat(receiveData.amount) || 0) + (parseFloat(receiveData.discount) || 0);
-      toast.success(`$${totalSettled.toFixed(2)} settled (Payment: $${(parseFloat(receiveData.amount) || 0).toFixed(2)}, Discount: $${(parseFloat(receiveData.discount) || 0).toFixed(2)})`);
+      toast.success(`$${totalSettled.toFixed(2)} settled (Payment: SAR ${(parseFloat(receiveData.amount) || 0).toFixed(2)}, Discount: SAR ${(parseFloat(receiveData.discount) || 0).toFixed(2)})`);
       setShowReceiveDialog(false);
       setReceiveData({ payment_mode: 'cash', amount: '', discount: '' });
       fetchData();

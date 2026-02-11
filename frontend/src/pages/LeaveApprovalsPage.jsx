@@ -164,7 +164,7 @@ export default function LeaveApprovalsPage() {
                     <div className="flex justify-between items-start">
                       <div>
                         <div className="font-medium">{r.employee_name}</div>
-                        <div className="text-sm mt-1"><Badge variant="secondary" className="capitalize mr-2">{r.request_type.replace('_', ' ')}</Badge>{r.subject}{r.amount ? ` - $${r.amount}` : ''}</div>
+                        <div className="text-sm mt-1"><Badge variant="secondary" className="capitalize mr-2">{r.request_type.replace('_', ' ')}</Badge>{r.subject}{r.amount ? ` - SAR ${r.amount}` : ''}</div>
                         {r.details && <p className="text-sm text-muted-foreground mt-1">{r.details}</p>}
                       </div>
                       {r.status === 'pending' ? (
