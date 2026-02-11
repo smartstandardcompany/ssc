@@ -198,35 +198,35 @@ export default function CreditReportPage() {
                   Remaining Credit: <span className="font-bold text-credit">${receivingSale?.remaining?.toFixed(2)}</span>
                 </p>
               </div>
-              <div>
-                <Label>Payment Amount *</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={receivePayment.amount}
-                  data-testid="receive-amount-input"
-                  onChange={(e) => setReceivePayment({ ...receivePayment, amount: e.target.value })}
-                  required
-                  max={receivingSale?.remaining}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Payment Amount</Label>
+                  <Input type="number" step="0.01" value={receivePayment.amount} data-testid="receive-amount-input"
+                    onChange={(e) => setReceivePayment({ ...receivePayment, amount: e.target.value })} placeholder="0.00" />
+                </div>
+                <div>
+                  <Label>Discount</Label>
+                  <Input type="number" step="0.01" value={receivePayment.discount} data-testid="receive-discount-input"
+                    onChange={(e) => setReceivePayment({ ...receivePayment, discount: e.target.value })} placeholder="0.00" />
+                </div>
               </div>
+              {(parseFloat(receivePayment.amount) > 0 || parseFloat(receivePayment.discount) > 0) && (
+                <div className="p-3 bg-secondary/50 rounded-lg space-y-1 text-sm">
+                  <div className="flex justify-between"><span>Payment:</span><span>${(parseFloat(receivePayment.amount) || 0).toFixed(2)}</span></div>
+                  {parseFloat(receivePayment.discount) > 0 && <div className="flex justify-between"><span>Discount:</span><span className="text-error">-${(parseFloat(receivePayment.discount) || 0).toFixed(2)}</span></div>}
+                  <div className="flex justify-between border-t pt-1 font-bold"><span>Total Settled:</span><span className="text-success">${((parseFloat(receivePayment.amount) || 0) + (parseFloat(receivePayment.discount) || 0)).toFixed(2)}</span></div>
+                </div>
+              )}
               <div>
-                <Label>Payment Mode *</Label>
+                <Label>Payment Mode</Label>
                 <Select value={receivePayment.payment_mode} onValueChange={(val) => setReceivePayment({ ...receivePayment, payment_mode: val })}>
-                  <SelectTrigger data-testid="receive-mode-select">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="bank">Bank</SelectItem>
-                  </SelectContent>
+                  <SelectTrigger data-testid="receive-mode-select"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="cash">Cash</SelectItem><SelectItem value="bank">Bank</SelectItem></SelectContent>
                 </Select>
               </div>
               <div className="flex gap-3">
                 <Button type="submit" data-testid="submit-receive-button" className="rounded-full">Receive Payment</Button>
-                <Button type="button" variant="outline" onClick={() => setShowReceiveDialog(false)} className="rounded-full">
-                  Cancel
-                </Button>
+                <Button type="button" variant="outline" onClick={() => setShowReceiveDialog(false)} className="rounded-full">Cancel</Button>
               </div>
             </form>
           </DialogContent>
