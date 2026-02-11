@@ -1034,6 +1034,36 @@ async def delete_expense(expense_id: str, current_user: User = Depends(get_curre
         raise HTTPException(status_code=404, detail="Expense not found")
     return {"message": "Expense deleted successfully"}
 
+# Branch Summary Stats
+@api_router.get("/branches/{branch_id}/summary")
+async def get_branch_summary(branch_id: str, current_user: User = Depends(get_current_user)):
+    branch = await db.branches.find_one({"id": branch_id}, {"_id": 0})
+    if not branch:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    
+    sales = await db.sales.find({"branch_id": branch_id}, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find({"branch_id": branch_id}, {"_id": 0}).to_list(10000)
+    sp = await db.supplier_payments.find({"branch_id": branch_id, "supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
+    
+    total_sales = sum(s.get("final_amount", s.get("amount", 0)) for s in sales)
+    cash_sales = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "cash")
+    bank_sales = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "bank")
+    credit_sales = sum(s.get("credit_amount", 0) - s.get("credit_received", 0) for s in sales)
+    total_expenses = sum(e["amount"] for e in expenses)
+    exp_cash = sum(e["amount"] for e in expenses if e.get("payment_mode") == "cash")
+    exp_bank = sum(e["amount"] for e in expenses if e.get("payment_mode") == "bank")
+    total_sp = sum(p["amount"] for p in sp)
+    sp_cash = sum(p["amount"] for p in sp if p.get("payment_mode") == "cash")
+    sp_bank = sum(p["amount"] for p in sp if p.get("payment_mode") == "bank")
+    
+    return {
+        "branch_id": branch_id, "branch_name": branch["name"],
+        "total_sales": total_sales, "sales_cash": cash_sales, "sales_bank": bank_sales, "sales_credit": credit_sales, "sales_count": len(sales),
+        "total_expenses": total_expenses, "expenses_cash": exp_cash, "expenses_bank": exp_bank, "expenses_count": len(expenses),
+        "total_supplier_payments": total_sp, "sp_cash": sp_cash, "sp_bank": sp_bank, "sp_count": len(sp),
+        "net_profit": total_sales - total_expenses - total_sp
+    }
+
 # Dashboard Stats
 @api_router.get("/dashboard/stats")
 async def get_dashboard_stats(branch_ids: Optional[str] = None, current_user: User = Depends(get_current_user)):
