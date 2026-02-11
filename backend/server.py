@@ -1014,14 +1014,21 @@ async def get_customer_report(customer_id: str, current_user: User = Depends(get
     
     purchases = []
     for s in sales:
-        modes = ", ".join(f'{p["mode"]}' for p in s.get("payment_details", []))
+        payments_detail = []
+        for p in s.get("payment_details", []):
+            payments_detail.append({"mode": p.get("mode",""), "amount": p.get("amount", 0)})
+        credit_given = s.get("credit_amount", 0)
+        credit_received = s.get("credit_received", 0)
         purchases.append({
             "date": s["date"], "type": "Sale",
             "branch": branches.get(s.get("branch_id"), "-"),
             "amount": s.get("final_amount", s["amount"]),
             "discount": s.get("discount", 0),
-            "payment": modes,
-            "credit": s.get("credit_amount", 0) - s.get("credit_received", 0),
+            "payments": payments_detail,
+            "payment": ", ".join(f'{p["mode"]}' for p in payments_detail),
+            "credit_given": credit_given,
+            "credit_received": credit_received,
+            "credit": credit_given - credit_received,
             "invoice": s.get("notes", "")
         })
     
