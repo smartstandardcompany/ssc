@@ -119,6 +119,7 @@ export default function DashboardPage() {
           <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="dashboard-title">Dashboard</h1>
           <p className="text-muted-foreground">Welcome to your sales and expense tracking dashboard</p>
         </div>
+        <BranchFilter onChange={setBranchFilter} className="mb-4" />
 
         {/* Main Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
