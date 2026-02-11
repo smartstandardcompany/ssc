@@ -22,7 +22,9 @@ export default function EmployeePortalPage() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showLeaveForm, setShowLeaveForm] = useState(false);
-  const [leaveData, setLeaveData] = useState({ leave_type: 'annual', start_date: '', end_date: '', days: '', reason: '' });
+  const [showRequestForm, setShowRequestForm] = useState(false);
+  const [leaveData, setLeaveData] = useState({ leave_type: 'annual', start_date: '', end_date: '', days: '', reason: '', with_ticket: false });
+  const [requestData, setRequestData] = useState({ request_type: 'letter', subject: '', details: '', amount: '' });
   const [noProfile, setNoProfile] = useState(false);
 
   useEffect(() => { fetchData(); }, []);
@@ -31,8 +33,10 @@ export default function EmployeePortalPage() {
     try {
       const profRes = await api.get('/my/employee-profile');
       setProfile(profRes.data);
-      const [payRes, leaveRes] = await Promise.all([api.get('/my/payments'), api.get('/my/leaves')]);
+      const [payRes, leaveRes, reqRes] = await Promise.all([api.get('/my/payments'), api.get('/my/leaves'), api.get('/my/requests')]);
       setPayments(payRes.data);
+      setLeaves(leaveRes.data);
+      setRequests(reqRes.data);
       setLeaves(leaveRes.data);
     } catch (err) {
       if (err.response?.status === 404) setNoProfile(true);
