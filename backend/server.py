@@ -2224,7 +2224,17 @@ async def generate_letter(body: dict, current_user: User = Depends(get_current_u
             elements.append(logo)
         except: pass
     
-    elements.append(Paragraph("SMART STANDARD COMPANY", title_s))
+    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    co_name = company.get("company_name", "Smart Standard Company")
+    addr_parts = [company.get("address_line1",""), company.get("address_line2",""), company.get("city",""), company.get("country","")]
+    co_addr = ", ".join([p for p in addr_parts if p])
+    co_contact = " | ".join([p for p in [company.get("phone",""), company.get("email","")] if p])
+    
+    elements.append(Paragraph(co_name.upper(), title_s))
+    if co_addr:
+        elements.append(Paragraph(co_addr, ParagraphStyle('Addr', parent=styles['Normal'], fontSize=8, textColor=colors.grey, alignment=1)))
+    if co_contact:
+        elements.append(Paragraph(co_contact, ParagraphStyle('Contact', parent=styles['Normal'], fontSize=8, textColor=colors.grey, alignment=1)))
     elements.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#F5841F')))
     elements.append(Spacer(1, 0.3*inch))
     elements.append(Paragraph(f"Date: {datetime.now().strftime('%d %B %Y')}", right_s))
