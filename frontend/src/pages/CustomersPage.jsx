@@ -49,23 +49,29 @@ export default function CustomersPage() {
   const handleReceiveCredit = async (e) => {
     e.preventDefault();
     if (!receivingCustomer) return;
-    // Find sales with remaining credit for this customer
     try {
       const salesRes = await api.get('/sales');
       const custSales = salesRes.data.filter(s => s.customer_id === receivingCustomer.id && (s.credit_amount - s.credit_received) > 0);
       if (custSales.length === 0) { toast.error('No pending credit sales'); return; }
       
-      let remaining = parseFloat(receiveData.amount);
+      let remainingPay = parseFloat(receiveData.amount) || 0;
+      let remainingDisc = parseFloat(receiveData.discount) || 0;
+      
       for (const sale of custSales) {
-        if (remaining <= 0) break;
+        if (remainingPay <= 0 && remainingDisc <= 0) break;
         const saleRemaining = sale.credit_amount - sale.credit_received;
-        const payAmount = Math.min(remaining, saleRemaining);
-        await api.post(`/sales/${sale.id}/receive-credit`, { payment_mode: receiveData.payment_mode, amount: payAmount });
-        remaining -= payAmount;
+        const payAmount = Math.min(remainingPay, saleRemaining);
+        const discAmount = Math.min(remainingDisc, saleRemaining - payAmount);
+        if (payAmount > 0 || discAmount > 0) {
+          await api.post(`/sales/${sale.id}/receive-credit`, { payment_mode: receiveData.payment_mode, amount: payAmount, discount: discAmount });
+        }
+        remainingPay -= payAmount;
+        remainingDisc -= discAmount;
       }
-      toast.success('Credit payment received');
+      const totalSettled = (parseFloat(receiveData.amount) || 0) + (parseFloat(receiveData.discount) || 0);
+      toast.success(`$${totalSettled.toFixed(2)} settled (Payment: $${(parseFloat(receiveData.amount) || 0).toFixed(2)}, Discount: $${(parseFloat(receiveData.discount) || 0).toFixed(2)})`);
       setShowReceiveDialog(false);
-      setReceiveData({ payment_mode: 'cash', amount: '' });
+      setReceiveData({ payment_mode: 'cash', amount: '', discount: '' });
       fetchData();
     } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
   };
