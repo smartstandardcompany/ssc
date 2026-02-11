@@ -334,7 +334,7 @@ export default function EmployeesPage() {
             <DialogHeader><DialogTitle className="font-outfit">Payment Summary - {empSummary?.employee?.name}</DialogTitle></DialogHeader>
             {empSummary && (
               <Tabs defaultValue="payments">
-                <TabsList className="mb-4"><TabsTrigger value="payments">Payments</TabsTrigger><TabsTrigger value="loan">Loan</TabsTrigger><TabsTrigger value="leave">Leave</TabsTrigger><TabsTrigger value="docs">Documents</TabsTrigger></TabsList>
+                <TabsList className="mb-4"><TabsTrigger value="payments">Payments</TabsTrigger><TabsTrigger value="loan">Loan</TabsTrigger><TabsTrigger value="leave">Leave</TabsTrigger><TabsTrigger value="deductions">Deductions</TabsTrigger><TabsTrigger value="docs">Documents</TabsTrigger></TabsList>
 
                 <TabsContent value="payments" className="space-y-4">
                   <div className="grid grid-cols-3 gap-3">
