@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
 import { DateFilter } from '@/components/DateFilter';
+import { BranchFilter } from '@/components/BranchFilter';
 
 export default function SalesPage() {
   const [sales, setSales] = useState([]);
@@ -37,6 +38,7 @@ export default function SalesPage() {
 
   const [receivePayment, setReceivePayment] = useState({ payment_mode: 'cash', amount: '' });
   const [dateFilter, setDateFilter] = useState({ start: null, end: null, period: 'all' });
+  const [branchFilter, setBranchFilter] = useState([]);
 
   useEffect(() => {
     fetchData();
@@ -190,7 +192,8 @@ export default function SalesPage() {
             <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="sales-page-title">Sales Management</h1>
             <p className="text-muted-foreground">Track sales with flexible payment options</p>
           </div>
-          <div className="flex gap-3 items-center">
+          <div className="flex gap-3 items-center flex-wrap">
+            <BranchFilter onChange={setBranchFilter} />
             <DateFilter onFilterChange={setDateFilter} />
             <ExportButtons dataType="sales" />
             <Button
@@ -404,6 +407,7 @@ export default function SalesPage() {
                 </thead>
                 <tbody>
                   {sales.filter(s => {
+                    if (branchFilter.length > 0 && !branchFilter.includes(s.branch_id)) return false;
                     if (dateFilter.start && dateFilter.end) {
                       const d = new Date(s.date);
                       return d >= dateFilter.start && d <= dateFilter.end;
