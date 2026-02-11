@@ -64,9 +64,14 @@ export const DashboardLayout = ({ children }) => {
   return (
     <div className="flex min-h-screen bg-background">
       <aside className="w-64 bg-card border-r border-border fixed h-full overflow-y-auto">
-        <div className="p-6">
-          <h1 className="text-2xl font-bold text-primary font-outfit" data-testid="app-title">DataEntry Hub</h1>
-          <p className="text-sm text-muted-foreground mt-1">{isEmployee ? 'Employee Portal' : 'Sales & Expense Tracker'}</p>
+        <div className="p-4">
+          <div className="flex items-center gap-3">
+            <img src="/logo.jpg" alt="SSC" className="w-10 h-10 rounded-lg object-contain" />
+            <div>
+              <h1 className="text-lg font-bold text-primary font-outfit" data-testid="app-title">SSC Track</h1>
+              <p className="text-xs text-muted-foreground">{isEmployee ? 'Employee Portal' : 'Smart Standard Company'}</p>
+            </div>
+          </div>
         </div>
 
         <nav className="px-3 space-y-1">
