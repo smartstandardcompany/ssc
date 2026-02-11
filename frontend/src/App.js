@@ -39,12 +39,34 @@ function App() {
     setLoading(false);
   }, []);
 
+  useEffect(() => {
+    const handler = (e) => { e.preventDefault(); setInstallPrompt(e); setShowInstall(true); };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (installPrompt) {
+      installPrompt.prompt();
+      const result = await installPrompt.userChoice;
+      if (result.outcome === 'accepted') setShowInstall(false);
+      setInstallPrompt(null);
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
   return (
     <div className="App">
+      {showInstall && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-primary text-primary-foreground p-3 flex items-center justify-center gap-4 shadow-lg" data-testid="install-banner">
+          <span className="text-sm font-medium">Install DataEntry Hub as an app for quick access!</span>
+          <button onClick={handleInstall} className="bg-white text-primary px-4 py-1.5 rounded-full text-sm font-bold hover:bg-gray-100">Install App</button>
+          <button onClick={() => setShowInstall(false)} className="text-white/80 hover:text-white text-sm">Later</button>
+        </div>
+      )}
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={!isAuthenticated ? <LoginPage setIsAuthenticated={setIsAuthenticated} /> : <Navigate to="/" />} />
