@@ -321,6 +321,37 @@ export default function InvoicesPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Receive Credit Dialog */}
+        <Dialog open={showReceiveDialog} onOpenChange={setShowReceiveDialog}>
+          <DialogContent data-testid="receive-invoice-dialog">
+            <DialogHeader><DialogTitle className="font-outfit">Receive Credit - {receivingInvoice?.invoice_number}</DialogTitle></DialogHeader>
+            <p className="text-sm text-muted-foreground">Customer: {receivingInvoice?.customer_name || 'Walk-in'} | Outstanding: <span className="font-bold text-warning">${receivingInvoice?.credit_remaining?.toFixed(2)}</span></p>
+            <form onSubmit={handleReceiveCredit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div><Label>Payment Amount</Label><Input type="number" step="0.01" value={receiveData.amount} onChange={(e) => setReceiveData({ ...receiveData, amount: e.target.value })} placeholder="0.00" /></div>
+                <div><Label>Discount</Label><Input type="number" step="0.01" value={receiveData.discount} onChange={(e) => setReceiveData({ ...receiveData, discount: e.target.value })} placeholder="0.00" /></div>
+              </div>
+              {(parseFloat(receiveData.amount) > 0 || parseFloat(receiveData.discount) > 0) && (
+                <div className="p-3 bg-secondary/50 rounded-lg space-y-1 text-sm">
+                  <div className="flex justify-between"><span>Payment:</span><span>${(parseFloat(receiveData.amount) || 0).toFixed(2)}</span></div>
+                  {parseFloat(receiveData.discount) > 0 && <div className="flex justify-between"><span>Discount:</span><span className="text-error">-${(parseFloat(receiveData.discount) || 0).toFixed(2)}</span></div>}
+                  <div className="flex justify-between border-t pt-1 font-bold"><span>Total Settled:</span><span className="text-success">${((parseFloat(receiveData.amount) || 0) + (parseFloat(receiveData.discount) || 0)).toFixed(2)}</span></div>
+                </div>
+              )}
+              <div><Label>Payment Mode</Label>
+                <Select value={receiveData.payment_mode} onValueChange={(v) => setReceiveData({ ...receiveData, payment_mode: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="cash">Cash</SelectItem><SelectItem value="bank">Bank</SelectItem></SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-3">
+                <Button type="submit" className="rounded-full">Receive Payment</Button>
+                <Button type="button" variant="outline" onClick={() => setShowReceiveDialog(false)} className="rounded-full">Cancel</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
