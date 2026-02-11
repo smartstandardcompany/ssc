@@ -276,14 +276,14 @@ export default function DashboardPage() {
           <Card className="border-border border-error/30 bg-error/5">
             <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Due Salaries</CardTitle></CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold font-outfit text-error" data-testid="due-salaries"> SAR {pendingSalaries.reduce((s, e) => s + (e.pending_salary || 0), 0).toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground mt-1">{pendingSalaries.filter(e => e.pending_salary > 0).length} employee(s) pending</p>
-              {pendingSalaries.filter(e => e.pending_salary > 0).length > 0 && (
+              <div className="text-2xl font-bold font-outfit text-error" data-testid="due-salaries"> SAR {(pendingSalaries.totals?.total_pending || 0).toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground mt-1">{pendingSalaries.period} | {(pendingSalaries.employees || []).filter(e => e.pending_salary > 0).length} employee(s)</p>
+              {Object.keys(pendingSalaries.branch_summary || {}).length > 0 && (
                 <div className="mt-2 space-y-1">
-                  {pendingSalaries.filter(e => e.pending_salary > 0).slice(0, 5).map(e => (
-                    <div key={e.id} className="flex justify-between text-xs p-1.5 bg-background rounded">
-                      <span>{e.name}</span>
-                      <span className="font-bold text-error"> SAR {e.pending_salary.toFixed(2)}</span>
+                  {Object.entries(pendingSalaries.branch_summary).map(([bName, bs]) => (
+                    <div key={bName} className="flex justify-between text-xs p-1.5 bg-background rounded">
+                      <span>{bName}</span>
+                      <span><span className="text-success">Paid: SAR {bs.total_paid.toFixed(0)}</span> <span className="text-error font-bold">Due: SAR {bs.total_pending.toFixed(0)}</span></span>
                     </div>
                   ))}
                 </div>
