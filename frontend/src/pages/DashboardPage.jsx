@@ -13,6 +13,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [branchDues, setBranchDues] = useState(null);
+  const [pendingSalaries, setPendingSalaries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [branchFilter, setBranchFilter] = useState([]);
   const [dateFilter, setDateFilter] = useState({ start: null, end: null, period: 'all' });
