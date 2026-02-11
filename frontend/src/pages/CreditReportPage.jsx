@@ -152,7 +152,7 @@ export default function CreditReportPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {reportData?.credit_sales?.filter(s => branchFilter.length === 0 || branchFilter.some(bid => s.branch === branches?.find(b => b === bid))).map((sale) => (
+                  {reportData?.credit_sales?.filter(s => branchFilter.length === 0 || getBranchNames().includes(s.branch)).map((sale) => (
                     <tr key={sale.id} className="border-b border-border hover:bg-secondary/50" data-testid="credit-sale-row">
                       <td className="p-3 text-sm">{format(new Date(sale.date), 'MMM dd, yyyy')}</td>
                       <td className="p-3 text-sm capitalize">{sale.sale_type}</td>
