@@ -1009,16 +1009,21 @@ async def get_customer_report(customer_id: str, current_user: User = Depends(get
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
     sales = await db.sales.find({"customer_id": customer_id}, {"_id": 0}).sort("date", -1).to_list(10000)
-    invoices = await db.invoices.find({"customer_id": customer_id}, {"_id": 0}).sort("date", -1).to_list(10000)
+    invoices_list = await db.invoices.find({"customer_id": customer_id}, {"_id": 0}).to_list(10000)
+    inv_by_sale = {inv.get("sale_id"): inv for inv in invoices_list if inv.get("sale_id")}
     branches = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
     
     purchases = []
     for s in sales:
-        payments_detail = []
-        for p in s.get("payment_details", []):
-            payments_detail.append({"mode": p.get("mode",""), "amount": p.get("amount", 0)})
+        payments_detail = [{"mode": p.get("mode",""), "amount": p.get("amount", 0)} for p in s.get("payment_details", [])]
         credit_given = s.get("credit_amount", 0)
         credit_received = s.get("credit_received", 0)
+        
+        # Link invoice items
+        inv = inv_by_sale.get(s["id"])
+        items = inv.get("items", []) if inv else []
+        inv_number = inv.get("invoice_number", "") if inv else ""
+        
         purchases.append({
             "date": s["date"], "type": "Sale",
             "branch": branches.get(s.get("branch_id"), "-"),
@@ -1029,7 +1034,8 @@ async def get_customer_report(customer_id: str, current_user: User = Depends(get
             "credit_given": credit_given,
             "credit_received": credit_received,
             "credit": credit_given - credit_received,
-            "invoice": s.get("notes", "")
+            "invoice_number": inv_number,
+            "items": items
         })
     
     total = sum(p["amount"] for p in purchases)
