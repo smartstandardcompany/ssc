@@ -198,6 +198,57 @@ export default function SettingsPage() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="import">
+            <div className="space-y-6">
+              <Card className="border-stone-100">
+                <CardHeader><CardTitle className="font-outfit">Import Data from Excel/CSV</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">Upload your existing data from Excel (.xlsx) or CSV files. Download the template first, fill in your data, then upload.</p>
+                  
+                  {['customers', 'suppliers', 'employees', 'items', 'branches'].map(type => (
+                    <div key={type} className="flex items-center justify-between p-4 border rounded-xl hover:bg-stone-50 transition-all">
+                      <div>
+                        <div className="font-medium capitalize text-sm">{type}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {type === 'customers' && 'name, phone, email'}
+                          {type === 'suppliers' && 'name, category, phone, email, credit_limit'}
+                          {type === 'employees' && 'name, document_id, phone, email, position, salary'}
+                          {type === 'items' && 'name, unit_price, category'}
+                          {type === 'branches' && 'name, location'}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" className="rounded-xl text-xs" onClick={async () => {
+                          try {
+                            const res = await api.get(`/import/template/${type}`, { responseType: 'blob' });
+                            const url = window.URL.createObjectURL(new Blob([res.data]));
+                            const link = document.createElement('a'); link.href = url; link.setAttribute('download', `${type}_template.xlsx`);
+                            document.body.appendChild(link); link.click(); link.remove();
+                          } catch { toast.error('Failed'); }
+                        }}><Download size={14} className="mr-1" />Template</Button>
+                        <label className="cursor-pointer">
+                          <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={async (e) => {
+                            const file = e.target.files[0]; if (!file) return;
+                            try {
+                              toast.loading('Importing...');
+                              const form = new FormData(); form.append('file', file); form.append('data_type', type);
+                              const res = await api.post('/import/data', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+                              toast.dismiss();
+                              toast.success(res.data.message);
+                              if (res.data.errors?.length > 0) toast.warning(`${res.data.errors.length} errors`);
+                            } catch (err) { toast.dismiss(); toast.error(err.response?.data?.detail || 'Import failed'); }
+                            e.target.value = '';
+                          }} />
+                          <Button size="sm" className="rounded-xl text-xs" asChild><span><Upload size={14} className="mr-1" />Upload</span></Button>
+                        </label>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
           <TabsContent value="backup">
             <div className="space-y-6">
               <Card className="border-border">
