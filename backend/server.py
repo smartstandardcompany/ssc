@@ -931,7 +931,8 @@ async def receive_credit_payment(sale_id: str, payment: SalePayment, current_use
     return {
         "message": "Credit payment received",
         "received": payment.amount,
-        "remaining_credit": remaining_credit - payment.amount
+        "discount": discount,
+        "remaining_credit": remaining_credit - total_settle
     }
 
 @api_router.delete("/sales/{sale_id}")
