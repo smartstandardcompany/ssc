@@ -3048,6 +3048,65 @@ async def get_branch_dues(current_user: User = Depends(get_current_user)):
     
     return {"dues": dues, "total_cross_branch": sum(dues.values())}
 
+# Partner Routes
+@api_router.get("/partners")
+async def get_partners(current_user: User = Depends(get_current_user)):
+    partners = await db.partners.find({}, {"_id": 0}).to_list(100)
+    transactions = await db.partner_transactions.find({}, {"_id": 0}).to_list(10000)
+    for p in partners:
+        pt = [t for t in transactions if t.get("partner_id") == p["id"]]
+        invested = sum(t["amount"] for t in pt if t.get("transaction_type") in ["investment"])
+        withdrawn = sum(t["amount"] for t in pt if t.get("transaction_type") in ["withdrawal", "profit_share", "expense"])
+        p["total_invested"] = invested
+        p["total_withdrawn"] = withdrawn
+        p["balance"] = invested - withdrawn
+    return partners
+
+@api_router.post("/partners")
+async def create_partner(data: PartnerCreate, current_user: User = Depends(get_current_user)):
+    partner = Partner(**data.model_dump())
+    p_dict = partner.model_dump()
+    p_dict["created_at"] = p_dict["created_at"].isoformat()
+    await db.partners.insert_one(p_dict)
+    return {k: v for k, v in p_dict.items() if k != '_id'}
+
+@api_router.put("/partners/{partner_id}")
+async def update_partner(partner_id: str, data: PartnerCreate, current_user: User = Depends(get_current_user)):
+    await db.partners.update_one({"id": partner_id}, {"$set": data.model_dump()})
+    return await db.partners.find_one({"id": partner_id}, {"_id": 0})
+
+@api_router.delete("/partners/{partner_id}")
+async def delete_partner(partner_id: str, current_user: User = Depends(get_current_user)):
+    await db.partners.delete_one({"id": partner_id})
+    return {"message": "Partner deleted"}
+
+@api_router.get("/partner-transactions")
+async def get_partner_transactions(partner_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {}
+    if partner_id: query["partner_id"] = partner_id
+    txns = await db.partner_transactions.find(query, {"_id": 0}).sort("date", -1).to_list(10000)
+    for t in txns:
+        for f in ['date', 'created_at']:
+            if isinstance(t.get(f), str): t[f] = datetime.fromisoformat(t[f])
+    return txns
+
+@api_router.post("/partner-transactions")
+async def create_partner_transaction(data: PartnerTransactionCreate, current_user: User = Depends(get_current_user)):
+    partner = await db.partners.find_one({"id": data.partner_id}, {"_id": 0})
+    if not partner: raise HTTPException(status_code=404, detail="Partner not found")
+    txn = PartnerTransaction(**data.model_dump(), partner_name=partner["name"], created_by=current_user.id)
+    t_dict = txn.model_dump()
+    t_dict["date"] = t_dict["date"].isoformat()
+    t_dict["created_at"] = t_dict["created_at"].isoformat()
+    if t_dict.get("branch_id") == '': t_dict["branch_id"] = None
+    await db.partner_transactions.insert_one(t_dict)
+    return {k: v for k, v in t_dict.items() if k != '_id'}
+
+@api_router.delete("/partner-transactions/{txn_id}")
+async def delete_partner_transaction(txn_id: str, current_user: User = Depends(get_current_user)):
+    await db.partner_transactions.delete_one({"id": txn_id})
+    return {"message": "Transaction deleted"}
+
 # Fines & Penalties Routes
 @api_router.get("/fines")
 async def get_fines(current_user: User = Depends(get_current_user)):
