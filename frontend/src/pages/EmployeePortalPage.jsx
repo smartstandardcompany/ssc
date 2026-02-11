@@ -124,6 +124,7 @@ export default function EmployeePortalPage() {
           <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Loan Balance</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-warning">${(profile?.loan_balance || 0).toFixed(2)}</div></CardContent></Card>
           <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Annual Leave</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-success">{(profile?.annual_leave_entitled || 30) - annualUsed} left</div></CardContent></Card>
           <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Sick Leave</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-info">{(profile?.sick_leave_entitled || 15) - sickUsed} left</div></CardContent></Card>
+          <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Ticket Balance</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-primary">{(profile?.ticket_entitled || 1) - (profile?.ticket_used || 0)}</div><p className="text-xs text-muted-foreground">every {profile?.ticket_years || 2} years</p></CardContent></Card>
         </div>
 
         {pendingPayments.length > 0 && (
