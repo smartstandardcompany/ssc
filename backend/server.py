@@ -553,7 +553,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 # Health Check
 @api_router.get("/")
 async def root():
-    return {"message": "DataEntry Hub API"}
+    return {"message": "SSC Track API"}
 
 # Auth Routes
 @api_router.post("/auth/register", response_model=Token)
@@ -2794,7 +2794,7 @@ async def backup_database(current_user: User = Depends(get_current_user)):
                     "employee_requests", "recurring_expenses", "email_settings", "whatsapp_config",
                     "notification_prefs", "whatsapp_settings"]
     
-    backup_data = {"backup_date": datetime.now(timezone.utc).isoformat(), "app": "DataEntry Hub", "collections": {}}
+    backup_data = {"backup_date": datetime.now(timezone.utc).isoformat(), "app": "SSC Track", "collections": {}}
     
     for col_name in collections:
         try:
@@ -2858,8 +2858,8 @@ async def test_email(body: dict, current_user: User = Depends(get_current_user))
         raise HTTPException(status_code=400, detail="Email not configured. Save settings first.")
     try:
         to_email = body.get("to_email", current_user.email)
-        msg = MIMEText("This is a test email from DataEntry Hub. Your email settings are working correctly!")
-        msg["Subject"] = "DataEntry Hub - Test Email"
+        msg = MIMEText("This is a test email from SSC Track. Your email settings are working correctly!")
+        msg["Subject"] = "SSC Track - Test Email"
         msg["From"] = settings.get("from_email", settings["username"])
         msg["To"] = to_email
         await aiosmtplib.send(msg, hostname=settings["smtp_host"], port=settings["smtp_port"],
@@ -2955,7 +2955,7 @@ async def test_whatsapp(current_user: User = Depends(get_current_user)):
         client = Client(config["account_sid"], config["auth_token"])
         message = client.messages.create(
             from_=f'whatsapp:{config["phone_number"]}',
-            body="Test message from DataEntry Hub. Your WhatsApp settings are working!",
+            body="Test message from SSC Track. Your WhatsApp settings are working!",
             to=f'whatsapp:{config["recipient_number"]}'
         )
         return {"message": "Test WhatsApp sent", "sid": message.sid}
@@ -2990,7 +2990,7 @@ async def send_daily_report(current_user: User = Depends(get_current_user)):
     results = []
     
     if prefs.get("email_daily_sales"):
-        sent = await send_email_notification("DataEntry Hub - Daily Sales Report", report)
+        sent = await send_email_notification("SSC Track - Daily Sales Report", report)
         results.append(f"Email: {'sent' if sent else 'failed (check email settings)'}")
     
     if prefs.get("whatsapp_daily_sales"):
@@ -3062,7 +3062,7 @@ def generate_pdf_report(sales, expenses, supplier_payments, branches, customers)
         spaceAfter=30,
         alignment=1
     )
-    elements.append(Paragraph("DataEntry Hub - Sales Report", title_style))
+    elements.append(Paragraph("SSC Track - Sales Report", title_style))
     elements.append(Spacer(1, 0.2*inch))
     
     total_sales = sum(s.get("final_amount", s["amount"] - s.get("discount", 0)) for s in sales)
@@ -3137,7 +3137,7 @@ def generate_excel_report(sales, expenses, supplier_payments, branches, customer
     ws_summary = wb.active
     ws_summary.title = "Summary"
     
-    ws_summary['A1'] = "DataEntry Hub - Sales Report"
+    ws_summary['A1'] = "SSC Track - Sales Report"
     ws_summary['A1'].font = Font(size=16, bold=True, color="7C3AED")
     
     total_sales = sum(s.get("final_amount", s["amount"] - s.get("discount", 0)) for s in sales)
