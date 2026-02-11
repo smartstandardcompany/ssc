@@ -2551,7 +2551,14 @@ async def generate_payslip(payment_id: str, current_user: User = Depends(get_cur
         except:
             pass
     
-    elements.append(Paragraph("SMART STANDARD COMPANY", title_style))
+    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    co_name = company.get("company_name", "Smart Standard Company")
+    addr_parts = [company.get("address_line1",""), company.get("address_line2",""), company.get("city",""), company.get("country","")]
+    co_addr = ", ".join([p for p in addr_parts if p])
+    
+    elements.append(Paragraph(co_name.upper(), title_style))
+    if co_addr:
+        elements.append(Paragraph(co_addr, ParagraphStyle('PAddr', parent=styles['Normal'], fontSize=8, textColor=colors.grey, alignment=1, spaceAfter=3)))
     elements.append(Paragraph("Pay Slip", sub_style))
     elements.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#F5841F')))
     elements.append(Spacer(1, 0.2*inch))
