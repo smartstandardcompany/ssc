@@ -193,13 +193,15 @@ export default function CustomersPage() {
                         </td>
                         <td className="p-3 text-right">
                           <div className="flex gap-1 justify-end">
+                            <Button size="sm" variant="outline" onClick={() => viewReport(c.id)} className="h-8 text-xs" data-testid="view-report-btn"><Eye size={14} className="mr-1" />Report</Button>
+                            <Button size="sm" variant="ghost" onClick={() => exportCustomerPDF(c.id)} className="h-8"><FileText size={14} /></Button>
                             {(bal.credit_balance || 0) > 0 && (
-                              <Button size="sm" variant="outline" onClick={() => { setReceivingCustomer({ ...c, credit_balance: bal.credit_balance }); setReceiveData({ payment_mode: 'cash', amount: '' }); setShowReceiveDialog(true); }} data-testid="receive-credit-btn" className="h-8">
+                              <Button size="sm" variant="outline" onClick={() => { setReceivingCustomer({ ...c, credit_balance: bal.credit_balance }); setReceiveData({ payment_mode: 'cash', amount: '' }); setShowReceiveDialog(true); }} data-testid="receive-credit-btn" className="h-8 text-xs">
                                 <DollarSign size={14} className="mr-1" />Receive
                               </Button>
                             )}
-                            <Button size="sm" variant="outline" onClick={() => handleEdit(c)} data-testid="edit-customer-button" className="h-8"><Edit size={14} /></Button>
-                            <Button size="sm" variant="outline" onClick={() => handleDelete(c.id)} data-testid="delete-customer-button" className="h-8 text-error hover:text-error"><Trash2 size={14} /></Button>
+                            <Button size="sm" variant="ghost" onClick={() => handleEdit(c)} data-testid="edit-customer-button" className="h-8"><Edit size={14} /></Button>
+                            <Button size="sm" variant="ghost" onClick={() => handleDelete(c.id)} data-testid="delete-customer-button" className="h-8 text-error"><Trash2 size={14} /></Button>
                           </div>
                         </td>
                       </tr>
