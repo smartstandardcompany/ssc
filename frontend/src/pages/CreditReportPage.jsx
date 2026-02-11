@@ -18,7 +18,7 @@ export default function CreditReportPage() {
   const [loading, setLoading] = useState(true);
   const [showReceiveDialog, setShowReceiveDialog] = useState(false);
   const [receivingSale, setReceivingSale] = useState(null);
-  const [receivePayment, setReceivePayment] = useState({ payment_mode: 'cash', amount: '' });
+  const [receivePayment, setReceivePayment] = useState({ payment_mode: 'cash', amount: '', discount: '' });
 
   useEffect(() => {
     fetchReport();
@@ -40,11 +40,12 @@ export default function CreditReportPage() {
     try {
       await api.post(`/sales/${receivingSale.id}/receive-credit`, {
         payment_mode: receivePayment.payment_mode,
-        amount: parseFloat(receivePayment.amount)
+        amount: parseFloat(receivePayment.amount) || 0,
+        discount: parseFloat(receivePayment.discount) || 0
       });
       toast.success('Credit payment received');
       setShowReceiveDialog(false);
-      setReceivePayment({ payment_mode: 'cash', amount: '' });
+      setReceivePayment({ payment_mode: 'cash', amount: '', discount: '' });
       fetchReport();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to receive payment');
