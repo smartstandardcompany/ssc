@@ -1072,7 +1072,9 @@ async def get_branch_summary(branch_id: str, current_user: User = Depends(get_cu
         "total_sales": total_sales, "sales_cash": cash_sales, "sales_bank": bank_sales, "sales_credit": credit_sales, "sales_count": len(sales),
         "total_expenses": total_expenses, "expenses_cash": exp_cash, "expenses_bank": exp_bank, "expenses_count": len(expenses),
         "total_supplier_payments": total_sp, "sp_cash": sp_cash, "sp_bank": sp_bank, "sp_count": len(sp),
-        "net_profit": total_sales - total_expenses - total_sp
+        "net_profit": total_sales - total_expenses - total_sp,
+        "cash_in_hand": cash_sales - exp_cash - sp_cash,
+        "bank_in_hand": bank_sales - exp_bank - sp_bank
     }
 
 # Dashboard Stats
