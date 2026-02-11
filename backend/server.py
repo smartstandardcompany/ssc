@@ -1002,6 +1002,107 @@ async def get_customer_balance(customer_id: str, current_user: User = Depends(ge
         "sales_count": len(sales)
     }
 
+# Customer Purchase Report
+@api_router.get("/customers/{customer_id}/report")
+async def get_customer_report(customer_id: str, current_user: User = Depends(get_current_user)):
+    customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    sales = await db.sales.find({"customer_id": customer_id}, {"_id": 0}).sort("date", -1).to_list(10000)
+    invoices = await db.invoices.find({"customer_id": customer_id}, {"_id": 0}).sort("date", -1).to_list(10000)
+    branches = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
+    
+    purchases = []
+    for s in sales:
+        modes = ", ".join(f'{p["mode"]}' for p in s.get("payment_details", []))
+        purchases.append({
+            "date": s["date"], "type": "Sale",
+            "branch": branches.get(s.get("branch_id"), "-"),
+            "amount": s.get("final_amount", s["amount"]),
+            "discount": s.get("discount", 0),
+            "payment": modes,
+            "credit": s.get("credit_amount", 0) - s.get("credit_received", 0),
+            "invoice": s.get("notes", "")
+        })
+    
+    total = sum(p["amount"] for p in purchases)
+    total_disc = sum(p["discount"] for p in purchases)
+    total_credit = sum(p["credit"] for p in purchases if p["credit"] > 0)
+    
+    return {"customer": customer, "purchases": purchases, "total": total, "total_discount": total_disc, "credit_balance": total_credit, "count": len(purchases)}
+
+@api_router.get("/customers/{customer_id}/report/pdf")
+async def export_customer_report_pdf(customer_id: str, current_user: User = Depends(get_current_user)):
+    customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    sales = await db.sales.find({"customer_id": customer_id}, {"_id": 0}).sort("date", -1).to_list(10000)
+    branches = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
+    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    co_name = company.get("company_name", "Smart Standard Company")
+    co_addr = ", ".join([p for p in [company.get("address_line1",""), company.get("city",""), company.get("country","")] if p])
+    
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=40, bottomMargin=40)
+    elements = []
+    styles = getSampleStyleSheet()
+    title_s = ParagraphStyle('T', parent=styles['Heading1'], fontSize=16, textColor=colors.HexColor('#F5841F'), alignment=1, spaceAfter=3)
+    
+    logo_path = ROOT_DIR / "uploads" / "logos" / "company_logo.jpg"
+    if not logo_path.exists(): logo_path = ROOT_DIR / "uploads" / "logos" / "company_logo.png"
+    if logo_path.exists():
+        from reportlab.platypus import Image as RLImage
+        try:
+            logo = RLImage(str(logo_path), width=1.5*inch, height=0.7*inch)
+            logo.hAlign = 'CENTER'
+            elements.append(logo)
+        except: pass
+    
+    elements.append(Paragraph(co_name.upper(), title_s))
+    if co_addr:
+        elements.append(Paragraph(co_addr, ParagraphStyle('A', parent=styles['Normal'], fontSize=8, textColor=colors.grey, alignment=1)))
+    elements.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#F5841F')))
+    elements.append(Spacer(1, 0.2*inch))
+    elements.append(Paragraph(f"<b>Customer Statement - {customer['name']}</b>", ParagraphStyle('H', parent=styles['Heading2'], fontSize=13, alignment=1)))
+    elements.append(Paragraph(f"Phone: {customer.get('phone', '-')} | Date: {datetime.now().strftime('%d %b %Y')}", ParagraphStyle('S', parent=styles['Normal'], fontSize=9, textColor=colors.grey, alignment=1)))
+    elements.append(Spacer(1, 0.15*inch))
+    
+    rows = [["Date", "Branch", "Amount", "Discount", "Payment", "Credit Due"]]
+    total_amt = 0
+    total_disc = 0
+    total_credit = 0
+    for s in sales:
+        dt = datetime.fromisoformat(s["date"]).strftime("%d %b %Y") if isinstance(s["date"], str) else s["date"].strftime("%d %b %Y")
+        amt = s.get("final_amount", s["amount"])
+        disc = s.get("discount", 0)
+        modes = ", ".join(p["mode"] for p in s.get("payment_details", []))
+        credit = s.get("credit_amount", 0) - s.get("credit_received", 0)
+        rows.append([dt, branches.get(s.get("branch_id"), "-"), f"SAR {amt:.2f}", f"SAR {disc:.2f}" if disc > 0 else "-", modes, f"SAR {credit:.2f}" if credit > 0 else "-"])
+        total_amt += amt
+        total_disc += disc
+        if credit > 0: total_credit += credit
+    
+    rows.append(["", "", "", "", "", ""])
+    rows.append(["TOTAL", "", f"SAR {total_amt:.2f}", f"SAR {total_disc:.2f}", "", f"SAR {total_credit:.2f}"])
+    
+    t = Table(rows, colWidths=[1*inch, 1*inch, 1.1*inch, 0.9*inch, 1*inch, 1*inch])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F5841F')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#FFF3E0')),
+        ('ALIGN', (2, 0), (-1, -1), 'RIGHT'),
+    ]))
+    elements.append(t)
+    
+    doc.build(elements)
+    buffer.seek(0)
+    fname = f"statement_{customer['name'].replace(' ','_')}.pdf"
+    return StreamingResponse(buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename={fname}"})
+
 # All Customers Balance Summary
 @api_router.get("/customers-balance")
 async def get_all_customers_balance(current_user: User = Depends(get_current_user)):
