@@ -103,7 +103,7 @@ export default function LeaveApprovalsPage() {
           <Button onClick={() => setShowAnnouncement(true)} className="rounded-full" data-testid="send-announcement-btn"><Send size={18} className="mr-2" />Send Announcement</Button>
           <div className="flex gap-2">
             {['pending', 'approved', 'rejected', 'all'].map(f => (
-              <Button key={f} size="sm" variant={filter === f ? 'default' : 'outline'} onClick={() => { setFilter(f); setLoading(true); }} className="capitalize rounded-full" data-testid={`filter-${f}`}>{f}</Button>
+              <Button key={f} size="sm" variant={filter === f ? 'default' : 'outline'} onClick={() => { setFilter(f); setLoading(true); }} className="capitalize rounded-full" data-testid={`filter-SAR {f}`}>{f}</Button>
             ))}
           </div>
         </div>

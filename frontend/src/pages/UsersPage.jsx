@@ -262,7 +262,7 @@ export default function UsersPage() {
                         <div className="grid grid-cols-2 gap-2">
                           {allPermissions.filter(p => p.group === group).map((perm) => (
                             <div key={perm.value} className="flex items-center space-x-2 p-1.5 rounded-lg hover:bg-white transition-all">
-                              <Checkbox id={perm.value} checked={formData.permissions.includes(perm.value)} onCheckedChange={() => togglePermission(perm.value)} data-testid={`permission-${perm.value}`} />
+                              <Checkbox id={perm.value} checked={formData.permissions.includes(perm.value)} onCheckedChange={() => togglePermission(perm.value)} data-testid={`permission-SAR {perm.value}`} />
                               <label htmlFor={perm.value} className="text-sm cursor-pointer">{perm.label}</label>
                             </div>
                           ))}

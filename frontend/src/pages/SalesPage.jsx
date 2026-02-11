@@ -428,7 +428,7 @@ export default function SalesPage() {
                         <td className="p-3 text-sm">{sale.sale_type === 'online' ? customerName : '-'}</td>
                         <td className="p-3 text-sm text-right font-medium">${sale.amount.toFixed(2)}</td>
                         <td className="p-3 text-sm text-right text-error">
-                          {discount > 0 ? `-$${discount.toFixed(2)}` : '-'}
+                          {discount > 0 ? `-SAR ${discount.toFixed(2)}` : '-'}
                         </td>
                         <td className="p-3 text-sm text-right font-bold text-primary">${finalAmount.toFixed(2)}</td>
                         <td className="p-3">

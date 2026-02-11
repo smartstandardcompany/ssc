@@ -214,7 +214,7 @@ export default function InvoicesPage() {
                           return (
                             <Button key={m.id} type="button" size="sm" variant="outline"
                               className={`h-9 text-xs rounded-full border-2 transition-all ${isSelected ? 'ring-2 ring-primary ring-offset-1 font-bold' : ''} ${colors[idx % colors.length]}`}
-                              data-testid={`quick-item-${m.id}`}
+                              data-testid={`quick-item-SAR {m.id}`}
                               onClick={() => setFormData({ ...formData, items: [...formData.items.filter(i => i.description), { description: m.name, quantity: 1, unit_price: m.unit_price }] })}>
                               {m.name} - ${m.unit_price}
                             </Button>
@@ -242,11 +242,11 @@ export default function InvoicesPage() {
                                   <SelectContent>{masterItems.filter(m => m.active !== false).map(m => <SelectItem key={m.id} value={m.id}>{m.name} - ${m.unit_price}</SelectItem>)}</SelectContent>
                                 </Select>
                               ) : (
-                                <Input value={item.description} onChange={(e) => updateItem(i, 'description', e.target.value)} placeholder="Item description" className="h-8 border-0" data-testid={`item-desc-${i}`} />
+                                <Input value={item.description} onChange={(e) => updateItem(i, 'description', e.target.value)} placeholder="Item description" className="h-8 border-0" data-testid={`item-desc-SAR {i}`} />
                               )}
                             </td>
                             <td className="p-1"><Input type="number" value={item.quantity} onChange={(e) => updateItem(i, 'quantity', e.target.value)} className="h-8 border-0 text-center" /></td>
-                            <td className="p-1"><Input type="number" step="0.01" value={item.unit_price} onChange={(e) => updateItem(i, 'unit_price', e.target.value)} placeholder="0.00" className="h-8 border-0 text-right" data-testid={`item-price-${i}`} /></td>
+                            <td className="p-1"><Input type="number" step="0.01" value={item.unit_price} onChange={(e) => updateItem(i, 'unit_price', e.target.value)} placeholder="0.00" className="h-8 border-0 text-right" data-testid={`item-price-SAR {i}`} /></td>
                             <td className="p-2 text-right text-sm font-medium">${((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)).toFixed(2)}</td>
                             <td className="p-1">{formData.items.length > 1 && <Button type="button" size="sm" variant="ghost" onClick={() => removeItem(i)} className="h-6 w-6 p-0 text-error"><X size={14} /></Button>}</td>
                           </tr>
@@ -335,7 +335,7 @@ export default function InvoicesPage() {
               {(parseFloat(receiveData.amount) > 0 || parseFloat(receiveData.discount) > 0) && (
                 <div className="p-3 bg-secondary/50 rounded-lg space-y-1 text-sm">
                   <div className="flex justify-between"><span>Payment:</span><span>${(parseFloat(receiveData.amount) || 0).toFixed(2)}</span></div>
-                  {parseFloat(receiveData.discount) > 0 && <div className="flex justify-between"><span>Discount:</span><span className="text-error">-${(parseFloat(receiveData.discount) || 0).toFixed(2)}</span></div>}
+                  {parseFloat(receiveData.discount) > 0 && <div className="flex justify-between"><span>Discount:</span><span className="text-error">-SAR {(parseFloat(receiveData.discount) || 0).toFixed(2)}</span></div>}
                   <div className="flex justify-between border-t pt-1 font-bold"><span>Total Settled:</span><span className="text-success">${((parseFloat(receiveData.amount) || 0) + (parseFloat(receiveData.discount) || 0)).toFixed(2)}</span></div>
                 </div>
               )}

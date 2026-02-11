@@ -206,7 +206,7 @@ export default function CustomersPage() {
               {(parseFloat(receiveData.amount) > 0 || parseFloat(receiveData.discount) > 0) && (
                 <div className="p-3 bg-secondary/50 rounded-lg space-y-1 text-sm">
                   <div className="flex justify-between"><span>Payment:</span><span className="font-medium">${(parseFloat(receiveData.amount) || 0).toFixed(2)}</span></div>
-                  {parseFloat(receiveData.discount) > 0 && <div className="flex justify-between"><span>Discount:</span><span className="font-medium text-error">-${(parseFloat(receiveData.discount) || 0).toFixed(2)}</span></div>}
+                  {parseFloat(receiveData.discount) > 0 && <div className="flex justify-between"><span>Discount:</span><span className="font-medium text-error">-SAR {(parseFloat(receiveData.discount) || 0).toFixed(2)}</span></div>}
                   <div className="flex justify-between border-t pt-1 font-bold"><span>Total Settled:</span><span className="text-success">${((parseFloat(receiveData.amount) || 0) + (parseFloat(receiveData.discount) || 0)).toFixed(2)}</span></div>
                   <div className="flex justify-between text-xs text-muted-foreground"><span>Remaining after:</span><span>${(receivingCustomer?.credit_balance - (parseFloat(receiveData.amount) || 0) - (parseFloat(receiveData.discount) || 0)).toFixed(2)}</span></div>
                 </div>

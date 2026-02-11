@@ -159,7 +159,7 @@ export default function CreditReportPage() {
                       <td className="p-3 text-sm">{sale.branch}</td>
                       <td className="p-3 text-sm">{sale.sale_type === 'online' ? sale.reference : '-'}</td>
                       <td className="p-3 text-sm text-right font-medium">${sale.total_amount.toFixed(2)}</td>
-                      <td className="p-3 text-sm text-right text-error">{(sale.discount || 0) > 0 ? `-$${sale.discount.toFixed(2)}` : '-'}</td>
+                      <td className="p-3 text-sm text-right text-error">{(sale.discount || 0) > 0 ? `-SAR ${sale.discount.toFixed(2)}` : '-'}</td>
                       <td className="p-3 text-sm text-right font-medium text-primary">${(sale.final_amount || sale.total_amount).toFixed(2)}</td>
                       <td className="p-3 text-sm text-right text-credit font-bold">${sale.credit_given.toFixed(2)}</td>
                       <td className="p-3 text-sm text-right text-success">${sale.credit_received.toFixed(2)}</td>
@@ -224,7 +224,7 @@ export default function CreditReportPage() {
               {(parseFloat(receivePayment.amount) > 0 || parseFloat(receivePayment.discount) > 0) && (
                 <div className="p-3 bg-secondary/50 rounded-lg space-y-1 text-sm">
                   <div className="flex justify-between"><span>Payment:</span><span>${(parseFloat(receivePayment.amount) || 0).toFixed(2)}</span></div>
-                  {parseFloat(receivePayment.discount) > 0 && <div className="flex justify-between"><span>Discount:</span><span className="text-error">-${(parseFloat(receivePayment.discount) || 0).toFixed(2)}</span></div>}
+                  {parseFloat(receivePayment.discount) > 0 && <div className="flex justify-between"><span>Discount:</span><span className="text-error">-SAR {(parseFloat(receivePayment.discount) || 0).toFixed(2)}</span></div>}
                   <div className="flex justify-between border-t pt-1 font-bold"><span>Total Settled:</span><span className="text-success">${((parseFloat(receivePayment.amount) || 0) + (parseFloat(receivePayment.discount) || 0)).toFixed(2)}</span></div>
                 </div>
               )}
