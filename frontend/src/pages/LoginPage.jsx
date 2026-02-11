@@ -32,21 +32,14 @@ export default function LoginPage({ setIsAuthenticated }) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-      <div
-        className="absolute inset-0 z-0"
-        style={{
-          backgroundImage: 'url(https://images.unsplash.com/photo-1767482712476-7b72663a0120?crop=entropy&cs=srgb&fm=jpg&q=85)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
-      />
-      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10" />
-      
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #FFF8F0 0%, #FFF0E0 50%, #FFE8CC 100%)' }}>
       <Card className="w-full max-w-md z-20 border-border shadow-2xl" data-testid="login-card">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-3xl font-bold font-outfit text-center">Welcome Back</CardTitle>
-          <CardDescription className="text-center">Sign in to your SSC Track account</CardDescription>
+        <CardHeader className="space-y-3">
+          <div className="flex justify-center">
+            <img src="/logo.jpg" alt="Smart Standard Company" className="h-20 object-contain" />
+          </div>
+          <CardTitle className="text-2xl font-bold font-outfit text-center">SSC Track</CardTitle>
+          <CardDescription className="text-center">Sign in to your account</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
