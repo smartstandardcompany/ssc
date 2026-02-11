@@ -196,7 +196,7 @@ export default function DashboardPage() {
                 <div className="bg-cash/20 p-2 rounded-lg"><Wallet className="h-5 w-5 text-cash" strokeWidth={2} /></div>
               </CardHeader>
               <CardContent>
-                <div className={`text-3xl font-bold font-outfit ${(stats?.cash_in_hand || 0) >= 0 ? 'text-cash' : 'text-error'}`} data-testid="cash-in-hand-value">${(stats?.cash_in_hand || 0).toFixed(2)}</div>
+                <div className={`text-3xl font-bold font-outfit ${(stats?.cash_in_hand || 0) >= 0 ? 'text-cash' : 'text-error'}`} data-testid="cash-in-hand-value">SAR {(stats?.cash_in_hand || 0).toFixed(2)}</div>
                 <p className="text-xs text-muted-foreground mt-1">Cash Sales - Cash Expenses - Cash Supplier Payments</p>
               </CardContent>
             </Card>
@@ -206,7 +206,7 @@ export default function DashboardPage() {
                 <div className="bg-bank/20 p-2 rounded-lg"><Building2 className="h-5 w-5 text-bank" strokeWidth={2} /></div>
               </CardHeader>
               <CardContent>
-                <div className={`text-3xl font-bold font-outfit ${(stats?.bank_in_hand || 0) >= 0 ? 'text-bank' : 'text-error'}`} data-testid="bank-in-hand-value">${(stats?.bank_in_hand || 0).toFixed(2)}</div>
+                <div className={`text-3xl font-bold font-outfit ${(stats?.bank_in_hand || 0) >= 0 ? 'text-bank' : 'text-error'}`} data-testid="bank-in-hand-value">SAR {(stats?.bank_in_hand || 0).toFixed(2)}</div>
                 <p className="text-xs text-muted-foreground mt-1">Bank Sales - Bank Expenses - Bank Supplier Payments</p>
               </CardContent>
             </Card>
