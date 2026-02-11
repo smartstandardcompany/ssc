@@ -66,7 +66,7 @@ export const DashboardLayout = ({ children }) => {
       <aside className="w-64 bg-white border-r border-stone-100 fixed h-full overflow-y-auto shadow-sm">
         <div className="p-5 border-b border-stone-100">
           <div className="flex items-center gap-3">
-            <img src="/logo.jpg" alt="SSC" className="w-11 h-11 rounded-xl object-contain shadow-sm" />
+            <img src="/logo.png" alt="SSC" className="w-11 h-11 rounded-xl object-contain" />
             <div>
               <h1 className="text-lg font-bold font-outfit bg-gradient-to-r from-orange-600 to-amber-500 bg-clip-text text-transparent" data-testid="app-title">SSC Track</h1>
               <p className="text-xs text-stone-400">{isEmployee ? 'Employee Portal' : 'Smart Standard Company'}</p>

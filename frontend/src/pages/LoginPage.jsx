@@ -37,7 +37,7 @@ export default function LoginPage({ setIsAuthenticated }) {
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #E8501A 0%, #F5841F 50%, #F5A623 100%)' }}>
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, white 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
         <div className="relative z-10 flex flex-col justify-center items-center w-full p-12 text-white">
-          <img src="/logo.jpg" alt="SSC" className="h-28 object-contain mb-8 drop-shadow-2xl bg-white/90 rounded-2xl p-4" />
+          <img src="/logo.png" alt="SSC" className="h-28 object-contain mb-8 drop-shadow-2xl" />
           <h1 className="text-4xl font-bold font-outfit tracking-tight">SSC Track</h1>
           <p className="text-lg mt-3 text-white/80 text-center max-w-md">Smart Standard Company<br/>Business Management Platform</p>
           <div className="mt-12 grid grid-cols-3 gap-6 text-center">
@@ -52,7 +52,7 @@ export default function LoginPage({ setIsAuthenticated }) {
       <div className="flex-1 flex items-center justify-center p-6 bg-[#FDFBF7]">
         <div className="w-full max-w-md">
           <div className="lg:hidden flex justify-center mb-8">
-            <img src="/logo.jpg" alt="SSC" className="h-16 object-contain" />
+            <img src="/logo.png" alt="SSC" className="h-16 object-contain" />
           </div>
           <Card className="border-stone-100 shadow-xl shadow-orange-500/5" data-testid="login-card">
             <CardHeader className="space-y-2 pb-4">
