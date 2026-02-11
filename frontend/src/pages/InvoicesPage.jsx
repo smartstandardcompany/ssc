@@ -174,7 +174,6 @@ export default function InvoicesPage() {
                       <Button type="button" size="sm" onClick={handleAddMasterItem} className="h-8 rounded-full">Save</Button>
                     </div>
                   )}
-                  </div>
                   <div className="border rounded-lg overflow-hidden">
                     <table className="w-full">
                       <thead><tr className="bg-secondary/50 border-b">
