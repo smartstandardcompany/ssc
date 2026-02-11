@@ -285,7 +285,7 @@ export default function SuppliersPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {suppliers.map((supplier) => {
+          {suppliers.filter(s => branchFilter.length === 0 || branchFilter.includes(s.branch_id) || !s.branch_id).map((supplier) => {
             const branchName = branches.find((b) => b.id === supplier.branch_id)?.name || 'All Branches';
             const creditUtilization = supplier.credit_limit > 0 ? (supplier.current_credit / supplier.credit_limit) * 100 : 0;
             
