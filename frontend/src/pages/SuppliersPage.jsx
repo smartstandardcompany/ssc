@@ -33,14 +33,16 @@ export default function SuppliersPage() {
 
   const fetchData = async () => {
     try {
-      const [suppliersRes, branchesRes, categoriesRes] = await Promise.all([
+      const [suppliersRes, branchesRes, categoriesRes, summariesRes] = await Promise.all([
         api.get('/suppliers'),
         api.get('/branches'),
         api.get('/categories?category_type=supplier'),
+        api.get('/suppliers/payment-summaries'),
       ]);
       setSuppliers(suppliersRes.data);
       setBranches(branchesRes.data);
       setCategories(categoriesRes.data);
+      setPaySummaries(summariesRes.data);
     } catch (error) {
       toast.error('Failed to fetch data');
     } finally {
