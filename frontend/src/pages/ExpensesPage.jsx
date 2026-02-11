@@ -178,7 +178,8 @@ export default function ExpensesPage() {
             <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="expenses-page-title">Expenses</h1>
             <p className="text-muted-foreground">Track business expenses and supplier costs</p>
           </div>
-          <div className="flex gap-3 items-center">
+          <div className="flex gap-3 items-center flex-wrap">
+            <BranchFilter onChange={setBranchFilter} />
             <DateFilter onFilterChange={setDateFilter} />
             <ExportButtons dataType="expenses" />
             <Button
