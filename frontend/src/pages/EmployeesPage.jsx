@@ -209,7 +209,7 @@ export default function EmployeesPage() {
                   <th className="text-right p-3 font-medium text-sm">Actions</th>
                 </tr></thead>
                 <tbody>
-                  {employees.map((emp) => (
+                  {employees.filter(emp => branchFilter.length === 0 || branchFilter.includes(emp.branch_id) || !emp.branch_id).map((emp) => (
                     <tr key={emp.id} className="border-b border-border hover:bg-secondary/50" data-testid="employee-row">
                       <td className="p-3 text-sm font-medium">{emp.name}<div className="text-xs text-muted-foreground">{emp.document_id || ''}</div></td>
                       <td className="p-3 text-sm">{emp.position || '-'}</td>
