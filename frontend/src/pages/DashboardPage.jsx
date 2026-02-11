@@ -163,23 +163,6 @@ export default function DashboardPage() {
             </Card>
           </div>
         </div>
-          {statCards.map((card) => {
-            const Icon = card.icon;
-            return (
-              <Card key={card.title} className="stat-card border-border" data-testid={card.testId}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">{card.title}</CardTitle>
-                  <div className={`${card.bgColor} p-2 rounded-lg`}>
-                    <Icon className={`h-5 w-5 ${card.color}`} strokeWidth={2} />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold font-outfit" data-testid={`${card.testId}-value`}>{card.value}</div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
 
         {/* Payment Mode Breakdown */}
         <div>
