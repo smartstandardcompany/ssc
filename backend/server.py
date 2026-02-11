@@ -1415,6 +1415,11 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
     prev_total_expenses = sum(e["amount"] for e in prev_expenses)
     prev_net = prev_total_sales - prev_total_expenses
     
+    # Due fines
+    all_fines = await db.fines.find({"payment_status": {"$ne": "paid"}}, {"_id": 0}).to_list(1000)
+    due_fines = sum(f["amount"] - f.get("paid_amount", 0) for f in all_fines)
+    due_fines_list = [{"department": f.get("department",""), "amount": f["amount"] - f.get("paid_amount",0), "type": f.get("fine_type","")} for f in all_fines[:5]]
+    
     return {
         "total_sales": total_sales,
         "total_expenses": total_expenses,
@@ -1439,7 +1444,9 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
         "prev_net": prev_net,
         "expenses_pct_of_sales": round(total_expenses / total_sales * 100, 1) if total_sales > 0 else 0,
         "sp_pct_of_sales": round(total_supplier_payments / total_sales * 100, 1) if total_sales > 0 else 0,
-        "profit_pct_of_sales": round(net_profit / total_sales * 100, 1) if total_sales > 0 else 0
+        "profit_pct_of_sales": round(net_profit / total_sales * 100, 1) if total_sales > 0 else 0,
+        "due_fines": due_fines,
+        "due_fines_list": due_fines_list
     }
 
 # Credit Sales Report
