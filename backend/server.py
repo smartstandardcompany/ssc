@@ -1334,6 +1334,27 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
             key = f"{to_b} → {from_b}"
             branch_dues[key] = branch_dues.get(key, 0) + t["amount"]
     
+    # Previous month comparison
+    prev_month_start = (now.replace(day=1) - timedelta(days=1)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    prev_month_end = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0) - timedelta(seconds=1)
+    pms = prev_month_start.isoformat()
+    pme = prev_month_end.isoformat()
+    
+    prev_sales_q = {"date": {"$gte": pms, "$lte": pme}}
+    prev_exp_q = {"date": {"$gte": pms, "$lte": pme}}
+    if branch_ids:
+        bid_list = [b.strip() for b in branch_ids.split(",") if b.strip()]
+        if bid_list:
+            prev_sales_q["branch_id"] = {"$in": bid_list}
+            prev_exp_q["branch_id"] = {"$in": bid_list}
+    
+    prev_sales = await db.sales.find(prev_sales_q, {"_id": 0}).to_list(10000)
+    prev_expenses = await db.expenses.find(prev_exp_q, {"_id": 0}).to_list(10000)
+    
+    prev_total_sales = sum(s.get("final_amount", s["amount"]) for s in prev_sales)
+    prev_total_expenses = sum(e["amount"] for e in prev_expenses)
+    prev_net = prev_total_sales - prev_total_expenses
+    
     return {
         "total_sales": total_sales,
         "total_expenses": total_expenses,
@@ -1352,7 +1373,13 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
         "expense_by_category": expense_by_category,
         "supplier_dues": supplier_dues,
         "upcoming_expenses": upcoming_expenses,
-        "branch_dues": branch_dues
+        "branch_dues": branch_dues,
+        "prev_sales": prev_total_sales,
+        "prev_expenses": prev_total_expenses,
+        "prev_net": prev_net,
+        "expenses_pct_of_sales": round(total_expenses / total_sales * 100, 1) if total_sales > 0 else 0,
+        "sp_pct_of_sales": round(total_supplier_payments / total_sales * 100, 1) if total_sales > 0 else 0,
+        "profit_pct_of_sales": round(net_profit / total_sales * 100, 1) if total_sales > 0 else 0
     }
 
 # Credit Sales Report
