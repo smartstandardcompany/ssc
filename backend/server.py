@@ -2891,6 +2891,19 @@ async def create_fine(data: FineCreate, current_user: User = Depends(get_current
     for k in ['branch_id', 'employee_id']:
         if f_dict.get(k) == '': f_dict[k] = None
     await db.fines.insert_one(f_dict)
+    
+    # Notify employee if fine is charged to them
+    if data.employee_id:
+        emp = await db.employees.find_one({"id": data.employee_id}, {"_id": 0})
+        if emp and emp.get("user_id"):
+            msg = f"SAR {data.amount:.2f} fine ({data.fine_type}) from {data.department}. {data.description}"
+            if data.deduct_from_salary and data.monthly_deduction:
+                msg += f" | SAR {data.monthly_deduction:.2f}/month will be deducted from salary."
+            n = Notification(user_id=emp["user_id"], title="Fine Charged to You", message=msg, type="fine_charged", related_id=fine.id)
+            n_dict = n.model_dump()
+            n_dict["created_at"] = n_dict["created_at"].isoformat()
+            await db.notifications.insert_one(n_dict)
+    
     return {k: v for k, v in f_dict.items() if k != '_id'}
 
 @api_router.put("/fines/{fine_id}/pay")
