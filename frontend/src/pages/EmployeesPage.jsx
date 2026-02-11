@@ -315,9 +315,9 @@ export default function EmployeesPage() {
                     <SelectContent>{LEAVE_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <div><Label>Days *</Label><Input type="number" value={leaveData.days} data-testid="leave-days" onChange={(e) => setLeaveData({ ...leaveData, days: e.target.value })} required /></div>
-                <div><Label>Start Date *</Label><Input type="date" value={leaveData.start_date} data-testid="leave-start" onChange={(e) => setLeaveData({ ...leaveData, start_date: e.target.value })} required /></div>
-                <div><Label>End Date *</Label><Input type="date" value={leaveData.end_date} data-testid="leave-end" onChange={(e) => setLeaveData({ ...leaveData, end_date: e.target.value })} required /></div>
+                <div><Label>Start Date *</Label><Input type="date" value={leaveData.start_date} data-testid="leave-start" onChange={(e) => { const s = e.target.value; const days = s && leaveData.end_date ? Math.max(1, Math.round((new Date(leaveData.end_date) - new Date(s)) / 86400000) + 1) : ''; setLeaveData({ ...leaveData, start_date: s, days }); }} required /></div>
+                <div><Label>End Date *</Label><Input type="date" value={leaveData.end_date} data-testid="leave-end" onChange={(e) => { const en = e.target.value; const days = leaveData.start_date && en ? Math.max(1, Math.round((new Date(en) - new Date(leaveData.start_date)) / 86400000) + 1) : ''; setLeaveData({ ...leaveData, end_date: en, days }); }} required /></div>
+                <div><Label>Days</Label><Input type="number" value={leaveData.days} data-testid="leave-days" readOnly className="bg-stone-50 font-bold" /></div>
               </div>
               <div><Label>Reason</Label><Textarea value={leaveData.reason} onChange={(e) => setLeaveData({ ...leaveData, reason: e.target.value })} placeholder="Optional reason" /></div>
               <div className="flex gap-3">
