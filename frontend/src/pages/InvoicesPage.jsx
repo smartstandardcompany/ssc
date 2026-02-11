@@ -284,10 +284,13 @@ export default function InvoicesPage() {
                   <th className="text-right p-3 font-medium text-sm">Discount</th>
                   <th className="text-right p-3 font-medium text-sm">Total</th>
                   <th className="text-left p-3 font-medium text-sm">Payment</th>
+                  <th className="text-right p-3 font-medium text-sm">Credit Due</th>
                   <th className="text-right p-3 font-medium text-sm">Actions</th>
                 </tr></thead>
                 <tbody>
-                  {filtered.map(inv => (
+                  {filtered.map(inv => {
+                    const creditRem = getCreditRemaining(inv);
+                    return (
                     <tr key={inv.id} className="border-b border-border hover:bg-secondary/50" data-testid="invoice-row">
                       <td className="p-3 text-sm font-medium text-primary">{inv.invoice_number}</td>
                       <td className="p-3 text-sm">{format(new Date(inv.date), 'MMM dd, yyyy')}</td>
@@ -297,10 +300,21 @@ export default function InvoicesPage() {
                       <td className="p-3 text-sm text-right text-error">{inv.discount > 0 ? `-$${inv.discount.toFixed(2)}` : '-'}</td>
                       <td className="p-3 text-sm text-right font-bold">${inv.total.toFixed(2)}</td>
                       <td className="p-3"><Badge className={inv.payment_mode === 'cash' ? 'bg-cash/20 text-cash' : inv.payment_mode === 'bank' ? 'bg-bank/20 text-bank' : 'bg-credit/20 text-credit'}>{inv.payment_mode}</Badge></td>
-                      <td className="p-3 text-right"><Button size="sm" variant="outline" onClick={() => handleDelete(inv.id)} className="h-8 text-error hover:text-error"><Trash2 size={14} /></Button></td>
+                      <td className="p-3 text-right">{creditRem > 0 ? <span className="font-bold text-warning">${creditRem.toFixed(2)}</span> : <span className="text-muted-foreground">-</span>}</td>
+                      <td className="p-3 text-right">
+                        <div className="flex gap-1 justify-end">
+                          {creditRem > 0 && (
+                            <Button size="sm" variant="outline" onClick={() => { setReceivingInvoice({ ...inv, credit_remaining: creditRem }); setReceiveData({ payment_mode: 'cash', amount: '', discount: '' }); setShowReceiveDialog(true); }} className="h-8 text-xs" data-testid="receive-invoice-credit">
+                              <DollarSign size={14} className="mr-1" />Receive
+                            </Button>
+                          )}
+                          <Button size="sm" variant="outline" onClick={() => handleDelete(inv.id)} className="h-8 text-error hover:text-error"><Trash2 size={14} /></Button>
+                        </div>
+                      </td>
                     </tr>
-                  ))}
-                  {filtered.length === 0 && <tr><td colSpan={9} className="p-8 text-center text-muted-foreground">No invoices yet</td></tr>}
+                    );
+                  })}
+                  {filtered.length === 0 && <tr><td colSpan={10} className="p-8 text-center text-muted-foreground">No invoices yet</td></tr>}
                 </tbody>
               </table>
             </div>
