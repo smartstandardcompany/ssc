@@ -1139,7 +1139,6 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, current_user: Us
         "cash_in_hand": cash_in_hand,
         "bank_in_hand": bank_in_hand
     }
-    )
 
 # Credit Sales Report
 @api_router.get("/reports/credit-sales")
