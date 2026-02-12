@@ -154,10 +154,12 @@ export default function ReportsPage() {
         </div>
 
         <Tabs value={compareMode} onValueChange={setCompareMode}>
-          <TabsList>
+          <TabsList className="flex-wrap">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="branch_report">Branch Report</TabsTrigger>
+            <TabsTrigger value="expense_report">Expense Report</TabsTrigger>
             <TabsTrigger value="period">Period Compare</TabsTrigger>
-            <TabsTrigger value="branch">Branch Compare</TabsTrigger>
+            <TabsTrigger value="branch">Branch vs Branch</TabsTrigger>
             <TabsTrigger value="trend">Trends</TabsTrigger>
             <TabsTrigger value="detailed">Detailed</TabsTrigger>
           </TabsList>
