@@ -216,7 +216,56 @@ export default function FinesPage() {
               </tbody></table>
             </CardContent></Card>
           </TabsContent>
+          <TabsContent value="capital">
+            <Card className="border-stone-100"><CardContent className="pt-6">
+              <div className="flex justify-between items-center mb-4">
+                <p className="text-sm text-muted-foreground">Track goodwill, building purchases, branch acquisition costs</p>
+                <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowCapitalDialog(true)}><Plus size={14} className="mr-1" />Add Capital Expense</Button>
+              </div>
+              <table className="w-full"><thead><tr className="border-b">
+                <th className="text-left p-3 text-sm font-medium">Date</th><th className="text-left p-3 text-sm font-medium">Title</th><th className="text-left p-3 text-sm font-medium">Category</th><th className="text-left p-3 text-sm font-medium">Description</th><th className="text-left p-3 text-sm font-medium">Mode</th><th className="text-right p-3 text-sm font-medium">Amount</th><th className="text-right p-3 text-sm font-medium">Actions</th>
+              </tr></thead><tbody>
+                {capitalExpenses.map(c => (
+                  <tr key={c.id} className="border-b hover:bg-stone-50">
+                    <td className="p-3 text-sm">{new Date(c.date).toLocaleDateString()}</td>
+                    <td className="p-3 text-sm font-medium">{c.title}</td>
+                    <td className="p-3"><Badge variant="secondary" className="capitalize">{c.category}</Badge></td>
+                    <td className="p-3 text-sm">{c.description || '-'}</td>
+                    <td className="p-3"><Badge variant="secondary" className="capitalize">{c.payment_mode}</Badge></td>
+                    <td className="p-3 text-sm text-right font-bold">SAR {c.amount.toFixed(2)}</td>
+                    <td className="p-3 text-right"><Button size="sm" variant="ghost" onClick={async () => { if(window.confirm('Delete?')) { await api.delete(`/capital-expenses/${c.id}`); fetchData(); }}} className="h-7 text-xs text-error"><Trash2 size={12} /></Button></td>
+                  </tr>
+                ))}
+                {capitalExpenses.length === 0 && <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">No capital expenses</td></tr>}
+                {capitalExpenses.length > 0 && <tr className="bg-stone-50"><td colSpan={5} className="p-3 font-bold text-sm">Total</td><td className="p-3 text-right font-bold text-sm">SAR {capitalExpenses.reduce((s,c) => s + c.amount, 0).toFixed(2)}</td><td></td></tr>}
+              </tbody></table>
+            </CardContent></Card>
+          </TabsContent>
         </Tabs>
+
+        {/* Capital Expense Dialog */}
+        <Dialog open={showCapitalDialog} onOpenChange={setShowCapitalDialog}>
+          <DialogContent><DialogHeader><DialogTitle className="font-outfit">Capital / Goodwill Expense</DialogTitle></DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div><Label>Title *</Label><Input value={capData.title} onChange={(e) => setCapData({...capData, title: e.target.value})} placeholder="e.g. Branch B Goodwill" /></div>
+                <div><Label>Category</Label>
+                  <Select value={capData.category} onValueChange={(v) => setCapData({...capData, category: v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="goodwill">Goodwill</SelectItem><SelectItem value="building">Building</SelectItem><SelectItem value="equipment">Equipment</SelectItem><SelectItem value="renovation">Renovation</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select>
+                </div>
+                <div><Label>Amount *</Label><Input type="number" step="0.01" value={capData.amount} onChange={(e) => setCapData({...capData, amount: e.target.value})} /></div>
+                <div><Label>Mode</Label><Select value={capData.payment_mode} onValueChange={(v) => setCapData({...capData, payment_mode: v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="cash">Cash</SelectItem><SelectItem value="bank">Bank</SelectItem></SelectContent></Select></div>
+                <div><Label>Branch</Label><Select value={capData.branch_id || "none"} onValueChange={(v) => setCapData({...capData, branch_id: v === "none" ? "" : v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No Branch</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></div>
+                <div><Label>Date</Label><Input type="date" value={capData.date} onChange={(e) => setCapData({...capData, date: e.target.value})} /></div>
+              </div>
+              <div><Label>Description</Label><Input value={capData.description} onChange={(e) => setCapData({...capData, description: e.target.value})} /></div>
+              <Button className="rounded-xl" onClick={async () => {
+                if (!capData.title || !capData.amount) { toast.error('Fill required fields'); return; }
+                try { await api.post('/capital-expenses', {...capData, amount: parseFloat(capData.amount), branch_id: capData.branch_id || null, date: new Date(capData.date).toISOString()}); toast.success('Recorded'); setShowCapitalDialog(false); setCapData({title:'',category:'goodwill',description:'',amount:'',branch_id:'',payment_mode:'cash',date:new Date().toISOString().split('T')[0],notes:''}); fetchData(); }
+                catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+              }}>Save Capital Expense</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={showPayDialog} onOpenChange={setShowPayDialog}>
           <DialogContent><DialogHeader><DialogTitle className="font-outfit">Pay Fine - {payingFine?.department}</DialogTitle></DialogHeader>
