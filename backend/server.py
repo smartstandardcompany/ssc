@@ -1632,8 +1632,59 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
         "due_fines_list": due_fines_list,
         "vat_on_sales": round(total_sales * 0.15, 2),
         "vat_on_purchases": round(total_supplier_payments * 0.15, 2),
-        "vat_payable": round((total_sales - total_supplier_payments) * 0.15, 2)
+        "vat_payable": round((total_sales - total_supplier_payments) * 0.15, 2),
+        "branch_alerts": branch_alerts
     }
+
+    # Calculate branch loss alerts (before return)
+    branch_alerts_list = []
+    all_branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    for br in all_branches:
+        bid = br["id"]
+        br_sales = [s for s in sales if s.get("branch_id") == bid]
+        br_exp = [e for e in expenses if e.get("branch_id") == bid]
+        br_sp = [p for p in supplier_payments if p.get("branch_id") == bid]
+        br_total_sales = sum(s.get("final_amount", s["amount"]) for s in br_sales)
+        br_total_exp = sum(e["amount"] for e in br_exp)
+        br_total_sp = sum(p["amount"] for p in br_sp)
+        br_profit = br_total_sales - br_total_exp - br_total_sp
+        if br_profit < 0:
+            branch_alerts_list.append({"branch": br["name"], "profit": br_profit, "sales": br_total_sales, "expenses": br_total_exp + br_total_sp})
+    
+    return_data = {
+        "total_sales": total_sales,
+        "total_expenses": total_expenses,
+        "total_supplier_payments": total_supplier_payments,
+        "net_profit": net_profit,
+        "pending_credits": pending_credits,
+        "cash_sales": cash_sales,
+        "bank_sales": bank_sales,
+        "credit_sales": credit_sales,
+        "cash_in_hand": cash_in_hand,
+        "bank_in_hand": bank_in_hand,
+        "expenses_cash": exp_cash,
+        "expenses_bank": exp_bank,
+        "sp_cash": sp_cash,
+        "sp_bank": sp_bank,
+        "expense_by_category": expense_by_category,
+        "supplier_dues": supplier_dues,
+        "upcoming_expenses": upcoming_expenses,
+        "branch_dues": branch_dues,
+        "prev_sales": prev_total_sales,
+        "prev_expenses": prev_total_expenses,
+        "prev_net": prev_net,
+        "expenses_pct_of_sales": round(total_expenses / total_sales * 100, 1) if total_sales > 0 else 0,
+        "sp_pct_of_sales": round(total_supplier_payments / total_sales * 100, 1) if total_sales > 0 else 0,
+        "profit_pct_of_sales": round(net_profit / total_sales * 100, 1) if total_sales > 0 else 0,
+        "due_fines": due_fines,
+        "due_fines_list": due_fines_list,
+        "vat_on_sales": round(total_sales * 0.15, 2),
+        "vat_on_purchases": round(total_supplier_payments * 0.15, 2),
+        "vat_payable": round((total_sales - total_supplier_payments) * 0.15, 2),
+        "branch_loss_alerts": branch_alerts_list
+    }
+    return return_data
 
 # Credit Sales Report
 @api_router.get("/reports/credit-sales")
