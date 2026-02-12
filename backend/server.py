@@ -3322,8 +3322,48 @@ async def pay_fine(fine_id: str, body: dict, current_user: User = Depends(get_cu
 
 @api_router.delete("/fines/{fine_id}")
 async def delete_fine(fine_id: str, current_user: User = Depends(get_current_user)):
+    fine = await db.fines.find_one({"id": fine_id}, {"_id": 0})
+    if fine and fine.get("file_path") and os.path.exists(fine["file_path"]): os.remove(fine["file_path"])
     await db.fines.delete_one({"id": fine_id})
     return {"message": "Fine deleted"}
+
+@api_router.post("/fines/{fine_id}/upload")
+async def upload_fine_proof(fine_id: str, file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+    upload_dir = ROOT_DIR / "uploads" / "fines"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    ext = Path(file.filename).suffix
+    file_path = upload_dir / f"{fine_id}{ext}"
+    with open(file_path, "wb") as f: f.write(await file.read())
+    await db.fines.update_one({"id": fine_id}, {"$set": {"file_path": str(file_path), "file_name": file.filename}})
+    return {"message": "Proof uploaded", "file_name": file.filename}
+
+@api_router.get("/fines/{fine_id}/download")
+async def download_fine_proof(fine_id: str, current_user: User = Depends(get_current_user)):
+    fine = await db.fines.find_one({"id": fine_id}, {"_id": 0})
+    if not fine or not fine.get("file_path"): raise HTTPException(status_code=404, detail="No file")
+    if not os.path.exists(fine["file_path"]): raise HTTPException(status_code=404, detail="File missing")
+    return FileResponse(fine["file_path"], filename=fine.get("file_name", "proof"))
+
+# Capital Expense / Goodwill (branch acquisition costs)
+@api_router.get("/capital-expenses")
+async def get_capital_expenses(current_user: User = Depends(get_current_user)):
+    return await db.capital_expenses.find({}, {"_id": 0}).sort("date", -1).to_list(1000)
+
+@api_router.post("/capital-expenses")
+async def create_capital_expense(body: dict, current_user: User = Depends(get_current_user)):
+    doc = {"id": str(uuid.uuid4()), "title": body.get("title",""), "category": body.get("category","goodwill"),
+           "description": body.get("description",""), "amount": float(body.get("amount",0)),
+           "branch_id": body.get("branch_id") or None, "payment_mode": body.get("payment_mode","cash"),
+           "date": body.get("date", datetime.now(timezone.utc).isoformat()),
+           "notes": body.get("notes",""), "created_by": current_user.id,
+           "created_at": datetime.now(timezone.utc).isoformat()}
+    await db.capital_expenses.insert_one(doc)
+    return {k: v for k, v in doc.items() if k != '_id'}
+
+@api_router.delete("/capital-expenses/{cap_id}")
+async def delete_capital_expense(cap_id: str, current_user: User = Depends(get_current_user)):
+    await db.capital_expenses.delete_one({"id": cap_id})
+    return {"message": "Deleted"}
 
 # Salary Deductions Routes
 @api_router.get("/salary-deductions")
