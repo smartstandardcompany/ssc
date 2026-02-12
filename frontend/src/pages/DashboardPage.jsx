@@ -190,6 +190,21 @@ export default function DashboardPage() {
           })}
         </div>
 
+        {/* Branch Loss Alerts */}
+        {stats?.branch_loss_alerts?.length > 0 && (
+          <Card className="border-error/50 bg-error/5">
+            <CardHeader><CardTitle className="font-outfit flex items-center gap-2 text-error"><AlertTriangle size={18} />Branch Loss Alert</CardTitle></CardHeader>
+            <CardContent>
+              <div className="space-y-2">{stats.branch_loss_alerts.map((a, i) => (
+                <div key={i} className="flex justify-between items-center p-3 bg-background rounded-xl border border-error/20">
+                  <div><div className="font-medium text-sm">{a.branch}</div><div className="text-xs text-muted-foreground">Sales: SAR {a.sales.toFixed(0)} | Expenses: SAR {a.expenses.toFixed(0)}</div></div>
+                  <Badge className="bg-error/20 text-error text-sm">Loss: SAR {Math.abs(a.profit).toFixed(2)}</Badge>
+                </div>
+              ))}</div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Cash & Bank In Hand */}
         <div>
           <h2 className="text-2xl font-bold font-outfit mb-4">Cash & Bank In Hand</h2>
