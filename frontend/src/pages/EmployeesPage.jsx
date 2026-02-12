@@ -297,7 +297,12 @@ export default function EmployeesPage() {
                   {payData.payment_type === 'loan_repayment' && <p className="text-xs text-success mt-1">Will decrease loan balance</p>}
                 </div>
                 <div><Label>Amount *</Label><Input type="number" step="0.01" value={payData.amount} data-testid="salary-amount" onChange={(e) => setPayData({ ...payData, amount: e.target.value })} required /></div>
-                <div><Label>Period *</Label><Input value={payData.period} placeholder="e.g. Feb 2026" data-testid="salary-period" onChange={(e) => setPayData({ ...payData, period: e.target.value })} required /></div>
+                <div><Label>Period *</Label>
+                  <Select value={payData.period} onValueChange={(v) => setPayData({ ...payData, period: v })}>
+                    <SelectTrigger data-testid="salary-period"><SelectValue placeholder="Select month" /></SelectTrigger>
+                    <SelectContent>{getMonthOptions().map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
                 <div><Label>Mode</Label>
                   <Select value={payData.payment_mode} onValueChange={(v) => setPayData({ ...payData, payment_mode: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
