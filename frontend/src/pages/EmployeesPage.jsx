@@ -121,7 +121,7 @@ export default function EmployeesPage() {
 
   const getMonthOptions = () => {
     const months = [];
-    for (let i = -2; i <= 12; i++) { const d = new Date(); d.setMonth(d.getMonth() - i); months.push(d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })); }
+    for (let i = -2; i <= 96; i++) { const d = new Date(); d.setMonth(d.getMonth() - i); months.push(d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })); }
     return months;
   };
 
