@@ -3735,6 +3735,8 @@ async def download_import_template(data_type: str, current_user: User = Depends(
         "employees": ["name", "document_id", "phone", "email", "position", "salary"],
         "items": ["name", "unit_price", "category"],
         "branches": ["name", "location"],
+        "sales": ["date", "sale_type", "amount", "discount", "payment_mode", "notes"],
+        "expenses_import": ["date", "category", "description", "amount", "payment_mode"],
     }
     if data_type not in templates:
         raise HTTPException(status_code=400, detail="Invalid type")
