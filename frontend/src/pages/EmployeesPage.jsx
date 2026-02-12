@@ -365,6 +365,7 @@ export default function EmployeesPage() {
                     <div className="p-3 bg-secondary/50 rounded-lg"><div className="text-xs text-muted-foreground">Monthly Salary</div><div className="text-xl font-bold"> SAR {empSummary.employee.salary.toFixed(2)}</div></div>
                     <div className="p-3 bg-success/10 rounded-lg"><div className="text-xs text-muted-foreground">Total Paid</div><div className="text-xl font-bold text-success"> SAR {empSummary.total_all_time.toFixed(2)}</div></div>
                     <div className="p-3 bg-warning/10 rounded-lg"><div className="text-xs text-muted-foreground">Loan Balance</div><div className="text-xl font-bold text-warning"> SAR {empSummary.loan.balance.toFixed(2)}</div></div>
+                    {(empSummary?.old_salary_balance || 0) > 0 && <div className="p-3 bg-error/10 rounded-lg"><div className="text-xs text-muted-foreground">Old Balance Due</div><div className="text-xl font-bold text-error"> SAR {empSummary.old_salary_balance.toFixed(2)}</div></div>}
                   </div>
                   {empSummary.monthly_summary.map((m) => (
                     <Card key={m.period} className="border-border">
