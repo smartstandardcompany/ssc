@@ -18,6 +18,12 @@ export default function ExpensesPage() {
   const [expenses, setExpenses] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [customCategories, setCustomCategories] = useState([]);
+  const [recurringExpenses, setRecurringExpenses] = useState([]);
+  const [showRecurringForm, setShowRecurringForm] = useState(false);
+  const [showRenewDialog, setShowRenewDialog] = useState(false);
+  const [renewingRec, setRenewingRec] = useState(null);
+  const [renewData, setRenewData] = useState({ amount: '', payment_mode: 'cash', branch_id: '' });
+  const [recData, setRecData] = useState({ name: '', category: 'rent', amount: '', frequency: 'monthly', branch_id: '', next_due_date: '', alert_days: 7 });
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [branches, setBranches] = useState([]);
