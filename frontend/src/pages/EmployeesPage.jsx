@@ -18,6 +18,8 @@ import { BranchFilter } from '@/components/BranchFilter';
 
 const PAYMENT_TYPES = [
   { value: 'salary', label: 'Salary', color: 'bg-success/20 text-success' },
+  { value: 'bonus', label: 'Bonus', color: 'bg-primary/20 text-primary' },
+  { value: 'old_balance', label: 'Old Balance Payment', color: 'bg-info/20 text-info' },
   { value: 'advance', label: 'Advance / Loan', color: 'bg-info/20 text-info' },
   { value: 'loan_repayment', label: 'Loan Repayment', color: 'bg-primary/20 text-primary' },
   { value: 'overtime', label: 'Overtime', color: 'bg-primary/20 text-primary' },
