@@ -2187,6 +2187,7 @@ async def get_employee_summary(emp_id: str, current_user: User = Depends(get_cur
         "monthly_summary": summary,
         "total_all_time": sum(p.get("amount", 0) for p in payments),
         "loan": {"total_advance": total_advance, "total_repaid": total_repaid, "balance": emp.get("loan_balance", 0)},
+        "old_salary_balance": emp.get("old_salary_balance", 0),
         "leave": {
             "annual_used": annual_used, "annual_remaining": emp.get("annual_leave_entitled", 30) - annual_used,
             "sick_used": sick_used, "sick_remaining": emp.get("sick_leave_entitled", 15) - sick_used,
