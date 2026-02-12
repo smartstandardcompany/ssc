@@ -1633,10 +1633,9 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
         "vat_on_sales": round(total_sales * 0.15, 2),
         "vat_on_purchases": round(total_supplier_payments * 0.15, 2),
         "vat_payable": round((total_sales - total_supplier_payments) * 0.15, 2),
-        "branch_alerts": branch_alerts
     }
 
-    # Calculate branch loss alerts (before return)
+    # Calculate branch loss alerts
     branch_alerts_list = []
     all_branches = await db.branches.find({}, {"_id": 0}).to_list(100)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
