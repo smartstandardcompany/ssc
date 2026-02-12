@@ -4087,6 +4087,68 @@ async def send_daily_report(current_user: User = Depends(get_current_user)):
     
     return {"message": "Report sent", "details": results}
 
+# Send specific report via WhatsApp
+async def send_whatsapp_message(message: str):
+    config = await db.whatsapp_config.find_one({}, {"_id": 0})
+    if not config or not config.get("account_sid") or not config.get("auth_token"):
+        return False, "WhatsApp not configured"
+    try:
+        client_tw = Client(config["account_sid"], config["auth_token"])
+        client_tw.messages.create(from_=f'whatsapp:{config["phone_number"]}', body=message, to=f'whatsapp:{config["recipient_number"]}')
+        return True, "Sent"
+    except Exception as e:
+        return False, str(e)
+
+@api_router.post("/whatsapp/send-branch-report")
+async def send_branch_report_wa(body: dict, current_user: User = Depends(get_current_user)):
+    branch_id = body.get("branch_id")
+    branch = await db.branches.find_one({"id": branch_id}, {"_id": 0}) if branch_id else None
+    bname = branch["name"] if branch else "All Branches"
+    
+    sales = await db.sales.find({"branch_id": branch_id} if branch_id else {}, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find({"branch_id": branch_id} if branch_id else {}, {"_id": 0}).to_list(10000)
+    
+    total_sales = sum(s.get("final_amount", s["amount"]) for s in sales)
+    total_exp = sum(e["amount"] for e in expenses)
+    
+    msg = f"SSC Track - {bname}\n\nSales: SAR {total_sales:,.2f}\nExpenses: SAR {total_exp:,.2f}\nProfit: SAR {(total_sales-total_exp):,.2f}\nTransactions: {len(sales)}"
+    ok, err = await send_whatsapp_message(msg)
+    if ok: return {"message": f"Branch report sent for {bname}"}
+    raise HTTPException(status_code=500, detail=err)
+
+@api_router.post("/whatsapp/send-employee-report")
+async def send_employee_report_wa(body: dict, current_user: User = Depends(get_current_user)):
+    employees = await db.employees.find({"active": {"$ne": False}}, {"_id": 0}).to_list(1000)
+    total_salary = sum(e.get("salary", 0) for e in employees)
+    total_loan = sum(e.get("loan_balance", 0) for e in employees)
+    
+    msg = f"SSC Track - Employee Summary\n\nTotal Employees: {len(employees)}\nMonthly Payroll: SAR {total_salary:,.2f}\nTotal Loans: SAR {total_loan:,.2f}"
+    ok, err = await send_whatsapp_message(msg)
+    if ok: return {"message": "Employee report sent"}
+    raise HTTPException(status_code=500, detail=err)
+
+@api_router.post("/whatsapp/send-custom")
+async def send_custom_wa(body: dict, current_user: User = Depends(get_current_user)):
+    message = body.get("message", "")
+    if not message: raise HTTPException(status_code=400, detail="Message required")
+    ok, err = await send_whatsapp_message(f"SSC Track\n\n{message}")
+    if ok: return {"message": "Message sent"}
+    raise HTTPException(status_code=500, detail=err)
+
+@api_router.post("/whatsapp/send-supplier-report")
+async def send_supplier_report_wa(current_user: User = Depends(get_current_user)):
+    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+    total_credit = sum(s.get("current_credit", 0) for s in suppliers)
+    
+    lines = [f"SSC Track - Supplier Report\n\nTotal Suppliers: {len(suppliers)}\nTotal Credit Due: SAR {total_credit:,.2f}\n"]
+    for s in suppliers[:10]:
+        if s.get("current_credit", 0) > 0:
+            lines.append(f"- {s['name']}: SAR {s['current_credit']:,.2f}")
+    
+    ok, err = await send_whatsapp_message("\n".join(lines))
+    if ok: return {"message": "Supplier report sent"}
+    raise HTTPException(status_code=500, detail=err)
+
 # Export Routes
 @api_router.post("/export/reports")
 async def export_reports(export_request: ExportRequest, current_user: User = Depends(get_current_user)):
