@@ -44,8 +44,8 @@ export default function FinesPage() {
 
   const fetchData = async () => {
     try {
-      const [fR, dR, bR, eR, catR] = await Promise.all([api.get('/fines'), api.get('/salary-deductions'), api.get('/branches'), api.get('/employees'), api.get('/categories?category_type=fine')]);
-      setFines(fR.data); setDeductions(dR.data); setBranches(bR.data); setEmployees(eR.data);
+      const [fR, dR, bR, eR, catR, capR] = await Promise.all([api.get('/fines'), api.get('/salary-deductions'), api.get('/branches'), api.get('/employees'), api.get('/categories?category_type=fine'), api.get('/capital-expenses')]);
+      setFines(fR.data); setDeductions(dR.data); setBranches(bR.data); setEmployees(eR.data); setCapitalExpenses(capR.data);
       const defaults = ['government', 'traffic', 'labor', 'municipality', 'other'];
       const custom = catR.data.map(c => c.name.toLowerCase()).filter(n => !defaults.includes(n));
       setFineTypes([...defaults, ...custom]);
