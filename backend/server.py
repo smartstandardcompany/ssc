@@ -3426,6 +3426,40 @@ async def delete_recurring_expense(rec_id: str, current_user: User = Depends(get
     await db.recurring_expenses.delete_one({"id": rec_id})
     return {"message": "Recurring expense deleted"}
 
+@api_router.post("/recurring-expenses/{rec_id}/renew-pay")
+async def renew_pay_recurring(rec_id: str, body: dict, current_user: User = Depends(get_current_user)):
+    rec = await db.recurring_expenses.find_one({"id": rec_id}, {"_id": 0})
+    if not rec: raise HTTPException(status_code=404, detail="Not found")
+    
+    amount = float(body.get("amount", rec["amount"]))
+    mode = body.get("payment_mode", "cash")
+    branch_id = body.get("branch_id") or rec.get("branch_id")
+    if branch_id == '': branch_id = None
+    
+    # Create expense record
+    expense = Expense(category=rec.get("category", "other"), description=f"{rec['name']} - Renewed", amount=amount,
+                      payment_mode=mode, branch_id=branch_id, date=datetime.now(timezone.utc), notes=f"Recurring: {rec['name']}", created_by=current_user.id)
+    e_dict = expense.model_dump()
+    e_dict["date"] = e_dict["date"].isoformat()
+    e_dict["created_at"] = e_dict["created_at"].isoformat()
+    await db.expenses.insert_one(e_dict)
+    
+    # Update next due date
+    freq = rec.get("frequency", "monthly")
+    due = rec.get("next_due_date")
+    if isinstance(due, str): due = datetime.fromisoformat(due)
+    if due is None: due = datetime.now(timezone.utc)
+    if freq == "monthly": new_due = due.replace(month=due.month % 12 + 1) if due.month < 12 else due.replace(year=due.year + 1, month=1)
+    elif freq == "quarterly":
+        m = due.month + 3
+        new_due = due.replace(year=due.year + m // 12, month=m % 12 or 12) if m > 12 else due.replace(month=m)
+    elif freq == "yearly": new_due = due.replace(year=due.year + 1)
+    else: new_due = due.replace(month=due.month % 12 + 1) if due.month < 12 else due.replace(year=due.year + 1, month=1)
+    
+    await db.recurring_expenses.update_one({"id": rec_id}, {"$set": {"next_due_date": new_due.isoformat(), "amount": amount}})
+    
+    return {"message": f"Paid SAR {amount:.2f} & renewed. Next due: {new_due.strftime('%d %b %Y')}"}
+
 # Employee Pending Salary Summary
 @api_router.get("/employees/pending-summary")
 async def get_employees_pending(current_user: User = Depends(get_current_user)):
