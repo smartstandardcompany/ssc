@@ -4102,18 +4102,46 @@ async def send_whatsapp_message(message: str):
 @api_router.post("/whatsapp/send-branch-report")
 async def send_branch_report_wa(body: dict, current_user: User = Depends(get_current_user)):
     branch_id = body.get("branch_id")
-    branch = await db.branches.find_one({"id": branch_id}, {"_id": 0}) if branch_id else None
-    bname = branch["name"] if branch else "All Branches"
+    all_branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branch_map = {b["id"]: b["name"] for b in all_branches}
     
-    sales = await db.sales.find({"branch_id": branch_id} if branch_id else {}, {"_id": 0}).to_list(10000)
-    expenses = await db.expenses.find({"branch_id": branch_id} if branch_id else {}, {"_id": 0}).to_list(10000)
+    if branch_id:
+        target_branches = [b for b in all_branches if b["id"] == branch_id]
+    else:
+        target_branches = all_branches
     
-    total_sales = sum(s.get("final_amount", s["amount"]) for s in sales)
-    total_exp = sum(e["amount"] for e in expenses)
+    sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
+    sp = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
     
-    msg = f"SSC Track - {bname}\n\nSales: SAR {total_sales:,.2f}\nExpenses: SAR {total_exp:,.2f}\nProfit: SAR {(total_sales-total_exp):,.2f}\nTransactions: {len(sales)}"
-    ok, err = await send_whatsapp_message(msg)
-    if ok: return {"message": f"Branch report sent for {bname}"}
+    lines = ["SSC Track - Branch Report\n"]
+    for br in target_branches:
+        bid = br["id"]
+        br_sales = sum(s.get("final_amount", s["amount"]) for s in sales if s.get("branch_id") == bid)
+        br_exp = sum(e["amount"] for e in expenses if e.get("branch_id") == bid)
+        br_sp = sum(p["amount"] for p in sp if p.get("branch_id") == bid)
+        cash = sum(p["amount"] for s in sales if s.get("branch_id") == bid for p in s.get("payment_details", []) if p.get("mode") == "cash")
+        bank = sum(p["amount"] for s in sales if s.get("branch_id") == bid for p in s.get("payment_details", []) if p.get("mode") == "bank")
+        profit = br_sales - br_exp - br_sp
+        
+        # Expense categories
+        exp_cats = {}
+        for e in expenses:
+            if e.get("branch_id") == bid:
+                exp_cats[e["category"]] = exp_cats.get(e["category"], 0) + e["amount"]
+        cat_str = " | ".join(f"{k}: SAR {v:,.0f}" for k, v in sorted(exp_cats.items(), key=lambda x: -x[1])[:5])
+        
+        lines.append(f"*{br['name']}*")
+        lines.append(f"Sales: SAR {br_sales:,.2f}")
+        lines.append(f"Cash: SAR {cash:,.0f} | Bank: SAR {bank:,.0f}")
+        lines.append(f"Expenses: SAR {br_exp:,.2f}")
+        if cat_str: lines.append(f"  {cat_str}")
+        lines.append(f"Supplier: SAR {br_sp:,.2f}")
+        lines.append(f"{'Profit' if profit >= 0 else 'LOSS'}: SAR {profit:,.2f}")
+        lines.append("")
+    
+    ok, err = await send_whatsapp_message("\n".join(lines))
+    if ok: return {"message": f"Branch report sent"}
     raise HTTPException(status_code=500, detail=err)
 
 @api_router.post("/whatsapp/send-employee-report")
