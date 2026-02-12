@@ -3482,11 +3482,27 @@ async def get_employees_pending(current_user: User = Depends(get_current_user)):
         sick_used = sum(l.get("days", 0) for l in emp_leaves if l.get("leave_type") == "sick" and l.get("status") == "approved")
         pending_leaves = sum(1 for l in emp_leaves if l.get("status") == "pending")
         
+        # Check if currently on leave
+        on_leave = None
+        for l in emp_leaves:
+            if l.get("status") == "approved":
+                start = l.get("start_date")
+                end = l.get("end_date")
+                if isinstance(start, str): start = datetime.fromisoformat(start)
+                if isinstance(end, str): end = datetime.fromisoformat(end)
+                if start and end:
+                    if start.tzinfo is None: start = start.replace(tzinfo=timezone.utc)
+                    if end.tzinfo is None: end = end.replace(tzinfo=timezone.utc)
+                    if start <= now <= end:
+                        on_leave = {"from": start.strftime("%d %b"), "to": end.strftime("%d %b %Y"), "type": l.get("leave_type", "")}
+                        break
+        
         result.append({
             "id": eid, "name": emp["name"], "position": emp.get("position", ""),
             "branch_id": emp.get("branch_id"),
             "salary": emp.get("salary", 0), "salary_paid": salary_paid, "pending_salary": max(0, pending),
             "loan_balance": emp.get("loan_balance", 0),
+            "on_leave": on_leave,
             "annual_leave_remaining": emp.get("annual_leave_entitled", 30) - annual_used,
             "sick_leave_remaining": emp.get("sick_leave_entitled", 15) - sick_used,
             "pending_leave_requests": pending_leaves
