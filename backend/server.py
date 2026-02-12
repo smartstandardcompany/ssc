@@ -616,6 +616,32 @@ class SalaryDeductionCreate(BaseModel):
     branch_id: Optional[str] = None
     date: datetime
 
+# Salary History (increments tracking)
+class SalaryHistory(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    employee_id: str
+    old_salary: float
+    new_salary: float
+    effective_date: datetime
+    reason: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Branch Payback (settle cross-branch dues)
+class BranchPayback(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    from_branch_id: str
+    to_branch_id: str
+    from_branch_name: str
+    to_branch_name: str
+    amount: float
+    payment_mode: str = "cash"
+    date: datetime
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+
 # Partner Model
 class Partner(BaseModel):
     model_config = ConfigDict(extra="ignore")
