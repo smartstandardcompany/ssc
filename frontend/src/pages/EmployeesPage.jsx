@@ -110,6 +110,21 @@ export default function EmployeesPage() {
     } catch { toast.error('Failed to download payslip'); }
   };
 
+  const downloadEmpReport = async (empId) => {
+    try {
+      const res = await api.get(`/employees/${empId}/report/pdf`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a'); link.href = url; link.setAttribute('download', 'employee_report.pdf'); document.body.appendChild(link); link.click(); link.remove();
+      toast.success('Report downloaded');
+    } catch { toast.error('Failed'); }
+  };
+
+  const getMonthOptions = () => {
+    const months = [];
+    for (let i = -2; i <= 12; i++) { const d = new Date(); d.setMonth(d.getMonth() - i); months.push(d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })); }
+    return months;
+  };
+
   const [empDocs, setEmpDocs] = useState([]);
   const [newDoc, setNewDoc] = useState({ document_type: 'passport', document_number: '', expiry_date: '' });
 
