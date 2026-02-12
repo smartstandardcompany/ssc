@@ -307,20 +307,26 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {branchDues && Object.keys(branchDues.dues || {}).length > 0 && (
+          {branchDues && (Object.keys(branchDues.dues || {}).length > 0 || Object.keys(branchDues.paybacks || {}).length > 0) && (
             <Card className="border-border md:col-span-2">
               <CardHeader className="pb-2"><CardTitle className="font-outfit text-base">Branch-to-Branch Dues</CardTitle></CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {Object.entries(branchDues.dues).map(([key, amt]) => (
-                    <div key={key} className="flex justify-between items-center p-3 bg-info/10 rounded-lg border border-info/20" data-testid="branch-due-item">
+                  {Object.entries(branchDues.dues || {}).map(([key, amt]) => (
+                    <div key={key} className="flex justify-between items-center p-3 bg-error/5 rounded-lg border border-error/20" data-testid="branch-due-item">
                       <span className="text-sm font-medium">{key}</span>
-                      <span className="font-bold text-info"> SAR {amt.toFixed(2)}</span>
+                      <span className="font-bold text-error"> SAR {amt.toFixed(2)}</span>
+                    </div>
+                  ))}
+                  {Object.entries(branchDues.paybacks || {}).map(([key, amt]) => (
+                    <div key={key} className="flex justify-between items-center p-3 bg-success/5 rounded-lg border border-success/20">
+                      <span className="text-sm font-medium">{key}</span>
+                      <span className="font-bold text-success"> SAR {amt.toFixed(2)}</span>
                     </div>
                   ))}
                   <div className="flex justify-between items-center p-3 bg-primary/10 rounded-lg border border-primary/20 mt-2">
-                    <span className="text-sm font-bold">Total Cross-Branch</span>
-                    <span className="font-bold text-primary"> SAR {(branchDues.total_cross_branch || 0).toFixed(2)}</span>
+                    <span className="text-sm font-bold">Net Due</span>
+                    <span className="font-bold text-primary"> SAR {((branchDues.total_dues || 0) - (branchDues.total_paybacks || 0)).toFixed(2)}</span>
                   </div>
                 </div>
               </CardContent>
