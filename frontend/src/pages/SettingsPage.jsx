@@ -11,6 +11,19 @@ import { Mail, MessageCircle, Bell, Send, Upload, Download, Database, Shield } f
 import api from '@/lib/api';
 import { toast } from 'sonner';
 
+function BranchWaButtons() {
+  const [br, setBr] = useState([]);
+  useEffect(() => { api.get('/branches').then(r => setBr(r.data)).catch(() => {}); }, []);
+  return (
+    <div className="flex gap-2 flex-wrap">
+      <Button variant="outline" className="rounded-xl h-8 text-xs" onClick={async () => { try { const res = await api.post('/whatsapp/send-branch-report', {}); toast.success(res.data.message); } catch(e) { toast.error(e.response?.data?.detail || 'Failed'); } }}>All Branches</Button>
+      {br.map(b => (
+        <Button key={b.id} variant="outline" className="rounded-xl h-8 text-xs" onClick={async () => { try { const res = await api.post('/whatsapp/send-branch-report', { branch_id: b.id }); toast.success(res.data.message); } catch(e) { toast.error(e.response?.data?.detail || 'Failed'); } }}>{b.name}</Button>
+      ))}
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const [emailSettings, setEmailSettings] = useState({ smtp_host: '', smtp_port: 587, username: '', password: '', from_email: '', use_tls: true });
   const [whatsappSettings, setWhatsappSettings] = useState({ account_sid: '', auth_token: '', phone_number: '', recipient_number: '', enabled: true });
