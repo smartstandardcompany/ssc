@@ -427,6 +427,91 @@ export default function ExpensesPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Recurring Expenses */}
+        <Card className="border-stone-100">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle className="font-outfit text-base">Recurring Expenses (Rent, Insurance, etc.)</CardTitle>
+              <Button size="sm" variant="outline" onClick={() => setShowRecurringForm(!showRecurringForm)} className="rounded-xl"><Plus size={14} className="mr-1" />Add Recurring</Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {showRecurringForm && (
+              <div className="p-4 bg-stone-50 rounded-xl border mb-4 space-y-3">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div><Label className="text-xs">Name *</Label><Input value={recData.name} onChange={(e) => setRecData({ ...recData, name: e.target.value })} placeholder="Office Rent" className="h-8" /></div>
+                  <div><Label className="text-xs">Category</Label><Input value={recData.category} onChange={(e) => setRecData({ ...recData, category: e.target.value })} placeholder="rent" className="h-8" /></div>
+                  <div><Label className="text-xs">Amount *</Label><Input type="number" step="0.01" value={recData.amount} onChange={(e) => setRecData({ ...recData, amount: e.target.value })} className="h-8" /></div>
+                  <div><Label className="text-xs">Frequency</Label>
+                    <Select value={recData.frequency} onValueChange={(v) => setRecData({ ...recData, frequency: v })}><SelectTrigger className="h-8"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="monthly">Monthly</SelectItem><SelectItem value="quarterly">Quarterly</SelectItem><SelectItem value="yearly">Yearly</SelectItem></SelectContent></Select>
+                  </div>
+                  <div><Label className="text-xs">Branch</Label>
+                    <Select value={recData.branch_id || "none"} onValueChange={(v) => setRecData({ ...recData, branch_id: v === "none" ? "" : v })}><SelectTrigger className="h-8"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">All</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select>
+                  </div>
+                  <div><Label className="text-xs">Next Due *</Label><Input type="date" value={recData.next_due_date} onChange={(e) => setRecData({ ...recData, next_due_date: e.target.value })} className="h-8" /></div>
+                  <div><Label className="text-xs">Alert (days)</Label><Input type="number" value={recData.alert_days} onChange={(e) => setRecData({ ...recData, alert_days: e.target.value })} className="h-8" /></div>
+                  <div className="flex items-end"><Button size="sm" className="h-8 rounded-xl" onClick={async () => {
+                    if (!recData.name || !recData.amount || !recData.next_due_date) { toast.error('Fill required fields'); return; }
+                    try {
+                      await api.post('/recurring-expenses', { ...recData, amount: parseFloat(recData.amount), alert_days: parseInt(recData.alert_days) || 7, branch_id: recData.branch_id || null, next_due_date: new Date(recData.next_due_date).toISOString() });
+                      toast.success('Added'); setShowRecurringForm(false); setRecData({ name: '', category: 'rent', amount: '', frequency: 'monthly', branch_id: '', next_due_date: '', alert_days: 7 }); fetchData();
+                    } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+                  }}>Save</Button></div>
+                </div>
+              </div>
+            )}
+            <div className="space-y-2">
+              {recurringExpenses.map(r => {
+                const daysLeft = r.days_until_due;
+                const isOverdue = daysLeft != null && daysLeft < 0;
+                const isNear = daysLeft != null && daysLeft <= (r.alert_days || 7) && daysLeft >= 0;
+                return (
+                  <div key={r.id} className={`flex justify-between items-center p-3 rounded-xl border ${isOverdue ? 'bg-error/5 border-error/30' : isNear ? 'bg-warning/5 border-warning/30' : 'bg-stone-50'}`}>
+                    <div>
+                      <div className="font-medium text-sm">{r.name}</div>
+                      <div className="text-xs text-muted-foreground capitalize">{r.category} | {r.frequency} | SAR {r.amount.toFixed(2)}</div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {daysLeft != null && <Badge className={isOverdue ? 'bg-error/20 text-error' : isNear ? 'bg-warning/20 text-warning' : 'bg-success/20 text-success'}>{isOverdue ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft}d left`}</Badge>}
+                      <Button size="sm" variant="outline" className="h-7 text-xs rounded-xl" onClick={() => { setRenewingRec(r); setRenewData({ amount: r.amount.toString(), payment_mode: 'cash', branch_id: r.branch_id || '' }); setShowRenewDialog(true); }}>Renew & Pay</Button>
+                      <Button size="sm" variant="ghost" className="h-7 text-xs text-error" onClick={async () => { if (window.confirm('Delete?')) { await api.delete(`/recurring-expenses/${r.id}`); fetchData(); } }}><Trash2 size={12} /></Button>
+                    </div>
+                  </div>
+                );
+              })}
+              {recurringExpenses.length === 0 && <p className="text-center text-muted-foreground py-4">No recurring expenses. Add rent, insurance, etc.</p>}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Renew & Pay Dialog */}
+        <Dialog open={showRenewDialog} onOpenChange={setShowRenewDialog}>
+          <DialogContent>
+            <DialogHeader><DialogTitle className="font-outfit">Renew & Pay - {renewingRec?.name}</DialogTitle></DialogHeader>
+            <p className="text-sm text-muted-foreground capitalize">{renewingRec?.category} | {renewingRec?.frequency}</p>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div><Label>Amount *</Label><Input type="number" step="0.01" value={renewData.amount} onChange={(e) => setRenewData({ ...renewData, amount: e.target.value })} /></div>
+                <div><Label>Payment Mode</Label>
+                  <Select value={renewData.payment_mode} onValueChange={(v) => setRenewData({ ...renewData, payment_mode: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="cash">Cash</SelectItem><SelectItem value="bank">Bank</SelectItem></SelectContent></Select>
+                </div>
+                <div><Label>Branch</Label>
+                  <Select value={renewData.branch_id || "none"} onValueChange={(v) => setRenewData({ ...renewData, branch_id: v === "none" ? "" : v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No Branch</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Button className="rounded-xl" onClick={async () => {
+                  try {
+                    const res = await api.post(`/recurring-expenses/${renewingRec.id}/renew-pay`, { amount: parseFloat(renewData.amount), payment_mode: renewData.payment_mode, branch_id: renewData.branch_id || null });
+                    toast.success(res.data.message); setShowRenewDialog(false); fetchData();
+                  } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+                }}>Pay & Renew</Button>
+                <Button variant="outline" className="rounded-xl" onClick={() => setShowRenewDialog(false)}>Cancel</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
