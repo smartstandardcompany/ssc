@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
