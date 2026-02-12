@@ -444,6 +444,31 @@ export default function EmployeesPage() {
                   {(!empSummary?.deductions?.length && !empSummary?.fines?.length) && <p className="text-center text-muted-foreground py-4">No deductions or fines</p>}
                 </TabsContent>
 
+                <TabsContent value="salary_history" className="space-y-4">
+                  <div className="flex gap-2 items-end p-3 bg-stone-50 rounded-xl border">
+                    <div className="w-28"><Label className="text-xs">New Salary</Label><Input type="number" step="0.01" value={newIncrement.new_salary} onChange={(e) => setNewIncrement({ ...newIncrement, new_salary: e.target.value })} className="h-8" placeholder="SAR" /></div>
+                    <div className="w-36"><Label className="text-xs">Effective Date</Label><Input type="date" value={newIncrement.effective_date} onChange={(e) => setNewIncrement({ ...newIncrement, effective_date: e.target.value })} className="h-8" /></div>
+                    <div className="flex-1"><Label className="text-xs">Reason</Label><Input value={newIncrement.reason} onChange={(e) => setNewIncrement({ ...newIncrement, reason: e.target.value })} className="h-8" placeholder="Annual increment" /></div>
+                    <Button size="sm" className="h-8 rounded-xl" onClick={async () => {
+                      if (!newIncrement.new_salary || !newIncrement.effective_date || !empSummary?.employee?.id) return;
+                      try {
+                        await api.post('/salary-history', { employee_id: empSummary.employee.id, new_salary: newIncrement.new_salary, effective_date: new Date(newIncrement.effective_date).toISOString(), reason: newIncrement.reason });
+                        toast.success('Salary updated'); setNewIncrement({ new_salary: '', effective_date: '', reason: '' });
+                        const h = await api.get(`/salary-history/${empSummary.employee.id}`); setSalaryHistory(h.data); fetchData();
+                      } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+                    }}>Update Salary</Button>
+                  </div>
+                  <div className="space-y-2">
+                    {salaryHistory.map(h => (
+                      <div key={h.id} className="flex justify-between items-center p-3 rounded-xl border bg-stone-50">
+                        <div><span className="text-sm font-medium">SAR {h.old_salary.toFixed(2)} → SAR {h.new_salary.toFixed(2)}</span><div className="text-xs text-muted-foreground mt-1">{h.reason || 'No reason'} | {new Date(h.effective_date).toLocaleDateString()}</div></div>
+                        <Badge className={h.new_salary > h.old_salary ? 'bg-success/20 text-success' : 'bg-error/20 text-error'}>{h.new_salary > h.old_salary ? '+' : ''}{(h.new_salary - h.old_salary).toFixed(2)}</Badge>
+                      </div>
+                    ))}
+                    {salaryHistory.length === 0 && <p className="text-center text-muted-foreground py-4">No salary history</p>}
+                  </div>
+                </TabsContent>
+
                 <TabsContent value="docs" className="space-y-4">
                   <div className="flex gap-2 items-end p-3 bg-stone-50 rounded-xl border">
                     <div className="w-36"><Label className="text-xs">Type</Label>
