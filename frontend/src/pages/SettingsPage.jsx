@@ -185,12 +185,7 @@ export default function SettingsPage() {
 
                   <div className="mt-3">
                     <Label className="text-xs mb-2 block">Send Branch Report via WhatsApp</Label>
-                    <div className="flex gap-2 flex-wrap">
-                      <Button variant="outline" className="rounded-xl h-8 text-xs" onClick={async () => { try { const res = await api.post('/whatsapp/send-branch-report', {}); toast.success(res.data.message); } catch(e) { toast.error(e.response?.data?.detail || 'Failed'); } }}>All Branches</Button>
-                      {(() => { const [br, setBr] = React.useState([]); React.useEffect(() => { api.get('/branches').then(r => setBr(r.data)).catch(() => {}); }, []); return br.map(b => (
-                        <Button key={b.id} variant="outline" className="rounded-xl h-8 text-xs" onClick={async () => { try { const res = await api.post('/whatsapp/send-branch-report', { branch_id: b.id }); toast.success(res.data.message); } catch(e) { toast.error(e.response?.data?.detail || 'Failed'); } }}>{b.name}</Button>
-                      )); })()}
-                    </div>
+                    <BranchWaButtons />
                   </div>
                   <div className="mt-3 p-3 bg-stone-50 rounded-xl border">
                     <Label className="text-xs">Send Custom Message via WhatsApp</Label>
