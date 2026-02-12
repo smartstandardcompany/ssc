@@ -172,6 +172,17 @@ export default function FinesPage() {
                     <td className="p-3 text-sm text-right text-success">SAR {(f.paid_amount || 0).toFixed(2)}</td>
                     <td className="p-3 text-center"><Badge className={f.payment_status === 'paid' ? 'bg-success/20 text-success' : f.payment_status === 'partial' ? 'bg-warning/20 text-warning' : 'bg-error/20 text-error'}>{f.payment_status}</Badge></td>
                     <td className="p-3 text-right"><div className="flex gap-1 justify-end">
+                      {f.file_name ? (
+                        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={async () => {
+                          try { const res = await api.get(`/fines/${f.id}/download`, { responseType: 'blob' }); const url = window.URL.createObjectURL(new Blob([res.data])); const link = document.createElement('a'); link.href = url; link.setAttribute('download', f.file_name); document.body.appendChild(link); link.click(); link.remove(); } catch { toast.error('Failed'); }
+                        }}><Download size={12} className="mr-1" />{f.file_name.length > 8 ? f.file_name.slice(0,8)+'...' : f.file_name}</Button>
+                      ) : (
+                        <label className="cursor-pointer"><input type="file" className="hidden" onChange={async (e) => {
+                          const file = e.target.files[0]; if (!file) return;
+                          try { const form = new FormData(); form.append('file', file); await api.post(`/fines/${f.id}/upload`, form, { headers: { 'Content-Type': 'multipart/form-data' } }); toast.success('Proof uploaded'); fetchData(); } catch { toast.error('Upload failed'); }
+                          e.target.value = '';
+                        }} /><Button size="sm" variant="ghost" className="h-7 text-xs" asChild><span><Upload size={12} className="mr-1" />Proof</span></Button></label>
+                      )}
                       {f.payment_status !== 'paid' && <Button size="sm" variant="outline" onClick={() => { setPayingFine(f); setPayData({ amount: (f.amount - (f.paid_amount || 0)).toFixed(2), payment_mode: 'cash' }); setShowPayDialog(true); }} className="h-7 text-xs"><DollarSign size={12} className="mr-1" />Pay</Button>}
                       <Button size="sm" variant="ghost" onClick={async () => { if (window.confirm('Delete?')) { await api.delete(`/fines/${f.id}`); fetchData(); } }} className="h-7 text-xs text-error"><Trash2 size={12} /></Button>
                     </div></td>
