@@ -59,16 +59,18 @@ export default function ExpensesPage() {
 
   const fetchData = async () => {
     try {
-      const [expensesRes, suppliersRes, categoriesRes, branchesRes] = await Promise.all([
+      const [expensesRes, suppliersRes, categoriesRes, branchesRes, recRes] = await Promise.all([
         api.get('/expenses'),
         api.get('/suppliers'),
         api.get('/categories?category_type=expense'),
         api.get('/branches'),
+        api.get('/recurring-expenses'),
       ]);
       setExpenses(expensesRes.data);
       setSuppliers(suppliersRes.data);
       setCustomCategories(categoriesRes.data);
       setBranches(branchesRes.data);
+      setRecurringExpenses(recRes.data);
     } catch (error) {
       toast.error('Failed to fetch data');
     } finally {
