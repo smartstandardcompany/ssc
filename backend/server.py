@@ -274,6 +274,7 @@ class Employee(BaseModel):
     join_date: Optional[datetime] = None
     document_expiry: Optional[datetime] = None
     loan_balance: float = 0
+    old_salary_balance: float = 0  # Old unpaid salary balance
     annual_leave_entitled: int = 30
     sick_leave_entitled: int = 15
     ticket_entitled: int = 1  # Tickets per 2 years
