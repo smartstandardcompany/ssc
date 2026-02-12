@@ -177,7 +177,22 @@ export default function SettingsPage() {
 
                 <div className="flex gap-3 pt-2">
                   <Button onClick={savePrefs} className="rounded-full" data-testid="save-prefs">Save Preferences</Button>
-                  <Button variant="outline" onClick={sendDailyReport} className="rounded-full" data-testid="send-report"><Send size={14} className="mr-2" />Send Daily Report Now</Button>
+                  <div className="flex gap-2 flex-wrap">
+                    <Button variant="outline" onClick={sendDailyReport} className="rounded-xl" data-testid="send-report"><Send size={14} className="mr-2" />Daily Sales</Button>
+                    <Button variant="outline" className="rounded-xl" onClick={async () => { try { const res = await api.post('/whatsapp/send-supplier-report'); toast.success(res.data.message); } catch(e) { toast.error(e.response?.data?.detail || 'Failed'); } }}><Send size={14} className="mr-2" />Supplier Report</Button>
+                    <Button variant="outline" className="rounded-xl" onClick={async () => { try { const res = await api.post('/whatsapp/send-employee-report', {}); toast.success(res.data.message); } catch(e) { toast.error(e.response?.data?.detail || 'Failed'); } }}><Send size={14} className="mr-2" />Employee Report</Button>
+                  </div>
+                  <div className="mt-3 p-3 bg-stone-50 rounded-xl border">
+                    <Label className="text-xs">Send Custom Message via WhatsApp</Label>
+                    <div className="flex gap-2 mt-2">
+                      <Input id="custom-wa-msg" placeholder="Type your message..." className="h-9" />
+                      <Button variant="outline" className="rounded-xl h-9" onClick={async () => {
+                        const msg = document.getElementById('custom-wa-msg').value;
+                        if (!msg) { toast.error('Enter a message'); return; }
+                        try { const res = await api.post('/whatsapp/send-custom', { message: msg }); toast.success(res.data.message); document.getElementById('custom-wa-msg').value = ''; } catch(e) { toast.error(e.response?.data?.detail || 'Failed'); }
+                      }}><Send size={14} className="mr-1" />Send</Button>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
