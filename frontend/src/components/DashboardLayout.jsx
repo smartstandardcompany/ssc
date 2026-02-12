@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, ShoppingCart, Store, Users, Truck, Receipt, BarChart3, LogOut, Shield, CreditCard, FileText, Tags, UserCheck, FileWarning, Bell, User as UserIcon, Settings, ArrowLeftRight, FileInput, AlertTriangle, Handshake } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Store, Users, Truck, Receipt, BarChart3, LogOut, Shield, CreditCard, FileText, Tags, UserCheck, FileWarning, Bell, User as UserIcon, Settings, ArrowLeftRight, FileInput, AlertTriangle, Handshake, HelpCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { toast } from 'sonner';
@@ -53,6 +53,7 @@ export const DashboardLayout = ({ children }) => {
     { path: '/supplier-report', icon: FileText, label: 'Supplier Report', roles: ['admin', 'manager'], perm: 'supplier_report' },
     { path: '/category-report', icon: Tags, label: 'Category Report', roles: ['admin', 'manager'], perm: 'reports' },
     { path: '/settings', icon: Settings, label: 'Settings', roles: ['admin'], perm: 'settings' },
+    { path: '/help', icon: HelpCircle, label: 'Help & Guide', roles: ['admin', 'manager', 'operator'] },
     { path: '/users', icon: Shield, label: 'Users', roles: ['admin'], perm: 'users' },
   ];
 
