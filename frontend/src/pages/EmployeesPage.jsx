@@ -261,6 +261,7 @@ export default function EmployeesPage() {
                       <td className="p-3 text-right">
                         <div className="flex gap-1 justify-end flex-wrap">
                           <Button size="sm" variant="outline" onClick={() => viewSummary(emp)} data-testid="view-summary-btn" className="h-7 text-xs"><Eye size={12} className="mr-1" />View</Button>
+                          <Button size="sm" variant="ghost" onClick={() => downloadEmpReport(emp.id)} className="h-7 text-xs" title="Download Report"><FileText size={12} /></Button>
                           <Button size="sm" variant="outline" onClick={() => { setPayingEmp(emp); setPayData(d => ({ ...d, amount: emp.salary || '', period: format(new Date(), 'MMM yyyy') })); setShowPayDialog(true); }} data-testid="pay-salary-btn" className="h-7 text-xs"><DollarSign size={12} className="mr-1" />Pay</Button>
                           <Button size="sm" variant="outline" onClick={() => { setLeaveEmp(emp); setShowLeaveDialog(true); }} data-testid="add-leave-btn" className="h-7 text-xs"><Calendar size={12} className="mr-1" />Leave</Button>
                           <Button size="sm" variant="ghost" onClick={() => handleEdit(emp)} className="h-7 text-xs"><Edit size={12} /></Button>
