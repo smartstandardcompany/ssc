@@ -20,6 +20,7 @@ import EmployeePortalPage from "./pages/EmployeePortalPage";
 import LeaveApprovalsPage from "./pages/LeaveApprovalsPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import SettingsPage from "./pages/SettingsPage";
+import HelpPage from "./pages/HelpPage";
 import CashTransfersPage from "./pages/CashTransfersPage";
 import FinesPage from "./pages/FinesPage";
 import PartnersPage from "./pages/PartnersPage";
@@ -93,6 +94,7 @@ function App() {
           <Route path="/leave-approvals" element={isAuthenticated ? <LeaveApprovalsPage /> : <Navigate to="/login" />} />
           <Route path="/notifications" element={isAuthenticated ? <NotificationsPage /> : <Navigate to="/login" />} />
           <Route path="/settings" element={isAuthenticated ? <SettingsPage /> : <Navigate to="/login" />} />
+          <Route path="/help" element={isAuthenticated ? <HelpPage /> : <Navigate to="/login" />} />
           <Route path="/cash-transfers" element={isAuthenticated ? <CashTransfersPage /> : <Navigate to="/login" />} />
           <Route path="/fines" element={isAuthenticated ? <FinesPage /> : <Navigate to="/login" />} />
           <Route path="/partners" element={isAuthenticated ? <PartnersPage /> : <Navigate to="/login" />} />
