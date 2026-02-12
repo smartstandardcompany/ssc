@@ -3156,6 +3156,67 @@ async def get_branch_dues(current_user: User = Depends(get_current_user)):
     
     return {"dues": dues, "total_cross_branch": sum(dues.values())}
 
+# Salary History Routes
+@api_router.get("/salary-history/{emp_id}")
+async def get_salary_history(emp_id: str, current_user: User = Depends(get_current_user)):
+    history = await db.salary_history.find({"employee_id": emp_id}, {"_id": 0}).sort("effective_date", -1).to_list(100)
+    for h in history:
+        if isinstance(h.get("effective_date"), str): h["effective_date"] = datetime.fromisoformat(h["effective_date"])
+    return history
+
+@api_router.post("/salary-history")
+async def add_salary_history(body: dict, current_user: User = Depends(get_current_user)):
+    emp = await db.employees.find_one({"id": body["employee_id"]}, {"_id": 0})
+    if not emp: raise HTTPException(status_code=404, detail="Employee not found")
+    old_salary = emp.get("salary", 0)
+    new_salary = float(body["new_salary"])
+    record = SalaryHistory(employee_id=body["employee_id"], old_salary=old_salary, new_salary=new_salary,
+                           effective_date=datetime.fromisoformat(body["effective_date"]), reason=body.get("reason", ""))
+    r_dict = record.model_dump()
+    r_dict["effective_date"] = r_dict["effective_date"].isoformat()
+    r_dict["created_at"] = r_dict["created_at"].isoformat()
+    await db.salary_history.insert_one(r_dict)
+    await db.employees.update_one({"id": body["employee_id"]}, {"$set": {"salary": new_salary}})
+    return {k: v for k, v in r_dict.items() if k != '_id'}
+
+# Branch Payback Routes
+@api_router.get("/branch-paybacks")
+async def get_branch_paybacks(current_user: User = Depends(get_current_user)):
+    paybacks = await db.branch_paybacks.find({}, {"_id": 0}).sort("date", -1).to_list(1000)
+    for p in paybacks:
+        for f in ['date', 'created_at']:
+            if isinstance(p.get(f), str): p[f] = datetime.fromisoformat(p[f])
+    return paybacks
+
+@api_router.post("/branch-paybacks")
+async def create_branch_payback(body: dict, current_user: User = Depends(get_current_user)):
+    branches = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
+    payback = BranchPayback(
+        from_branch_id=body["from_branch_id"], to_branch_id=body["to_branch_id"],
+        from_branch_name=branches.get(body["from_branch_id"], "?"), to_branch_name=branches.get(body["to_branch_id"], "?"),
+        amount=float(body["amount"]), payment_mode=body.get("payment_mode", "cash"),
+        date=datetime.fromisoformat(body["date"]), notes=body.get("notes", ""), created_by=current_user.id
+    )
+    p_dict = payback.model_dump()
+    p_dict["date"] = p_dict["date"].isoformat()
+    p_dict["created_at"] = p_dict["created_at"].isoformat()
+    await db.branch_paybacks.insert_one(p_dict)
+    return {k: v for k, v in p_dict.items() if k != '_id'}
+
+# Enhanced Branch Dues with payback deduction
+@api_router.get("/reports/branch-dues-net")
+async def get_branch_dues_net(current_user: User = Depends(get_current_user)):
+    dues_resp = await get_branch_dues(current_user)
+    paybacks = await db.branch_paybacks.find({}, {"_id": 0}).to_list(10000)
+    
+    # Build payback totals
+    payback_totals = {}
+    for p in paybacks:
+        key = f"{p['from_branch_name']} paid back {p['to_branch_name']}"
+        payback_totals[key] = payback_totals.get(key, 0) + p["amount"]
+    
+    return {"dues": dues_resp["dues"], "paybacks": payback_totals, "total_dues": dues_resp["total_cross_branch"], "total_paybacks": sum(payback_totals.values())}
+
 # Partner Routes
 @api_router.get("/partners")
 async def get_partners(current_user: User = Depends(get_current_user)):
