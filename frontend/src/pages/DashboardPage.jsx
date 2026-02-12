@@ -36,7 +36,7 @@ export default function DashboardPage() {
       const [statsRes, alertsRes, duesRes, pendRes] = await Promise.all([
         api.get(`/dashboard/stats${q}`),
         api.get('/documents/alerts/upcoming'),
-        api.get('/reports/branch-dues'),
+        api.get('/reports/branch-dues-net'),
         api.get('/employees/pending-summary'),
       ]);
       setStats(statsRes.data);
