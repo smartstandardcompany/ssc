@@ -3708,6 +3708,19 @@ async def import_data(file: UploadFile = File(...), data_type: str = Form(...), 
                 if doc["name"]:
                     await db.branches.insert_one(doc)
                     imported += 1
+            elif data_type == "sales":
+                amt = float(clean.get("amount", 0) or 0)
+                disc = float(clean.get("discount", 0) or 0)
+                mode = str(clean.get("payment_mode", "cash") or "cash").lower()
+                doc = {"id": str(uuid.uuid4()), "sale_type": str(clean.get("sale_type", "branch")), "branch_id": None, "customer_id": None, "amount": amt, "discount": disc, "final_amount": amt - disc, "payment_details": [{"mode": mode, "amount": amt - disc}], "credit_amount": 0, "credit_received": 0, "date": str(clean.get("date", datetime.now(timezone.utc).isoformat())), "notes": str(clean.get("notes", "") or ""), "created_by": current_user.id, "created_at": datetime.now(timezone.utc).isoformat()}
+                await db.sales.insert_one(doc)
+                imported += 1
+            elif data_type == "expenses_import":
+                amt = float(clean.get("amount", 0) or 0)
+                doc = {"id": str(uuid.uuid4()), "category": str(clean.get("category", "other")), "description": str(clean.get("description", "")), "amount": amt, "payment_mode": str(clean.get("payment_mode", "cash") or "cash"), "branch_id": None, "supplier_id": None, "date": str(clean.get("date", datetime.now(timezone.utc).isoformat())), "notes": "", "created_by": current_user.id, "created_at": datetime.now(timezone.utc).isoformat()}
+                if doc["description"]:
+                    await db.expenses.insert_one(doc)
+                    imported += 1
         except Exception as e:
             errors.append(f"Row {i+1}: {str(e)[:50]}")
     
