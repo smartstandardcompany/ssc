@@ -2062,24 +2062,34 @@ async def create_salary_payment(data: SalaryPaymentCreate, current_user: User = 
     emp = await db.employees.find_one({"id": data.employee_id}, {"_id": 0})
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Prevent duplicate salary payment for same month
+    if data.payment_type == "salary":
+        existing = await db.salary_payments.find_one({"employee_id": data.employee_id, "period": data.period, "payment_type": "salary"}, {"_id": 0})
+        if existing:
+            raise HTTPException(status_code=400, detail=f"Salary already paid for {data.period}. Use overtime/bonus for extra payments.")
+    
     payment = SalaryPayment(**data.model_dump(), employee_name=emp["name"], created_by=current_user.id)
     p_dict = payment.model_dump()
     p_dict["date"] = p_dict["date"].isoformat()
     p_dict["created_at"] = p_dict["created_at"].isoformat()
     await db.salary_payments.insert_one(p_dict)
     
-    # Update loan balance: advance increases, loan_repayment decreases
+    # Update loan balance
     loan_balance = emp.get("loan_balance", 0)
     if data.payment_type == "advance":
-        loan_balance += data.amount
-        await db.employees.update_one({"id": data.employee_id}, {"$set": {"loan_balance": loan_balance}})
+        await db.employees.update_one({"id": data.employee_id}, {"$set": {"loan_balance": loan_balance + data.amount}})
     elif data.payment_type == "loan_repayment":
-        loan_balance = max(0, loan_balance - data.amount)
-        await db.employees.update_one({"id": data.employee_id}, {"$set": {"loan_balance": loan_balance}})
+        await db.employees.update_one({"id": data.employee_id}, {"$set": {"loan_balance": max(0, loan_balance - data.amount)}})
     
-    # Create expense record for all salary-related payments (except loan_repayment which is a deduction)
+    # Reduce old salary balance if paying old_balance type
+    if data.payment_type == "old_balance":
+        old_bal = emp.get("old_salary_balance", 0)
+        await db.employees.update_one({"id": data.employee_id}, {"$set": {"old_salary_balance": max(0, old_bal - data.amount)}})
+    
+    # Create expense for ALL salary payments (except loan_repayment)
     if data.payment_type != "loan_repayment":
-        cat_map = {"salary": "salary", "advance": "salary", "overtime": "salary", "tickets": "tickets", "id_card": "id_card"}
+        cat_map = {"salary": "salary", "advance": "salary", "overtime": "salary", "bonus": "salary", "old_balance": "salary", "tickets": "tickets", "id_card": "id_card"}
         type_label = data.payment_type.replace("_", " ").title()
         expense = Expense(
             category=cat_map.get(data.payment_type, "salary"),
