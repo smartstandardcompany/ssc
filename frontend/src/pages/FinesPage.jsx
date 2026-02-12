@@ -158,7 +158,7 @@ export default function FinesPage() {
         </div>
 
         <Tabs defaultValue="fines">
-          <TabsList><TabsTrigger value="fines">Fines & Penalties</TabsTrigger><TabsTrigger value="deductions">Salary Deductions</TabsTrigger></TabsList>
+          <TabsList><TabsTrigger value="fines">Fines & Penalties</TabsTrigger><TabsTrigger value="deductions">Salary Deductions</TabsTrigger><TabsTrigger value="capital">Capital / Goodwill</TabsTrigger></TabsList>
 
           <TabsContent value="fines">
             <Card className="border-stone-100"><CardContent className="pt-6">
