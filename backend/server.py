@@ -2328,6 +2328,76 @@ async def delete_leave(leave_id: str, current_user: User = Depends(get_current_u
         raise HTTPException(status_code=404, detail="Leave not found")
     return {"message": "Leave deleted"}
 
+# Employee Report PDF
+@api_router.get("/employees/{emp_id}/report/pdf")
+async def employee_report_pdf(emp_id: str, current_user: User = Depends(get_current_user)):
+    emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    if not emp: raise HTTPException(status_code=404, detail="Employee not found")
+    
+    payments = await db.salary_payments.find({"employee_id": emp_id}, {"_id": 0}).sort("date", -1).to_list(1000)
+    leaves = await db.leaves.find({"employee_id": emp_id}, {"_id": 0}).to_list(1000)
+    deductions = await db.salary_deductions.find({"employee_id": emp_id}, {"_id": 0}).to_list(1000)
+    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    co_name = company.get("company_name", "Smart Standard Company")
+    
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=40, bottomMargin=40)
+    elements = []
+    styles = getSampleStyleSheet()
+    title_s = ParagraphStyle('T', parent=styles['Heading1'], fontSize=16, textColor=colors.HexColor('#F5841F'), alignment=1, spaceAfter=5)
+    body_s = ParagraphStyle('B', parent=styles['Normal'], fontSize=9, leading=14)
+    
+    logo_path = ROOT_DIR / "uploads" / "logos" / "company_logo.jpg"
+    if not logo_path.exists(): logo_path = ROOT_DIR / "uploads" / "logos" / "company_logo.png"
+    if logo_path.exists():
+        from reportlab.platypus import Image as RLImage
+        try:
+            logo = RLImage(str(logo_path), width=1.3*inch, height=0.6*inch)
+            logo.hAlign = 'CENTER'
+            elements.append(logo)
+        except: pass
+    
+    elements.append(Paragraph(co_name.upper(), title_s))
+    elements.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#F5841F')))
+    elements.append(Spacer(1, 0.15*inch))
+    elements.append(Paragraph(f"<b>Employee Report - {emp['name']}</b>", ParagraphStyle('H', parent=styles['Heading2'], fontSize=12, alignment=1)))
+    elements.append(Spacer(1, 0.1*inch))
+    
+    # Employee info
+    info = [["Name:", emp["name"], "Position:", emp.get("position", "-")],
+            ["Doc ID:", emp.get("document_id", "-"), "Salary:", f"SAR {emp.get('salary', 0):,.2f}"],
+            ["Loan:", f"SAR {emp.get('loan_balance', 0):,.2f}", "Old Balance:", f"SAR {emp.get('old_salary_balance', 0):,.2f}"]]
+    it = Table(info, colWidths=[1*inch, 2.2*inch, 1*inch, 2.2*inch])
+    it.setStyle(TableStyle([('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'), ('FONTNAME', (2,0), (2,-1), 'Helvetica-Bold'), ('FONTSIZE', (0,0), (-1,-1), 8), ('BOTTOMPADDING', (0,0), (-1,-1), 6)]))
+    elements.append(it)
+    elements.append(Spacer(1, 0.15*inch))
+    
+    # Payments table
+    elements.append(Paragraph("<b>Salary Payments</b>", body_s))
+    pay_rows = [["Date", "Type", "Period", "Mode", "Amount"]]
+    for p in payments[:30]:
+        dt = datetime.fromisoformat(p["date"]).strftime("%d %b %Y") if isinstance(p["date"], str) else p["date"].strftime("%d %b %Y")
+        pay_rows.append([dt, p.get("payment_type","salary").replace("_"," ").title(), p.get("period",""), p.get("payment_mode",""), f"SAR {p['amount']:,.2f}"])
+    pay_rows.append(["", "", "", "TOTAL", f"SAR {sum(p['amount'] for p in payments):,.2f}"])
+    pt = Table(pay_rows, colWidths=[1.1*inch, 1.1*inch, 1.1*inch, 0.8*inch, 1.3*inch])
+    pt.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), colors.HexColor('#F5841F')), ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke), ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'), ('FONTSIZE', (0,0), (-1,-1), 7), ('GRID', (0,0), (-1,-1), 0.5, colors.grey), ('FONTNAME', (0,-1), (-1,-1), 'Helvetica-Bold'), ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor('#FFF3E0'))]))
+    elements.append(pt)
+    elements.append(Spacer(1, 0.15*inch))
+    
+    # Leave summary
+    annual_used = sum(l.get("days",0) for l in leaves if l.get("leave_type") == "annual" and l.get("status") == "approved")
+    sick_used = sum(l.get("days",0) for l in leaves if l.get("leave_type") == "sick" and l.get("status") == "approved")
+    elements.append(Paragraph(f"<b>Leave:</b> Annual: {annual_used}/{emp.get('annual_leave_entitled',30)} used | Sick: {sick_used}/{emp.get('sick_leave_entitled',15)} used", body_s))
+    
+    # Deductions
+    if deductions:
+        elements.append(Spacer(1, 0.1*inch))
+        elements.append(Paragraph(f"<b>Deductions:</b> Total SAR {sum(d['amount'] for d in deductions):,.2f}", body_s))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    return StreamingResponse(buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=employee_report_{emp['name'].replace(' ','_')}.pdf"})
+
 # Salary Acknowledgment
 @api_router.post("/salary-payments/{payment_id}/acknowledge")
 async def acknowledge_salary(payment_id: str, current_user: User = Depends(get_current_user)):
