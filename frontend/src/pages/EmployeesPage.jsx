@@ -126,12 +126,14 @@ export default function EmployeesPage() {
   };
 
   const [empDocs, setEmpDocs] = useState([]);
+  const [salaryHistory, setSalaryHistory] = useState([]);
   const [newDoc, setNewDoc] = useState({ document_type: 'passport', document_number: '', expiry_date: '' });
+  const [newIncrement, setNewIncrement] = useState({ new_salary: '', effective_date: '', reason: '' });
 
   const viewSummary = async (emp) => {
     try {
-      const [res, docsRes] = await Promise.all([api.get(`/employees/${emp.id}/summary`), api.get(`/employee-documents?employee_id=${emp.id}`)]);
-      setEmpSummary(res.data); setEmpDocs(docsRes.data); setShowSummary(true);
+      const [res, docsRes, histRes] = await Promise.all([api.get(`/employees/${emp.id}/summary`), api.get(`/employee-documents?employee_id=${emp.id}`), api.get(`/salary-history/${emp.id}`)]);
+      setEmpSummary(res.data); setEmpDocs(docsRes.data); setSalaryHistory(histRes.data); setShowSummary(true);
     } catch { toast.error('Failed to load summary'); }
   };
 
