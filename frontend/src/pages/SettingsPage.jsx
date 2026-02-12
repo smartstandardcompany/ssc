@@ -232,7 +232,7 @@ export default function SettingsPage() {
                 <CardContent className="space-y-4">
                   <p className="text-sm text-muted-foreground">Upload your existing data from Excel (.xlsx) or CSV files. Download the template first, fill in your data, then upload.</p>
                   
-                  {['customers', 'suppliers', 'employees', 'items', 'branches'].map(type => (
+                  {['customers', 'suppliers', 'employees', 'items', 'branches', 'sales', 'expenses_import'].map(type => (
                     <div key={type} className="flex items-center justify-between p-4 border rounded-xl hover:bg-stone-50 transition-all">
                       <div>
                         <div className="font-medium capitalize text-sm">{type}</div>
@@ -242,6 +242,8 @@ export default function SettingsPage() {
                           {type === 'employees' && 'name, document_id, phone, email, position, salary'}
                           {type === 'items' && 'name, unit_price, category'}
                           {type === 'branches' && 'name, location'}
+                          {type === 'sales' && 'date, sale_type, amount, discount, payment_mode, notes'}
+                          {type === 'expenses_import' && 'date, category, description, amount, payment_mode'}
                         </div>
                       </div>
                       <div className="flex gap-2">
