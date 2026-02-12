@@ -26,10 +26,13 @@ export default function FinesPage() {
   const [branches, setBranches] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [fineTypes, setFineTypes] = useState([]);
+  const [capitalExpenses, setCapitalExpenses] = useState([]);
   const [newFineType, setNewFineType] = useState('');
   const [loading, setLoading] = useState(true);
   const [showFineDialog, setShowFineDialog] = useState(false);
   const [showDeductionDialog, setShowDeductionDialog] = useState(false);
+  const [showCapitalDialog, setShowCapitalDialog] = useState(false);
+  const [capData, setCapData] = useState({ title: '', category: 'goodwill', description: '', amount: '', branch_id: '', payment_mode: 'cash', date: new Date().toISOString().split('T')[0], notes: '' });
   const [showPayDialog, setShowPayDialog] = useState(false);
   const [payingFine, setPayingFine] = useState(null);
   const [payData, setPayData] = useState({ amount: '', payment_mode: 'cash' });
