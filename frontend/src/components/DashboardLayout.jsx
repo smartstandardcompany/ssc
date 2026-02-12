@@ -35,25 +35,25 @@ export const DashboardLayout = ({ children }) => {
   };
 
   const allNav = [
-    { path: '/', icon: LayoutDashboard, label: 'Dashboard', roles: ['admin', 'manager', 'operator'] },
-    { path: '/sales', icon: ShoppingCart, label: 'Sales', roles: ['admin', 'manager', 'operator'] },
-    { path: '/invoices', icon: FileInput, label: 'Invoices', roles: ['admin', 'manager', 'operator'] },
-    { path: '/branches', icon: Store, label: 'Branches', roles: ['admin', 'manager'] },
-    { path: '/customers', icon: Users, label: 'Customers', roles: ['admin', 'manager', 'operator'] },
-    { path: '/suppliers', icon: Truck, label: 'Suppliers', roles: ['admin', 'manager'] },
-    { path: '/supplier-payments', icon: Receipt, label: 'Supplier Payments', roles: ['admin', 'manager'] },
-    { path: '/expenses', icon: Receipt, label: 'Expenses', roles: ['admin', 'manager'] },
-    { path: '/cash-transfers', icon: ArrowLeftRight, label: 'Cash Transfers', roles: ['admin', 'manager'] },
-    { path: '/fines', icon: AlertTriangle, label: 'Fines & Penalties', roles: ['admin', 'manager'] },
-    { path: '/partners', icon: Handshake, label: 'Partners', roles: ['admin'] },
-    { path: '/employees', icon: UserCheck, label: 'Employees', roles: ['admin', 'manager'] },
-    { path: '/documents', icon: FileWarning, label: 'Documents', roles: ['admin', 'manager'] },
-    { path: '/reports', icon: BarChart3, label: 'Reports', roles: ['admin', 'manager'] },
-    { path: '/credit-report', icon: CreditCard, label: 'Credit Report', roles: ['admin', 'manager'] },
-    { path: '/supplier-report', icon: FileText, label: 'Supplier Report', roles: ['admin', 'manager'] },
-    { path: '/category-report', icon: Tags, label: 'Category Report', roles: ['admin', 'manager'] },
-    { path: '/settings', icon: Settings, label: 'Settings', roles: ['admin'] },
-    { path: '/users', icon: Shield, label: 'Users', roles: ['admin'] },
+    { path: '/', icon: LayoutDashboard, label: 'Dashboard', roles: ['admin', 'manager', 'operator'], perm: 'dashboard' },
+    { path: '/sales', icon: ShoppingCart, label: 'Sales', roles: ['admin', 'manager', 'operator'], perm: 'sales' },
+    { path: '/invoices', icon: FileInput, label: 'Invoices', roles: ['admin', 'manager', 'operator'], perm: 'invoices' },
+    { path: '/branches', icon: Store, label: 'Branches', roles: ['admin', 'manager'], perm: 'branches' },
+    { path: '/customers', icon: Users, label: 'Customers', roles: ['admin', 'manager', 'operator'], perm: 'customers' },
+    { path: '/suppliers', icon: Truck, label: 'Suppliers', roles: ['admin', 'manager'], perm: 'suppliers' },
+    { path: '/supplier-payments', icon: Receipt, label: 'Supplier Payments', roles: ['admin', 'manager'], perm: 'supplier_payments' },
+    { path: '/expenses', icon: Receipt, label: 'Expenses', roles: ['admin', 'manager'], perm: 'expenses' },
+    { path: '/cash-transfers', icon: ArrowLeftRight, label: 'Cash Transfers', roles: ['admin', 'manager'], perm: 'cash_transfers' },
+    { path: '/fines', icon: AlertTriangle, label: 'Fines & Penalties', roles: ['admin', 'manager'], perm: 'fines' },
+    { path: '/partners', icon: Handshake, label: 'Partners', roles: ['admin'], perm: 'partners' },
+    { path: '/employees', icon: UserCheck, label: 'Employees', roles: ['admin', 'manager'], perm: 'employees' },
+    { path: '/documents', icon: FileWarning, label: 'Documents', roles: ['admin', 'manager'], perm: 'documents' },
+    { path: '/reports', icon: BarChart3, label: 'Reports', roles: ['admin', 'manager'], perm: 'reports' },
+    { path: '/credit-report', icon: CreditCard, label: 'Credit Report', roles: ['admin', 'manager'], perm: 'credit_report' },
+    { path: '/supplier-report', icon: FileText, label: 'Supplier Report', roles: ['admin', 'manager'], perm: 'supplier_report' },
+    { path: '/category-report', icon: Tags, label: 'Category Report', roles: ['admin', 'manager'], perm: 'reports' },
+    { path: '/settings', icon: Settings, label: 'Settings', roles: ['admin'], perm: 'settings' },
+    { path: '/users', icon: Shield, label: 'Users', roles: ['admin'], perm: 'users' },
   ];
 
   const employeeNav = [
@@ -61,7 +61,16 @@ export const DashboardLayout = ({ children }) => {
     { path: '/notifications', icon: Bell, label: 'Notifications' },
   ];
 
-  const navItems = isEmployee ? employeeNav : allNav.filter(item => !item.roles || item.roles.includes(user.role || 'operator'));
+  const userPerms = user.permissions || [];
+  const navItems = isEmployee ? employeeNav : allNav.filter(item => {
+    // Admin sees everything
+    if (user.role === 'admin') return true;
+    // Check role first
+    if (item.roles && !item.roles.includes(user.role || 'operator')) return false;
+    // If user has custom permissions set, filter by those
+    if (userPerms.length > 0 && item.perm) return userPerms.includes(item.perm);
+    return true;
+  });
 
   return (
     <div className="flex min-h-screen bg-background">
