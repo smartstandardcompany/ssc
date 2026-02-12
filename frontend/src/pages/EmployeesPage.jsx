@@ -258,7 +258,11 @@ export default function EmployeesPage() {
                         {(emp.loan_balance || 0) > 0 ? <span className="font-bold text-warning"> SAR {emp.loan_balance.toFixed(2)}</span> : <span className="text-muted-foreground">-</span>}
                       </td>
                       <td className="p-3 text-center">
-                        <div className="text-xs"><span className="text-success">{pend.annual_leave_remaining || 0}A</span> <span className="text-info">{pend.sick_leave_remaining || 0}S</span>{pend.pending_leave_requests > 0 && <Badge className="ml-1 bg-warning/20 text-warning text-xs">{pend.pending_leave_requests}P</Badge>}</div>
+                        <div className="text-xs">
+                          <span className="text-success">{pend.annual_leave_remaining || 0}A</span> <span className="text-info">{pend.sick_leave_remaining || 0}S</span>
+                          {pend.pending_leave_requests > 0 && <Badge className="ml-1 bg-warning/20 text-warning text-xs">{pend.pending_leave_requests}P</Badge>}
+                          {pend.on_leave && <div className="mt-1"><Badge className="bg-orange-100 text-orange-700 text-xs">{pend.on_leave.type}: {pend.on_leave.from} - {pend.on_leave.to}</Badge></div>}
+                        </div>
                       </td>
                       <td className="p-3 text-right">
                         <div className="flex gap-1 justify-end flex-wrap">
