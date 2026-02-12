@@ -280,9 +280,10 @@ export default function EmployeesPage() {
         <Dialog open={showPayDialog} onOpenChange={setShowPayDialog}>
           <DialogContent data-testid="pay-salary-dialog">
             <DialogHeader><DialogTitle className="font-outfit">Record Payment - {payingEmp?.name}</DialogTitle></DialogHeader>
-            <div className="flex gap-4 text-sm mb-2">
+            <div className="flex gap-4 text-sm mb-2 flex-wrap">
               <span>Salary: <span className="font-bold"> SAR {payingEmp?.salary?.toFixed(2)}</span></span>
               {(payingEmp?.loan_balance || 0) > 0 && <span>Loan: <span className="font-bold text-warning"> SAR {payingEmp?.loan_balance?.toFixed(2)}</span></span>}
+              {(payingEmp?.old_salary_balance || 0) > 0 && <span>Old Balance: <span className="font-bold text-error"> SAR {payingEmp?.old_salary_balance?.toFixed(2)}</span></span>}
             </div>
             <form onSubmit={handlePaySalary} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
