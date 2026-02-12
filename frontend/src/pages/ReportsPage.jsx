@@ -191,6 +191,155 @@ export default function ReportsPage() {
             </CardContent></Card>}
           </TabsContent>
 
+          {/* BRANCH REPORT - Detailed per branch */}
+          <TabsContent value="branch_report" className="space-y-6">
+            {branches.map(b => {
+              const bs = calcStats(filterByBranch(sales, b.id), filterByBranch(expenses, b.id), filterByBranch(supplierPayments, b.id));
+              const brExpenses = filterByBranch(expenses, b.id);
+              const expCats = {};
+              brExpenses.forEach(e => { expCats[e.category] = (expCats[e.category] || 0) + e.amount; });
+              const brSP = filterByBranch(supplierPayments, b.id);
+              const spCats = {};
+              brSP.forEach(p => { const name = p.supplier_name || 'Unknown'; spCats[name] = (spCats[name] || 0) + p.amount; });
+              return (
+                <Card key={b.id} className="border-stone-100">
+                  <CardHeader><CardTitle className="font-outfit">{b.name}</CardTitle></CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                      <div className="p-3 bg-success/10 rounded-xl text-center"><div className="text-xs text-muted-foreground">Sales</div><div className="text-lg font-bold text-success">SAR {bs.totalSales.toFixed(0)}</div></div>
+                      <div className="p-3 bg-error/10 rounded-xl text-center"><div className="text-xs text-muted-foreground">Expenses</div><div className="text-lg font-bold text-error">SAR {bs.totalExpenses.toFixed(0)}</div></div>
+                      <div className="p-3 bg-info/10 rounded-xl text-center"><div className="text-xs text-muted-foreground">Supplier Pay</div><div className="text-lg font-bold text-info">SAR {bs.totalSP.toFixed(0)}</div></div>
+                      <div className="p-3 bg-cash/10 rounded-xl text-center"><div className="text-xs text-muted-foreground">Cash</div><div className="text-lg font-bold text-cash">SAR {bs.cash.toFixed(0)}</div></div>
+                      <div className="p-3 bg-bank/10 rounded-xl text-center"><div className="text-xs text-muted-foreground">Bank</div><div className="text-lg font-bold text-bank">SAR {bs.bank.toFixed(0)}</div></div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm font-medium mb-2">Expense Breakdown</p>
+                        <div className="space-y-1">{Object.entries(expCats).sort((a,b) => b[1]-a[1]).map(([cat, amt]) => (
+                          <div key={cat} className="flex justify-between items-center p-2 bg-stone-50 rounded-lg text-xs">
+                            <span className="capitalize font-medium">{cat.replace('_',' ')}</span>
+                            <div className="flex items-center gap-2"><div className="w-20 h-1.5 bg-stone-200 rounded-full overflow-hidden"><div className="h-full bg-error rounded-full" style={{width: `${bs.totalExpenses > 0 ? (amt/bs.totalExpenses*100) : 0}%`}} /></div><span className="font-bold w-20 text-right">SAR {amt.toFixed(0)}</span></div>
+                          </div>
+                        ))}</div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium mb-2">Supplier Payments</p>
+                        <div className="space-y-1">{Object.entries(spCats).sort((a,b) => b[1]-a[1]).map(([name, amt]) => (
+                          <div key={name} className="flex justify-between items-center p-2 bg-stone-50 rounded-lg text-xs">
+                            <span className="font-medium">{name}</span>
+                            <span className="font-bold">SAR {amt.toFixed(0)}</span>
+                          </div>
+                        ))}{Object.keys(spCats).length === 0 && <p className="text-xs text-muted-foreground text-center py-2">No supplier payments</p>}</div>
+                      </div>
+                    </div>
+                    <div className="flex justify-between p-3 bg-primary/10 rounded-xl border border-primary/20">
+                      <span className="font-bold">Net Profit</span>
+                      <span className={`font-bold text-lg ${bs.netProfit >= 0 ? 'text-success' : 'text-error'}`}>SAR {bs.netProfit.toFixed(2)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </TabsContent>
+
+          {/* EXPENSE REPORT - Detailed expense analysis */}
+          <TabsContent value="expense_report" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="border-stone-100">
+                <CardHeader><CardTitle className="font-outfit text-base">Expenses by Category</CardTitle></CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart><Pie data={catData} cx="50%" cy="50%" outerRadius={110} innerRadius={50} dataKey="value" label={({ name, percent }) => `${name} ${(percent*100).toFixed(0)}%`}>{catData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip formatter={(v) => `SAR ${v.toFixed(2)}`} /></PieChart>
+                  </ResponsiveContainer>
+                  <div className="mt-4 space-y-2">{catData.map((c, i) => (
+                    <div key={c.name} className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-full shrink-0" style={{background: COLORS[i % COLORS.length]}} />
+                      <span className="text-sm flex-1">{c.name}</span>
+                      <span className="text-sm font-bold">SAR {c.value.toFixed(2)}</span>
+                      <span className="text-xs text-muted-foreground w-12 text-right">{stats.totalExpenses > 0 ? (c.value/stats.totalExpenses*100).toFixed(1) : 0}%</span>
+                    </div>
+                  ))}</div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-stone-100">
+                <CardHeader><CardTitle className="font-outfit text-base">Expenses by Branch</CardTitle></CardHeader>
+                <CardContent>
+                  {(() => {
+                    const brExp = {};
+                    fExp.forEach(e => {
+                      const bName = branches.find(b => b.id === e.branch_id)?.name || 'No Branch';
+                      if (!brExp[bName]) brExp[bName] = { total: 0, cash: 0, bank: 0, categories: {} };
+                      brExp[bName].total += e.amount;
+                      if (e.payment_mode === 'cash') brExp[bName].cash += e.amount;
+                      if (e.payment_mode === 'bank') brExp[bName].bank += e.amount;
+                      brExp[bName].categories[e.category] = (brExp[bName].categories[e.category] || 0) + e.amount;
+                    });
+                    return (
+                      <div className="space-y-4">{Object.entries(brExp).sort((a,b) => b[1].total-a[1].total).map(([bName, data]) => (
+                        <div key={bName} className="border rounded-xl p-3 bg-stone-50">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="font-medium text-sm">{bName}</span>
+                            <div className="flex gap-3 text-xs">
+                              <span className="text-cash">Cash: SAR {data.cash.toFixed(0)}</span>
+                              <span className="text-bank">Bank: SAR {data.bank.toFixed(0)}</span>
+                              <span className="font-bold">Total: SAR {data.total.toFixed(0)}</span>
+                            </div>
+                          </div>
+                          <div className="flex gap-1 flex-wrap">{Object.entries(data.categories).sort((a,b) => b[1]-a[1]).map(([cat, amt]) => (
+                            <Badge key={cat} variant="secondary" className="text-xs capitalize">{cat.replace('_',' ')}: SAR {amt.toFixed(0)}</Badge>
+                          ))}</div>
+                        </div>
+                      ))}</div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="border-stone-100">
+              <CardHeader><CardTitle className="font-outfit text-base">Salary & Employee Costs by Branch</CardTitle></CardHeader>
+              <CardContent>
+                {(() => {
+                  const salaryExp = fExp.filter(e => ['salary', 'tickets', 'id_card', 'bonus', 'overtime'].includes(e.category));
+                  const brSalary = {};
+                  salaryExp.forEach(e => {
+                    const bName = branches.find(b => b.id === e.branch_id)?.name || 'No Branch';
+                    if (!brSalary[bName]) brSalary[bName] = {};
+                    brSalary[bName][e.category] = (brSalary[bName][e.category] || 0) + e.amount;
+                  });
+                  const barData = Object.entries(brSalary).map(([name, cats]) => ({ name, Salary: cats.salary || 0, Overtime: cats.overtime || 0, Bonus: cats.bonus || 0, Tickets: cats.tickets || 0, 'ID Card': cats.id_card || 0 }));
+                  return barData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={barData}><CartesianGrid strokeDasharray="3 3" opacity={0.3} /><XAxis dataKey="name" tick={{fontSize: 11}} /><YAxis tick={{fontSize: 11}} /><Tooltip formatter={(v) => `SAR ${v.toFixed(2)}`} /><Legend />
+                        <Bar dataKey="Salary" fill="#22C55E" radius={[4,4,0,0]} stackId="a" />
+                        <Bar dataKey="Overtime" fill="#0EA5E9" radius={[0,0,0,0]} stackId="a" />
+                        <Bar dataKey="Bonus" fill="#F5841F" radius={[0,0,0,0]} stackId="a" />
+                        <Bar dataKey="Tickets" fill="#F59E0B" radius={[0,0,0,0]} stackId="a" />
+                        <Bar dataKey="ID Card" fill="#EF4444" radius={[4,4,0,0]} stackId="a" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : <p className="text-center text-muted-foreground py-8">No salary expenses</p>;
+                })()}
+              </CardContent>
+            </Card>
+
+            <Card className="border-stone-100">
+              <CardHeader><CardTitle className="font-outfit text-base">Top Expenses (All)</CardTitle></CardHeader>
+              <CardContent>
+                <table className="w-full"><thead><tr className="border-b"><th className="text-left p-2 text-xs font-medium">Category</th><th className="text-right p-2 text-xs font-medium">Amount</th><th className="text-right p-2 text-xs font-medium">% of Total</th><th className="p-2 text-xs font-medium w-32">Bar</th></tr></thead>
+                <tbody>{catData.map((c, i) => (
+                  <tr key={c.name} className="border-b hover:bg-stone-50">
+                    <td className="p-2 text-sm font-medium flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full shrink-0" style={{background: COLORS[i % COLORS.length]}} />{c.name}</td>
+                    <td className="p-2 text-sm text-right font-bold">SAR {c.value.toFixed(2)}</td>
+                    <td className="p-2 text-sm text-right">{stats.totalExpenses > 0 ? (c.value/stats.totalExpenses*100).toFixed(1) : 0}%</td>
+                    <td className="p-2"><div className="w-full h-3 bg-stone-100 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{width: `${stats.totalExpenses > 0 ? (c.value/stats.totalExpenses*100) : 0}%`, background: COLORS[i % COLORS.length]}} /></div></td>
+                  </tr>
+                ))}</tbody></table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* PERIOD COMPARE */}
           <TabsContent value="period" className="space-y-6">
             <Card className="border-stone-100"><CardContent className="pt-6">
