@@ -182,6 +182,16 @@ export default function SettingsPage() {
                     <Button variant="outline" className="rounded-xl" onClick={async () => { try { const res = await api.post('/whatsapp/send-supplier-report'); toast.success(res.data.message); } catch(e) { toast.error(e.response?.data?.detail || 'Failed'); } }}><Send size={14} className="mr-2" />Supplier Report</Button>
                     <Button variant="outline" className="rounded-xl" onClick={async () => { try { const res = await api.post('/whatsapp/send-employee-report', {}); toast.success(res.data.message); } catch(e) { toast.error(e.response?.data?.detail || 'Failed'); } }}><Send size={14} className="mr-2" />Employee Report</Button>
                   </div>
+
+                  <div className="mt-3">
+                    <Label className="text-xs mb-2 block">Send Branch Report via WhatsApp</Label>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button variant="outline" className="rounded-xl h-8 text-xs" onClick={async () => { try { const res = await api.post('/whatsapp/send-branch-report', {}); toast.success(res.data.message); } catch(e) { toast.error(e.response?.data?.detail || 'Failed'); } }}>All Branches</Button>
+                      {(() => { const [br, setBr] = React.useState([]); React.useEffect(() => { api.get('/branches').then(r => setBr(r.data)).catch(() => {}); }, []); return br.map(b => (
+                        <Button key={b.id} variant="outline" className="rounded-xl h-8 text-xs" onClick={async () => { try { const res = await api.post('/whatsapp/send-branch-report', { branch_id: b.id }); toast.success(res.data.message); } catch(e) { toast.error(e.response?.data?.detail || 'Failed'); } }}>{b.name}</Button>
+                      )); })()}
+                    </div>
+                  </div>
                   <div className="mt-3 p-3 bg-stone-50 rounded-xl border">
                     <Label className="text-xs">Send Custom Message via WhatsApp</Label>
                     <div className="flex gap-2 mt-2">
