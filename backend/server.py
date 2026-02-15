@@ -1476,6 +1476,16 @@ async def get_branch_summary(branch_id: str, current_user: User = Depends(get_cu
     sp_cash = sum(p["amount"] for p in sp if p.get("payment_mode") == "cash")
     sp_bank = sum(p["amount"] for p in sp if p.get("payment_mode") == "bank")
     
+    # Expense category breakdown
+    exp_categories = {}
+    for e in expenses:
+        cat = e.get("category", "other")
+        exp_categories[cat] = exp_categories.get(cat, 0) + e["amount"]
+    
+    # Recurring expenses for this branch
+    recs = await db.recurring_expenses.find({"$or": [{"branch_id": branch_id}, {"branch_id": None}]}, {"_id": 0}).to_list(100)
+    monthly_fixed = sum(r["amount"] for r in recs if r.get("frequency") == "monthly")
+    
     return {
         "branch_id": branch_id, "branch_name": branch["name"],
         "total_sales": total_sales, "sales_cash": cash_sales, "sales_bank": bank_sales, "sales_credit": credit_sales, "sales_count": len(sales),
@@ -1483,7 +1493,10 @@ async def get_branch_summary(branch_id: str, current_user: User = Depends(get_cu
         "total_supplier_payments": total_sp, "sp_cash": sp_cash, "sp_bank": sp_bank, "sp_count": len(sp),
         "net_profit": total_sales - total_expenses - total_sp,
         "cash_in_hand": cash_sales - exp_cash - sp_cash,
-        "bank_in_hand": bank_sales - exp_bank - sp_bank
+        "bank_in_hand": bank_sales - exp_bank - sp_bank,
+        "expense_categories": exp_categories,
+        "monthly_fixed": monthly_fixed,
+        "is_loss": (total_sales - total_expenses - total_sp) < 0
     }
 
 # Dashboard Stats
