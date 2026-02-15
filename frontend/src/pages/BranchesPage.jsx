@@ -120,14 +120,29 @@ export default function BranchesPage() {
                       </div>
                       <div className="grid grid-cols-2 gap-2 pt-1">
                         <div className="flex items-center justify-between p-2 bg-cash/10 rounded">
-                          <span className="text-xs">Cash In Hand</span>
-                          <span className={`text-sm font-bold ${(s.cash_in_hand || 0) >= 0 ? 'text-cash' : 'text-error'}`}>SAR {(s.cash_in_hand || 0).toFixed(2)}</span>
+                          <span className="text-xs">Cash</span>
+                          <span className={`text-sm font-bold ${(s.cash_in_hand || 0) >= 0 ? 'text-cash' : 'text-error'}`}>SAR {(s.cash_in_hand || 0).toFixed(0)}</span>
                         </div>
                         <div className="flex items-center justify-between p-2 bg-bank/10 rounded">
-                          <span className="text-xs">Bank In Hand</span>
-                          <span className={`text-sm font-bold ${(s.bank_in_hand || 0) >= 0 ? 'text-bank' : 'text-error'}`}>SAR {(s.bank_in_hand || 0).toFixed(2)}</span>
+                          <span className="text-xs">Bank</span>
+                          <span className={`text-sm font-bold ${(s.bank_in_hand || 0) >= 0 ? 'text-bank' : 'text-error'}`}>SAR {(s.bank_in_hand || 0).toFixed(0)}</span>
                         </div>
                       </div>
+                      {/* Expense breakdown */}
+                      {s.expense_categories && Object.keys(s.expense_categories).length > 0 && (
+                        <div className="pt-2 border-t mt-2">
+                          <p className="text-xs text-muted-foreground mb-1">Monthly Costs:</p>
+                          <div className="flex gap-1 flex-wrap">{Object.entries(s.expense_categories).sort((a,b) => b[1]-a[1]).slice(0,4).map(([cat, amt]) => (
+                            <Badge key={cat} variant="outline" className="text-xs capitalize">{cat.replace('_',' ')}: SAR {amt.toFixed(0)}</Badge>
+                          ))}</div>
+                        </div>
+                      )}
+                      {s.is_loss && (
+                        <div className="mt-2 p-2 bg-error/10 rounded border border-error/30 flex items-center gap-2">
+                          <AlertTriangle size={14} className="text-error" />
+                          <span className="text-xs font-bold text-error">This branch is running at a LOSS</span>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">Loading stats...</p>
