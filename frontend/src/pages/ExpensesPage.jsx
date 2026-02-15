@@ -6,511 +6,312 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Plus, Trash2, AlertTriangle, DollarSign, Settings2 } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
-import { DateFilter } from '@/components/DateFilter';
 import { BranchFilter } from '@/components/BranchFilter';
+import { DateFilter } from '@/components/DateFilter';
 
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
-  const [customCategories, setCustomCategories] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [recurringExpenses, setRecurringExpenses] = useState([]);
-  const [showRecurringForm, setShowRecurringForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [branchFilter, setBranchFilter] = useState([]);
+  const [dateFilter, setDateFilter] = useState({ start: null, end: null, period: 'all' });
+  const [showCatManager, setShowCatManager] = useState(false);
   const [showRenewDialog, setShowRenewDialog] = useState(false);
   const [renewingRec, setRenewingRec] = useState(null);
   const [renewData, setRenewData] = useState({ amount: '', payment_mode: 'cash', branch_id: '' });
-  const [recData, setRecData] = useState({ name: '', category: 'rent', amount: '', frequency: 'monthly', branch_id: '', next_due_date: '', alert_days: 7 });
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [branches, setBranches] = useState([]);
-  const [newCategory, setNewCategory] = useState('');
-  const [newSubCategory, setNewSubCategory] = useState('');
-  const [formData, setFormData] = useState({
-    category: 'salary',
-    sub_category: '',
-    description: '',
-    amount: '',
-    payment_mode: 'cash',
-    branch_id: '',
-    supplier_id: '',
-    date: new Date().toISOString().split('T')[0],
-    notes: '',
-  });
-  const [dateFilter, setDateFilter] = useState({ start: null, end: null, period: 'all' });
-  const [branchFilter, setBranchFilter] = useState([]);
+  const [newCat, setNewCat] = useState('');
+  const [newSubCat, setNewSubCat] = useState({ name: '', parent: '' });
+  const [newRecData, setNewRecData] = useState({ name: '', category: 'rent', amount: '', frequency: 'monthly', branch_id: '', next_due_date: '', alert_days: 7 });
 
-  const defaultCategories = [
-    { value: 'salary', label: 'Salary' },
-    { value: 'rent', label: 'Rent' },
-    { value: 'maintenance', label: 'Maintenance' },
-    { value: 'vat', label: 'VAT' },
-    { value: 'insurance', label: 'Insurance' },
-    { value: 'supplier', label: 'Supplier Expense' },
-    { value: 'other', label: 'Other' },
+  const [formData, setFormData] = useState({
+    category: '', sub_category: '', description: '', amount: '',
+    payment_mode: 'cash', branch_id: '', supplier_id: '',
+    date: new Date().toISOString().split('T')[0], notes: ''
+  });
+
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const isAdmin = user.role === 'admin' || user.role === 'manager';
+
+  const defaultCats = [
+    { name: 'Salary', subs: ['Basic Salary', 'Overtime', 'Bonus'] },
+    { name: 'Rent', subs: ['Office Rent', 'Warehouse Rent', 'Shop Rent'] },
+    { name: 'Utilities', subs: ['Electricity', 'Water', 'Internet', 'Phone'] },
+    { name: 'Vehicle', subs: ['Fuel', 'Maintenance', 'Insurance'] },
+    { name: 'Maintenance', subs: ['Office Maintenance', 'Equipment Repair'] },
+    { name: 'Supplier', subs: [] },
+    { name: 'Tickets', subs: [] },
+    { name: 'ID Card', subs: [] },
+    { name: 'Other', subs: [] },
   ];
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     try {
-      const [expensesRes, suppliersRes, categoriesRes, branchesRes, recRes] = await Promise.all([
-        api.get('/expenses'),
-        api.get('/suppliers'),
-        api.get('/categories?category_type=expense'),
-        api.get('/branches'),
-        api.get('/recurring-expenses'),
-      ]);
-      setExpenses(expensesRes.data);
-      setSuppliers(suppliersRes.data);
-      setCustomCategories(categoriesRes.data);
-      setBranches(branchesRes.data);
-      setRecurringExpenses(recRes.data);
-    } catch (error) {
-      toast.error('Failed to fetch data');
-    } finally {
-      setLoading(false);
-    }
+      const [eR, sR, bR, cR, rR] = await Promise.all([api.get('/expenses'), api.get('/suppliers'), api.get('/branches'), api.get('/categories?category_type=expense'), api.get('/recurring-expenses')]);
+      setExpenses(eR.data); setSuppliers(sR.data); setBranches(bR.data); setCategories(cR.data); setRecurringExpenses(rR.data);
+    } catch { toast.error('Failed'); } finally { setLoading(false); }
   };
 
-  const allCategories = [
-    ...defaultCategories,
-    ...customCategories.filter(c => !defaultCategories.find(d => d.value === c.name.toLowerCase())).map(c => ({ value: c.name.toLowerCase(), label: c.name }))
-  ];
-
-  const handleAddCategory = async () => {
-    if (!newCategory.trim()) return;
-    try {
-      await api.post('/categories', { name: newCategory.trim(), type: 'expense' });
-      toast.success('Category added');
-      setNewCategory('');
-      const res = await api.get('/categories?category_type=expense');
-      setCustomCategories(res.data);
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to add category');
-    }
-  };
-
-  const handleAddExpSubCategory = async () => {
-    if (!newSubCategory.trim()) return;
-    try {
-      await api.post('/categories', { name: newSubCategory.trim(), type: 'expense', parent_id: null });
-      toast.success('Sub-category added');
-      setNewSubCategory('');
-      const res = await api.get('/categories?category_type=expense');
-      setCustomCategories(res.data);
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed');
-    }
+  // Build category tree
+  const mainCats = [...defaultCats.map(c => c.name), ...categories.filter(c => !c.parent_id).map(c => c.name)].filter((v, i, a) => a.indexOf(v) === i);
+  const getSubCats = (mainCat) => {
+    const defaultSubs = defaultCats.find(c => c.name === mainCat)?.subs || [];
+    const customSubs = categories.filter(c => c.parent_id).filter(c => {
+      const parent = categories.find(p => p.id === c.parent_id);
+      return parent?.name === mainCat;
+    }).map(c => c.name);
+    return [...defaultSubs, ...customSubs].filter((v, i, a) => a.indexOf(v) === i);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.category || !formData.amount) { toast.error('Select category and amount'); return; }
     try {
-      const payload = {
-        ...formData,
+      await api.post('/expenses', {
+        ...formData, category: formData.sub_category || formData.category,
+        sub_category: formData.sub_category ? formData.category : null,
         amount: parseFloat(formData.amount),
-        supplier_id: formData.supplier_id || null,
-        branch_id: formData.branch_id || null,
-        date: new Date(formData.date).toISOString(),
-      };
-      await api.post('/expenses', payload);
-      toast.success('Expense added successfully');
-      setShowForm(false);
-      resetForm();
+        branch_id: formData.branch_id || null, supplier_id: formData.supplier_id || null,
+        date: new Date(formData.date).toISOString()
+      });
+      toast.success('Expense added');
+      setFormData({ category: '', sub_category: '', description: '', amount: '', payment_mode: 'cash', branch_id: '', supplier_id: '', date: new Date().toISOString().split('T')[0], notes: '' });
       fetchData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to add expense');
-    }
+    } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
   };
 
-  const resetForm = () => {
-    setFormData({
-      category: 'salary',
-      sub_category: '',
-      description: '',
-      amount: '',
-      payment_mode: 'cash',
-      branch_id: '',
-      supplier_id: '',
-      date: new Date().toISOString().split('T')[0],
-      notes: '',
-    });
+  const handleAddCat = async () => {
+    if (!newCat.trim()) return;
+    try { await api.post('/categories', { name: newCat.trim(), type: 'expense' }); toast.success('Category added'); setNewCat(''); fetchData(); }
+    catch { toast.error('Failed'); }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this expense?')) {
-      try {
-        await api.delete(`/expenses/${id}`);
-        toast.success('Expense deleted successfully');
-        fetchData();
-      } catch (error) {
-        toast.error('Failed to delete expense');
-      }
-    }
+  const handleAddSubCat = async () => {
+    if (!newSubCat.name.trim() || !newSubCat.parent) return;
+    const parent = categories.find(c => c.name === newSubCat.parent && !c.parent_id);
+    try { await api.post('/categories', { name: newSubCat.name.trim(), type: 'expense', parent_id: parent?.id || null }); toast.success('Sub-category added'); setNewSubCat({ name: '', parent: '' }); fetchData(); }
+    catch { toast.error('Failed'); }
   };
 
-  const getPaymentBadgeClass = (mode) => {
-    switch (mode) {
-      case 'cash':
-        return 'bg-cash/20 text-cash border-cash/30';
-      case 'bank':
-        return 'bg-bank/20 text-bank border-bank/30';
-      case 'credit':
-        return 'bg-credit/20 text-credit border-credit/30';
-      default:
-        return 'bg-secondary text-secondary-foreground';
-    }
-  };
+  if (loading) return <DashboardLayout><div className="flex items-center justify-center h-64">Loading...</div></DashboardLayout>;
 
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-64">Loading...</div>
-      </DashboardLayout>
-    );
-  }
-
-  const isSupplierCategory = formData.category === 'supplier';
+  const filtered = expenses.filter(e => {
+    if (branchFilter.length > 0 && !branchFilter.includes(e.branch_id)) return false;
+    if (dateFilter.start && dateFilter.end) { const d = new Date(e.date); return d >= dateFilter.start && d <= dateFilter.end; }
+    return true;
+  });
+  const totalExp = filtered.reduce((s, e) => s + e.amount, 0);
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-start flex-wrap gap-3">
           <div>
-            <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="expenses-page-title">Expenses</h1>
-            <p className="text-muted-foreground">Track business expenses and supplier costs</p>
+            <h1 className="text-4xl font-bold font-outfit mb-2">Expenses</h1>
+            <p className="text-muted-foreground">Track and manage all business expenses</p>
           </div>
-          <div className="flex gap-3 items-center flex-wrap">
+          <div className="flex gap-2 items-center flex-wrap">
             <BranchFilter onChange={setBranchFilter} />
             <DateFilter onFilterChange={setDateFilter} />
             <ExportButtons dataType="expenses" />
-            <Button
-            onClick={() => setShowForm(!showForm)}
-            data-testid="add-expense-button"
-            className="rounded-full"
-          >
-            <Plus size={18} className="mr-2" />
-            Add Expense
-          </Button>
+            {isAdmin && <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowCatManager(true)}><Settings2 size={14} className="mr-1" />Categories</Button>}
           </div>
         </div>
 
-        {showForm && (
-          <Card className="border-border" data-testid="expense-form-card">
-            <CardHeader>
-              <CardTitle className="font-outfit">Add Expense</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Category *</Label>
-                    <Select value={formData.category} onValueChange={(val) => setFormData({ ...formData, category: val, supplier_id: '' })}>
-                      <SelectTrigger data-testid="category-select">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {allCategories.map((cat) => (
-                          <SelectItem key={cat.value} value={cat.value}>
-                            {cat.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <div className="flex gap-2 mt-2">
-                      <Input
-                        value={newCategory}
-                        onChange={(e) => setNewCategory(e.target.value)}
-                        placeholder="New category"
-                        className="h-8 text-xs"
-                        data-testid="new-expense-category-input"
-                      />
-                      <Button type="button" size="sm" variant="outline" onClick={handleAddCategory} className="h-8 text-xs whitespace-nowrap" data-testid="add-expense-category-button">
-                        <Plus size={12} className="mr-1" />
-                        Add
-                      </Button>
-                    </div>
-                  </div>
+        <Tabs defaultValue="add">
+          <TabsList><TabsTrigger value="add">Add Expense</TabsTrigger><TabsTrigger value="list">All Expenses ({filtered.length})</TabsTrigger><TabsTrigger value="recurring">Recurring & Planned</TabsTrigger></TabsList>
 
-                  <div>
-                    <Label>Sub-Category</Label>
-                    <Select value={formData.sub_category || "none"} onValueChange={(val) => setFormData({ ...formData, sub_category: val === "none" ? "" : val })}>
-                      <SelectTrigger data-testid="expense-subcategory-select"><SelectValue placeholder="Select sub-category" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No Sub-Category</SelectItem>
-                        {customCategories.filter(c => c.parent_id).map((cat) => <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <div className="flex gap-2 mt-2">
-                      <Input value={newSubCategory} onChange={(e) => setNewSubCategory(e.target.value)} placeholder="New sub-category" className="h-8 text-xs" />
-                      <Button type="button" size="sm" variant="outline" onClick={handleAddExpSubCategory} className="h-8 text-xs whitespace-nowrap"><Plus size={12} className="mr-1" />Add</Button>
-                    </div>
-                  </div>
-
-                  {isSupplierCategory && (
+          {/* ADD EXPENSE - Simplified */}
+          <TabsContent value="add">
+            <Card className="border-stone-100">
+              <CardContent className="pt-6">
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
-                      <Label>Supplier *</Label>
-                      <Select value={formData.supplier_id} onValueChange={(val) => setFormData({ ...formData, supplier_id: val })} required={isSupplierCategory}>
-                        <SelectTrigger data-testid="supplier-select">
-                          <SelectValue placeholder="Select supplier" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {suppliers.map((supplier) => (
-                            <SelectItem key={supplier.id} value={supplier.id}>
-                              {supplier.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
+                      <Label>Category *</Label>
+                      <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v, sub_category: '' })}>
+                        <SelectTrigger className="h-10"><SelectValue placeholder="Select category" /></SelectTrigger>
+                        <SelectContent>{mainCats.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
-                  )}
-
-                  <div className={isSupplierCategory ? '' : 'md:col-span-2'}>
-                    <Label>Description *</Label>
-                    <Input
-                      value={formData.description}
-                      data-testid="description-input"
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      required
-                      placeholder="e.g., Office rent for January"
-                    />
+                    {formData.category && getSubCats(formData.category).length > 0 && (
+                      <div>
+                        <Label>Sub-Category</Label>
+                        <Select value={formData.sub_category || "none"} onValueChange={(v) => setFormData({ ...formData, sub_category: v === "none" ? "" : v })}>
+                          <SelectTrigger className="h-10"><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent><SelectItem value="none">General {formData.category}</SelectItem>{getSubCats(formData.category).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    <div>
+                      <Label>Amount *</Label>
+                      <Input type="number" step="0.01" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: e.target.value })} placeholder="SAR 0.00" className="h-10" required />
+                    </div>
+                    <div>
+                      <Label>Payment</Label>
+                      <Select value={formData.payment_mode} onValueChange={(v) => setFormData({ ...formData, payment_mode: v })}>
+                        <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectItem value="cash">Cash</SelectItem><SelectItem value="bank">Bank</SelectItem><SelectItem value="credit">Credit</SelectItem></SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Branch</Label>
+                      <Select value={formData.branch_id || "none"} onValueChange={(v) => setFormData({ ...formData, branch_id: v === "none" ? "" : v })}>
+                        <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectItem value="none">No Branch</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Date</Label>
+                      <Input type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} className="h-10" />
+                    </div>
+                    <div>
+                      <Label>Description</Label>
+                      <Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="What was this for?" className="h-10" />
+                    </div>
+                    <div className="flex items-end">
+                      <Button type="submit" className="rounded-xl w-full h-10"><Plus size={16} className="mr-2" />Add Expense</Button>
+                    </div>
                   </div>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-                  <div>
-                    <Label>Amount *</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      data-testid="amount-input"
-                      value={formData.amount}
-                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                      required
-                      placeholder="0.00"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Payment Mode *</Label>
-                    <Select value={formData.payment_mode} onValueChange={(val) => setFormData({ ...formData, payment_mode: val })}>
-                      <SelectTrigger data-testid="payment-mode-select">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="bank">Bank</SelectItem>
-                        {isSupplierCategory && <SelectItem value="credit">Credit</SelectItem>}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label>Branch (cash/bank from)</Label>
-                    <Select value={formData.branch_id || "all"} onValueChange={(val) => setFormData({ ...formData, branch_id: val === "all" ? "" : val })}>
-                      <SelectTrigger data-testid="expense-branch-select">
-                        <SelectValue placeholder="Select branch" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">No Branch</SelectItem>
-                        {branches.map((branch) => (
-                          <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label>Date *</Label>
-                    <Input
-                      type="date"
-                      data-testid="date-input"
-                      value={formData.date}
-                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Notes</Label>
-                    <Textarea
-                      data-testid="notes-input"
-                      value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      placeholder="Optional notes"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-3 mt-6">
-                  <Button type="submit" data-testid="submit-expense-button" className="rounded-full">Add Expense</Button>
-                  <Button type="button" variant="outline" onClick={() => { setShowForm(false); resetForm(); }} className="rounded-full">
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
-        <Card className="border-border">
-          <CardHeader>
-            <CardTitle className="font-outfit">All Expenses</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full" data-testid="expenses-table">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left p-3 font-medium text-sm">Date</th>
-                    <th className="text-left p-3 font-medium text-sm">Category</th>
-                    <th className="text-left p-3 font-medium text-sm">Description</th>
-                    <th className="text-left p-3 font-medium text-sm">Supplier</th>
-                    <th className="text-right p-3 font-medium text-sm">Amount</th>
-                    <th className="text-left p-3 font-medium text-sm">Payment</th>
-                    <th className="text-right p-3 font-medium text-sm">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {expenses.filter(e => {
-                    if (branchFilter.length > 0 && !branchFilter.includes(e.branch_id)) return false;
-                    if (dateFilter.start && dateFilter.end) {
-                      const d = new Date(e.date);
-                      return d >= dateFilter.start && d <= dateFilter.end;
-                    }
-                    return true;
-                  }).map((expense) => {
-                    const supplierName = suppliers.find((s) => s.id === expense.supplier_id)?.name || '-';
-                    return (
-                      <tr key={expense.id} className="border-b border-border hover:bg-secondary/50" data-testid="expense-row">
-                        <td className="p-3 text-sm">{format(new Date(expense.date), 'MMM dd, yyyy')}</td>
-                        <td className="p-3">
-                          <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-primary/10 text-primary capitalize">
-                            {expense.category}
-                          </span>
-                        </td>
-                        <td className="p-3 text-sm">{expense.description}</td>
-                        <td className="p-3 text-sm">{supplierName}</td>
-                        <td className="p-3 text-sm text-right font-medium"> SAR {expense.amount.toFixed(2)}</td>
-                        <td className="p-3">
-                          <span className={`inline-block px-2 py-1 rounded text-xs font-medium border ${getPaymentBadgeClass(expense.payment_mode)}`}>
-                            {expense.payment_mode}
-                          </span>
-                        </td>
-                        <td className="p-3 text-right">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDelete(expense.id)}
-                            data-testid="delete-expense-button"
-                            className="h-8 text-error hover:text-error"
-                          >
-                            <Trash2 size={14} />
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {expenses.length === 0 && (
-                    <tr>
-                      <td colSpan={7} className="p-8 text-center text-muted-foreground">
-                        No expenses recorded yet. Add your first expense above!
-                      </td>
+          {/* ALL EXPENSES */}
+          <TabsContent value="list">
+            <Card className="border-stone-100">
+              <CardHeader><CardTitle className="font-outfit text-base flex justify-between">All Expenses <span className="text-error">Total: SAR {totalExp.toFixed(2)}</span></CardTitle></CardHeader>
+              <CardContent>
+                <table className="w-full"><thead><tr className="border-b">
+                  <th className="text-left p-3 text-sm font-medium">Date</th><th className="text-left p-3 text-sm font-medium">Category</th><th className="text-left p-3 text-sm font-medium">Description</th><th className="text-left p-3 text-sm font-medium">Branch</th><th className="text-right p-3 text-sm font-medium">Amount</th><th className="text-left p-3 text-sm font-medium">Mode</th><th className="text-right p-3 text-sm font-medium">Actions</th>
+                </tr></thead><tbody>
+                  {filtered.map(e => (
+                    <tr key={e.id} className="border-b hover:bg-stone-50">
+                      <td className="p-3 text-sm">{format(new Date(e.date), 'MMM dd, yyyy')}</td>
+                      <td className="p-3"><Badge variant="secondary" className="capitalize">{e.category?.replace('_',' ')}</Badge>{e.sub_category && <Badge variant="outline" className="ml-1 text-xs capitalize">{e.sub_category}</Badge>}</td>
+                      <td className="p-3 text-sm">{e.description || '-'}</td>
+                      <td className="p-3 text-sm">{branches.find(b => b.id === e.branch_id)?.name || '-'}</td>
+                      <td className="p-3 text-sm text-right font-bold">SAR {e.amount.toFixed(2)}</td>
+                      <td className="p-3"><Badge className={`capitalize ${e.payment_mode === 'cash' ? 'bg-cash/20 text-cash' : e.payment_mode === 'bank' ? 'bg-bank/20 text-bank' : 'bg-credit/20 text-credit'}`}>{e.payment_mode}</Badge></td>
+                      <td className="p-3 text-right"><Button size="sm" variant="ghost" onClick={async () => { if(window.confirm('Delete?')) { await api.delete(`/expenses/${e.id}`); fetchData(); }}} className="h-7 text-error"><Trash2 size={12} /></Button></td>
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                  ))}
+                  {filtered.length === 0 && <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">No expenses</td></tr>}
+                </tbody></table>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        {/* Recurring Expenses */}
-        <Card className="border-stone-100">
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle className="font-outfit text-base">Recurring Expenses (Rent, Insurance, etc.)</CardTitle>
-              <Button size="sm" variant="outline" onClick={() => setShowRecurringForm(!showRecurringForm)} className="rounded-xl"><Plus size={14} className="mr-1" />Add Recurring</Button>
+          {/* RECURRING & PLANNED */}
+          <TabsContent value="recurring">
+            <div className="space-y-4">
+              <Card className="border-stone-100">
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="font-outfit text-base">Recurring Expenses (Rent, Insurance, Renewals)</CardTitle>
+                    <Button size="sm" className="rounded-xl" onClick={() => document.getElementById('rec-form').classList.toggle('hidden')}><Plus size={14} className="mr-1" />Add Recurring</Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div id="rec-form" className="hidden mb-4 p-4 bg-stone-50 rounded-xl border space-y-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div><Label className="text-xs">Name *</Label><Input value={newRecData.name} onChange={(e) => setNewRecData({...newRecData, name: e.target.value})} placeholder="Office Rent" className="h-8" /></div>
+                      <div><Label className="text-xs">Category</Label><Input value={newRecData.category} onChange={(e) => setNewRecData({...newRecData, category: e.target.value})} placeholder="rent" className="h-8" /></div>
+                      <div><Label className="text-xs">Amount *</Label><Input type="number" step="0.01" value={newRecData.amount} onChange={(e) => setNewRecData({...newRecData, amount: e.target.value})} className="h-8" /></div>
+                      <div><Label className="text-xs">Frequency</Label><Select value={newRecData.frequency} onValueChange={(v) => setNewRecData({...newRecData, frequency: v})}><SelectTrigger className="h-8"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="monthly">Monthly</SelectItem><SelectItem value="quarterly">Quarterly</SelectItem><SelectItem value="yearly">Yearly</SelectItem></SelectContent></Select></div>
+                      <div><Label className="text-xs">Branch</Label><Select value={newRecData.branch_id || "none"} onValueChange={(v) => setNewRecData({...newRecData, branch_id: v === "none" ? "" : v})}><SelectTrigger className="h-8"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">All</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></div>
+                      <div><Label className="text-xs">Next Due *</Label><Input type="date" value={newRecData.next_due_date} onChange={(e) => setNewRecData({...newRecData, next_due_date: e.target.value})} className="h-8" /></div>
+                      <div><Label className="text-xs">Alert Days</Label><Input type="number" value={newRecData.alert_days} onChange={(e) => setNewRecData({...newRecData, alert_days: e.target.value})} className="h-8" /></div>
+                      <div className="flex items-end"><Button size="sm" className="h-8 rounded-xl w-full" onClick={async () => {
+                        if (!newRecData.name || !newRecData.amount || !newRecData.next_due_date) { toast.error('Fill required'); return; }
+                        try { await api.post('/recurring-expenses', {...newRecData, amount: parseFloat(newRecData.amount), alert_days: parseInt(newRecData.alert_days) || 7, branch_id: newRecData.branch_id || null, next_due_date: new Date(newRecData.next_due_date).toISOString()}); toast.success('Added'); setNewRecData({name:'',category:'rent',amount:'',frequency:'monthly',branch_id:'',next_due_date:'',alert_days:7}); fetchData(); }
+                        catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+                      }}>Save</Button></div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {recurringExpenses.map(r => {
+                      const dl = r.days_until_due;
+                      const overdue = dl != null && dl < 0;
+                      const near = dl != null && dl <= (r.alert_days || 7) && dl >= 0;
+                      return (
+                        <div key={r.id} className={`flex justify-between items-center p-4 rounded-xl border ${overdue ? 'bg-error/5 border-error/30' : near ? 'bg-warning/5 border-warning/30' : 'bg-stone-50'}`}>
+                          <div>
+                            <div className="font-medium">{r.name}</div>
+                            <div className="text-xs text-muted-foreground mt-1 capitalize">{r.category} | {r.frequency} | SAR {r.amount.toFixed(2)}{r.branch_id ? ` | ${branches.find(b => b.id === r.branch_id)?.name || ''}` : ''}</div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {dl != null && <Badge className={overdue ? 'bg-error/20 text-error' : near ? 'bg-warning/20 text-warning' : 'bg-success/20 text-success'}>{overdue ? `${Math.abs(dl)}d overdue` : `${dl}d left`}</Badge>}
+                            <Button size="sm" variant="default" className="rounded-xl" onClick={() => { setRenewingRec(r); setRenewData({ amount: r.amount.toString(), payment_mode: 'cash', branch_id: r.branch_id || '' }); setShowRenewDialog(true); }}><DollarSign size={14} className="mr-1" />Renew & Pay</Button>
+                            <Button size="sm" variant="ghost" className="text-error" onClick={async () => { if(window.confirm('Delete?')) { await api.delete(`/recurring-expenses/${r.id}`); fetchData(); }}}><Trash2 size={12} /></Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {recurringExpenses.length === 0 && <div className="text-center py-8 text-muted-foreground"><AlertTriangle size={24} className="mx-auto mb-2 text-warning" /><p>No recurring expenses set up yet.</p><p className="text-xs mt-1">Add rent, insurance, subscriptions etc. to get alerts before they're due.</p></div>}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </CardHeader>
-          <CardContent>
-            {showRecurringForm && (
-              <div className="p-4 bg-stone-50 rounded-xl border mb-4 space-y-3">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div><Label className="text-xs">Name *</Label><Input value={recData.name} onChange={(e) => setRecData({ ...recData, name: e.target.value })} placeholder="Office Rent" className="h-8" /></div>
-                  <div><Label className="text-xs">Category</Label><Input value={recData.category} onChange={(e) => setRecData({ ...recData, category: e.target.value })} placeholder="rent" className="h-8" /></div>
-                  <div><Label className="text-xs">Amount *</Label><Input type="number" step="0.01" value={recData.amount} onChange={(e) => setRecData({ ...recData, amount: e.target.value })} className="h-8" /></div>
-                  <div><Label className="text-xs">Frequency</Label>
-                    <Select value={recData.frequency} onValueChange={(v) => setRecData({ ...recData, frequency: v })}><SelectTrigger className="h-8"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="monthly">Monthly</SelectItem><SelectItem value="quarterly">Quarterly</SelectItem><SelectItem value="yearly">Yearly</SelectItem></SelectContent></Select>
-                  </div>
-                  <div><Label className="text-xs">Branch</Label>
-                    <Select value={recData.branch_id || "none"} onValueChange={(v) => setRecData({ ...recData, branch_id: v === "none" ? "" : v })}><SelectTrigger className="h-8"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">All</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select>
-                  </div>
-                  <div><Label className="text-xs">Next Due *</Label><Input type="date" value={recData.next_due_date} onChange={(e) => setRecData({ ...recData, next_due_date: e.target.value })} className="h-8" /></div>
-                  <div><Label className="text-xs">Alert (days)</Label><Input type="number" value={recData.alert_days} onChange={(e) => setRecData({ ...recData, alert_days: e.target.value })} className="h-8" /></div>
-                  <div className="flex items-end"><Button size="sm" className="h-8 rounded-xl" onClick={async () => {
-                    if (!recData.name || !recData.amount || !recData.next_due_date) { toast.error('Fill required fields'); return; }
-                    try {
-                      await api.post('/recurring-expenses', { ...recData, amount: parseFloat(recData.amount), alert_days: parseInt(recData.alert_days) || 7, branch_id: recData.branch_id || null, next_due_date: new Date(recData.next_due_date).toISOString() });
-                      toast.success('Added'); setShowRecurringForm(false); setRecData({ name: '', category: 'rent', amount: '', frequency: 'monthly', branch_id: '', next_due_date: '', alert_days: 7 }); fetchData();
-                    } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
-                  }}>Save</Button></div>
+          </TabsContent>
+        </Tabs>
+
+        {/* Category Manager Dialog */}
+        <Dialog open={showCatManager} onOpenChange={setShowCatManager}>
+          <DialogContent className="max-w-lg"><DialogHeader><DialogTitle className="font-outfit">Manage Expense Categories</DialogTitle></DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium">Add Main Category</Label>
+                <div className="flex gap-2 mt-1"><Input value={newCat} onChange={(e) => setNewCat(e.target.value)} placeholder="e.g. Marketing" className="h-9" /><Button size="sm" className="rounded-xl h-9" onClick={handleAddCat}>Add</Button></div>
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Add Sub-Category</Label>
+                <div className="flex gap-2 mt-1">
+                  <Select value={newSubCat.parent || "none"} onValueChange={(v) => setNewSubCat({...newSubCat, parent: v === "none" ? "" : v})}><SelectTrigger className="h-9 w-36"><SelectValue placeholder="Parent" /></SelectTrigger><SelectContent><SelectItem value="none">Select</SelectItem>{mainCats.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
+                  <Input value={newSubCat.name} onChange={(e) => setNewSubCat({...newSubCat, name: e.target.value})} placeholder="Sub-category name" className="h-9 flex-1" />
+                  <Button size="sm" className="rounded-xl h-9" onClick={handleAddSubCat}>Add</Button>
                 </div>
               </div>
-            )}
-            <div className="space-y-2">
-              {recurringExpenses.map(r => {
-                const daysLeft = r.days_until_due;
-                const isOverdue = daysLeft != null && daysLeft < 0;
-                const isNear = daysLeft != null && daysLeft <= (r.alert_days || 7) && daysLeft >= 0;
-                return (
-                  <div key={r.id} className={`flex justify-between items-center p-3 rounded-xl border ${isOverdue ? 'bg-error/5 border-error/30' : isNear ? 'bg-warning/5 border-warning/30' : 'bg-stone-50'}`}>
-                    <div>
-                      <div className="font-medium text-sm">{r.name}</div>
-                      <div className="text-xs text-muted-foreground capitalize">{r.category} | {r.frequency} | SAR {r.amount.toFixed(2)}</div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {daysLeft != null && <Badge className={isOverdue ? 'bg-error/20 text-error' : isNear ? 'bg-warning/20 text-warning' : 'bg-success/20 text-success'}>{isOverdue ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft}d left`}</Badge>}
-                      <Button size="sm" variant="outline" className="h-7 text-xs rounded-xl" onClick={() => { setRenewingRec(r); setRenewData({ amount: r.amount.toString(), payment_mode: 'cash', branch_id: r.branch_id || '' }); setShowRenewDialog(true); }}>Renew & Pay</Button>
-                      <Button size="sm" variant="ghost" className="h-7 text-xs text-error" onClick={async () => { if (window.confirm('Delete?')) { await api.delete(`/recurring-expenses/${r.id}`); fetchData(); } }}><Trash2 size={12} /></Button>
-                    </div>
+              <div className="border-t pt-3">
+                <p className="text-xs font-medium text-muted-foreground mb-2">Current Categories:</p>
+                <div className="space-y-2 max-h-48 overflow-y-auto">{mainCats.map(cat => (
+                  <div key={cat} className="p-2 bg-stone-50 rounded-lg">
+                    <span className="font-medium text-sm">{cat}</span>
+                    {getSubCats(cat).length > 0 && <div className="flex gap-1 mt-1 flex-wrap">{getSubCats(cat).map(s => <Badge key={s} variant="secondary" className="text-xs">{s}</Badge>)}</div>}
                   </div>
-                );
-              })}
-              {recurringExpenses.length === 0 && <p className="text-center text-muted-foreground py-4">No recurring expenses. Add rent, insurance, etc.</p>}
+                ))}</div>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </DialogContent>
+        </Dialog>
 
         {/* Renew & Pay Dialog */}
         <Dialog open={showRenewDialog} onOpenChange={setShowRenewDialog}>
-          <DialogContent>
-            <DialogHeader><DialogTitle className="font-outfit">Renew & Pay - {renewingRec?.name}</DialogTitle></DialogHeader>
+          <DialogContent><DialogHeader><DialogTitle className="font-outfit">Renew & Pay - {renewingRec?.name}</DialogTitle></DialogHeader>
             <p className="text-sm text-muted-foreground capitalize">{renewingRec?.category} | {renewingRec?.frequency}</p>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div><Label>Amount *</Label><Input type="number" step="0.01" value={renewData.amount} onChange={(e) => setRenewData({ ...renewData, amount: e.target.value })} /></div>
-                <div><Label>Payment Mode</Label>
-                  <Select value={renewData.payment_mode} onValueChange={(v) => setRenewData({ ...renewData, payment_mode: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="cash">Cash</SelectItem><SelectItem value="bank">Bank</SelectItem></SelectContent></Select>
-                </div>
-                <div><Label>Branch</Label>
-                  <Select value={renewData.branch_id || "none"} onValueChange={(v) => setRenewData({ ...renewData, branch_id: v === "none" ? "" : v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No Branch</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select>
-                </div>
+                <div><Label>Amount *</Label><Input type="number" step="0.01" value={renewData.amount} onChange={(e) => setRenewData({...renewData, amount: e.target.value})} /></div>
+                <div><Label>Mode</Label><Select value={renewData.payment_mode} onValueChange={(v) => setRenewData({...renewData, payment_mode: v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="cash">Cash</SelectItem><SelectItem value="bank">Bank</SelectItem></SelectContent></Select></div>
+                <div><Label>Branch</Label><Select value={renewData.branch_id || "none"} onValueChange={(v) => setRenewData({...renewData, branch_id: v === "none" ? "" : v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No Branch</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></div>
               </div>
-              <div className="flex gap-3">
-                <Button className="rounded-xl" onClick={async () => {
-                  try {
-                    const res = await api.post(`/recurring-expenses/${renewingRec.id}/renew-pay`, { amount: parseFloat(renewData.amount), payment_mode: renewData.payment_mode, branch_id: renewData.branch_id || null });
-                    toast.success(res.data.message); setShowRenewDialog(false); fetchData();
-                  } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
-                }}>Pay & Renew</Button>
-                <Button variant="outline" className="rounded-xl" onClick={() => setShowRenewDialog(false)}>Cancel</Button>
-              </div>
+              <Button className="rounded-xl" onClick={async () => {
+                try { const res = await api.post(`/recurring-expenses/${renewingRec.id}/renew-pay`, {amount: parseFloat(renewData.amount), payment_mode: renewData.payment_mode, branch_id: renewData.branch_id || null}); toast.success(res.data.message); setShowRenewDialog(false); fetchData(); }
+                catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+              }}>Pay & Renew</Button>
             </div>
           </DialogContent>
         </Dialog>
