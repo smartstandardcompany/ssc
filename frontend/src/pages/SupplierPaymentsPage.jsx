@@ -155,7 +155,7 @@ export default function SupplierPaymentsPage() {
                       <SelectContent>
                         {suppliers.map((supplier) => (
                           <SelectItem key={supplier.id} value={supplier.id}>
-                            {supplier.name} {supplier.current_credit > 0 && `(Credit: $${supplier.current_credit.toFixed(2)})`}
+                            {supplier.name} {supplier.current_credit > 0 && `(Credit: SAR ${supplier.current_credit.toFixed(0)})`}
                           </SelectItem>
                         ))}
                       </SelectContent>
