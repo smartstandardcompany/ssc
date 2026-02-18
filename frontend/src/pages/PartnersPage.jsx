@@ -94,7 +94,7 @@ export default function PartnersPage() {
               </DialogContent>
             </Dialog>
             <Dialog open={showTxnDialog} onOpenChange={setShowTxnDialog}>
-              <DialogTrigger asChild><Button variant="outline" className="rounded-xl"><DollarSign size={16} className="mr-2" />Transaction</Button></DialogTrigger>
+              <DialogTrigger asChild><Button variant="outline" className="rounded-xl"><Plus size={16} className="mr-2" />Investment / Withdrawal</Button></DialogTrigger>
               <DialogContent><DialogHeader><DialogTitle className="font-outfit">Partner Transaction</DialogTitle></DialogHeader>
                 <form onSubmit={handleAddTxn} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
