@@ -118,6 +118,19 @@ export default function CashTransfersPage() {
           </div>
         </div>
 
+        <Card className="border-stone-100 border-primary/30 bg-gradient-to-r from-primary/5 to-amber-50">
+          <CardHeader className="pb-2"><CardTitle className="font-outfit text-base">Company / Head Office Balance</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-3 bg-white rounded-xl text-center"><div className="text-xs text-muted-foreground">From Branches</div><div className="text-lg font-bold text-success">SAR {companyIncoming.toFixed(2)}</div></div>
+              <div className="p-3 bg-white rounded-xl text-center"><div className="text-xs text-muted-foreground">To Branches</div><div className="text-lg font-bold text-error">SAR {companyOutgoing.toFixed(2)}</div></div>
+              <div className="p-3 bg-cash/10 rounded-xl text-center border border-cash/20"><div className="text-xs text-muted-foreground">Cash at Company</div><div className="text-lg font-bold text-cash">SAR {companyCash.toFixed(2)}</div></div>
+              <div className="p-3 bg-bank/10 rounded-xl text-center border border-bank/20"><div className="text-xs text-muted-foreground">Bank at Company</div><div className="text-lg font-bold text-bank">SAR {companyBank.toFixed(2)}</div></div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">Move cash/bank from branches to Company or Company to branches using "New Transfer"</p>
+          </CardContent>
+        </Card>
+
         <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Total Transferred</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-primary"> SAR {totalTransferred.toFixed(2)}</div></CardContent></Card>
 
         <Card className="border-border">
