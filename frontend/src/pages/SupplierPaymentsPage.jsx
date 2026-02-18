@@ -228,10 +228,9 @@ export default function SupplierPaymentsPage() {
                 </div>
 
                 <div className="flex gap-3 mt-6">
-                  <Button type="submit" data-testid="submit-payment-button" className="rounded-full">Add Payment</Button>
-                  <Button type="button" variant="outline" onClick={() => { setShowForm(false); resetForm(); }} className="rounded-full">
-                    Cancel
-                  </Button>
+                  <Button type="submit" data-testid="submit-payment-button" className="rounded-xl">Add Payment</Button>
+                  <Button type="button" variant="outline" onClick={() => { setShowForm(false); resetForm(); }} className="rounded-xl">Cancel</Button>
+                </div>
                 </div>
               </form>
             </CardContent>
