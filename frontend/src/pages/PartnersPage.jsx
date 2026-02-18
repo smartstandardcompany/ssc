@@ -28,9 +28,12 @@ export default function PartnersPage() {
   const [loading, setLoading] = useState(true);
   const [showPartnerDialog, setShowPartnerDialog] = useState(false);
   const [showTxnDialog, setShowTxnDialog] = useState(false);
+  const [showPaySalaryDialog, setShowPaySalaryDialog] = useState(false);
+  const [payingPartner, setPayingPartner] = useState(null);
   const [editingPartner, setEditingPartner] = useState(null);
   const [branchFilter, setBranchFilter] = useState([]);
-  const [partnerData, setPartnerData] = useState({ name: '', phone: '', email: '', share_percentage: '', notes: '' });
+  const [partnerData, setPartnerData] = useState({ name: '', phone: '', email: '', share_percentage: '', salary: '', notes: '' });
+  const [salaryPayData, setSalaryPayData] = useState({ type: 'salary', amount: '', payment_mode: 'cash', branch_id: '', period: '' });
   const [txnData, setTxnData] = useState({ partner_id: '', transaction_type: 'investment', amount: '', payment_mode: 'cash', branch_id: '', description: '', date: new Date().toISOString().split('T')[0] });
 
   useEffect(() => { fetchData(); }, []);
