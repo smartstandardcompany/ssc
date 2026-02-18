@@ -137,23 +137,34 @@ export default function ExpensesPage() {
             <Card className="border-stone-100">
               <CardContent className="pt-6">
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <Label>Category *</Label>
-                      <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v, sub_category: '' })}>
-                        <SelectTrigger className="h-10"><SelectValue placeholder="Select category" /></SelectTrigger>
-                        <SelectContent>{mainCats.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                      </Select>
+                  <div>
+                    <Label>Category *</Label>
+                    <div className="flex gap-2 flex-wrap mt-2">
+                      {mainCats.map((c, i) => {
+                        const colors = ['bg-orange-100 border-orange-300 text-orange-700', 'bg-green-100 border-green-300 text-green-700', 'bg-blue-100 border-blue-300 text-blue-700', 'bg-purple-100 border-purple-300 text-purple-700', 'bg-red-100 border-red-300 text-red-700', 'bg-cyan-100 border-cyan-300 text-cyan-700', 'bg-amber-100 border-amber-300 text-amber-700', 'bg-pink-100 border-pink-300 text-pink-700', 'bg-stone-100 border-stone-300 text-stone-700'];
+                        return (
+                          <button key={c} type="button" onClick={() => setFormData({...formData, category: c, sub_category: ''})}
+                            className={`px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all ${colors[i % colors.length]} ${formData.category === c ? 'ring-2 ring-primary ring-offset-1 scale-105 shadow-md' : 'opacity-80 hover:opacity-100 hover:scale-105'}`}>
+                            {c}
+                          </button>
+                        );
+                      })}
                     </div>
-                    {formData.category && getSubCats(formData.category).length > 0 && (
-                      <div>
-                        <Label>Sub-Category</Label>
-                        <Select value={formData.sub_category || "none"} onValueChange={(v) => setFormData({ ...formData, sub_category: v === "none" ? "" : v })}>
-                          <SelectTrigger className="h-10"><SelectValue placeholder="Select" /></SelectTrigger>
-                          <SelectContent><SelectItem value="none">General {formData.category}</SelectItem>{getSubCats(formData.category).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                        </Select>
+                  </div>
+                  {formData.category && getSubCats(formData.category).length > 0 && (
+                    <div>
+                      <Label>Sub-Category</Label>
+                      <div className="flex gap-2 flex-wrap mt-2">
+                        <button type="button" onClick={() => setFormData({...formData, sub_category: ''})}
+                          className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${!formData.sub_category ? 'bg-primary text-white' : 'bg-stone-50 border-stone-200 hover:bg-stone-100'}`}>General</button>
+                        {getSubCats(formData.category).map(s => (
+                          <button key={s} type="button" onClick={() => setFormData({...formData, sub_category: s})}
+                            className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${formData.sub_category === s ? 'bg-primary text-white' : 'bg-stone-50 border-stone-200 hover:bg-stone-100'}`}>{s}</button>
+                        ))}
                       </div>
-                    )}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
                       <Label>Amount *</Label>
                       <Input type="number" step="0.01" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: e.target.value })} placeholder="SAR 0.00" className="h-10" required />
