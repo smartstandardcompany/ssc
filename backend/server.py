@@ -3370,6 +3370,107 @@ async def delete_partner_transaction(txn_id: str, current_user: User = Depends(g
     await db.partner_transactions.delete_one({"id": txn_id})
     return {"message": "Transaction deleted"}
 
+# Partner Salary Payment
+@api_router.post("/partners/{partner_id}/pay-salary")
+async def pay_partner_salary(partner_id: str, body: dict, current_user: User = Depends(get_current_user)):
+    partner = await db.partners.find_one({"id": partner_id}, {"_id": 0})
+    if not partner: raise HTTPException(status_code=404, detail="Partner not found")
+    amount = float(body.get("amount", partner.get("salary", 0)))
+    period = body.get("period", "")
+    ptype = body.get("type", "salary")  # salary, advance, loan, loan_repayment
+    mode = body.get("payment_mode", "cash")
+    branch_id = body.get("branch_id") or None
+    
+    # Record transaction
+    txn = PartnerTransaction(partner_id=partner_id, partner_name=partner["name"],
+        transaction_type="withdrawal" if ptype in ["salary", "advance"] else ptype,
+        amount=amount, payment_mode=mode, branch_id=branch_id,
+        description=f"{ptype.replace('_',' ').title()} - {period}", date=datetime.now(timezone.utc), created_by=current_user.id)
+    t_dict = txn.model_dump()
+    t_dict["date"] = t_dict["date"].isoformat()
+    t_dict["created_at"] = t_dict["created_at"].isoformat()
+    await db.partner_transactions.insert_one(t_dict)
+    
+    # Update partner balances
+    if ptype == "advance":
+        await db.partners.update_one({"id": partner_id}, {"$inc": {"loan_balance": amount}})
+    elif ptype == "loan_repayment":
+        await db.partners.update_one({"id": partner_id}, {"$inc": {"loan_balance": -amount}})
+    
+    # Create expense
+    expense = Expense(category="partner_salary", description=f"Partner {ptype.title()} - {partner['name']} - {period}",
+        amount=amount, payment_mode=mode, branch_id=branch_id, date=datetime.now(timezone.utc), created_by=current_user.id)
+    e_dict = expense.model_dump()
+    e_dict["date"] = e_dict["date"].isoformat()
+    e_dict["created_at"] = e_dict["created_at"].isoformat()
+    await db.expenses.insert_one(e_dict)
+    
+    return {"message": f"Partner {ptype} SAR {amount:.2f} recorded & added to expenses"}
+
+# Company Loans
+@api_router.get("/company-loans")
+async def get_company_loans(current_user: User = Depends(get_current_user)):
+    loans = await db.company_loans.find({}, {"_id": 0}).to_list(100)
+    payments = await db.company_loan_payments.find({}, {"_id": 0}).to_list(10000)
+    for l in loans:
+        l["paid_amount"] = sum(p["amount"] for p in payments if p.get("loan_id") == l["id"])
+        l["remaining"] = l["total_amount"] - l["paid_amount"]
+        l["status"] = "paid" if l["remaining"] <= 0 else "active"
+        for f in ['start_date', 'created_at']:
+            if isinstance(l.get(f), str): l[f] = datetime.fromisoformat(l[f])
+    return loans
+
+@api_router.post("/company-loans")
+async def create_company_loan(body: dict, current_user: User = Depends(get_current_user)):
+    loan = CompanyLoan(lender=body["lender"], loan_type=body.get("loan_type", "bank"),
+        total_amount=float(body["total_amount"]), monthly_payment=float(body.get("monthly_payment", 0)),
+        interest_rate=float(body.get("interest_rate", 0)), branch_id=body.get("branch_id") or None,
+        start_date=datetime.fromisoformat(body["start_date"]), notes=body.get("notes", ""))
+    l_dict = loan.model_dump()
+    l_dict["start_date"] = l_dict["start_date"].isoformat()
+    l_dict["created_at"] = l_dict["created_at"].isoformat()
+    await db.company_loans.insert_one(l_dict)
+    return {k: v for k, v in l_dict.items() if k != '_id'}
+
+@api_router.post("/company-loans/{loan_id}/pay")
+async def pay_company_loan(loan_id: str, body: dict, current_user: User = Depends(get_current_user)):
+    loan = await db.company_loans.find_one({"id": loan_id}, {"_id": 0})
+    if not loan: raise HTTPException(status_code=404, detail="Loan not found")
+    amount = float(body["amount"])
+    mode = body.get("payment_mode", "bank")
+    branch_id = body.get("branch_id") or loan.get("branch_id")
+    
+    payment = CompanyLoanPayment(loan_id=loan_id, amount=amount, payment_mode=mode,
+        branch_id=branch_id, date=datetime.now(timezone.utc), notes=body.get("notes", ""))
+    p_dict = payment.model_dump()
+    p_dict["date"] = p_dict["date"].isoformat()
+    p_dict["created_at"] = p_dict["created_at"].isoformat()
+    await db.company_loan_payments.insert_one(p_dict)
+    
+    # Create expense
+    expense = Expense(category="loan_repayment", description=f"Loan repayment - {loan['lender']}",
+        amount=amount, payment_mode=mode, branch_id=branch_id, date=datetime.now(timezone.utc), created_by=current_user.id)
+    e_dict = expense.model_dump()
+    e_dict["date"] = e_dict["date"].isoformat()
+    e_dict["created_at"] = e_dict["created_at"].isoformat()
+    await db.expenses.insert_one(e_dict)
+    
+    return {"message": f"Loan payment SAR {amount:.2f} recorded"}
+
+@api_router.delete("/company-loans/{loan_id}")
+async def delete_company_loan(loan_id: str, current_user: User = Depends(get_current_user)):
+    await db.company_loans.delete_one({"id": loan_id})
+    return {"message": "Loan deleted"}
+
+@api_router.get("/company-loan-payments")
+async def get_loan_payments(loan_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {"loan_id": loan_id} if loan_id else {}
+    payments = await db.company_loan_payments.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
+    for p in payments:
+        for f in ['date', 'created_at']:
+            if isinstance(p.get(f), str): p[f] = datetime.fromisoformat(p[f])
+    return payments
+
 # Fines & Penalties Routes
 @api_router.get("/fines")
 async def get_fines(current_user: User = Depends(get_current_user)):
