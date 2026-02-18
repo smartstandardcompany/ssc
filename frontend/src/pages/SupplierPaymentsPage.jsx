@@ -145,22 +145,23 @@ export default function SupplierPaymentsPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
                   <div>
                     <Label>Supplier *</Label>
-                    <Select value={formData.supplier_id} onValueChange={(val) => setFormData({ ...formData, supplier_id: val })} required>
-                      <SelectTrigger data-testid="supplier-select">
-                        <SelectValue placeholder="Select supplier" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {suppliers.map((supplier) => (
-                          <SelectItem key={supplier.id} value={supplier.id}>
-                            {supplier.name} {supplier.current_credit > 0 && `(Credit: SAR ${supplier.current_credit.toFixed(0)})`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex gap-2 flex-wrap mt-2">
+                      {suppliers.map((supplier, i) => {
+                        const colors = ['bg-orange-100 border-orange-300 text-orange-700', 'bg-green-100 border-green-300 text-green-700', 'bg-blue-100 border-blue-300 text-blue-700', 'bg-purple-100 border-purple-300 text-purple-700', 'bg-red-100 border-red-300 text-red-700', 'bg-cyan-100 border-cyan-300 text-cyan-700', 'bg-amber-100 border-amber-300 text-amber-700'];
+                        return (
+                          <button key={supplier.id} type="button" onClick={() => setFormData({...formData, supplier_id: supplier.id})}
+                            className={`px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all ${colors[i % colors.length]} ${formData.supplier_id === supplier.id ? 'ring-2 ring-primary ring-offset-1 scale-105 shadow-md' : 'opacity-80 hover:opacity-100 hover:scale-105'}`}>
+                            {supplier.name}
+                            {supplier.current_credit > 0 && <span className="ml-1 text-xs opacity-70">SAR {supplier.current_credit.toFixed(0)}</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                   <div>
                     <Label>Amount *</Label>
