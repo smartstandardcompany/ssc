@@ -24,6 +24,7 @@ import HelpPage from "./pages/HelpPage";
 import CashTransfersPage from "./pages/CashTransfersPage";
 import FinesPage from "./pages/FinesPage";
 import PartnersPage from "./pages/PartnersPage";
+import CompanyLoansPage from "./pages/CompanyLoansPage";
 import InvoicesPage from "./pages/InvoicesPage";
 import UsersPage from "./pages/UsersPage";
 import { Toaster } from "@/components/ui/sonner";
@@ -98,6 +99,7 @@ function App() {
           <Route path="/cash-transfers" element={isAuthenticated ? <CashTransfersPage /> : <Navigate to="/login" />} />
           <Route path="/fines" element={isAuthenticated ? <FinesPage /> : <Navigate to="/login" />} />
           <Route path="/partners" element={isAuthenticated ? <PartnersPage /> : <Navigate to="/login" />} />
+          <Route path="/company-loans" element={isAuthenticated ? <CompanyLoansPage /> : <Navigate to="/login" />} />
           <Route path="/invoices" element={isAuthenticated ? <InvoicesPage /> : <Navigate to="/login" />} />
           <Route path="/users" element={isAuthenticated ? <UsersPage /> : <Navigate to="/login" />} />
         </Routes>
