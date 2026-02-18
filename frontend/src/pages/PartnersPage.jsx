@@ -85,6 +85,7 @@ export default function PartnersPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div><Label>Name *</Label><Input value={partnerData.name} onChange={(e) => setPartnerData({ ...partnerData, name: e.target.value })} required /></div>
                     <div><Label>Share %</Label><Input type="number" step="0.1" value={partnerData.share_percentage} onChange={(e) => setPartnerData({ ...partnerData, share_percentage: e.target.value })} placeholder="0" /></div>
+                    <div><Label>Monthly Salary</Label><Input type="number" step="0.01" value={partnerData.salary} onChange={(e) => setPartnerData({ ...partnerData, salary: e.target.value })} placeholder="SAR 0" /></div>
                     <div><Label>Phone</Label><Input value={partnerData.phone} onChange={(e) => setPartnerData({ ...partnerData, phone: e.target.value })} /></div>
                     <div><Label>Email</Label><Input value={partnerData.email} onChange={(e) => setPartnerData({ ...partnerData, email: e.target.value })} /></div>
                   </div>
