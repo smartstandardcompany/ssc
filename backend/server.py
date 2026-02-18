@@ -650,6 +650,9 @@ class Partner(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     share_percentage: float = 0
+    salary: float = 0
+    loan_balance: float = 0
+    salary_due: float = 0
     notes: Optional[str] = None
     active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -659,7 +662,35 @@ class PartnerCreate(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     share_percentage: Optional[float] = 0
+    salary: Optional[float] = 0
     notes: Optional[str] = None
+
+# Company Loan
+class CompanyLoan(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    lender: str
+    loan_type: str  # "bank", "personal", "partner", "other"
+    total_amount: float
+    paid_amount: float = 0
+    monthly_payment: float = 0
+    interest_rate: float = 0
+    branch_id: Optional[str] = None
+    start_date: datetime
+    notes: Optional[str] = None
+    status: str = "active"  # "active", "paid"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CompanyLoanPayment(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    loan_id: str
+    amount: float
+    payment_mode: str = "bank"
+    branch_id: Optional[str] = None
+    date: datetime
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class PartnerTransaction(BaseModel):
     model_config = ConfigDict(extra="ignore")
