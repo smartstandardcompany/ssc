@@ -47,10 +47,10 @@ export default function PartnersPage() {
   const handleAddPartner = async (e) => {
     e.preventDefault();
     try {
-      const payload = { ...partnerData, share_percentage: parseFloat(partnerData.share_percentage) || 0 };
+      const payload = { ...partnerData, share_percentage: parseFloat(partnerData.share_percentage) || 0, salary: parseFloat(partnerData.salary) || 0 };
       if (editingPartner) { await api.put(`/partners/${editingPartner.id}`, payload); toast.success('Updated'); }
       else { await api.post('/partners', payload); toast.success('Partner added'); }
-      setShowPartnerDialog(false); setPartnerData({ name: '', phone: '', email: '', share_percentage: '', notes: '' }); setEditingPartner(null); fetchData();
+      setShowPartnerDialog(false); setPartnerData({ name: '', phone: '', email: '', share_percentage: '', salary: '', notes: '' }); setEditingPartner(null); fetchData();
     } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
   };
 
