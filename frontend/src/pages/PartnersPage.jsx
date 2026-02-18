@@ -131,6 +131,8 @@ export default function PartnersPage() {
                 </div>
               </CardTitle></CardHeader>
               <CardContent className="space-y-2">
+                {p.salary > 0 && <div className="flex justify-between p-2 bg-stone-50 rounded"><span className="text-xs">Monthly Salary</span><span className="text-sm font-bold">SAR {p.salary.toFixed(2)}</span></div>}
+                {(p.loan_balance || 0) > 0 && <div className="flex justify-between p-2 bg-warning/10 rounded"><span className="text-xs">Loan Balance</span><span className="text-sm font-bold text-warning">SAR {p.loan_balance.toFixed(2)}</span></div>}
                 <div className="flex justify-between p-2 bg-success/10 rounded"><span className="text-xs flex items-center gap-1"><TrendingUp size={12} />Invested</span><span className="text-sm font-bold text-success">SAR {(p.total_invested || 0).toFixed(2)}</span></div>
                 <div className="flex justify-between p-2 bg-error/10 rounded"><span className="text-xs flex items-center gap-1"><TrendingDown size={12} />Withdrawn</span><span className="text-sm font-bold text-error">SAR {(p.total_withdrawn || 0).toFixed(2)}</span></div>
                 <div className="flex justify-between p-2 bg-primary/10 rounded border border-primary/20"><span className="text-xs font-medium">Balance</span><span className={`text-sm font-bold ${(p.balance || 0) >= 0 ? 'text-success' : 'text-error'}`}>SAR {(p.balance || 0).toFixed(2)}</span></div>
