@@ -159,6 +159,25 @@ export default function PartnersPage() {
             })}</tbody></table>
           </CardContent></Card>
         )}
+        {/* Pay Partner Salary Dialog */}
+        <Dialog open={showPaySalaryDialog} onOpenChange={setShowPaySalaryDialog}>
+          <DialogContent><DialogHeader><DialogTitle className="font-outfit">Partner Payment - {payingPartner?.name}</DialogTitle></DialogHeader>
+            <p className="text-sm text-muted-foreground">Salary: SAR {payingPartner?.salary?.toFixed(2)}{(payingPartner?.loan_balance || 0) > 0 ? ` | Loan: SAR ${payingPartner.loan_balance.toFixed(2)}` : ''}</p>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div><Label>Type</Label><Select value={salaryPayData.type} onValueChange={(v) => setSalaryPayData({...salaryPayData, type: v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="salary">Salary</SelectItem><SelectItem value="advance">Advance/Loan</SelectItem><SelectItem value="loan_repayment">Loan Repayment</SelectItem></SelectContent></Select></div>
+                <div><Label>Amount *</Label><Input type="number" step="0.01" value={salaryPayData.amount} onChange={(e) => setSalaryPayData({...salaryPayData, amount: e.target.value})} /></div>
+                <div><Label>Period</Label><Input value={salaryPayData.period} onChange={(e) => setSalaryPayData({...salaryPayData, period: e.target.value})} placeholder="Feb 2026" /></div>
+                <div><Label>Mode</Label><Select value={salaryPayData.payment_mode} onValueChange={(v) => setSalaryPayData({...salaryPayData, payment_mode: v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="cash">Cash</SelectItem><SelectItem value="bank">Bank</SelectItem></SelectContent></Select></div>
+                <div><Label>Branch</Label><Select value={salaryPayData.branch_id || "none"} onValueChange={(v) => setSalaryPayData({...salaryPayData, branch_id: v === "none" ? "" : v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Company</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></div>
+              </div>
+              <Button className="rounded-xl" onClick={async () => {
+                try { const res = await api.post(`/partners/${payingPartner.id}/pay-salary`, {...salaryPayData, amount: parseFloat(salaryPayData.amount), branch_id: salaryPayData.branch_id || null}); toast.success(res.data.message); setShowPaySalaryDialog(false); fetchData(); }
+                catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+              }}>Record Payment</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
