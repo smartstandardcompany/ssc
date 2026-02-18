@@ -87,13 +87,13 @@ export default function CashTransfersPage() {
                     <div><Label>From</Label>
                       <Select value={formData.from_branch_id || "office"} onValueChange={(v) => setFormData({ ...formData, from_branch_id: v === "office" ? "" : v })}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent><SelectItem value="office">Office / HQ</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+                        <SelectContent><SelectItem value="office">Company / Head Office</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
                     <div><Label>To</Label>
                       <Select value={formData.to_branch_id || "office"} onValueChange={(v) => setFormData({ ...formData, to_branch_id: v === "office" ? "" : v })}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent><SelectItem value="office">Office / HQ</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+                        <SelectContent><SelectItem value="office">Company / Head Office</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
                     <div><Label>Amount *</Label><Input type="number" step="0.01" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: e.target.value })} required data-testid="transfer-amount" /></div>
