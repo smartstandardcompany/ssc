@@ -60,6 +60,12 @@ export default function CashTransfersPage() {
     return true;
   });
   const totalTransferred = filtered.reduce((s, t) => s + t.amount, 0);
+  
+  // Company balance: incoming from branches - outgoing to branches
+  const companyIncoming = transfers.filter(t => !t.to_branch_id && t.from_branch_id).reduce((s, t) => s + t.amount, 0);
+  const companyOutgoing = transfers.filter(t => t.to_branch_id && !t.from_branch_id).reduce((s, t) => s + t.amount, 0);
+  const companyCash = transfers.filter(t => !t.to_branch_id && t.from_branch_id && t.transfer_mode === 'cash').reduce((s, t) => s + t.amount, 0) - transfers.filter(t => t.to_branch_id && !t.from_branch_id && t.transfer_mode === 'cash').reduce((s, t) => s + t.amount, 0);
+  const companyBank = transfers.filter(t => !t.to_branch_id && t.from_branch_id && t.transfer_mode === 'bank').reduce((s, t) => s + t.amount, 0) - transfers.filter(t => t.to_branch_id && !t.from_branch_id && t.transfer_mode === 'bank').reduce((s, t) => s + t.amount, 0);
 
   return (
     <DashboardLayout>
