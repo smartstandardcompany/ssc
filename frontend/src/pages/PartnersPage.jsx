@@ -125,7 +125,8 @@ export default function PartnersPage() {
               <CardHeader><CardTitle className="font-outfit flex justify-between items-start">
                 <div><span>{p.name}</span>{p.share_percentage > 0 && <Badge className="ml-2 bg-primary/20 text-primary">{p.share_percentage}%</Badge>}</div>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => { setEditingPartner(p); setPartnerData({ name: p.name, phone: p.phone || '', email: p.email || '', share_percentage: p.share_percentage || '', notes: p.notes || '' }); setShowPartnerDialog(true); }} className="h-7"><Edit size={14} /></Button>
+                  {p.salary > 0 && <Button size="sm" variant="outline" onClick={() => { setPayingPartner(p); setSalaryPayData({ type: 'salary', amount: p.salary.toString(), payment_mode: 'cash', branch_id: '', period: format(new Date(), 'MMM yyyy') }); setShowPaySalaryDialog(true); }} className="h-7 text-xs"><DollarSign size={12} className="mr-1" />Pay</Button>}
+                  <Button size="sm" variant="ghost" onClick={() => { setEditingPartner(p); setPartnerData({ name: p.name, phone: p.phone || '', email: p.email || '', share_percentage: p.share_percentage || '', salary: p.salary || '', notes: p.notes || '' }); setShowPartnerDialog(true); }} className="h-7"><Edit size={14} /></Button>
                   <Button size="sm" variant="ghost" onClick={async () => { if (window.confirm('Delete?')) { await api.delete(`/partners/${p.id}`); fetchData(); } }} className="h-7 text-error"><Trash2 size={14} /></Button>
                 </div>
               </CardTitle></CardHeader>
