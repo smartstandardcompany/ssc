@@ -316,11 +316,12 @@ export default function EmployeesPage() {
                     <SelectContent><SelectItem value="cash">Cash</SelectItem><SelectItem value="bank">Bank</SelectItem></SelectContent>
                   </Select>
                 </div>
-                <div><Label>From Branch</Label>
-                  <Select value={payData.branch_id || "all"} onValueChange={(v) => setPayData({ ...payData, branch_id: v === "all" ? "" : v })}>
+                <div><Label>Paid From</Label>
+                  <Select value={payData.branch_id || "company"} onValueChange={(v) => setPayData({ ...payData, branch_id: v === "company" ? "" : v })}>
                     <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent><SelectItem value="all">No Branch</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+                    <SelectContent><SelectItem value="company">Company / Head Office</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground mt-1">Which branch cash/bank is used to pay</p>
                 </div>
                 <div><Label>Date</Label><Input type="date" value={payData.date} onChange={(e) => setPayData({ ...payData, date: e.target.value })} /></div>
               </div>
