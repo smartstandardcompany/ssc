@@ -146,12 +146,23 @@ export default function BankStatementsPage() {
                   )) : <div className="text-center py-8"><AlertTriangle size={24} className="mx-auto mb-2 text-success" /><p className="text-success font-medium">No major mismatches detected</p><p className="text-xs text-muted-foreground">Map POS machines to branches first for accurate comparison</p></div>}
                 </TabsContent>
 
-                <TabsContent value="suppliers">
-                  <p className="text-sm text-muted-foreground mb-3">Bank debits that match your supplier names</p>
-                  <table className="w-full"><thead><tr className="border-b"><th className="text-left p-2 text-xs font-medium">Transaction</th><th className="text-left p-2 text-xs font-medium">Supplier Match</th><th className="text-right p-2 text-xs font-medium">Amount</th><th className="text-left p-2 text-xs font-medium">Date</th></tr></thead>
+                <TabsContent value="suppliers" className="space-y-4">
+                  <p className="text-sm text-muted-foreground">Matches bank transactions to suppliers by name or account number. Add account numbers to suppliers for better matching.</p>
+                  {analysis?.supplier_summary?.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Supplier Summary</p>
+                      {analysis.supplier_summary.map((s, i) => (
+                        <div key={i} className="flex justify-between items-center p-3 border rounded-xl">
+                          <div><span className="font-medium">{s.name}</span><Badge className="ml-2" variant="secondary">{s.match_type === 'account' ? 'By Account #' : 'By Name'}</Badge></div>
+                          <div className="flex items-center gap-4"><Badge variant="secondary">{s.count}x</Badge><span className="font-bold text-error">SAR {s.total.toFixed(2)}</span><span className="text-xs text-muted-foreground">{s.first_date} → {s.last_date}</span></div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <table className="w-full"><thead><tr className="border-b"><th className="text-left p-2 text-xs font-medium">Transaction</th><th className="text-left p-2 text-xs font-medium">Supplier</th><th className="text-left p-2 text-xs font-medium">Match</th><th className="text-right p-2 text-xs font-medium">Amount</th><th className="text-left p-2 text-xs font-medium">Date</th></tr></thead>
                   <tbody>{analysis?.supplier_matches?.map((m, i) => (
-                    <tr key={i} className="border-b hover:bg-stone-50"><td className="p-2 text-sm max-w-xs truncate">{m.transaction}</td><td className="p-2"><Badge className="bg-primary/20 text-primary">{m.supplier}</Badge></td><td className="p-2 text-sm text-right font-bold text-error">SAR {m.amount.toFixed(2)}</td><td className="p-2 text-xs">{m.date}</td></tr>
-                  ))}{(!analysis?.supplier_matches || analysis.supplier_matches.length === 0) && <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">No supplier matches found. Add suppliers with correct names to auto-match.</td></tr>}</tbody></table>
+                    <tr key={i} className="border-b hover:bg-stone-50"><td className="p-2 text-xs max-w-xs truncate">{m.transaction}</td><td className="p-2"><Badge className="bg-primary/20 text-primary">{m.supplier}</Badge></td><td className="p-2"><Badge variant="outline" className="text-xs">{m.match_type}</Badge></td><td className="p-2 text-sm text-right font-bold text-error">SAR {m.amount.toFixed(2)}</td><td className="p-2 text-xs">{m.date}</td></tr>
+                  ))}{(!analysis?.supplier_matches || analysis.supplier_matches.length === 0) && <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">Add supplier account numbers in Suppliers page for auto-matching</td></tr>}</tbody></table>
                 </TabsContent>
 
                 <TabsContent value="daily"><table className="w-full"><thead><tr className="border-b"><th className="text-left p-2 text-xs font-medium">Date</th><th className="text-right p-2 text-xs font-medium">In</th><th className="text-right p-2 text-xs font-medium">Out</th><th className="text-right p-2 text-xs font-medium">Net</th></tr></thead>
