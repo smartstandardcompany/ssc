@@ -178,28 +178,53 @@ export default function BankStatementsPage() {
         {/* POS Machine Manager */}
         <Dialog open={showPosManager} onOpenChange={setShowPosManager}>
           <DialogContent className="max-w-2xl"><DialogHeader><DialogTitle className="font-outfit">POS Machine → Branch Mapping</DialogTitle></DialogHeader>
-            <p className="text-sm text-muted-foreground mb-4">Link each POS machine number to a branch for accurate reconciliation</p>
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {/* Show machines from all statements */}
+            <p className="text-sm text-muted-foreground mb-3">Add POS machines manually or auto-detected from statements</p>
+            
+            {/* Manual Add */}
+            <div className="flex gap-2 items-end p-3 bg-stone-50 rounded-xl border mb-3">
+              <div className="flex-1"><Label className="text-xs">Machine ID</Label><Input id="new-pos-id" placeholder="e.g., 6377290677581211" className="h-8 font-mono" /></div>
+              <div className="w-32"><Label className="text-xs">Label</Label><Input id="new-pos-label" placeholder="POS 1" className="h-8" /></div>
+              <div className="w-36"><Label className="text-xs">Branch</Label>
+                <Select onValueChange={(v) => document.getElementById('new-pos-branch').value = v === "none" ? "" : v}><SelectTrigger className="h-8"><SelectValue placeholder="Branch" /></SelectTrigger><SelectContent><SelectItem value="none">Select</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select>
+                <input type="hidden" id="new-pos-branch" />
+              </div>
+              <Button size="sm" className="h-8 rounded-xl" onClick={() => {
+                const mid = document.getElementById('new-pos-id').value;
+                const label = document.getElementById('new-pos-label').value;
+                const bid = document.getElementById('new-pos-branch').value;
+                if (!mid) { toast.error('Enter machine ID'); return; }
+                savePosMapping(mid, bid, label);
+                document.getElementById('new-pos-id').value = '';
+                document.getElementById('new-pos-label').value = '';
+              }}>Add</Button>
+            </div>
+
+            <div className="space-y-2 max-h-72 overflow-y-auto">
+              {/* Existing mapped machines */}
+              {posMachines.map(pm => (
+                <div key={pm.machine_id} className="flex gap-2 items-center p-2 border rounded-xl bg-success/5">
+                  <span className="font-mono text-xs flex-1">{pm.machine_id}</span>
+                  <Badge variant="secondary">{pm.label || 'No label'}</Badge>
+                  <Badge className="bg-success/20 text-success">{branches.find(b => b.id === pm.branch_id)?.name || 'Unmapped'}</Badge>
+                  <Button size="sm" variant="ghost" className="h-6 text-error" onClick={async () => { await api.delete(`/pos-machines/${pm.machine_id}`); fetchData(); }}><Trash2 size={12} /></Button>
+                </div>
+              ))}
+              {/* Unmapped machines from statements */}
               {(() => {
-                const allMachines = new Set();
-                statements.forEach(s => { if (s.pos_machines) Object.keys(s.pos_machines).forEach(m => allMachines.add(m)); });
-                // Also from detail
-                if (detail?.pos_machines) Object.keys(detail.pos_machines).forEach(m => allMachines.add(m));
-                const machines = [...allMachines];
-                if (machines.length === 0) return <p className="text-center text-muted-foreground py-4">Upload a statement first to detect POS machines</p>;
-                return machines.map(mid => {
-                  const existing = posMachines.find(p => p.machine_id === mid);
-                  return (
-                    <div key={mid} className="flex gap-3 items-center p-3 border rounded-xl">
-                      <span className="font-mono text-xs flex-1">{mid}</span>
-                      <Select defaultValue={existing?.branch_id || "none"} onValueChange={(v) => savePosMapping(mid, v === "none" ? "" : v, "")}>
-                        <SelectTrigger className="w-40 h-8"><SelectValue placeholder="Select branch" /></SelectTrigger>
-                        <SelectContent><SelectItem value="none">Unmapped</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
-                      </Select>
-                    </div>
-                  );
-                });
+                const mapped = new Set(posMachines.map(p => p.machine_id));
+                const unmapped = new Set();
+                statements.forEach(s => { if (s.pos_machines) Object.keys(s.pos_machines).forEach(m => { if (!mapped.has(m)) unmapped.add(m); }); });
+                if (detail?.pos_machines) Object.keys(detail.pos_machines).forEach(m => { if (!mapped.has(m)) unmapped.add(m); });
+                return [...unmapped].map(mid => (
+                  <div key={mid} className="flex gap-2 items-center p-2 border rounded-xl bg-warning/5">
+                    <span className="font-mono text-xs flex-1">{mid}</span>
+                    <Badge className="bg-warning/20 text-warning">Unmapped</Badge>
+                    <Select onValueChange={(v) => savePosMapping(mid, v === "none" ? "" : v, "")}>
+                      <SelectTrigger className="w-32 h-7"><SelectValue placeholder="Assign" /></SelectTrigger>
+                      <SelectContent>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                ));
               })()}
             </div>
           </DialogContent>
