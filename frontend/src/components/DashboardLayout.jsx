@@ -47,6 +47,7 @@ export const DashboardLayout = ({ children }) => {
     { path: '/fines', icon: AlertTriangle, label: 'Fines & Penalties', roles: ['admin', 'manager'], perm: 'fines' },
     { path: '/partners', icon: Handshake, label: 'Partners', roles: ['admin'], perm: 'partners' },
     { path: '/company-loans', icon: Building2, label: 'Company Loans', roles: ['admin'], perm: 'partners' },
+    { path: '/bank-statements', icon: FileText, label: 'Bank Statements', roles: ['admin'], perm: 'reports' },
     { path: '/employees', icon: UserCheck, label: 'Employees', roles: ['admin', 'manager'], perm: 'employees' },
     { path: '/documents', icon: FileWarning, label: 'Documents', roles: ['admin', 'manager'], perm: 'documents' },
     { path: '/reports', icon: BarChart3, label: 'Reports', roles: ['admin', 'manager'], perm: 'reports' },
