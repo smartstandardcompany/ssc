@@ -4177,12 +4177,14 @@ async def test_whatsapp(current_user: User = Depends(get_current_user)):
         raise HTTPException(status_code=400, detail="WhatsApp not configured")
     try:
         client = Client(config["account_sid"], config["auth_token"])
-        message = client.messages.create(
-            from_=f'whatsapp:{config["phone_number"]}',
-            body="Test message from SSC Track. Your WhatsApp settings are working!",
-            to=f'whatsapp:{config["recipient_number"]}'
-        )
-        return {"message": "Test WhatsApp sent", "sid": message.sid}
+        recipients = [r.strip() for r in config.get("recipient_number", "").split(",") if r.strip()]
+        sent = 0
+        for recipient in recipients:
+            try:
+                client.messages.create(from_=f'whatsapp:{config["phone_number"]}', body="Test message from SSC Track - WhatsApp is working!", to=f'whatsapp:{recipient}')
+                sent += 1
+            except: pass
+        return {"message": f"Test sent to {sent}/{len(recipients)} recipients"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"WhatsApp failed: {str(e)}")
 
