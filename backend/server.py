@@ -4559,6 +4559,110 @@ async def delete_bank_statement(stmt_id: str, current_user: User = Depends(get_c
     await db.bank_statements.delete_one({"id": stmt_id})
     return {"message": "Statement deleted"}
 
+# POS Machine → Branch Mapping
+@api_router.get("/pos-machines")
+async def get_pos_machines(current_user: User = Depends(get_current_user)):
+    return await db.pos_machines.find({}, {"_id": 0}).to_list(100)
+
+@api_router.post("/pos-machines")
+async def save_pos_machine(body: dict, current_user: User = Depends(get_current_user)):
+    machine_id = body.get("machine_id", "")
+    branch_id = body.get("branch_id", "")
+    label = body.get("label", "")
+    existing = await db.pos_machines.find_one({"machine_id": machine_id})
+    if existing:
+        await db.pos_machines.update_one({"machine_id": machine_id}, {"$set": {"branch_id": branch_id, "label": label}})
+    else:
+        await db.pos_machines.insert_one({"id": str(uuid.uuid4()), "machine_id": machine_id, "branch_id": branch_id, "label": label})
+    return {"message": "POS machine mapped"}
+
+@api_router.delete("/pos-machines/{machine_id}")
+async def delete_pos_machine(machine_id: str, current_user: User = Depends(get_current_user)):
+    await db.pos_machines.delete_one({"machine_id": machine_id})
+    return {"message": "Deleted"}
+
+# Statement Analysis - Sender/Receiver grouping + Mismatch + Supplier linking
+@api_router.get("/bank-statements/{stmt_id}/analysis")
+async def analyze_statement(stmt_id: str, current_user: User = Depends(get_current_user)):
+    stmt = await db.bank_statements.find_one({"id": stmt_id}, {"_id": 0})
+    if not stmt: raise HTTPException(status_code=404, detail="Not found")
+    
+    txns = stmt.get("transactions", [])
+    pos_mappings = {m["machine_id"]: m for m in await db.pos_machines.find({}, {"_id": 0}).to_list(100)}
+    branches = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
+    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+    
+    # 1. Sender/Receiver analysis
+    senders = {}
+    for t in txns:
+        desc = t.get("description", "")
+        # Extract name from description
+        name = desc.split('-')[0].strip() if '-' in desc else desc[:40].strip()
+        if len(name) < 3 or name.upper() in ['NAN', '']: continue
+        if name not in senders:
+            senders[name] = {"count": 0, "total_credit": 0, "total_debit": 0, "first_date": t.get("date",""), "last_date": t.get("date","")}
+        senders[name]["count"] += 1
+        senders[name]["total_credit"] += t.get("credit", 0)
+        senders[name]["total_debit"] += t.get("debit", 0)
+        senders[name]["last_date"] = t.get("date", "")
+    
+    # Sort by total amount
+    sender_list = [{"name": k, **v, "net": v["total_credit"] - v["total_debit"]} for k, v in senders.items()]
+    sender_list.sort(key=lambda x: x["total_credit"] + x["total_debit"], reverse=True)
+    
+    # 2. POS by branch (using mappings)
+    pos_by_branch = {}
+    for t in txns:
+        mid = t.get("machine_id")
+        if not mid: continue
+        mapping = pos_mappings.get(mid, {})
+        bid = mapping.get("branch_id", "unmapped")
+        bname = branches.get(bid, mapping.get("label", "Unmapped"))
+        if bname not in pos_by_branch:
+            pos_by_branch[bname] = {"count": 0, "total": 0, "machines": set()}
+        pos_by_branch[bname]["count"] += 1
+        pos_by_branch[bname]["total"] += t.get("credit", 0)
+        pos_by_branch[bname]["machines"].add(mid)
+    for v in pos_by_branch.values():
+        v["machines"] = list(v["machines"])
+    
+    # 3. Compare POS with SSC Track sales
+    system_sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+    # Group system sales by branch per day
+    sys_by_branch = {}
+    for s in system_sales:
+        bid = s.get("branch_id", "")
+        bname = branches.get(bid, "Unknown")
+        bank_amt = sum(p["amount"] for p in s.get("payment_details", []) if p.get("mode") == "bank")
+        if bank_amt > 0:
+            sys_by_branch[bname] = sys_by_branch.get(bname, 0) + bank_amt
+    
+    mismatches = []
+    for bname, pos_data in pos_by_branch.items():
+        sys_amt = sys_by_branch.get(bname, 0)
+        diff = pos_data["total"] - sys_amt
+        if abs(diff) > 1:
+            mismatches.append({"branch": bname, "bank_amount": pos_data["total"], "system_amount": sys_amt, "difference": diff})
+    
+    # 4. Potential supplier matches
+    supplier_matches = []
+    for t in txns:
+        if t.get("debit", 0) > 0:
+            desc_upper = t.get("description", "").upper()
+            for sup in suppliers:
+                if sup["name"].upper() in desc_upper or (sup.get("phone") and sup["phone"] in desc_upper):
+                    supplier_matches.append({"transaction": t.get("description","")[:50], "amount": t["debit"], "supplier": sup["name"], "supplier_id": sup["id"], "date": t.get("date","")})
+                    break
+    
+    return {
+        "senders": sender_list[:50],
+        "pos_by_branch": pos_by_branch,
+        "mismatches": mismatches,
+        "supplier_matches": supplier_matches[:30],
+        "total_bank_fees": sum(t.get("debit",0) for t in txns if t.get("category") == "bank_fees"),
+        "total_pos_sales": sum(t.get("credit",0) for t in txns if t.get("category") == "pos_sales"),
+    }
+
 # Export Routes
 @api_router.post("/export/reports")
 async def export_reports(export_request: ExportRequest, current_user: User = Depends(get_current_user)):
