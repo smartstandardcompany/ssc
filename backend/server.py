@@ -4659,21 +4659,34 @@ async def analyze_statement(stmt_id: str, current_user: User = Depends(get_curre
         if abs(diff) > 1:
             mismatches.append({"branch": bname, "bank_amount": pos_data["total"], "system_amount": sys_amt, "difference": diff})
     
-    # 4. Potential supplier matches
+    # 4. Potential supplier matches - by name OR account number
     supplier_matches = []
     for t in txns:
-        if t.get("debit", 0) > 0:
-            desc_upper = t.get("description", "").upper()
-            for sup in suppliers:
-                if sup["name"].upper() in desc_upper or (sup.get("phone") and sup["phone"] in desc_upper):
-                    supplier_matches.append({"transaction": t.get("description","")[:50], "amount": t["debit"], "supplier": sup["name"], "supplier_id": sup["id"], "date": t.get("date","")})
-                    break
+        desc = t.get("description", "")
+        desc_upper = desc.upper()
+        for sup in suppliers:
+            if sup.get("account_number") and sup["account_number"] in desc:
+                supplier_matches.append({"transaction": desc[:80], "amount": t.get("debit",0) or t.get("credit",0), "type": "credit" if t.get("credit",0) > 0 else "debit", "supplier": sup["name"], "supplier_id": sup["id"], "date": t.get("date",""), "match_type": "account"})
+                break
+            if t.get("debit", 0) > 0 and sup["name"].upper() in desc_upper:
+                supplier_matches.append({"transaction": desc[:80], "amount": t["debit"], "type": "debit", "supplier": sup["name"], "supplier_id": sup["id"], "date": t.get("date",""), "match_type": "name"})
+                break
+    
+    sup_summary = {}
+    for m in supplier_matches:
+        key = m["supplier"]
+        if key not in sup_summary:
+            sup_summary[key] = {"count": 0, "total": 0, "first_date": m["date"], "last_date": m["date"], "match_type": m["match_type"]}
+        sup_summary[key]["count"] += 1
+        sup_summary[key]["total"] += m["amount"]
+        sup_summary[key]["last_date"] = m["date"]
     
     return {
-        "senders": sender_list[:50],
+        "senders": sender_list[:80],
         "pos_by_branch": pos_by_branch,
         "mismatches": mismatches,
-        "supplier_matches": supplier_matches[:30],
+        "supplier_matches": supplier_matches[:50],
+        "supplier_summary": [{"name": k, **v} for k, v in sorted(sup_summary.items(), key=lambda x: -x[1]["total"])],
         "total_bank_fees": sum(t.get("debit",0) for t in txns if t.get("category") == "bank_fees"),
         "total_pos_sales": sum(t.get("credit",0) for t in txns if t.get("category") == "pos_sales"),
     }
