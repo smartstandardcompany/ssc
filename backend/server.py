@@ -4322,6 +4322,197 @@ async def send_supplier_report_wa(current_user: User = Depends(get_current_user)
     if ok: return {"message": "Supplier report sent"}
     raise HTTPException(status_code=500, detail=err)
 
+# Bank Statement Analyzer
+@api_router.post("/bank-statements/upload")
+async def upload_bank_statement(file: UploadFile = File(...), bank_name: str = Form(""), branch_id: str = Form(""), current_user: User = Depends(get_current_user)):
+    import pdfplumber, re
+    
+    content = await file.read()
+    transactions = []
+    
+    if file.filename.endswith('.pdf'):
+        # Parse PDF
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
+            tmp.write(content)
+            tmp_path = tmp.name
+        
+        try:
+            with pdfplumber.open(tmp_path) as pdf:
+                for page in pdf.pages:
+                    tables = page.extract_tables()
+                    for table in tables:
+                        for row in table:
+                            if not row or len(row) < 3: continue
+                            # Try to find date pattern
+                            cells = [str(c or '').strip() for c in row]
+                            date_match = None
+                            for cell in cells:
+                                m = re.search(r'(\d{2}/\d{2}/\d{4})', cell)
+                                if m: date_match = m.group(1); break
+                            if not date_match: continue
+                            
+                            # Extract amounts
+                            debit = 0
+                            credit = 0
+                            desc = ''
+                            balance = 0
+                            
+                            for cell in cells:
+                                if cell == date_match: continue
+                                # Try parse as number
+                                clean = cell.replace(',', '').replace(' ', '')
+                                try:
+                                    num = float(clean)
+                                    if num > 0:
+                                        if credit == 0: credit = num
+                                        else: balance = num
+                                    elif num < 0:
+                                        debit = abs(num)
+                                except:
+                                    if len(cell) > 5 and not desc:
+                                        desc = cell[:200]
+                            
+                            if (debit > 0 or credit > 0) and date_match:
+                                transactions.append({"date": date_match, "description": desc, "debit": debit, "credit": credit, "balance": balance})
+        finally:
+            os.remove(tmp_path)
+    else:
+        # Parse Excel/CSV
+        try:
+            if file.filename.endswith('.csv'):
+                df = pd.read_csv(BytesIO(content))
+            else:
+                df = pd.read_excel(BytesIO(content))
+            
+            df.columns = [str(c).lower().strip() for c in df.columns]
+            
+            for _, row in df.iterrows():
+                r = {str(k): str(v) if pd.notna(v) else '' for k, v in row.items()}
+                date = r.get('date', r.get('transaction date', r.get('value date', '')))
+                desc = r.get('description', r.get('details', r.get('narrative', r.get('particulars', ''))))
+                
+                debit = 0
+                credit = 0
+                balance = 0
+                for k, v in r.items():
+                    try:
+                        num = float(str(v).replace(',', ''))
+                        if 'debit' in k or 'withdrawal' in k: debit = abs(num)
+                        elif 'credit' in k or 'deposit' in k: credit = num
+                        elif 'balance' in k: balance = num
+                        elif 'amount' in k:
+                            if num < 0: debit = abs(num)
+                            else: credit = num
+                    except: pass
+                
+                if (debit > 0 or credit > 0) and date:
+                    transactions.append({"date": str(date)[:10], "description": str(desc)[:200], "debit": debit, "credit": credit, "balance": balance})
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Cannot parse file: {str(e)}")
+    
+    if not transactions:
+        raise HTTPException(status_code=400, detail="No transactions found in file. Try Excel format.")
+    
+    # Categorize transactions
+    for t in transactions:
+        desc = t["description"].upper()
+        if any(k in desc for k in ['POS', 'SPANMRC', 'VISAMRC', 'BNETMRC', 'MADA', 'نقاط البيع']): t["category"] = "pos_sales"
+        elif any(k in desc for k in ['SFEEMRC', 'VAT OF FEES', 'FEE']): t["category"] = "bank_fees"
+        elif any(k in desc for k in ['INTERNAL TRANSFER', 'INT XFER']): t["category"] = "internal_transfer"
+        elif any(k in desc for k in ['SARIE', 'INCOMING']): t["category"] = "incoming_transfer"
+        elif any(k in desc for k in ['SALARY', 'SAL']): t["category"] = "salary"
+        elif any(k in desc for k in ['VAT', 'ضريبة']): t["category"] = "vat"
+        else: t["category"] = "other"
+        
+        # Extract POS machine number
+        import re as re2
+        machine = re2.search(r'(\d{16})', t["description"])
+        t["machine_id"] = machine.group(1) if machine else None
+    
+    # Save statement
+    statement = {
+        "id": str(uuid.uuid4()),
+        "file_name": file.filename,
+        "bank_name": bank_name or "Unknown",
+        "branch_id": branch_id if branch_id else None,
+        "period": f"{transactions[0]['date']} - {transactions[-1]['date']}" if transactions else "",
+        "total_credit": sum(t["credit"] for t in transactions),
+        "total_debit": sum(t["debit"] for t in transactions),
+        "transaction_count": len(transactions),
+        "transactions": transactions,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": current_user.id
+    }
+    await db.bank_statements.insert_one(statement)
+    
+    # Summary
+    cats = {}
+    machines = {}
+    for t in transactions:
+        cat = t["category"]
+        cats[cat] = cats.get(cat, {"count": 0, "debit": 0, "credit": 0})
+        cats[cat]["count"] += 1
+        cats[cat]["debit"] += t["debit"]
+        cats[cat]["credit"] += t["credit"]
+        if t.get("machine_id"):
+            mid = t["machine_id"]
+            machines[mid] = machines.get(mid, {"count": 0, "total": 0})
+            machines[mid]["count"] += 1
+            machines[mid]["total"] += t["credit"]
+    
+    return {
+        "id": statement["id"],
+        "file_name": file.filename,
+        "transactions_parsed": len(transactions),
+        "total_credit": statement["total_credit"],
+        "total_debit": statement["total_debit"],
+        "net": statement["total_credit"] - statement["total_debit"],
+        "categories": cats,
+        "pos_machines": machines
+    }
+
+@api_router.get("/bank-statements")
+async def get_bank_statements(current_user: User = Depends(get_current_user)):
+    statements = await db.bank_statements.find({}, {"_id": 0, "transactions": 0}).sort("created_at", -1).to_list(100)
+    return statements
+
+@api_router.get("/bank-statements/{stmt_id}")
+async def get_bank_statement_detail(stmt_id: str, current_user: User = Depends(get_current_user)):
+    stmt = await db.bank_statements.find_one({"id": stmt_id}, {"_id": 0})
+    if not stmt: raise HTTPException(status_code=404, detail="Not found")
+    
+    # Recalculate summary
+    txns = stmt.get("transactions", [])
+    cats = {}
+    machines = {}
+    daily = {}
+    for t in txns:
+        cat = t.get("category", "other")
+        cats[cat] = cats.get(cat, {"count": 0, "debit": 0, "credit": 0})
+        cats[cat]["count"] += 1
+        cats[cat]["debit"] += t.get("debit", 0)
+        cats[cat]["credit"] += t.get("credit", 0)
+        if t.get("machine_id"):
+            mid = t["machine_id"]
+            machines[mid] = machines.get(mid, {"count": 0, "total": 0})
+            machines[mid]["count"] += 1
+            machines[mid]["total"] += t.get("credit", 0)
+        d = t.get("date", "")[:10]
+        daily[d] = daily.get(d, {"credit": 0, "debit": 0})
+        daily[d]["credit"] += t.get("credit", 0)
+        daily[d]["debit"] += t.get("debit", 0)
+    
+    stmt["categories"] = cats
+    stmt["pos_machines"] = machines
+    stmt["daily_summary"] = [{"date": k, **v} for k, v in sorted(daily.items())]
+    return stmt
+
+@api_router.delete("/bank-statements/{stmt_id}")
+async def delete_bank_statement(stmt_id: str, current_user: User = Depends(get_current_user)):
+    await db.bank_statements.delete_one({"id": stmt_id})
+    return {"message": "Statement deleted"}
+
 # Export Routes
 @api_router.post("/export/reports")
 async def export_reports(export_request: ExportRequest, current_user: User = Depends(get_current_user)):
