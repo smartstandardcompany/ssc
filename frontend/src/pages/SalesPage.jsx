@@ -221,41 +221,41 @@ export default function SalesPage() {
 
                 <form onSubmit={handleSubmit}>
                   <div className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Branch *</Label>
-                        <Select value={formData.branch_id} onValueChange={(val) => setFormData({ ...formData, branch_id: val })} required>
-                          <SelectTrigger data-testid="branch-select">
-                            <SelectValue placeholder="Select branch" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {branches.map((branch) => (
-                              <SelectItem key={branch.id} value={branch.id}>
-                                {branch.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                    {/* Branch Selection - Color Coded */}
+                    <div>
+                      <Label>Branch *</Label>
+                      <div className="flex gap-2 flex-wrap mt-2">
+                        {branches.map((branch, i) => {
+                          const colors = ['bg-orange-100 border-orange-300 text-orange-700', 'bg-green-100 border-green-300 text-green-700', 'bg-blue-100 border-blue-300 text-blue-700', 'bg-purple-100 border-purple-300 text-purple-700', 'bg-cyan-100 border-cyan-300 text-cyan-700'];
+                          return (
+                            <button key={branch.id} type="button" onClick={() => setFormData({...formData, branch_id: branch.id})}
+                              className={`px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all ${colors[i % colors.length]} ${formData.branch_id === branch.id ? 'ring-2 ring-primary ring-offset-1 scale-105 shadow-md' : 'opacity-80 hover:opacity-100 hover:scale-105'}`}>
+                              {branch.name}
+                            </button>
+                          );
+                        })}
                       </div>
+                    </div>
 
-                      <TabsContent value="online" className="mt-0">
-                        <div>
-                          <Label>Customer *</Label>
-                          <Select value={formData.customer_id} onValueChange={(val) => setFormData({ ...formData, customer_id: val })} required={activeTab === 'online'}>
-                            <SelectTrigger data-testid="customer-select">
-                              <SelectValue placeholder="Select customer" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {customers.map((customer) => (
-                                <SelectItem key={customer.id} value={customer.id}>
-                                  {customer.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                    {/* Customer Selection for Online Sales */}
+                    <TabsContent value="online" className="mt-0">
+                      <div>
+                        <Label>Customer *</Label>
+                        <div className="flex gap-2 flex-wrap mt-2">
+                          {customers.map((customer, i) => {
+                            const colors = ['bg-amber-100 border-amber-300 text-amber-700', 'bg-teal-100 border-teal-300 text-teal-700', 'bg-rose-100 border-rose-300 text-rose-700', 'bg-indigo-100 border-indigo-300 text-indigo-700', 'bg-lime-100 border-lime-300 text-lime-700'];
+                            return (
+                              <button key={customer.id} type="button" onClick={() => setFormData({...formData, customer_id: customer.id})}
+                                className={`px-3 py-1.5 rounded-xl border-2 text-xs font-medium transition-all ${colors[i % colors.length]} ${formData.customer_id === customer.id ? 'ring-2 ring-primary ring-offset-1 scale-105 shadow-md' : 'opacity-80 hover:opacity-100 hover:scale-105'}`}>
+                                {customer.name}
+                              </button>
+                            );
+                          })}
                         </div>
-                      </TabsContent>
+                      </div>
+                    </TabsContent>
 
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>Date *</Label>
                         <Input
