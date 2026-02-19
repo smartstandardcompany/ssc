@@ -23,7 +23,7 @@ export default function SuppliersPage() {
   const [showPayDialog, setShowPayDialog] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [payingSupplier, setPayingSupplier] = useState(null);
-  const [formData, setFormData] = useState({ name: '', category: '', sub_category: '', branch_id: '', phone: '', email: '', credit_limit: 0 });
+  const [formData, setFormData] = useState({ name: '', category: '', sub_category: '', branch_id: '', phone: '', email: '', account_number: '', credit_limit: 0 });
   const [paymentData, setPaymentData] = useState({ payment_mode: 'cash', amount: '', branch_id: '' });
   const [newCategory, setNewCategory] = useState('');
   const [newSubCategory, setNewSubCategory] = useState('');
@@ -123,7 +123,7 @@ export default function SuppliersPage() {
       branch_id: supplier.branch_id || '',
       phone: supplier.phone || '',
       email: supplier.email || '',
-      credit_limit: supplier.credit_limit || 0
+      account_number: supplier.account_number || '', credit_limit: supplier.credit_limit || 0
     });
     setShowDialog(true);
   };
@@ -141,7 +141,7 @@ export default function SuppliersPage() {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', category: '', sub_category: '', branch_id: '', phone: '', email: '', credit_limit: 0 });
+    setFormData({ name: '', category: '', sub_category: '', branch_id: '', phone: '', email: '', account_number: '', credit_limit: 0 });
     setEditingSupplier(null);
   };
 
