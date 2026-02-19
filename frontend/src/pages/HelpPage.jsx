@@ -1,120 +1,129 @@
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { LayoutDashboard, ShoppingCart, FileInput, Store, Users, Truck, Receipt, ArrowLeftRight, AlertTriangle, Handshake, UserCheck, FileWarning, BarChart3, CreditCard, FileText, Settings, HelpCircle } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, FileInput, Store, Users, Truck, Receipt, ArrowLeftRight, AlertTriangle, Handshake, UserCheck, FileWarning, BarChart3, CreditCard, FileText, Settings, HelpCircle, Building2 } from 'lucide-react';
 
 const sections = [
   { icon: LayoutDashboard, title: 'Dashboard', color: 'text-primary', items: [
-    'View total sales, expenses, supplier payments, net profit',
+    'View total sales, expenses, supplier payments, net profit with % of sales',
     'Cash & Bank in hand after all expenses',
-    'Filter by branch (click branch chips) and date period',
+    'Filter by branch chips + date period (Today/Month/Year/Custom)',
     'VAT 15% toggle: check "Show VAT 15% Calculation"',
-    'Due fines, due salaries, supplier dues displayed',
-    'Branch-to-branch dues with payback tracking',
-    'Upcoming recurring expenses alerts',
-    'Document expiry alerts',
+    'Due fines, due salaries by branch, supplier dues',
+    'Branch-to-branch dues with payback tracking (net balance)',
+    'Branch loss alerts in RED when any branch is losing money',
+    'Upcoming recurring expenses & document expiry alerts',
+    '▲/▼ arrows comparing vs previous month on all cards',
   ]},
   { icon: ShoppingCart, title: 'Sales', color: 'text-success', items: [
     'Click "+ Add Sale" → choose Branch Sale or Online Sale',
+    'Color-coded branch chips - click to select branch',
+    'Color-coded customer chips for online sales',
     'Add payment details: Cash, Bank, or Credit with amounts',
     'Discount auto-calculates final amount',
     'Filter by branch chips and date period',
     'Export to PDF or Excel',
   ]},
   { icon: FileInput, title: 'Invoices', color: 'text-primary', items: [
-    'Click "+ New Invoice" to create invoice',
-    'Click colored item chips to add products (admin adds them via "New Product")',
-    'Or click "Add Row" for custom items',
+    'Color-coded product chips - click to add items instantly',
+    'Admin adds products via "New Product" button',
+    'Operators select from colored chips or dropdown',
     'Search customers by typing in search box',
-    'Select payment mode: Cash/Bank/Credit',
+    'Credit invoices show "Receive" button + discount option',
     'Invoice auto-creates a sale entry',
-    'Credit invoices show "Receive" button to collect payment',
   ]},
   { icon: Store, title: 'Branches', color: 'text-info', items: [
     'Each branch card shows: Sales, Expenses, Supplier Payments, Net Profit',
-    'Cash In Hand and Bank In Hand per branch',
-    'Click eye icon for detailed breakdown (cash/bank split)',
-    'Set recurring expenses (rent etc.) in Expenses page → Recurring section',
+    'Cash & Bank In Hand per branch',
+    'Expense category breakdown badges (salary, rent, tickets etc.)',
+    'RED "LOSS" warning if branch expenses exceed sales',
+    'Click eye icon for detailed breakdown',
   ]},
   { icon: Users, title: 'Customers', color: 'text-warning', items: [
-    'Add customers with branch assignment',
     'Table shows: Total Sales, Cash, Bank, Credit Balance per customer',
-    '"Receive" button for customers with credit balance (supports discount)',
-    '"Report" button → view purchase history with invoice items',
-    'PDF icon → download customer statement for sharing',
+    '"Report" button → purchase history with invoice items',
+    '"Receive" button for credit balance (supports discount)',
+    'PDF export → customer statement for sharing/tally',
   ]},
-  { icon: Truck, title: 'Suppliers', color: 'text-error', items: [
-    'Add suppliers with category, sub-category, branch, credit limit',
-    'Each card shows Cash Paid / Bank Paid with branch-wise breakdown',
-    '"Pay Credit" to settle outstanding amounts (select branch, cash/bank)',
-    'Credit status bar shows utilization',
+  { icon: Truck, title: 'Suppliers & Payments', color: 'text-error', items: [
+    'Supplier cards show Cash/Bank paid with branch-wise breakdown',
+    'Supplier Payments: Color-coded supplier chips - click to select',
+    'Quick pay: Select supplier → Amount → Mode → Branch → Pay',
+    '"Pay Credit" to settle outstanding amounts',
+    'Sub-categories support for better organization',
   ]},
   { icon: Receipt, title: 'Expenses', color: 'text-error', items: [
-    'Add expenses with category, sub-category, branch, supplier link',
-    'Filter by branch and date',
-    'Bottom section: Recurring Expenses (rent, insurance, etc.)',
-    '"+ Add Recurring" → set name, amount, frequency, due date',
-    '"Renew & Pay" → pays and auto-sets next due date',
+    'Color-coded category chips: Salary(orange), Rent(green), Utilities(blue), Vehicle(purple) etc.',
+    'Click category → sub-categories appear → enter amount → done',
+    'Admin manages categories via "Categories" button',
+    '"Recurring & Planned" tab: Add rent, insurance with due dates',
+    '"Renew & Pay" button → pays + creates expense + auto-sets next due date',
   ]},
   { icon: ArrowLeftRight, title: 'Cash Transfers', color: 'text-info', items: [
-    'Track cash/bank movements between branches and office',
-    'Select From branch → To branch, sender name, receiver name',
-    'These create branch-to-branch dues on Dashboard',
+    'Move cash/bank between branches and Company/Head Office',
+    'Company Balance card shows: Cash & Bank at head office',
+    'Tracks who sent, who received, with dates',
+    'Creates branch-to-branch dues automatically',
   ]},
   { icon: AlertTriangle, title: 'Fines & Penalties', color: 'text-warning', items: [
-    'Record government fines: type, department, amount, branch',
-    'Optionally charge to employee with monthly salary deduction',
-    '"Pay" button for partial or full payment',
-    'Salary Deductions tab: deduct for late, absence, misbehavior',
-    'Employee gets notification when deducted',
+    'Record fines: type (custom types addable), department, amount, branch',
+    'Upload proof documents (PDF/images)',
+    'Charge to employee with monthly salary deduction option',
+    'Salary Deductions: late, absence, misbehavior (employee gets alert)',
+    'Capital/Goodwill tab: track building purchases, branch acquisitions',
   ]},
   { icon: Handshake, title: 'Partners', color: 'text-primary', items: [
-    'Add business partners with share percentage',
-    'Record transactions: Investment, Withdrawal, Profit Share, Expense',
-    'Each partner card shows invested, withdrawn, balance',
-    'Filter by branch',
+    '"Investment / Withdrawal" button to add invested amounts',
+    'Partner salary: set monthly salary, pay via "Pay" button',
+    'Salary types: Regular, Advance/Loan, Loan Repayment',
+    'All partner salary → auto expense record',
+    'Loan balance tracking per partner',
+    'Share percentage displayed on each card',
+  ]},
+  { icon: Building2, title: 'Company Loans', color: 'text-info', items: [
+    'Track bank loans, personal loans, partner loans',
+    'Visual progress bar showing % paid',
+    '"Pay" button → record repayment (auto creates expense)',
+    'Monthly payment tracking with interest rate',
+    'Branch-wise or company-wide loans',
   ]},
   { icon: UserCheck, title: 'Employees', color: 'text-success', items: [
-    'Add employees with salary, document ID, position, leave entitlements',
-    'Pay salary: select month from dropdown (prevents duplicate payment)',
-    'Payment types: Salary, Bonus, Overtime, Advance/Loan, Loan Repayment, Tickets, ID Card, Old Balance',
-    'All payments auto-create expense records',
-    '"View" → 6 tabs: Payments, Loan, Leave, Deductions, Salary History, Documents',
-    'Salary History: track increments (old → new salary with date)',
-    '"Leave" button: auto-calculates days from date range',
-    'Employee Portal: employees login to view payslips, apply leave, submit requests',
-    'Time In/Out attendance tracking',
-    'Letters: Salary Certificate, Employment, NOC, Experience (auto-filled PDF)',
+    'Pay salary: month dropdown prevents duplicate payment',
+    'Payment types: Salary, Bonus, Overtime, Advance, Loan Repayment, Tickets, ID Card, Old Balance',
+    '"Paid From" shows which branch cash/bank is used',
+    'View Summary → 6 tabs: Payments, Loan, Leave, Deductions, Salary History, Documents',
+    'Salary History: track increments over time',
+    'Leave: auto-calculates days, shows if currently on leave',
+    'Employee Portal: attendance, payslips, leave requests, letter downloads',
+    'Download employee report as PDF',
   ]},
   { icon: FileWarning, title: 'Documents', color: 'text-warning', items: [
-    'Track documents with expiry dates (license, insurance, permit, etc.)',
-    'Upload actual files as backup (PDF, images)',
+    'Track documents with expiry dates + upload actual files',
+    'Custom document types (add via dropdown)',
+    'Auto-alerts on Dashboard when approaching expiry',
     'Download/share attached files anytime',
-    'Auto-alerts when approaching expiry on Dashboard',
-    'Add custom document types',
   ]},
   { icon: BarChart3, title: 'Reports', color: 'text-info', items: [
-    '5 tabs: Overview, Period Compare, Branch Compare, Trends, Detailed',
-    'Period Compare: Day/Month/Year with % change arrows',
-    'Branch Compare: select 2 branches side by side',
-    'Trends: 6-month sales vs expenses area chart',
-    'Export to PDF/Excel',
+    '7 tabs: Overview, Branch Report, Expense Report, Period Compare, Branch vs Branch, Trends, Detailed',
+    'Branch Report: per-branch breakdown with expense categories & supplier payments',
+    'Expense Report: donut chart, branch-wise costs, salary chart by branch',
+    'Period Compare: Day/Month/Year with % change',
+    'Export to PDF/Excel, WhatsApp reports per branch',
   ]},
   { icon: Settings, title: 'Settings', color: 'text-stone-500', items: [
-    'Email (SMTP): configure email server for notifications',
-    'WhatsApp: add Twilio credentials for WhatsApp alerts',
-    'Notifications: choose which alerts to send (daily sales, expiry, leave)',
+    'Email SMTP: configure for notifications',
+    'WhatsApp: Twilio setup + send reports per branch',
+    'Alerts: choose what to send (daily sales, expiry, leave)',
     'Import Data: upload old data from Excel (customers, suppliers, employees, sales, expenses)',
-    'Backup: download complete database backup as JSON',
-    'Deploy: step-by-step guide to deploy on your own server',
-    'Company: set address, logo, VAT settings (appears on letters & payslips)',
+    'Backup: download complete database as JSON',
+    'Deploy: step-by-step deployment guide',
+    'Company: address, logo, VAT settings, CR/VAT numbers',
   ]},
   { icon: HelpCircle, title: 'User Roles & Permissions', color: 'text-primary', items: [
-    'Admin: full access to everything',
-    'Manager: sales, invoices, customers, suppliers, expenses, employees, reports',
-    'Operator: limited to sales, invoices, customers',
-    'Employee: only My Portal (payslips, leave, requests)',
-    'Custom permissions: Users page → Edit → check/uncheck individual pages',
+    'Admin: full access | Manager: operations | Operator: sales & invoices | Employee: portal only',
+    'Custom permissions: Users → Edit → check/uncheck individual pages',
+    'Permissions control which sidebar pages appear for each user',
+    'Employee accounts auto-created when adding employee with email (password: emp@123)',
   ]},
 ];
 
@@ -124,63 +133,35 @@ export default function HelpPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-4xl font-bold font-outfit mb-2">Help & Guide</h1>
-          <p className="text-muted-foreground">How to use SSC Track - complete guide for all modules</p>
+          <p className="text-muted-foreground">Complete guide for SSC Track - all modules & features</p>
         </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {sections.map((s) => {
             const Icon = s.icon;
             return (
               <Card key={s.title} className="border-stone-100 hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
-                  <CardTitle className="font-outfit text-base flex items-center gap-2">
-                    <Icon size={20} className={s.color} />
-                    {s.title}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-1.5">
-                    {s.items.map((item, i) => (
-                      <li key={i} className="text-sm text-muted-foreground flex gap-2">
-                        <span className="text-primary mt-1 shrink-0">•</span>
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
+                <CardHeader className="pb-3"><CardTitle className="font-outfit text-base flex items-center gap-2"><Icon size={20} className={s.color} />{s.title}</CardTitle></CardHeader>
+                <CardContent><ul className="space-y-1.5">{s.items.map((item, i) => (
+                  <li key={i} className="text-sm text-muted-foreground flex gap-2"><span className="text-primary mt-1 shrink-0">•</span><span>{item}</span></li>
+                ))}</ul></CardContent>
               </Card>
             );
           })}
         </div>
-
         <Card className="border-orange-200 bg-orange-50">
           <CardHeader><CardTitle className="font-outfit">Quick Tips</CardTitle></CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-              <div className="p-3 bg-white rounded-xl">
-                <div className="font-medium mb-1">Branch Filtering</div>
-                <p className="text-muted-foreground">Click branch name chips at top of any page. Select multiple branches to combine data. Click "Clear" to reset.</p>
-              </div>
-              <div className="p-3 bg-white rounded-xl">
-                <div className="font-medium mb-1">Date Filtering</div>
-                <p className="text-muted-foreground">Use "Period" dropdown: All Time, Today, This Month, This Year, or Custom date range.</p>
-              </div>
-              <div className="p-3 bg-white rounded-xl">
-                <div className="font-medium mb-1">Employee Portal</div>
-                <p className="text-muted-foreground">Employees login with their email (auto-created when you add employee with email). Default password: emp@123</p>
-              </div>
-              <div className="p-3 bg-white rounded-xl">
-                <div className="font-medium mb-1">Import Old Data</div>
-                <p className="text-muted-foreground">Settings → Import Data → Download template → Fill your data → Upload. Supports dates from 2018.</p>
-              </div>
-              <div className="p-3 bg-white rounded-xl">
-                <div className="font-medium mb-1">Backup</div>
-                <p className="text-muted-foreground">Settings → Backup → Download Full Backup. Save to OneDrive or Google Drive regularly.</p>
-              </div>
-              <div className="p-3 bg-white rounded-xl">
-                <div className="font-medium mb-1">Currency</div>
-                <p className="text-muted-foreground">All amounts in SAR (Saudi Riyal). VAT 15% calculation available on Dashboard (toggle on/off).</p>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+              {[
+                { t: 'Color-Coded Selection', d: 'Categories, suppliers, branches, customers all shown as colored chips. Click to select - no more scrolling dropdowns.' },
+                { t: 'Branch Filtering', d: 'Click branch chips at top of any page. Multiple branches can be combined.' },
+                { t: 'Date Filtering', d: 'Period dropdown: All Time, Today, This Month, This Year, or Custom range.' },
+                { t: 'Company Balance', d: 'Cash Transfers page shows Company/Head Office cash & bank balance from branch transfers.' },
+                { t: 'Employee Portal', d: 'Employees login with email (auto-created). Default password: emp@123. Time In/Out, payslips, leave.' },
+                { t: 'Backup & Import', d: 'Settings → Backup (download JSON) | Import (upload Excel for old data from 2018+)' },
+              ].map((tip, i) => (
+                <div key={i} className="p-3 bg-white rounded-xl"><div className="font-medium mb-1">{tip.t}</div><p className="text-muted-foreground text-xs">{tip.d}</p></div>
+              ))}
             </div>
           </CardContent>
         </Card>
