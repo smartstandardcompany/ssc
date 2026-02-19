@@ -4241,8 +4241,15 @@ async def send_whatsapp_message(message: str):
         return False, "WhatsApp not configured"
     try:
         client_tw = Client(config["account_sid"], config["auth_token"])
-        client_tw.messages.create(from_=f'whatsapp:{config["phone_number"]}', body=message, to=f'whatsapp:{config["recipient_number"]}')
-        return True, "Sent"
+        # Send to all recipients (comma-separated)
+        recipients = [r.strip() for r in config.get("recipient_number", "").split(",") if r.strip()]
+        sent = 0
+        for recipient in recipients:
+            try:
+                client_tw.messages.create(from_=f'whatsapp:{config["phone_number"]}', body=message, to=f'whatsapp:{recipient}')
+                sent += 1
+            except: pass
+        return sent > 0, f"Sent to {sent}/{len(recipients)} recipients"
     except Exception as e:
         return False, str(e)
 
