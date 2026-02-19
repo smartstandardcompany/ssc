@@ -155,7 +155,7 @@ export default function SettingsPage() {
                   <div><Label>Account SID *</Label><Input value={whatsappSettings.account_sid} placeholder="ACxxxxxxxxxx" data-testid="twilio-sid" onChange={(e) => setWhatsappSettings({ ...whatsappSettings, account_sid: e.target.value })} /></div>
                   <div><Label>Auth Token *</Label><Input type="password" value={whatsappSettings.auth_token} placeholder="••••••••" data-testid="twilio-token" onChange={(e) => setWhatsappSettings({ ...whatsappSettings, auth_token: e.target.value })} /></div>
                   <div><Label>WhatsApp Number (from Twilio) *</Label><Input value={whatsappSettings.phone_number} placeholder="+14155238886" onChange={(e) => setWhatsappSettings({ ...whatsappSettings, phone_number: e.target.value })} /></div>
-                  <div><Label>Your WhatsApp Number *</Label><Input value={whatsappSettings.recipient_number} placeholder="+971xxxxxxxxx" onChange={(e) => setWhatsappSettings({ ...whatsappSettings, recipient_number: e.target.value })} /></div>
+                  <div><Label>Recipient Numbers * (comma-separated for multiple)</Label><Input value={whatsappSettings.recipient_number} placeholder="+966508235003, +966512345678" onChange={(e) => setWhatsappSettings({ ...whatsappSettings, recipient_number: e.target.value })} /><p className="text-xs text-muted-foreground mt-1">Add multiple numbers separated by comma. Each person must join Twilio sandbox first.</p></div>
                 </div>
                 <div className="flex gap-3 pt-2">
                   <Button onClick={saveWhatsapp} className="rounded-full" data-testid="save-whatsapp">Save WhatsApp Settings</Button>
