@@ -4378,36 +4378,82 @@ async def upload_bank_statement(file: UploadFile = File(...), bank_name: str = F
         finally:
             os.remove(tmp_path)
     else:
-        # Parse Excel/CSV
+        # Parse Excel/CSV - handles different bank formats
         try:
             if file.filename.endswith('.csv'):
                 df = pd.read_csv(BytesIO(content))
             else:
-                df = pd.read_excel(BytesIO(content))
+                try:
+                    df = pd.read_excel(BytesIO(content))
+                except:
+                    df = pd.read_excel(BytesIO(content), engine='xlrd')
             
-            df.columns = [str(c).lower().strip() for c in df.columns]
+            # Detect format by scanning rows
+            for idx in range(min(20, len(df))):
+                row_vals = [str(v).lower() for v in df.iloc[idx].values if pd.notna(v)]
+                row_str = ' '.join(row_vals)
+                
+                # Alinma format: row with "transaction date" or "تاريخ العملية"
+                if 'transaction date' in row_str or 'تاريخ العملية' in row_str:
+                    data_df = df.iloc[idx+1:].reset_index(drop=True)
+                    for _, row in data_df.iterrows():
+                        vals = [v for v in row.values]
+                        date_val = str(vals[-1]) if pd.notna(vals[-1]) else ''
+                        if not any(c.isdigit() for c in date_val): continue
+                        balance = float(str(vals[0]).replace(',','').replace('(','').replace(')','').strip()) if pd.notna(vals[0]) else 0
+                        amount_str = str(vals[1]).replace(',','').strip() if pd.notna(vals[1]) else '0'
+                        try: amount = float(amount_str)
+                        except: continue
+                        desc = str(vals[2]) if pd.notna(vals[2]) else ''
+                        ref = str(vals[-3]) if pd.notna(vals[-3]) else ''
+                        
+                        debit = abs(amount) if amount < 0 else 0
+                        credit = amount if amount > 0 else 0
+                        transactions.append({"date": date_val, "description": desc[:200], "debit": debit, "credit": credit, "balance": abs(balance), "reference": ref})
+                    break
+                
+                # Bilad format: row with "Reference Number" and "Balance"
+                if 'reference' in row_str and 'balance' in row_str:
+                    data_df = df.iloc[idx+1:].reset_index(drop=True)
+                    prev_balance = 0
+                    for _, row in data_df.iterrows():
+                        vals = [v for v in row.values]
+                        ref = str(vals[1]) if pd.notna(vals[1]) else ''
+                        if not ref or ref == 'nan' or len(ref) < 3: continue
+                        desc = str(vals[3]) if pd.notna(vals[3]) else ''
+                        details = str(vals[4]) if pd.notna(vals[4]) else ''
+                        balance_str = str(vals[7]).replace(',','').strip() if pd.notna(vals[7]) else '0'
+                        try: balance = float(balance_str)
+                        except: continue
+                        
+                        diff = balance - prev_balance
+                        credit = diff if diff > 0 else 0
+                        debit = abs(diff) if diff < 0 else 0
+                        full_desc = f"{desc} - {details}" if details and details != 'nan' else desc
+                        transactions.append({"date": "", "description": full_desc[:200], "debit": debit, "credit": credit, "balance": balance, "reference": ref})
+                        prev_balance = balance
+                    break
             
-            for _, row in df.iterrows():
-                r = {str(k): str(v) if pd.notna(v) else '' for k, v in row.items()}
-                date = r.get('date', r.get('transaction date', r.get('value date', '')))
-                desc = r.get('description', r.get('details', r.get('narrative', r.get('particulars', ''))))
-                
-                debit = 0
-                credit = 0
-                balance = 0
-                for k, v in r.items():
-                    try:
-                        num = float(str(v).replace(',', ''))
-                        if 'debit' in k or 'withdrawal' in k: debit = abs(num)
-                        elif 'credit' in k or 'deposit' in k: credit = num
-                        elif 'balance' in k: balance = num
-                        elif 'amount' in k:
-                            if num < 0: debit = abs(num)
-                            else: credit = num
-                    except: pass
-                
-                if (debit > 0 or credit > 0) and date:
-                    transactions.append({"date": str(date)[:10], "description": str(desc)[:200], "debit": debit, "credit": credit, "balance": balance})
+            # Fallback: try column-name matching
+            if not transactions:
+                df.columns = [str(c).lower().strip() for c in df.columns]
+                for _, row in df.iterrows():
+                    r = {str(k): str(v) if pd.notna(v) else '' for k, v in row.items()}
+                    date = r.get('date', r.get('transaction date', r.get('value date', '')))
+                    desc = r.get('description', r.get('details', r.get('narrative', r.get('particulars', ''))))
+                    debit = 0; credit = 0; balance = 0
+                    for k, v in r.items():
+                        try:
+                            num = float(str(v).replace(',', ''))
+                            if 'debit' in k or 'withdrawal' in k: debit = abs(num)
+                            elif 'credit' in k or 'deposit' in k: credit = num
+                            elif 'balance' in k: balance = num
+                            elif 'amount' in k:
+                                if num < 0: debit = abs(num)
+                                else: credit = num
+                        except: pass
+                    if (debit > 0 or credit > 0) and date:
+                        transactions.append({"date": str(date)[:10], "description": str(desc)[:200], "debit": debit, "credit": credit, "balance": balance})
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Cannot parse file: {str(e)}")
     
