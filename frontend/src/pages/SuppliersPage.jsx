@@ -264,6 +264,10 @@ export default function SuppliersPage() {
                   />
                 </div>
                 <div>
+                  <Label>Bank Account #</Label>
+                  <Input value={formData.account_number} onChange={(e) => setFormData({ ...formData, account_number: e.target.value })} placeholder="For bank statement matching" />
+                </div>
+                <div>
                   <Label>Credit Limit</Label>
                   <Input
                     type="number"
