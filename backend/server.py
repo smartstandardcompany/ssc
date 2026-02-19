@@ -148,6 +148,7 @@ class Supplier(BaseModel):
     branch_id: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
+    account_number: Optional[str] = None  # Bank account number for matching
     credit_limit: Optional[float] = 0
     current_credit: Optional[float] = 0
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -159,6 +160,7 @@ class SupplierCreate(BaseModel):
     branch_id: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
+    account_number: Optional[str] = None
     credit_limit: Optional[float] = 0
 
 class SupplierPayment(BaseModel):
