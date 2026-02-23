@@ -4423,26 +4423,56 @@ async def upload_bank_statement(file: UploadFile = File(...), bank_name: str = F
                         transactions.append({"date": date_val, "description": desc[:200], "debit": debit, "credit": credit, "balance": abs(balance), "reference": ref})
                     break
                 
-                # Bilad format: row with "Reference Number" and "Balance"
-                if 'reference' in row_str and 'balance' in row_str:
+                # Bilad format: row with "Reference Number" and separate Debit/Credit columns
+                if 'reference' in row_str and ('balance' in row_str or 'debit' in row_str):
+                    # Find column positions
+                    header_vals = [str(v).lower().strip() if pd.notna(v) else '' for v in df.iloc[idx].values]
+                    ref_col = next((j for j, v in enumerate(header_vals) if 'reference' in v), 1)
+                    desc_col = next((j for j, v in enumerate(header_vals) if 'description' in v), 3)
+                    detail_col = next((j for j, v in enumerate(header_vals) if 'detail' in v), 4)
+                    bal_col = next((j for j, v in enumerate(header_vals) if 'balance' in v), 7)
+                    deb_col = next((j for j, v in enumerate(header_vals) if 'debit' in v), 8)
+                    cred_col = next((j for j, v in enumerate(header_vals) if 'credit' in v), 11)
+                    date_col = max(j for j, v in enumerate(header_vals) if v)  # Last non-empty = Gregorian date
+                    
                     data_df = df.iloc[idx+1:].reset_index(drop=True)
-                    prev_balance = 0
                     for _, row in data_df.iterrows():
                         vals = [v for v in row.values]
-                        ref = str(vals[1]) if pd.notna(vals[1]) else ''
+                        ref = str(vals[ref_col]) if pd.notna(vals[ref_col]) else ''
                         if not ref or ref == 'nan' or len(ref) < 3: continue
-                        desc = str(vals[3]) if pd.notna(vals[3]) else ''
-                        details = str(vals[4]) if pd.notna(vals[4]) else ''
-                        balance_str = str(vals[7]).replace(',','').strip() if pd.notna(vals[7]) else '0'
-                        try: balance = float(balance_str)
-                        except: continue
                         
-                        diff = balance - prev_balance
-                        credit = diff if diff > 0 else 0
-                        debit = abs(diff) if diff < 0 else 0
+                        desc = str(vals[desc_col]) if pd.notna(vals[desc_col]) else ''
+                        details = str(vals[detail_col]) if pd.notna(vals[detail_col]) else ''
                         full_desc = f"{desc} - {details}" if details and details != 'nan' else desc
-                        transactions.append({"date": "", "description": full_desc[:200], "debit": debit, "credit": credit, "balance": balance, "reference": ref})
-                        prev_balance = balance
+                        
+                        # Parse debit (negative number)
+                        debit = 0
+                        deb_str = str(vals[deb_col]).replace(',','').replace('(','').replace(')','').strip() if pd.notna(vals[deb_col]) else ''
+                        try: debit = abs(float(deb_str))
+                        except: pass
+                        
+                        # Parse credit
+                        credit = 0
+                        cred_str = str(vals[cred_col]).replace(',','').strip() if pd.notna(vals[cred_col]) else ''
+                        try: credit = abs(float(cred_str))
+                        except: pass
+                        
+                        # Parse balance
+                        balance = 0
+                        bal_str = str(vals[bal_col]).replace(',','').strip() if pd.notna(vals[bal_col]) else ''
+                        try: balance = float(bal_str)
+                        except: pass
+                        
+                        # Date - try last column (Gregorian)
+                        date_str = ''
+                        for c in range(len(vals)-1, -1, -1):
+                            if pd.notna(vals[c]):
+                                ds = str(vals[c]).strip()
+                                if '/' in ds and len(ds) >= 8 and ds[0].isdigit():
+                                    date_str = ds; break
+                        
+                        if debit > 0 or credit > 0:
+                            transactions.append({"date": date_str, "description": full_desc[:200], "debit": debit, "credit": credit, "balance": balance, "reference": ref})
                     break
             
             # Fallback: try column-name matching
