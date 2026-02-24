@@ -11,6 +11,15 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { BranchFilter } from '@/components/BranchFilter';
 import { DateFilter } from '@/components/DateFilter';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+
+const THEMES = {
+  default: { bg: 'from-[#FDFBF7] to-[#FFF8F0]', card: 'border-stone-100', accent: 'text-primary' },
+  dark: { bg: 'from-stone-900 to-stone-800', card: 'border-stone-700 bg-stone-800/50 text-white', accent: 'text-orange-400' },
+  blue: { bg: 'from-blue-50 to-indigo-50', card: 'border-blue-100', accent: 'text-blue-600' },
+  green: { bg: 'from-emerald-50 to-teal-50', card: 'border-emerald-100', accent: 'text-emerald-600' },
+};
+const PIE_COLORS = ['#F5841F', '#22C55E', '#0EA5E9', '#EF4444', '#F59E0B', '#8B5CF6'];
 
 export default function DashboardPage() {
   const [stats, setStats] = useState(null);
@@ -20,6 +29,10 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [branchFilter, setBranchFilter] = useState([]);
   const [showVat, setShowVat] = useState(false);
+  const [theme, setTheme] = useState(localStorage.getItem('dashboard_theme') || 'default');
+  const t = THEMES[theme] || THEMES.default;
+
+  const changeTheme = (newTheme) => { setTheme(newTheme); localStorage.setItem('dashboard_theme', newTheme); };
   const [dateFilter, setDateFilter] = useState({ start: null, end: null, period: 'all' });
 
   useEffect(() => {
