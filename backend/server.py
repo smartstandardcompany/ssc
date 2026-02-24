@@ -4504,13 +4504,26 @@ async def upload_bank_statement(file: UploadFile = File(...), bank_name: str = F
     # Categorize transactions
     for t in transactions:
         desc = t["description"].upper()
-        if any(k in desc for k in ['POS', 'SPANMRC', 'VISAMRC', 'BNETMRC', 'MADA', 'نقاط البيع']): t["category"] = "pos_sales"
-        elif any(k in desc for k in ['SFEEMRC', 'VAT OF FEES', 'FEE']): t["category"] = "bank_fees"
-        elif any(k in desc for k in ['INTERNAL TRANSFER', 'INT XFER']): t["category"] = "internal_transfer"
-        elif any(k in desc for k in ['SARIE', 'INCOMING']): t["category"] = "incoming_transfer"
-        elif any(k in desc for k in ['SALARY', 'SAL']): t["category"] = "salary"
-        elif any(k in desc for k in ['VAT', 'ضريبة']): t["category"] = "vat"
-        else: t["category"] = "other"
+        # Order matters - check fees BEFORE pos_sales
+        if any(k in desc for k in ['SFEEMRC', 'BFEEMRC', 'VFEEMRC', 'FEE FOR', 'FEES FOR', 'VAT OF FEE', 'VAT OF FEES']):
+            if 'VAT' in desc or 'VFEE' in desc or 'BFEE' in desc:
+                t["category"] = "vat_fees"
+            else:
+                t["category"] = "bank_fees"
+        elif any(k in desc for k in ['SPANMRC', 'VISAMRC', 'BNETMRC', 'نقاط البيع']) and 'FEE' not in desc:
+            t["category"] = "pos_sales"
+        elif any(k in desc for k in ['SARIE OUTGOING', 'OUTGOING SARIE', 'OUTGOING PAYMENT']):
+            t["category"] = "outgoing_transfer"
+        elif any(k in desc for k in ['SARIE INCOMING', 'INCOMING', 'SARIE']):
+            t["category"] = "incoming_transfer"
+        elif any(k in desc for k in ['INTERNAL TRANSFER', 'INT XFER', 'تحويل داخلي']):
+            t["category"] = "internal_transfer"
+        elif any(k in desc for k in ['SALARY', 'SAL', 'راتب']):
+            t["category"] = "salary"
+        elif any(k in desc for k in ['CHARGE', 'SARIE CHARGE']):
+            t["category"] = "bank_fees"
+        else:
+            t["category"] = "other"
         
         # Extract POS machine number
         import re as re2
