@@ -14,7 +14,7 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 
 const COLORS = ['#F5841F', '#22C55E', '#0EA5E9', '#EF4444', '#F59E0B', '#8B5CF6', '#EC4899'];
-const CAT_LABELS = { pos_sales: 'POS Sales', bank_fees: 'Bank Fees', vat_fees: 'VAT on Fees', internal_transfer: 'Internal Transfers', incoming_transfer: 'Incoming Transfers', outgoing_transfer: 'Outgoing Transfers', salary: 'Salary', vat: 'VAT', other: 'Other' };
+const CAT_LABELS = { pos_sales: 'POS Sales', bank_fees: 'Bank Fees', vat_fees: 'VAT on Fees', internal_transfer: 'Internal Transfers', incoming_transfer: 'Incoming Transfers', outgoing_transfer: 'Outgoing Transfers', sadad_payment: 'SADAD Bills', salary: 'Salary', vat: 'VAT', other: 'Other' };
 
 export default function BankStatementsPage() {
   const [statements, setStatements] = useState([]);
