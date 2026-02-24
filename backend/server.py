@@ -4712,21 +4712,44 @@ async def analyze_statement(stmt_id: str, current_user: User = Depends(get_curre
     sender_list = [{"name": k, "count": v["count"], "total_credit": v["total_credit"], "total_debit": v["total_debit"], "first_date": v["first_date"], "last_date": v["last_date"], "net": v["total_credit"] - v["total_debit"], "iban": list(v["ibans"])[:2], "bank": list(v["banks"])[:1], "fees": v["fees"], "vat": v["vat"]} for k, v in raw_senders.items()]
     sender_list.sort(key=lambda x: x["total_credit"] + x["total_debit"], reverse=True)
     
-    # 2. POS by branch (using mappings)
-    pos_by_branch = {}
+    # 2. POS by Machine ID - group sales, fees, VAT per machine
+    pos_by_machine = {}
     for t in txns:
         mid = t.get("machine_id")
         if not mid: continue
-        mapping = pos_mappings.get(mid, {})
-        bid = mapping.get("branch_id", "unmapped")
-        bname = branches.get(bid, mapping.get("label", "Unmapped"))
+        if mid not in pos_by_machine:
+            mapping = pos_mappings.get(mid, {})
+            bname = branches.get(mapping.get("branch_id", ""), mapping.get("label", "Unmapped"))
+            pos_by_machine[mid] = {"branch": bname, "sales_count": 0, "sales_total": 0, "fees": 0, "vat": 0, "net": 0,
+                                   "mada": 0, "visa": 0, "mastercard": 0, "mada_fee": 0, "visa_fee": 0, "mc_fee": 0}
+        cat = t.get("category", "")
+        desc_upper = t.get("description", "").upper()
+        if cat == "pos_sales":
+            pos_by_machine[mid]["sales_count"] += 1
+            pos_by_machine[mid]["sales_total"] += t.get("credit", 0)
+            if "SPANMRC" in desc_upper: pos_by_machine[mid]["mada"] += t.get("credit", 0)
+            elif "VISAMRC" in desc_upper: pos_by_machine[mid]["visa"] += t.get("credit", 0)
+            elif "BNETMRC" in desc_upper: pos_by_machine[mid]["mastercard"] += t.get("credit", 0)
+        elif cat in ("bank_fees", "vat_fees"):
+            pos_by_machine[mid]["fees" if cat == "bank_fees" else "vat"] += t.get("debit", 0)
+            if "SFEEMRC" in desc_upper: pos_by_machine[mid]["mada_fee"] += t.get("debit", 0)
+            elif "VFEEMRC" in desc_upper: pos_by_machine[mid]["visa_fee"] += t.get("debit", 0)
+            elif "BFEEMRC" in desc_upper: pos_by_machine[mid]["mc_fee"] += t.get("debit", 0)
+    
+    for mid, data in pos_by_machine.items():
+        data["net"] = data["sales_total"] - data["fees"] - data["vat"]
+    
+    # Also keep branch grouping
+    pos_by_branch = {}
+    for mid, data in pos_by_machine.items():
+        bname = data["branch"]
         if bname not in pos_by_branch:
-            pos_by_branch[bname] = {"count": 0, "total": 0, "machines": set()}
-        pos_by_branch[bname]["count"] += 1
-        pos_by_branch[bname]["total"] += t.get("credit", 0)
-        pos_by_branch[bname]["machines"].add(mid)
-    for v in pos_by_branch.values():
-        v["machines"] = list(v["machines"])
+            pos_by_branch[bname] = {"count": 0, "total": 0, "fees": 0, "vat": 0, "machines": []}
+        pos_by_branch[bname]["count"] += data["sales_count"]
+        pos_by_branch[bname]["total"] += data["sales_total"]
+        pos_by_branch[bname]["fees"] += data["fees"]
+        pos_by_branch[bname]["vat"] += data["vat"]
+        pos_by_branch[bname]["machines"].append(mid)
     
     # 3. Compare POS with SSC Track sales
     system_sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
