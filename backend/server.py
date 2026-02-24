@@ -4537,6 +4537,13 @@ async def upload_bank_statement(file: UploadFile = File(...), bank_name: str = F
                 if name_part:
                     t["beneficiary"] = name_part[:60]
         
+        # Extract SADAD bill payments (format: "NNN - Entity Name Bill XXXX Payment...")
+        sadad_match = re2.match(r'(\d{3})\s*-\s*(.+?)\s+Bill\s+(\d+)', desc)
+        if sadad_match:
+            t["beneficiary"] = sadad_match.group(2).strip()[:60]
+            t["sadad_code"] = sadad_match.group(1)
+            t["bill_number"] = sadad_match.group(3)
+        
         # Categorize
         if any(k in desc_upper for k in ['SFEEMRC', 'BFEEMRC', 'VFEEMRC', 'FEE FOR', 'VAT OF FEE']):
             t["category"] = "vat_fees" if ('VAT' in desc_upper or 'VFEE' in desc_upper or 'BFEE' in desc_upper) else "bank_fees"
@@ -4548,6 +4555,8 @@ async def upload_bank_statement(file: UploadFile = File(...), bank_name: str = F
             t["category"] = "incoming_transfer"
         elif 'INTERNAL TRANSFER' in desc_upper:
             t["category"] = "internal_transfer"
+        elif sadad_match:
+            t["category"] = "sadad_payment"
         elif any(k in desc_upper for k in ['SALARY', 'SAL']):
             t["category"] = "salary"
         elif 'CHARGE' in desc_upper:
