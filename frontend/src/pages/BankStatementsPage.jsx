@@ -135,16 +135,27 @@ export default function BankStatementsPage() {
                 </TabsContent>
 
                 <TabsContent value="pos" className="space-y-4">
-                  <p className="text-sm text-muted-foreground">POS machines detected in bank statement. Map each to a branch for reconciliation.</p>
-                  {analysis?.pos_by_branch && Object.entries(analysis.pos_by_branch).map(([bname, data]) => (
-                    <div key={bname} className="p-4 border rounded-xl">
-                      <div className="flex justify-between items-center"><span className="font-bold">{bname}</span><div className="text-right"><div className="text-success font-bold">SAR {data.total.toFixed(2)}</div><div className="text-xs text-muted-foreground">{data.count} txns | {data.machines?.length} machines</div></div></div>
-                      <div className="flex gap-1 mt-2 flex-wrap">{data.machines?.map(m => <Badge key={m} variant="outline" className="text-xs font-mono">{m}</Badge>)}</div>
+                  <p className="text-sm text-muted-foreground">POS machines with sales (MADA/VISA/MC), fees, VAT breakdown</p>
+                  {analysis?.pos_by_machine && Object.entries(analysis.pos_by_machine).sort((a,b) => b[1].sales_total - a[1].sales_total).map(([mid, data]) => (
+                    <div key={mid} className="border rounded-xl p-4 hover:bg-stone-50 transition-all">
+                      <div className="flex justify-between items-start mb-3">
+                        <div><span className="font-mono text-sm font-bold">{mid}</span><Badge className="ml-2 bg-primary/20 text-primary">{data.branch}</Badge></div>
+                        <div className="text-right"><div className="text-lg font-bold text-success">SAR {data.sales_total.toFixed(2)}</div><div className="text-xs text-muted-foreground">{data.sales_count} sales | Net: SAR {data.net.toFixed(2)}</div></div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 mb-2">
+                        <div className="p-2 bg-green-50 rounded-lg text-center"><div className="text-xs text-muted-foreground">MADA</div><div className="text-sm font-bold text-green-700">SAR {data.mada.toFixed(0)}</div>{data.mada_fee > 0 && <div className="text-xs text-error">Fee: -{data.mada_fee.toFixed(2)}</div>}</div>
+                        <div className="p-2 bg-blue-50 rounded-lg text-center"><div className="text-xs text-muted-foreground">VISA</div><div className="text-sm font-bold text-blue-700">SAR {data.visa.toFixed(0)}</div>{data.visa_fee > 0 && <div className="text-xs text-error">Fee: -{data.visa_fee.toFixed(2)}</div>}</div>
+                        <div className="p-2 bg-orange-50 rounded-lg text-center"><div className="text-xs text-muted-foreground">MasterCard</div><div className="text-sm font-bold text-orange-700">SAR {data.mastercard.toFixed(0)}</div>{data.mc_fee > 0 && <div className="text-xs text-error">Fee: -{data.mc_fee.toFixed(2)}</div>}</div>
+                      </div>
+                      <div className="flex gap-4 text-xs">
+                        <span className="text-success">Total In: SAR {data.sales_total.toFixed(2)}</span>
+                        <span className="text-error">Fees: -SAR {data.fees.toFixed(2)}</span>
+                        <span className="text-error">VAT: -SAR {data.vat.toFixed(2)}</span>
+                        <span className="font-bold">Net: SAR {data.net.toFixed(2)}</span>
+                      </div>
                     </div>
                   ))}
-                  {detail?.pos_machines && Object.entries(detail.pos_machines).length > 0 && (
-                    <div className="p-3 bg-stone-50 rounded-xl"><p className="text-xs font-medium mb-2">Map machines to branches (click "POS Machine Settings" above)</p></div>
-                  )}
+                  {(!analysis?.pos_by_machine || Object.keys(analysis.pos_by_machine).length === 0) && <p className="text-center text-muted-foreground py-8">No POS machines detected</p>}
                 </TabsContent>
 
                 <TabsContent value="mismatch" className="space-y-4">
