@@ -4794,6 +4794,7 @@ async def analyze_statement(stmt_id: str, current_user: User = Depends(get_curre
     return {
         "senders": sender_list[:80],
         "pos_by_branch": pos_by_branch,
+        "pos_by_machine": pos_by_machine,
         "mismatches": mismatches,
         "supplier_matches": supplier_matches[:50],
         "supplier_summary": [{"name": k, **v} for k, v in sorted(sup_summary.items(), key=lambda x: -x[1]["total"])],
