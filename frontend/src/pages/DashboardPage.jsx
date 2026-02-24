@@ -225,6 +225,31 @@ export default function DashboardPage() {
           </Card>
         )}
 
+        {/* Quick Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {stats?.expense_by_category && Object.keys(stats.expense_by_category).length > 0 && (
+            <Card className={t.card}>
+              <CardHeader className="pb-2"><CardTitle className="font-outfit text-base">Expense Distribution</CardTitle></CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart><Pie data={Object.entries(stats.expense_by_category).map(([k,v]) => ({name: k.replace('_',' '), value: v}))} cx="50%" cy="50%" outerRadius={75} innerRadius={40} dataKey="value" label={({name, percent}) => `${name} ${(percent*100).toFixed(0)}%`}>{Object.keys(stats.expense_by_category).map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}</Pie><Tooltip formatter={(v) => `SAR ${v.toFixed(0)}`} /></PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+          <Card className={t.card}>
+            <CardHeader className="pb-2"><CardTitle className="font-outfit text-base">Sales vs Expenses</CardTitle></CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={[{name: 'Sales', amount: stats?.total_sales || 0}, {name: 'Expenses', amount: stats?.total_expenses || 0}, {name: 'Supplier', amount: stats?.total_supplier_payments || 0}, {name: 'Profit', amount: stats?.net_profit || 0}]}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} /><XAxis dataKey="name" tick={{fontSize: 11}} /><YAxis tick={{fontSize: 10}} /><Tooltip formatter={(v) => `SAR ${v.toFixed(0)}`} />
+                  <Bar dataKey="amount" radius={[6,6,0,0]}>{[{fill:'#22C55E'},{fill:'#EF4444'},{fill:'#0EA5E9'},{fill: (stats?.net_profit || 0) >= 0 ? '#22C55E' : '#EF4444'}].map((c,i) => <Cell key={i} fill={c.fill} />)}</Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Cash & Bank In Hand */}
         <div>
           <h2 className="text-2xl font-bold font-outfit mb-4">Cash & Bank In Hand</h2>
