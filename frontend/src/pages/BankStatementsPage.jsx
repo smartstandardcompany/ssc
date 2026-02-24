@@ -119,7 +119,18 @@ export default function BankStatementsPage() {
                   <p className="text-sm text-muted-foreground mb-3">Grouped by sender/receiver name - shows frequency and total amounts</p>
                   <table className="w-full"><thead><tr className="border-b"><th className="text-left p-2 text-xs font-medium">Name</th><th className="text-center p-2 text-xs font-medium">Times</th><th className="text-right p-2 text-xs font-medium">Received</th><th className="text-right p-2 text-xs font-medium">Sent</th><th className="text-left p-2 text-xs font-medium">Period</th></tr></thead>
                   <tbody>{analysis?.senders?.map((s, i) => (
-                    <tr key={i} className="border-b hover:bg-stone-50"><td className="p-2 text-sm font-medium max-w-xs"><div>{s.name}</div>{s.sample && <div className="text-xs text-muted-foreground truncate mt-0.5">{s.sample}</div>}</td><td className="p-2 text-center"><Badge variant="secondary">{s.count}x</Badge></td><td className="p-2 text-sm text-right text-success">{s.total_credit > 0 ? `SAR ${s.total_credit.toFixed(0)}` : '-'}</td><td className="p-2 text-sm text-right text-error">{s.total_debit > 0 ? `SAR ${s.total_debit.toFixed(0)}` : '-'}</td><td className="p-2 text-xs text-muted-foreground">{s.first_date}{s.first_date !== s.last_date ? ` → ${s.last_date}` : ''}</td></tr>
+                    <tr key={i} className="border-b hover:bg-stone-50">
+                      <td className="p-2 text-sm font-medium max-w-xs">
+                        <div>{s.name}</div>
+                        {s.iban?.length > 0 && <div className="text-xs text-muted-foreground font-mono mt-0.5">{s.iban[0]}</div>}
+                        {s.bank?.length > 0 && <div className="text-xs text-info">{s.bank[0]}</div>}
+                      </td>
+                      <td className="p-2 text-center"><Badge variant="secondary">{s.count}x</Badge></td>
+                      <td className="p-2 text-sm text-right text-success">{s.total_credit > 0 ? `SAR ${s.total_credit.toFixed(0)}` : '-'}</td>
+                      <td className="p-2 text-sm text-right text-error">{s.total_debit > 0 ? `SAR ${s.total_debit.toFixed(0)}` : '-'}</td>
+                      <td className="p-2 text-xs text-right">{(s.fees || 0) > 0 && <span className="text-warning">Fee:{s.fees.toFixed(1)}</span>}{(s.vat || 0) > 0 && <span className="text-error ml-1">VAT:{s.vat.toFixed(1)}</span>}</td>
+                      <td className="p-2 text-xs text-muted-foreground">{s.first_date}{s.first_date !== s.last_date ? ` → ${s.last_date}` : ''}</td>
+                    </tr>
                   ))}</tbody></table>
                 </TabsContent>
 
