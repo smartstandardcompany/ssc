@@ -1,4 +1,4 @@
-FROM node:18-slim AS frontend-build
+FROM node:20-slim AS frontend-build
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/yarn.lock* ./
 RUN yarn install --frozen-lockfile 2>/dev/null || yarn install
