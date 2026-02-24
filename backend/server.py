@@ -4702,6 +4702,10 @@ async def analyze_statement(stmt_id: str, current_user: User = Depends(get_curre
     
     sender_list = [{"name": k, "count": v["count"], "total_credit": v["total_credit"], "total_debit": v["total_debit"], "first_date": v["first_date"], "last_date": v["last_date"], "net": v["total_credit"] - v["total_debit"], "iban": list(v["ibans"])[:2], "bank": list(v["banks"])[:1], "fees": v["fees"], "vat": v["vat"]} for k, v in raw_senders.items()]
     sender_list.sort(key=lambda x: x["total_credit"] + x["total_debit"], reverse=True)
+    
+    # 2. POS by branch (using mappings)
+    pos_by_branch = {}
+    for t in txns:
         mid = t.get("machine_id")
         if not mid: continue
         mapping = pos_mappings.get(mid, {})
