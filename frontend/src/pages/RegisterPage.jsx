@@ -37,7 +37,7 @@ export default function RegisterPage({ setIsAuthenticated }) {
       <div
         className="absolute inset-0 z-0"
         style={{
-          backgroundImage: 'url(https://images.unsplash.com/photo-1767482712476-7b72663a0120?crop=entropy&cs=srgb&fm=jpg&q=85)',
+          background: 'linear-gradient(135deg, #E8501A 0%, #F5841F 50%, #F5A623 100%)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
