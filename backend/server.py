@@ -4675,40 +4675,33 @@ async def analyze_statement(stmt_id: str, current_user: User = Depends(get_curre
     branches = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
     suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
     
-    # 1. Sender/Receiver analysis - better grouping by keywords
+    # 1. Sender/Receiver analysis - group by beneficiary name, IBAN, or cleaned description
     import re as re_mod
     raw_senders = {}
     for t in txns:
-        desc = t.get("description", "").strip()
-        if not desc or desc.upper() == 'NAN' or len(desc) < 3: continue
-        
-        # Clean and extract key part for grouping
-        # Remove numbers, dates, references for better grouping
-        clean = re_mod.sub(r'\d{10,}', '', desc)  # Remove long numbers
-        clean = re_mod.sub(r'\d{2}/\d{2}/\d{4}', '', clean)  # Remove dates
-        clean = re_mod.sub(r'MRC\d+', '', clean)  # Remove MRC refs
-        
-        # Extract meaningful name - take first significant part
-        parts = [p.strip() for p in re_mod.split(r'[-/|,]', clean) if len(p.strip()) > 2]
-        key = parts[0].strip()[:50] if parts else clean[:50].strip()
+        key = t.get("beneficiary") or ""
+        if not key or len(key) < 3:
+            desc = t.get("description", "").strip()
+            if not desc or desc.upper() == 'NAN' or len(desc) < 3: continue
+            clean = re_mod.sub(r'\d{10,}', '', desc)
+            clean = re_mod.sub(r'\d{2}/\d{2}/\d{4}', '', clean)
+            parts = [p.strip() for p in re_mod.split(r'[-/|,]', clean) if len(p.strip()) > 2]
+            key = parts[0].strip()[:50] if parts else clean[:50].strip()
         key = re_mod.sub(r'\s+', ' ', key).strip()
         if len(key) < 3: continue
-        
         if key not in raw_senders:
-            raw_senders[key] = {"count": 0, "total_credit": 0, "total_debit": 0, "first_date": t.get("date",""), "last_date": t.get("date",""), "samples": []}
+            raw_senders[key] = {"count": 0, "total_credit": 0, "total_debit": 0, "first_date": t.get("date",""), "last_date": t.get("date",""), "ibans": set(), "banks": set(), "fees": 0, "vat": 0}
         raw_senders[key]["count"] += 1
         raw_senders[key]["total_credit"] += t.get("credit", 0)
         raw_senders[key]["total_debit"] += t.get("debit", 0)
         raw_senders[key]["last_date"] = t.get("date", "")
-        if len(raw_senders[key]["samples"]) < 2:
-            raw_senders[key]["samples"].append(desc[:80])
+        raw_senders[key]["fees"] += t.get("transfer_fee", 0)
+        raw_senders[key]["vat"] += t.get("transfer_vat", 0)
+        if t.get("iban"): raw_senders[key]["ibans"].add(t["iban"])
+        if t.get("bank"): raw_senders[key]["banks"].add(t["bank"])
     
-    sender_list = [{"name": k, **{kk:vv for kk,vv in v.items() if kk != 'samples'}, "sample": v["samples"][0] if v["samples"] else "", "net": v["total_credit"] - v["total_debit"]} for k, v in raw_senders.items()]
+    sender_list = [{"name": k, "count": v["count"], "total_credit": v["total_credit"], "total_debit": v["total_debit"], "first_date": v["first_date"], "last_date": v["last_date"], "net": v["total_credit"] - v["total_debit"], "iban": list(v["ibans"])[:2], "bank": list(v["banks"])[:1], "fees": v["fees"], "vat": v["vat"]} for k, v in raw_senders.items()]
     sender_list.sort(key=lambda x: x["total_credit"] + x["total_debit"], reverse=True)
-    
-    # 2. POS by branch (using mappings)
-    pos_by_branch = {}
-    for t in txns:
         mid = t.get("machine_id")
         if not mid: continue
         mapping = pos_mappings.get(mid, {})
