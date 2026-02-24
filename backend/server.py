@@ -4502,33 +4502,61 @@ async def upload_bank_statement(file: UploadFile = File(...), bank_name: str = F
     if not transactions:
         raise HTTPException(status_code=400, detail="No transactions found in file. Try Excel format.")
     
-    # Categorize transactions
+    # Categorize transactions and extract details
+    import re as re2
     for t in transactions:
-        desc = t["description"].upper()
-        # Order matters - check fees BEFORE pos_sales
-        if any(k in desc for k in ['SFEEMRC', 'BFEEMRC', 'VFEEMRC', 'FEE FOR', 'FEES FOR', 'VAT OF FEE', 'VAT OF FEES']):
-            if 'VAT' in desc or 'VFEE' in desc or 'BFEE' in desc:
-                t["category"] = "vat_fees"
-            else:
-                t["category"] = "bank_fees"
-        elif any(k in desc for k in ['SPANMRC', 'VISAMRC', 'BNETMRC', 'نقاط البيع']) and 'FEE' not in desc:
+        desc = t.get("description", "")
+        desc_upper = desc.upper()
+        
+        # Extract IBAN
+        iban_match = re2.search(r'IBAN[:\s]*([A-Z]{2}\d{20,24})', desc_upper)
+        t["iban"] = iban_match.group(1) if iban_match else None
+        
+        # Extract beneficiary name (text between # markers)
+        names = re2.findall(r'#([^#]+?)(?:\s+in\s+|$)', desc)
+        if not names:
+            names = re2.findall(r'#(.+?)(?:\s+in\s+|\s+Value|\s+with|$)', desc)
+        t["beneficiary"] = names[0].strip()[:60] if names else None
+        
+        # Extract bank name
+        bank_match = re2.search(r'in\s+([\w\s]+Bank|AlRajhi\s+Bank|Saudi\s+National\s+Bank)', desc, re2.IGNORECASE)
+        t["bank"] = bank_match.group(1).strip() if bank_match else None
+        
+        # Extract fees and VAT from description
+        fee_match = re2.search(r'Fees?\s*SAR\s*([\d.]+)', desc, re2.IGNORECASE)
+        vat_match = re2.search(r'VAT\s*SAR\s*([\d.]+)', desc, re2.IGNORECASE)
+        t["transfer_fee"] = float(fee_match.group(1)) if fee_match else 0
+        t["transfer_vat"] = float(vat_match.group(1)) if vat_match else 0
+        
+        # Extract internal transfer name
+        if 'INTERNAL TRANSFER' in desc_upper:
+            int_name = re2.search(r'from\s+(.+?)\s*(?:value|\.|\s+Reference)', desc, re2.IGNORECASE)
+            if int_name:
+                name_part = int_name.group(1).strip()
+                name_part = re2.sub(r'(?:Alinma-\s*)?ALINMA\s+Head\s+Office\s+from\s+', '', name_part, flags=re2.IGNORECASE).strip()
+                if name_part:
+                    t["beneficiary"] = name_part[:60]
+        
+        # Categorize
+        if any(k in desc_upper for k in ['SFEEMRC', 'BFEEMRC', 'VFEEMRC', 'FEE FOR', 'VAT OF FEE']):
+            t["category"] = "vat_fees" if ('VAT' in desc_upper or 'VFEE' in desc_upper or 'BFEE' in desc_upper) else "bank_fees"
+        elif any(k in desc_upper for k in ['SPANMRC', 'VISAMRC', 'BNETMRC']) and 'FEE' not in desc_upper:
             t["category"] = "pos_sales"
-        elif any(k in desc for k in ['SARIE OUTGOING', 'OUTGOING SARIE', 'OUTGOING PAYMENT']):
+        elif any(k in desc_upper for k in ['OUTGOING SARIE', 'SARIE OUTGOING']):
             t["category"] = "outgoing_transfer"
-        elif any(k in desc for k in ['SARIE INCOMING', 'INCOMING', 'SARIE']):
+        elif any(k in desc_upper for k in ['INCOMING SARIE', 'SARIE INCOMING', 'INCOMING']):
             t["category"] = "incoming_transfer"
-        elif any(k in desc for k in ['INTERNAL TRANSFER', 'INT XFER', 'تحويل داخلي']):
+        elif 'INTERNAL TRANSFER' in desc_upper:
             t["category"] = "internal_transfer"
-        elif any(k in desc for k in ['SALARY', 'SAL', 'راتب']):
+        elif any(k in desc_upper for k in ['SALARY', 'SAL']):
             t["category"] = "salary"
-        elif any(k in desc for k in ['CHARGE', 'SARIE CHARGE']):
+        elif 'CHARGE' in desc_upper:
             t["category"] = "bank_fees"
         else:
             t["category"] = "other"
         
         # Extract POS machine number
-        import re as re2
-        machine = re2.search(r'(\d{16})', t["description"])
+        machine = re2.search(r'(\d{16})', desc)
         t["machine_id"] = machine.group(1) if machine else None
     
     # Save statement
