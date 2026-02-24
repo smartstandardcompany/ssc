@@ -168,10 +168,17 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="dashboard-title">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome to your sales and expense tracking dashboard</p>
+      <div className={`space-y-8 min-h-screen p-1 rounded-2xl ${theme === 'dark' ? 'bg-gradient-to-br ' + t.bg + ' text-white' : ''}`}>
+        <div className="flex justify-between items-start flex-wrap gap-3">
+          <div>
+            <h1 className={`text-4xl font-bold font-outfit mb-2 ${t.accent}`} data-testid="dashboard-title">Dashboard</h1>
+            <p className={theme === 'dark' ? 'text-stone-400' : 'text-muted-foreground'}>Smart Standard Company - Business Overview</p>
+          </div>
+          <div className="flex gap-2 items-center flex-wrap">
+            {Object.keys(THEMES).map(th => (
+              <button key={th} onClick={() => changeTheme(th)} className={`px-3 py-1 rounded-lg text-xs font-medium border transition-all capitalize ${theme === th ? 'bg-primary text-white border-primary' : 'bg-white border-stone-200 hover:border-primary'}`}>{th}</button>
+            ))}
+          </div>
         </div>
         <div className="flex gap-4 items-center flex-wrap">
           <BranchFilter onChange={setBranchFilter} />
