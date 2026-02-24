@@ -117,7 +117,7 @@ export default function BankStatementsPage() {
 
                 <TabsContent value="senders">
                   <p className="text-sm text-muted-foreground mb-3">Grouped by sender/receiver name - shows frequency and total amounts</p>
-                  <table className="w-full"><thead><tr className="border-b"><th className="text-left p-2 text-xs font-medium">Name</th><th className="text-center p-2 text-xs font-medium">Times</th><th className="text-right p-2 text-xs font-medium">Received</th><th className="text-right p-2 text-xs font-medium">Sent</th><th className="text-left p-2 text-xs font-medium">Period</th></tr></thead>
+                  <table className="w-full"><thead><tr className="border-b"><th className="text-left p-2 text-xs font-medium">Name / IBAN / Bank</th><th className="text-center p-2 text-xs font-medium">Times</th><th className="text-right p-2 text-xs font-medium">Received</th><th className="text-right p-2 text-xs font-medium">Sent</th><th className="text-right p-2 text-xs font-medium">Fees/VAT</th><th className="text-left p-2 text-xs font-medium">Period</th></tr></thead>
                   <tbody>{analysis?.senders?.map((s, i) => (
                     <tr key={i} className="border-b hover:bg-stone-50">
                       <td className="p-2 text-sm font-medium max-w-xs">
