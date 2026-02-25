@@ -4505,21 +4505,35 @@ async def upload_bank_statement(file: UploadFile = File(...), bank_name: str = F
                                 txn["beneficiary"] = iqama_match.group(1).strip()[:60]
                                 txn["sub_category"] = "iqama_renewal"
                             
-                            # Extract TRM machine number
-                            trm_match = re.search(r'TRM\s+(\d+)', details_str)
-                            if trm_match: txn["machine_id"] = trm_match.group(1)
+                            # Extract TRM machine number AND card type from details
+                            trm_match = re.search(r'(SPAN|VISA|MASTER)\s*TRM\s*(\d+)', details_str, re.IGNORECASE)
+                            if trm_match:
+                                txn["machine_id"] = trm_match.group(2)
+                                card = trm_match.group(1).upper()
+                                txn["card_type"] = "mada" if card == "SPAN" else "visa" if card == "VISA" else "mastercard"
+                            elif not trm_match:
+                                trm_match2 = re.search(r'TRM\s*(\d+)', details_str)
+                                if trm_match2: txn["machine_id"] = trm_match2.group(1)
                             
                             # Categorize
                             if 'recon-credit' in desc_lower:
                                 txn["category"] = "pos_sales"
+                                # Extract card type from details for POS sales too
+                                if 'SPAN' in details_str.upper(): txn["card_type"] = "mada"
+                                elif 'VISA' in details_str.upper(): txn["card_type"] = "visa"
+                                elif 'MASTER' in details_str.upper(): txn["card_type"] = "mastercard"
                             elif 'span transaction' in desc_lower:
                                 txn["category"] = "pos_fees"
+                                txn["card_type"] = "mada"
                             elif 'visa transaction' in desc_lower:
                                 txn["category"] = "pos_fees"
+                                txn["card_type"] = "visa"
                             elif 'master card transaction' in desc_lower or 'master card' in desc_lower:
                                 txn["category"] = "pos_fees"
+                                txn["card_type"] = "mastercard"
                             elif 'up transaction' in desc_lower:
                                 txn["category"] = "pos_fees"
+                                txn["card_type"] = "unionpay"
                             elif desc_lower == 'vat':
                                 txn["category"] = "vat_fees"
                             elif 'sarie outgoing' in desc_lower:
@@ -4534,7 +4548,7 @@ async def upload_bank_statement(file: UploadFile = File(...), bank_name: str = F
                                     txn["beneficiary"] = "HRSD (Human Resources)"
                                 else:
                                     txn["category"] = "sadad_payment"
-                            elif 'sadad refund' in desc_lower:
+                            elif 'sadad refund' in desc_lower or 'BAB#' in details_str:
                                 txn["category"] = "sadad_refund"
                             elif 'account to account' in desc_lower:
                                 txn["category"] = "internal_transfer"
@@ -4542,6 +4556,9 @@ async def upload_bank_statement(file: UploadFile = File(...), bank_name: str = F
                                 txn["category"] = "bank_fees"
                             elif 'pos.fee' in desc_lower:
                                 txn["category"] = "bank_fees"
+                                # Extract machine from "Monthly Fees XXXXXXXX"
+                                fee_machine = re.search(r'Monthly Fees\s*(\d+)', details_str)
+                                if fee_machine: txn["machine_id"] = fee_machine.group(1)
                             else:
                                 txn["category"] = "other"
                             
