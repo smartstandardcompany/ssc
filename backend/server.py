@@ -4843,17 +4843,20 @@ async def analyze_statement(stmt_id: str, current_user: User = Depends(get_curre
                                    "mada": 0, "visa": 0, "mastercard": 0, "mada_fee": 0, "visa_fee": 0, "mc_fee": 0}
         cat = t.get("category", "")
         desc_upper = t.get("description", "").upper()
+        card_type = t.get("card_type", "")
         if cat == "pos_sales":
             pos_by_machine[mid]["sales_count"] += 1
             pos_by_machine[mid]["sales_total"] += t.get("credit", 0)
-            if "SPANMRC" in desc_upper: pos_by_machine[mid]["mada"] += t.get("credit", 0)
-            elif "VISAMRC" in desc_upper: pos_by_machine[mid]["visa"] += t.get("credit", 0)
-            elif "BNETMRC" in desc_upper: pos_by_machine[mid]["mastercard"] += t.get("credit", 0)
-        elif cat in ("bank_fees", "vat_fees"):
-            pos_by_machine[mid]["fees" if cat == "bank_fees" else "vat"] += t.get("debit", 0)
-            if "SFEEMRC" in desc_upper: pos_by_machine[mid]["mada_fee"] += t.get("debit", 0)
-            elif "VFEEMRC" in desc_upper: pos_by_machine[mid]["visa_fee"] += t.get("debit", 0)
-            elif "BFEEMRC" in desc_upper: pos_by_machine[mid]["mc_fee"] += t.get("debit", 0)
+            # Use card_type if available (Bilad), else detect from description (Alinma)
+            if card_type == "mada" or "SPANMRC" in desc_upper: pos_by_machine[mid]["mada"] += t.get("credit", 0)
+            elif card_type == "visa" or "VISAMRC" in desc_upper: pos_by_machine[mid]["visa"] += t.get("credit", 0)
+            elif card_type == "mastercard" or "BNETMRC" in desc_upper: pos_by_machine[mid]["mastercard"] += t.get("credit", 0)
+        elif cat in ("bank_fees", "vat_fees", "pos_fees"):
+            fee_type = "fees" if cat != "vat_fees" else "vat"
+            pos_by_machine[mid][fee_type] += t.get("debit", 0)
+            if card_type == "mada" or "SFEEMRC" in desc_upper: pos_by_machine[mid]["mada_fee"] += t.get("debit", 0)
+            elif card_type == "visa" or "VFEEMRC" in desc_upper: pos_by_machine[mid]["visa_fee"] += t.get("debit", 0)
+            elif card_type == "mastercard" or "BFEEMRC" in desc_upper: pos_by_machine[mid]["mc_fee"] += t.get("debit", 0)
     
     for mid, data in pos_by_machine.items():
         data["net"] = data["sales_total"] - data["fees"] - data["vat"]
