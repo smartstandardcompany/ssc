@@ -62,6 +62,8 @@ export default function DashboardPage() {
       setAlerts(alertsRes.data);
       setBranchDues(duesRes.data);
       setPendingSalaries(pendRes.data);
+      const brRes = await api.get('/branches');
+      setBranches(brRes.data);
     } catch (error) {
       toast.error('Failed to fetch dashboard stats');
     } finally {
