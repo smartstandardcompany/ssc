@@ -4608,18 +4608,25 @@ async def upload_bank_statement(file: UploadFile = File(...), bank_name: str = F
             names = re2.findall(r'#(.+?)(?:\s+in\s+|\s+Value|\s+with|$)', desc)
         t["beneficiary"] = names[0].strip()[:60] if names else None
         
-        # Better extraction for INCOMING SARIE - find "from XXXX" pattern
+        # Better extraction for INCOMING SARIE
         if 'INCOMING SARIE' in desc_upper:
-            from_match = re2.search(r'from\s+(.+?)(?:\(IBAN|$)', desc, re2.IGNORECASE)
-            if from_match:
-                sender = from_match.group(1).strip()
-                sender = re2.sub(r'\s+at\s+\d+.*', '', sender).strip()
-                if len(sender) > 3:
-                    t["beneficiary"] = sender[:60]
-            # Also check for Arabic names after "from"
-            arab_match = re2.search(r'from\s+([\u0600-\u06FF\s]+)', desc)
-            if arab_match and len(arab_match.group(1).strip()) > 3:
-                t["beneficiary"] = arab_match.group(1).strip()[:60]
+            # Pattern: "from SENDER_NAME  #LIMITED" or "from SENDER_NAME through BANK"
+            from_match = re2.search(r'from\s+([A-Z\s]+?(?:ARABIA|LLC|COMPANY|CO\.|BANK|EST\.)?)(?:\s+#|\s+through|\s+$)', desc, re2.IGNORECASE)
+            if not from_match:
+                # Try: "from SENDER_NAME  " (at end or before #)
+                from_match = re2.search(r'\bfrom\s+([A-Z][A-Z\s]{3,}?)(?:\s{2,}|\s+#|\s+at\s+|\s+Value)', desc)
+            if not from_match:
+                # Try: last "from XXXX" pattern
+                all_froms = re2.findall(r'from\s+([A-Z][A-Za-z\s]+?)(?:\s{2,}|$|through)', desc)
+                if all_froms:
+                    # Take the last "from" which is usually the sender name
+                    name = all_froms[-1].strip()
+                    if len(name) > 3 and name.upper() not in ['ALINMA BANK', 'ALINMA HEAD OFFICE']:
+                        t["beneficiary"] = name[:60]
+            elif from_match:
+                name = from_match.group(1).strip()
+                if len(name) > 3 and name.upper() not in ['ALINMA BANK', 'ALINMA HEAD OFFICE']:
+                    t["beneficiary"] = name[:60]
         
         # Handle "Sarie Ben. Customer#1008###" pattern
         sarie_ben = re2.match(r'Sarie Ben\.\s*Customer#(\d+)', desc)
