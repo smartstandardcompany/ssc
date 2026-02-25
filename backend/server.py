@@ -4475,35 +4475,51 @@ async def upload_bank_statement(file: UploadFile = File(...), bank_name: str = F
                         if debit > 0 or credit > 0:
                             txn = {"date": date_str, "description": full_desc[:200], "debit": debit, "credit": credit, "balance": balance, "reference": ref}
                             
-                            # Bilad categorization from Description column
+                            # Bilad categorization from Description + Details
                             desc_lower = desc.lower()
                             details_str = details if details != 'nan' else ''
                             
-                            # Extract beneficiary from Details
-                            ben_match = re.search(r'Ben\s+(.+?)(?:\s+|$)', details_str)
+                            # Extract beneficiary from Details - multiple patterns
+                            # Pattern 1: "Ben XXXX" (SARIE transfers)
+                            ben_match = re.search(r'Ben\s+(.+?)$', details_str)
                             if ben_match: txn["beneficiary"] = ben_match.group(1).strip()[:60]
-                            # Extract name after # in details
-                            hash_match = re.search(r'#(.+?)(?:#|$)', details_str)
-                            if hash_match and not txn.get("beneficiary"): txn["beneficiary"] = hash_match.group(1).strip()[:60]
+                            
+                            # Pattern 2: "#NAME#" or "#NAME" (INCOMING SARIE)
+                            if not txn.get("beneficiary"):
+                                hash_parts = [p.strip() for p in details_str.split('#') if p.strip() and len(p.strip()) > 2]
+                                # Skip IBAN/account numbers, take the name
+                                for hp in hash_parts:
+                                    if not re.match(r'^[\d/\s]+$', hp) and not hp.startswith('/SA') and hp != 'CIF':
+                                        txn["beneficiary"] = hp[:60]
+                                        break
+                            
+                            # Pattern 3: "Name BILL#NUMBER" (SADAD - name before BILL#)
+                            bill_match = re.match(r'(.+?)\s*BILL#(\d+)', details_str)
+                            if bill_match:
+                                txn["beneficiary"] = bill_match.group(1).strip()[:60]
+                                txn["bill_number"] = bill_match.group(2)
+                            
+                            # Pattern 4: "Renew Iqama REF XXX-YYY-Name"
+                            iqama_match = re.match(r'Renew Iqama REF\s+[\d-]+(.+?)$', details_str)
+                            if iqama_match:
+                                txn["beneficiary"] = iqama_match.group(1).strip()[:60]
+                                txn["sub_category"] = "iqama_renewal"
                             
                             # Extract TRM machine number
                             trm_match = re.search(r'TRM\s+(\d+)', details_str)
                             if trm_match: txn["machine_id"] = trm_match.group(1)
                             
+                            # Categorize
                             if 'recon-credit' in desc_lower:
                                 txn["category"] = "pos_sales"
                             elif 'span transaction' in desc_lower:
                                 txn["category"] = "pos_fees"
-                                txn["card_type"] = "mada"
                             elif 'visa transaction' in desc_lower:
                                 txn["category"] = "pos_fees"
-                                txn["card_type"] = "visa"
-                            elif 'master card transaction' in desc_lower:
+                            elif 'master card transaction' in desc_lower or 'master card' in desc_lower:
                                 txn["category"] = "pos_fees"
-                                txn["card_type"] = "mastercard"
                             elif 'up transaction' in desc_lower:
                                 txn["category"] = "pos_fees"
-                                txn["card_type"] = "unionpay"
                             elif desc_lower == 'vat':
                                 txn["category"] = "vat_fees"
                             elif 'sarie outgoing' in desc_lower:
@@ -4511,16 +4527,20 @@ async def upload_bank_statement(file: UploadFile = File(...), bank_name: str = F
                             elif 'incoming sarie' in desc_lower:
                                 txn["category"] = "incoming_transfer"
                             elif 'sadad bill' in desc_lower:
-                                txn["category"] = "sadad_payment"
-                                bill_match = re.search(r'BILL#(\d+)', details_str)
-                                if bill_match: txn["bill_number"] = bill_match.group(1)
+                                if 'renew iqama' in details_str.lower():
+                                    txn["category"] = "iqama_renewal"
+                                elif 'hrsd' in details_str.upper():
+                                    txn["category"] = "sadad_payment"
+                                    txn["beneficiary"] = "HRSD (Human Resources)"
+                                else:
+                                    txn["category"] = "sadad_payment"
                             elif 'sadad refund' in desc_lower:
                                 txn["category"] = "sadad_refund"
                             elif 'account to account' in desc_lower:
                                 txn["category"] = "internal_transfer"
                             elif 'sarie charge' in desc_lower:
                                 txn["category"] = "bank_fees"
-                            elif 'pos.fee' in desc_lower or 'monthly fee' in desc_lower.replace(details_str.lower(), ''):
+                            elif 'pos.fee' in desc_lower:
                                 txn["category"] = "bank_fees"
                             else:
                                 txn["category"] = "other"
