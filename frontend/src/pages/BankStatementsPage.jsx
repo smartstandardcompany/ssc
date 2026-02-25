@@ -116,8 +116,16 @@ export default function BankStatementsPage() {
                 </TabsContent>
 
                 <TabsContent value="senders">
-                  <p className="text-sm text-muted-foreground mb-3">Grouped by sender/receiver name - shows frequency and total amounts</p>
-                  <table className="w-full"><thead><tr className="border-b"><th className="text-left p-2 text-xs font-medium">Name / IBAN / Bank</th><th className="text-center p-2 text-xs font-medium">Times</th><th className="text-right p-2 text-xs font-medium">Received</th><th className="text-right p-2 text-xs font-medium">Sent</th><th className="text-right p-2 text-xs font-medium">Fees/VAT</th><th className="text-left p-2 text-xs font-medium">Period</th></tr></thead>
+                  <div className="flex justify-between items-center mb-3">
+                    <p className="text-sm text-muted-foreground">Grouped by sender/receiver - totals at bottom</p>
+                    <Button size="sm" variant="outline" className="rounded-xl" onClick={() => {
+                      if (!analysis?.senders) return;
+                      const csv = 'Name,IBAN,Bank,Count,Received,Sent,Fees,VAT,Period\n' + analysis.senders.map(s => `"${s.name}","${(s.iban||[])[0]||''}","${(s.bank||[])[0]||''}",${s.count},${s.total_credit.toFixed(2)},${s.total_debit.toFixed(2)},${(s.fees||0).toFixed(2)},${(s.vat||0).toFixed(2)},"${s.first_date}-${s.last_date}"`).join('\n');
+                      const blob = new Blob([csv], {type: 'text/csv'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'senders_receivers.csv'; a.click();
+                      toast.success('Exported');
+                    }}><Upload size={14} className="mr-1" />Export CSV</Button>
+                  </div>
+                  <table className="w-full"><thead><tr className="border-b bg-stone-50"><th className="text-left p-2 text-xs font-medium">Name / IBAN / Bank</th><th className="text-center p-2 text-xs font-medium">Times</th><th className="text-right p-2 text-xs font-medium">Received</th><th className="text-right p-2 text-xs font-medium">Sent</th><th className="text-right p-2 text-xs font-medium">Fees/VAT</th><th className="text-left p-2 text-xs font-medium">Period</th></tr></thead>
                   <tbody>{analysis?.senders?.map((s, i) => (
                     <tr key={i} className="border-b hover:bg-stone-50">
                       <td className="p-2 text-sm font-medium max-w-xs">
@@ -126,12 +134,21 @@ export default function BankStatementsPage() {
                         {s.bank?.length > 0 && <div className="text-xs text-info">{s.bank[0]}</div>}
                       </td>
                       <td className="p-2 text-center"><Badge variant="secondary">{s.count}x</Badge></td>
-                      <td className="p-2 text-sm text-right text-success">{s.total_credit > 0 ? `SAR ${s.total_credit.toFixed(0)}` : '-'}</td>
-                      <td className="p-2 text-sm text-right text-error">{s.total_debit > 0 ? `SAR ${s.total_debit.toFixed(0)}` : '-'}</td>
+                      <td className="p-2 text-sm text-right text-success">{s.total_credit > 0 ? `SAR ${s.total_credit.toFixed(2)}` : '-'}</td>
+                      <td className="p-2 text-sm text-right text-error">{s.total_debit > 0 ? `SAR ${s.total_debit.toFixed(2)}` : '-'}</td>
                       <td className="p-2 text-xs text-right">{(s.fees || 0) > 0 && <span className="text-warning">Fee:{s.fees.toFixed(1)}</span>}{(s.vat || 0) > 0 && <span className="text-error ml-1">VAT:{s.vat.toFixed(1)}</span>}</td>
                       <td className="p-2 text-xs text-muted-foreground">{s.first_date}{s.first_date !== s.last_date ? ` → ${s.last_date}` : ''}</td>
                     </tr>
-                  ))}</tbody></table>
+                  ))}
+                  <tr className="bg-primary/10 font-bold border-t-2">
+                    <td className="p-2 text-sm">TOTAL ({analysis?.senders?.length || 0} groups)</td>
+                    <td className="p-2 text-center">{analysis?.senders?.reduce((s,x) => s + x.count, 0)}</td>
+                    <td className="p-2 text-sm text-right text-success">SAR {(analysis?.senders?.reduce((s,x) => s + x.total_credit, 0) || 0).toFixed(2)}</td>
+                    <td className="p-2 text-sm text-right text-error">SAR {(analysis?.senders?.reduce((s,x) => s + x.total_debit, 0) || 0).toFixed(2)}</td>
+                    <td className="p-2 text-xs text-right">Fee:{(analysis?.senders?.reduce((s,x) => s + (x.fees||0), 0) || 0).toFixed(1)}</td>
+                    <td></td>
+                  </tr>
+                  </tbody></table>
                 </TabsContent>
 
                 <TabsContent value="pos" className="space-y-4">
