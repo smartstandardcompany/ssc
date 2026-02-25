@@ -4554,9 +4554,10 @@ async def upload_bank_statement(file: UploadFile = File(...), bank_name: str = F
     if not transactions:
         raise HTTPException(status_code=400, detail="No transactions found in file. Try Excel format.")
     
-    # Categorize transactions and extract details
+    # Categorize transactions and extract details (skip already categorized from bank-specific parsers)
     import re as re2
     for t in transactions:
+        if t.get("category"): continue  # Already categorized by bank-specific parser
         desc = t.get("description", "")
         desc_upper = desc.upper()
         
