@@ -4512,11 +4512,30 @@ async def upload_bank_statement(file: UploadFile = File(...), bank_name: str = F
         iban_match = re2.search(r'IBAN[:\s]*([A-Z]{2}\d{20,24})', desc_upper)
         t["iban"] = iban_match.group(1) if iban_match else None
         
-        # Extract beneficiary name (text between # markers)
+        # Extract beneficiary name - multiple patterns
         names = re2.findall(r'#([^#]+?)(?:\s+in\s+|$)', desc)
         if not names:
             names = re2.findall(r'#(.+?)(?:\s+in\s+|\s+Value|\s+with|$)', desc)
         t["beneficiary"] = names[0].strip()[:60] if names else None
+        
+        # Better extraction for INCOMING SARIE - find "from XXXX" pattern
+        if 'INCOMING SARIE' in desc_upper:
+            from_match = re2.search(r'from\s+(.+?)(?:\(IBAN|$)', desc, re2.IGNORECASE)
+            if from_match:
+                sender = from_match.group(1).strip()
+                sender = re2.sub(r'\s+at\s+\d+.*', '', sender).strip()
+                if len(sender) > 3:
+                    t["beneficiary"] = sender[:60]
+            # Also check for Arabic names after "from"
+            arab_match = re2.search(r'from\s+([\u0600-\u06FF\s]+)', desc)
+            if arab_match and len(arab_match.group(1).strip()) > 3:
+                t["beneficiary"] = arab_match.group(1).strip()[:60]
+        
+        # Handle "Sarie Ben. Customer#1008###" pattern
+        sarie_ben = re2.match(r'Sarie Ben\.\s*Customer#(\d+)', desc)
+        if sarie_ben:
+            t["beneficiary"] = f"Internal Transfer #{sarie_ben.group(1)}"
+            t["category"] = "internal_transfer" if not t.get("category") else t.get("category")
         
         # Extract bank name
         bank_match = re2.search(r'in\s+([\w\s]+Bank|AlRajhi\s+Bank|Saudi\s+National\s+Bank)', desc, re2.IGNORECASE)
