@@ -4803,10 +4803,24 @@ async def analyze_statement(stmt_id: str, current_user: User = Depends(get_curre
     branches = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
     suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
     
-    # 1. Sender/Receiver analysis - group by beneficiary name, IBAN, or cleaned description
+    # 1. Sender/Receiver analysis - group by beneficiary name, IBAN, or machine ID
     import re as re_mod
     raw_senders = {}
     for t in txns:
+        cat = t.get("category", "")
+        mid = t.get("machine_id")
+        
+        # POS transactions: group by machine ID
+        if mid and cat in ("pos_sales", "pos_fees", "bank_fees", "vat_fees"):
+            key = f"POS Machine {mid}"
+            if key not in raw_senders:
+                raw_senders[key] = {"count": 0, "total_credit": 0, "total_debit": 0, "first_date": t.get("date",""), "last_date": t.get("date",""), "ibans": set(), "banks": set(), "fees": 0, "vat": 0, "is_pos": True}
+            raw_senders[key]["count"] += 1
+            raw_senders[key]["total_credit"] += t.get("credit", 0)
+            raw_senders[key]["total_debit"] += t.get("debit", 0)
+            raw_senders[key]["last_date"] = t.get("date", "")
+            continue
+        
         key = t.get("beneficiary") or ""
         if not key or len(key) < 3:
             desc = t.get("description", "").strip()
