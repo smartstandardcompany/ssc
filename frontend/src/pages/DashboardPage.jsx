@@ -473,6 +473,46 @@ export default function DashboardPage() {
           </Card>
         )}
 
+        {/* Payback Dialog */}
+        <Dialog open={showPaybackDialog} onOpenChange={setShowPaybackDialog}>
+          <DialogContent>
+            <DialogHeader><DialogTitle className="font-outfit">Record Branch Payback</DialogTitle></DialogHeader>
+            <p className="text-sm text-muted-foreground mb-3">When one branch pays back another branch for expenses paid on their behalf</p>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div><Label>Paying Branch (who owes)</Label>
+                  <Select value={paybackData.from_branch_id || "none"} onValueChange={(v) => setPaybackData({...paybackData, from_branch_id: v === "none" ? "" : v})}>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div><Label>Receiving Branch (who paid)</Label>
+                  <Select value={paybackData.to_branch_id || "none"} onValueChange={(v) => setPaybackData({...paybackData, to_branch_id: v === "none" ? "" : v})}>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div><Label>Amount *</Label><Input type="number" step="0.01" value={paybackData.amount} onChange={(e) => setPaybackData({...paybackData, amount: e.target.value})} placeholder="SAR 0.00" /></div>
+                <div><Label>Mode</Label>
+                  <Select value={paybackData.payment_mode} onValueChange={(v) => setPaybackData({...paybackData, payment_mode: v})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="cash">Cash</SelectItem><SelectItem value="bank">Bank</SelectItem></SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button className="rounded-xl w-full" onClick={async () => {
+                if (!paybackData.from_branch_id || !paybackData.to_branch_id || !paybackData.amount) { toast.error('Fill all fields'); return; }
+                try {
+                  await api.post('/branch-paybacks', {...paybackData, amount: parseFloat(paybackData.amount), date: new Date().toISOString()});
+                  toast.success('Payback recorded - dues updated');
+                  setShowPaybackDialog(false);
+                  setPaybackData({ from_branch_id: '', to_branch_id: '', amount: '', payment_mode: 'cash' });
+                  fetchStats();
+                } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+              }}>Record Payback</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
