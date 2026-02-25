@@ -33,6 +33,9 @@ export default function DashboardPage() {
   const [branchFilter, setBranchFilter] = useState([]);
   const [showVat, setShowVat] = useState(false);
   const [theme, setTheme] = useState(localStorage.getItem('dashboard_theme') || 'default');
+  const [showPaybackDialog, setShowPaybackDialog] = useState(false);
+  const [paybackData, setPaybackData] = useState({ from_branch_id: '', to_branch_id: '', amount: '', payment_mode: 'cash' });
+  const [branches, setBranches] = useState([]);
   const t = THEMES[theme] || THEMES.default;
 
   const changeTheme = (newTheme) => { setTheme(newTheme); localStorage.setItem('dashboard_theme', newTheme); };
