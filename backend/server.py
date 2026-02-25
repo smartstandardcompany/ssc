@@ -4556,23 +4556,33 @@ async def upload_bank_statement(file: UploadFile = File(...), bank_name: str = F
                 if name_part:
                     t["beneficiary"] = name_part[:60]
         
-        # Extract SADAD bill payments (format: "NNN - Entity Name Bill XXXX Payment...")
+        # Extract SADAD bill payments
         sadad_match = re2.match(r'(\d{3})\s*-\s*(.+?)\s+Bill\s+(\d+)', desc)
         if sadad_match:
             t["beneficiary"] = sadad_match.group(2).strip()[:60]
             t["sadad_code"] = sadad_match.group(1)
-            t["bill_number"] = sadad_match.group(3)
+        
+        # Handle Payroll Project#### pattern
+        if 'Payroll Project' in desc or ('###' in desc and 'Customer' not in desc and 'الاستحقاق' not in desc):
+            t["beneficiary"] = "Payroll Fee"
+            t["category"] = "bank_fees"
+            continue
+        
+        # Handle Sarie Ben Customer#1008### pattern  
+        sarie_ben = re2.match(r'Sarie Ben\.\s*Customer#(\d+)', desc)
+        if sarie_ben:
+            t["beneficiary"] = f"Internal Transfer #{sarie_ben.group(1)}"
         
         # Categorize
         if any(k in desc_upper for k in ['SFEEMRC', 'BFEEMRC', 'VFEEMRC', 'FEE FOR', 'VAT OF FEE']):
             t["category"] = "vat_fees" if ('VAT' in desc_upper or 'VFEE' in desc_upper or 'BFEE' in desc_upper) else "bank_fees"
-        elif any(k in desc_upper for k in ['SPANMRC', 'VISAMRC', 'BNETMRC']) and 'FEE' not in desc_upper:
+        elif any(k in desc_upper for k in ['SPANMRC', 'VISAMRC', 'BNETMRC', 'الاستحقاق']) and 'FEE' not in desc_upper:
             t["category"] = "pos_sales"
         elif any(k in desc_upper for k in ['OUTGOING SARIE', 'SARIE OUTGOING']):
             t["category"] = "outgoing_transfer"
         elif any(k in desc_upper for k in ['INCOMING SARIE', 'SARIE INCOMING', 'INCOMING']):
             t["category"] = "incoming_transfer"
-        elif 'INTERNAL TRANSFER' in desc_upper:
+        elif 'INTERNAL TRANSFER' in desc_upper or (sarie_ben is not None):
             t["category"] = "internal_transfer"
         elif sadad_match:
             t["category"] = "sadad_payment"
