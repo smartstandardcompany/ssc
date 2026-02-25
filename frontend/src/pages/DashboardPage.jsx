@@ -377,7 +377,12 @@ export default function DashboardPage() {
 
           {branchDues && (Object.keys(branchDues.dues || {}).length > 0 || Object.keys(branchDues.paybacks || {}).length > 0) && (
             <Card className="border-border md:col-span-2">
-              <CardHeader className="pb-2"><CardTitle className="font-outfit text-base">Branch-to-Branch Dues</CardTitle></CardHeader>
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="font-outfit text-base">Branch-to-Branch Dues</CardTitle>
+                  <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowPaybackDialog(true)}><ArrowLeftRight size={14} className="mr-1" />Record Payback</Button>
+                </div>
+              </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   {Object.entries(branchDues.dues || {}).map(([key, amt]) => (
