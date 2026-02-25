@@ -4473,7 +4473,59 @@ async def upload_bank_statement(file: UploadFile = File(...), bank_name: str = F
                                     date_str = ds; break
                         
                         if debit > 0 or credit > 0:
-                            transactions.append({"date": date_str, "description": full_desc[:200], "debit": debit, "credit": credit, "balance": balance, "reference": ref})
+                            txn = {"date": date_str, "description": full_desc[:200], "debit": debit, "credit": credit, "balance": balance, "reference": ref}
+                            
+                            # Bilad categorization from Description column
+                            desc_lower = desc.lower()
+                            details_str = details if details != 'nan' else ''
+                            
+                            # Extract beneficiary from Details
+                            ben_match = re.search(r'Ben\s+(.+?)(?:\s+|$)', details_str)
+                            if ben_match: txn["beneficiary"] = ben_match.group(1).strip()[:60]
+                            # Extract name after # in details
+                            hash_match = re.search(r'#(.+?)(?:#|$)', details_str)
+                            if hash_match and not txn.get("beneficiary"): txn["beneficiary"] = hash_match.group(1).strip()[:60]
+                            
+                            # Extract TRM machine number
+                            trm_match = re.search(r'TRM\s+(\d+)', details_str)
+                            if trm_match: txn["machine_id"] = trm_match.group(1)
+                            
+                            if 'recon-credit' in desc_lower:
+                                txn["category"] = "pos_sales"
+                            elif 'span transaction' in desc_lower:
+                                txn["category"] = "pos_fees"
+                                txn["card_type"] = "mada"
+                            elif 'visa transaction' in desc_lower:
+                                txn["category"] = "pos_fees"
+                                txn["card_type"] = "visa"
+                            elif 'master card transaction' in desc_lower:
+                                txn["category"] = "pos_fees"
+                                txn["card_type"] = "mastercard"
+                            elif 'up transaction' in desc_lower:
+                                txn["category"] = "pos_fees"
+                                txn["card_type"] = "unionpay"
+                            elif desc_lower == 'vat':
+                                txn["category"] = "vat_fees"
+                            elif 'sarie outgoing' in desc_lower:
+                                txn["category"] = "outgoing_transfer"
+                            elif 'incoming sarie' in desc_lower:
+                                txn["category"] = "incoming_transfer"
+                            elif 'sadad bill' in desc_lower:
+                                txn["category"] = "sadad_payment"
+                                bill_match = re.search(r'BILL#(\d+)', details_str)
+                                if bill_match: txn["bill_number"] = bill_match.group(1)
+                            elif 'sadad refund' in desc_lower:
+                                txn["category"] = "sadad_refund"
+                            elif 'account to account' in desc_lower:
+                                txn["category"] = "internal_transfer"
+                            elif 'sarie charge' in desc_lower:
+                                txn["category"] = "bank_fees"
+                            elif 'pos.fee' in desc_lower or 'monthly fee' in desc_lower.replace(details_str.lower(), ''):
+                                txn["category"] = "bank_fees"
+                            else:
+                                txn["category"] = "other"
+                            
+                            transactions.append(txn)
                     break
             
             # Fallback: try column-name matching
