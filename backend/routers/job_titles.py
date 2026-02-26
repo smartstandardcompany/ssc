@@ -60,6 +60,16 @@ async def update_job_title(title_id: str, body: dict, current_user: User = Depen
         update_data["max_salary"] = float(update_data["max_salary"])
     await db.job_titles.update_one({"id": title_id}, {"$set": update_data})
     updated = await db.job_titles.find_one({"id": title_id}, {"_id": 0})
+    # Sync permissions to all linked employees/users when permissions change
+    if "permissions" in update_data:
+        employees = await db.employees.find({"job_title_id": title_id}, {"_id": 0}).to_list(1000)
+        for emp in employees:
+            if emp.get("user_id"):
+                user_doc = await db.users.find_one({"id": emp["user_id"]}, {"_id": 0})
+                if user_doc:
+                    base = {"self_service"} if user_doc.get("role") == "employee" else set()
+                    merged = list(base | set(update_data["permissions"]))
+                    await db.users.update_one({"id": emp["user_id"]}, {"$set": {"permissions": merged}})
     return updated
 
 @router.delete("/job-titles/{title_id}")
