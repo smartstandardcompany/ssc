@@ -518,6 +518,7 @@ export default function DashboardPage() {
             </div>
           </DialogContent>
         </Dialog>
+        <WhatsAppSendDialog open={showWhatsApp} onClose={() => setShowWhatsApp(false)} defaultType="daily_sales" branches={branches} />
       </div>
     </DashboardLayout>
   );
