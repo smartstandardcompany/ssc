@@ -28,6 +28,7 @@ export default function StockPage() {
   const [showScanDialog, setShowScanDialog] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState(null);
+  const [showWhatsApp, setShowWhatsApp] = useState(false);
 
   const [newItem, setNewItem] = useState({ name: '', cost_price: '', unit_price: '', unit: 'piece', category: '', min_stock_level: '' });
   const [stockInData, setStockInData] = useState({ item_id: '', branch_id: '', quantity: '', unit_cost: '', supplier_id: '', date: new Date().toISOString().split('T')[0], notes: '' });
