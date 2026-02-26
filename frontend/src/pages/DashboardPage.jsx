@@ -370,8 +370,10 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+        )}
 
         {/* Supplier Dues, Due Fines & Due Salaries */}
+        {widgets.dues && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card className="border-border border-warning/30 bg-warning/5">
             <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Supplier Dues</CardTitle></CardHeader>
