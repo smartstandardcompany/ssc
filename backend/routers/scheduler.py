@@ -208,10 +208,23 @@ async def _async_sync_scheduler():
         hour = cfg.get("hour", 21)
         minute = cfg.get("minute", 0)
         try:
-            scheduler.add_job(
-                run_scheduled_job, CronTrigger(hour=hour, minute=minute),
-                args=[job_type], id=f"ssc_{job_type}", replace_existing=True
-            )
+            if job_type == "weekly_digest":
+                day_of_week = cfg.get("day_of_week", "sun")
+                scheduler.add_job(
+                    run_scheduled_job, CronTrigger(day_of_week=day_of_week, hour=hour, minute=minute),
+                    args=[job_type], id=f"ssc_{job_type}", replace_existing=True
+                )
+            elif job_type == "monthly_digest":
+                day = cfg.get("day", 1)
+                scheduler.add_job(
+                    run_scheduled_job, CronTrigger(day=day, hour=hour, minute=minute),
+                    args=[job_type], id=f"ssc_{job_type}", replace_existing=True
+                )
+            else:
+                scheduler.add_job(
+                    run_scheduled_job, CronTrigger(hour=hour, minute=minute),
+                    args=[job_type], id=f"ssc_{job_type}", replace_existing=True
+                )
         except:
             pass
 
