@@ -4250,9 +4250,9 @@ async def send_daily_report(current_user: User = Depends(get_current_user)):
     for b in branches:
         bt = sum(s.get("final_amount", s["amount"]) for s in sales if s.get("branch_id") == b["id"])
         if bt > 0:
-            branch_lines += f"  {b['name']}: ${bt:.2f}\n"
+            branch_lines += f"  {b['name']}: SAR {bt:.2f}\n"
     
-    report = f"Daily Sales Report - {datetime.now().strftime('%d %b %Y')}\n\nTotal Sales: ${total_sales:.2f}\nTotal Expenses: ${total_expenses:.2f}\nNet: ${(total_sales - total_expenses):.2f}\n"
+    report = f"Daily Sales Report - {datetime.now().strftime('%d %b %Y')}\n\nTotal Sales: SAR {total_sales:.2f}\nTotal Expenses: SAR {total_expenses:.2f}\nNet: SAR {(total_sales - total_expenses):.2f}\n"
     if branch_lines:
         report += f"\nBranch-wise Sales:\n{branch_lines}"
     
