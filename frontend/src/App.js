@@ -33,6 +33,7 @@ import KitchenPage from "./pages/KitchenPage";
 import SchedulePage from "./pages/SchedulePage";
 import ReconciliationPage from "./pages/ReconciliationPage";
 import POSPage from "./pages/POSPage";
+import POSAnalyticsPage from "./pages/POSAnalyticsPage";
 import { Toaster } from "@/components/ui/sonner";
 
 function App() {
