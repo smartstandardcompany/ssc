@@ -199,3 +199,91 @@ async def get_item_pnl(branch_id: Optional[str] = None, current_user: User = Dep
         rows.append({"item_id": iid, "item_name": item["name"], "category": item.get("category", ""), "unit": item.get("unit", "piece"), "purchased_qty": round(p_qty, 2), "purchased_cost": round(p_cost, 2), "avg_cost": round(avg_cost, 2), "used_qty": round(u_qty, 2), "sold_qty": round(s_qty, 2), "sold_revenue": round(s_rev, 2), "cost_of_sold": round(cost_of_sold, 2), "profit": round(profit, 2), "margin": round(margin, 1), "current_stock": round(current_stock, 2)})
     rows.sort(key=lambda x: -x["sold_revenue"])
     return {"rows": rows, "summary": {"total_items": len(rows), "total_cost": round(total_cost, 2), "total_revenue": round(total_revenue, 2), "total_profit": round(total_profit, 2), "overall_margin": round((total_profit / total_revenue * 100) if total_revenue > 0 else 0, 1)}}
+
+
+@router.get("/reports/daily-summary")
+async def get_daily_summary(start_date: Optional[str] = None, end_date: Optional[str] = None, branch_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {}
+    exp_query = {}
+    if branch_id:
+        query["branch_id"] = branch_id
+        exp_query["branch_id"] = branch_id
+    elif current_user.branch_id and current_user.role != "admin":
+        query["branch_id"] = current_user.branch_id
+        exp_query["branch_id"] = current_user.branch_id
+    if start_date and end_date:
+        query["date"] = {"$gte": start_date, "$lte": end_date}
+        exp_query["date"] = {"$gte": start_date, "$lte": end_date}
+    sales = await db.sales.find(query, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find(exp_query, {"_id": 0}).to_list(10000)
+    daily = {}
+    for s in sales:
+        day = s["date"][:10]
+        if day not in daily:
+            daily[day] = {"date": day, "sales": 0, "expenses": 0, "cash": 0, "bank": 0, "online": 0, "credit": 0, "txn_count": 0}
+        daily[day]["sales"] += s.get("final_amount", s["amount"] - s.get("discount", 0))
+        daily[day]["txn_count"] += 1
+        for p in s.get("payment_details", []):
+            mode = p.get("mode", "cash")
+            if mode in daily[day]:
+                daily[day][mode] += p.get("amount", 0)
+    for e in expenses:
+        day = e["date"][:10]
+        if day not in daily:
+            daily[day] = {"date": day, "sales": 0, "expenses": 0, "cash": 0, "bank": 0, "online": 0, "credit": 0, "txn_count": 0}
+        daily[day]["expenses"] += e["amount"]
+    rows = sorted(daily.values(), key=lambda x: x["date"], reverse=True)
+    for r in rows:
+        r["profit"] = round(r["sales"] - r["expenses"], 2)
+        r["sales"] = round(r["sales"], 2)
+        r["expenses"] = round(r["expenses"], 2)
+    return rows
+
+
+@router.get("/reports/top-customers")
+async def get_top_customers(current_user: User = Depends(get_current_user)):
+    customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
+    sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+    result = []
+    for c in customers:
+        cid = c["id"]
+        cust_sales = [s for s in sales if s.get("customer_id") == cid]
+        total_purchases = sum(s.get("final_amount", s["amount"] - s.get("discount", 0)) for s in cust_sales)
+        credit_given = sum(s.get("credit_amount", 0) for s in cust_sales)
+        credit_received = sum(s.get("credit_received", 0) for s in cust_sales)
+        result.append({
+            "id": cid, "name": c["name"], "phone": c.get("phone", ""),
+            "total_purchases": round(total_purchases, 2),
+            "transaction_count": len(cust_sales),
+            "credit_given": round(credit_given, 2),
+            "credit_received": round(credit_received, 2),
+            "credit_outstanding": round(credit_given - credit_received, 2),
+        })
+    result.sort(key=lambda x: -x["total_purchases"])
+    return result
+
+
+@router.get("/reports/cashier-performance")
+async def get_cashier_performance(current_user: User = Depends(get_current_user)):
+    users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(500)
+    sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    result = []
+    for u in users:
+        uid = u["id"]
+        user_sales = [s for s in sales if s.get("created_by") == uid]
+        total_amount = sum(s.get("final_amount", s["amount"] - s.get("discount", 0)) for s in user_sales)
+        cash = sum(p["amount"] for s in user_sales for p in s.get("payment_details", []) if p.get("mode") == "cash")
+        bank = sum(p["amount"] for s in user_sales for p in s.get("payment_details", []) if p.get("mode") == "bank")
+        branch_name = next((b["name"] for b in branches if b["id"] == u.get("branch_id")), "-")
+        if len(user_sales) > 0:
+            result.append({
+                "user_id": uid, "name": u.get("name", "Unknown"), "email": u.get("email", ""),
+                "role": u.get("role", ""), "branch": branch_name,
+                "total_sales": round(total_amount, 2), "transaction_count": len(user_sales),
+                "cash_collected": round(cash, 2), "bank_collected": round(bank, 2),
+                "avg_transaction": round(total_amount / len(user_sales), 2) if user_sales else 0,
+            })
+    result.sort(key=lambda x: -x["total_sales"])
+    return result
+
