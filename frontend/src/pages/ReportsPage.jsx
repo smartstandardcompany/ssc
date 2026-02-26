@@ -396,6 +396,113 @@ export default function ReportsPage() {
             </div>
           </TabsContent>
 
+          {/* ITEM P&L */}
+          <TabsContent value="item_pnl" className="space-y-6" data-testid="item-pnl-content">
+            <Card className="border-stone-100">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="font-outfit text-base">Item-Level Profit & Loss</CardTitle>
+                  <div className="flex gap-2">
+                    <Select value={pnlBranch || "all"} onValueChange={async (v) => {
+                      const bid = v === "all" ? "" : v;
+                      setPnlBranch(bid);
+                      try {
+                        const url = bid ? `/reports/item-pnl?branch_id=${bid}` : '/reports/item-pnl';
+                        const r = await api.get(url);
+                        setItemPnl(r.data);
+                      } catch {}
+                    }}>
+                      <SelectTrigger className="w-40" data-testid="pnl-branch-filter"><SelectValue placeholder="All Branches" /></SelectTrigger>
+                      <SelectContent><SelectItem value="all">All Branches</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <Button size="sm" variant="outline" className="rounded-xl" onClick={async () => {
+                      try { const url = pnlBranch ? `/reports/item-pnl?branch_id=${pnlBranch}` : '/reports/item-pnl'; const r = await api.get(url); setItemPnl(r.data); } catch {}
+                    }}>Refresh</Button>
+                    {itemPnl && <Button size="sm" variant="outline" className="rounded-xl" onClick={() => {
+                      const csv = 'Item,Category,Unit,Purchased Qty,Purchased Cost,Avg Cost,Kitchen Used,Sold Qty,Revenue,Cost of Sold,Profit,Margin %,Stock\n' + itemPnl.rows.map(r => `${r.item_name},${r.category},${r.unit},${r.purchased_qty},${r.purchased_cost},${r.avg_cost},${r.used_qty},${r.sold_qty},${r.sold_revenue},${r.cost_of_sold},${r.profit},${r.margin},${r.current_stock}`).join('\n');
+                      const blob = new Blob([csv], {type:'text/csv'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='item_pnl_report.csv'; a.click();
+                      toast.success('Exported');
+                    }}><FileSpreadsheet size={14} className="mr-1" />Export</Button>}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {!itemPnl ? (
+                  <div className="text-center py-8">
+                    <Button className="rounded-xl" onClick={async () => {
+                      try { const r = await api.get('/reports/item-pnl'); setItemPnl(r.data); } catch { toast.error('Failed to load'); }
+                    }} data-testid="load-pnl-btn">Load P&L Report</Button>
+                  </div>
+                ) : (
+                  <>
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+                      <div className="p-3 bg-stone-50 rounded-xl text-center"><p className="text-xs text-muted-foreground">Items</p><p className="text-lg font-bold font-outfit">{itemPnl.summary.total_items}</p></div>
+                      <div className="p-3 bg-error/5 rounded-xl text-center"><p className="text-xs text-muted-foreground">Total Cost</p><p className="text-lg font-bold text-error">SAR {itemPnl.summary.total_cost.toFixed(0)}</p></div>
+                      <div className="p-3 bg-success/5 rounded-xl text-center"><p className="text-xs text-muted-foreground">Total Revenue</p><p className="text-lg font-bold text-success">SAR {itemPnl.summary.total_revenue.toFixed(0)}</p></div>
+                      <div className={`p-3 rounded-xl text-center ${itemPnl.summary.total_profit >= 0 ? 'bg-success/5' : 'bg-error/5'}`}><p className="text-xs text-muted-foreground">Profit</p><p className={`text-lg font-bold ${itemPnl.summary.total_profit >= 0 ? 'text-success' : 'text-error'}`}>SAR {itemPnl.summary.total_profit.toFixed(0)}</p></div>
+                      <div className="p-3 bg-primary/5 rounded-xl text-center"><p className="text-xs text-muted-foreground">Margin</p><p className="text-lg font-bold text-primary">{itemPnl.summary.overall_margin}%</p></div>
+                    </div>
+
+                    {/* P&L Table */}
+                    <div className="max-h-[500px] overflow-y-auto border rounded-xl">
+                      <table className="w-full" data-testid="pnl-table">
+                        <thead className="sticky top-0 bg-stone-50 z-10"><tr className="border-b text-xs">
+                          <th className="text-left p-2 font-medium">Item</th>
+                          <th className="text-left p-2 font-medium">Category</th>
+                          <th className="text-right p-2 font-medium">Purchased</th>
+                          <th className="text-right p-2 font-medium">Cost</th>
+                          <th className="text-right p-2 font-medium">Kitchen Used</th>
+                          <th className="text-right p-2 font-medium">Sold</th>
+                          <th className="text-right p-2 font-medium">Revenue</th>
+                          <th className="text-right p-2 font-medium">Profit</th>
+                          <th className="text-right p-2 font-medium">Margin</th>
+                          <th className="text-right p-2 font-medium">Stock</th>
+                        </tr></thead>
+                        <tbody>
+                          {itemPnl.rows.map(r => (
+                            <tr key={r.item_id} className={`border-b hover:bg-stone-50 text-sm ${r.profit < 0 ? 'bg-error/5' : ''}`} data-testid={`pnl-row-${r.item_id}`}>
+                              <td className="p-2 font-medium">{r.item_name}</td>
+                              <td className="p-2 text-muted-foreground text-xs capitalize">{r.category || '-'}</td>
+                              <td className="p-2 text-right">{r.purchased_qty} {r.unit}</td>
+                              <td className="p-2 text-right text-error">SAR {r.purchased_cost.toFixed(0)}</td>
+                              <td className="p-2 text-right text-warning">{r.used_qty} {r.unit}</td>
+                              <td className="p-2 text-right">{r.sold_qty} {r.unit}</td>
+                              <td className="p-2 text-right text-success font-medium">SAR {r.sold_revenue.toFixed(0)}</td>
+                              <td className={`p-2 text-right font-bold ${r.profit >= 0 ? 'text-success' : 'text-error'}`}>SAR {r.profit.toFixed(0)}</td>
+                              <td className={`p-2 text-right ${r.margin >= 30 ? 'text-success' : r.margin >= 0 ? 'text-warning' : 'text-error'}`}>{r.margin}%</td>
+                              <td className="p-2 text-right"><Badge variant="outline" className={r.current_stock <= 0 ? 'border-error text-error' : ''}>{r.current_stock} {r.unit}</Badge></td>
+                            </tr>
+                          ))}
+                          {itemPnl.rows.length === 0 && <tr><td colSpan={10} className="p-8 text-center text-muted-foreground">No item data. Add stock entries and create invoices with items to see P&L.</td></tr>}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Top Profit/Loss Chart */}
+                    {itemPnl.rows.length > 0 && (
+                      <div className="mt-4">
+                        <h3 className="text-sm font-medium mb-2">Top Items by Revenue</h3>
+                        <ResponsiveContainer width="100%" height={250}>
+                          <BarChart data={itemPnl.rows.slice(0, 10)}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="item_name" tick={{ fontSize: 11 }} />
+                            <YAxis tick={{ fontSize: 11 }} />
+                            <Tooltip formatter={(v) => `SAR ${v.toFixed(2)}`} />
+                            <Legend />
+                            <Bar dataKey="sold_revenue" name="Revenue" fill="#22C55E" />
+                            <Bar dataKey="cost_of_sold" name="Cost" fill="#EF4444" />
+                            <Bar dataKey="profit" name="Profit" fill="#F5841F" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* DETAILED */}
           <TabsContent value="detailed" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
