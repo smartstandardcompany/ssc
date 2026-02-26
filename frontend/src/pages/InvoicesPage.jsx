@@ -511,6 +511,39 @@ export default function InvoicesPage() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Image Viewer Dialog */}
+        <Dialog open={!!viewImage} onOpenChange={(v) => !v && setViewImage(null)}>
+          <DialogContent className="max-w-lg" data-testid="image-viewer-dialog">
+            <DialogHeader><DialogTitle className="font-outfit">Invoice Image - {viewImage?.invoice_number}</DialogTitle></DialogHeader>
+            {viewImage && (
+              <div className="space-y-3">
+                <img
+                  src={`${process.env.REACT_APP_BACKEND_URL}${viewImage.image_url}`}
+                  alt={`Invoice ${viewImage.invoice_number}`}
+                  className="w-full rounded-lg border"
+                  data-testid="invoice-image-preview"
+                />
+                <div className="flex gap-2">
+                  <label className="flex-1 cursor-pointer">
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                      if (e.target.files[0]) {
+                        handleImageUpload(viewImage.id, e.target.files[0]);
+                        setViewImage(null);
+                      }
+                    }} />
+                    <Button variant="outline" className="w-full rounded-xl" asChild><span><Upload size={14} className="mr-1" />Replace</span></Button>
+                  </label>
+                  <Button variant="outline" className="rounded-xl text-red-600 hover:text-red-700" data-testid="delete-invoice-image"
+                    onClick={() => { handleDeleteImage(viewImage.id); setViewImage(null); }}>
+                    <Trash2 size={14} className="mr-1" />Remove
+                  </Button>
+                  <Button variant="outline" className="rounded-xl" onClick={() => setViewImage(null)}>Close</Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
