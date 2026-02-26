@@ -168,6 +168,21 @@ export default function SchedulePage() {
             <Button size="sm" className="rounded-xl" onClick={() => setShowAssignDialog(true)} data-testid="assign-schedule-btn">
               <Plus size={14} className="mr-1" />Assign Schedule
             </Button>
+            <Button size="sm" variant="outline" className="rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white border-0 hover:from-violet-600 hover:to-purple-700"
+              disabled={aiLoading || !branchId} data-testid="ai-recommend-btn"
+              onClick={async () => {
+                if (!branchId) { toast.error('Select a branch first'); return; }
+                setAiLoading(true);
+                try {
+                  const { data } = await api.post('/shifts/ai-recommend', { branch_id: branchId, week_start: weekStart });
+                  setAiRecommendations(data.recommendations || []);
+                  toast.success(`AI generated ${(data.recommendations || []).length} shift recommendations`);
+                } catch (err) { toast.error(err.response?.data?.detail || 'AI recommendation failed'); }
+                finally { setAiLoading(false); }
+              }}>
+              {aiLoading ? <Loader2 size={14} className="mr-1 animate-spin" /> : <Sparkles size={14} className="mr-1" />}
+              {aiLoading ? 'Analyzing...' : 'AI Schedule'}
+            </Button>
           </div>
         </div>
 
