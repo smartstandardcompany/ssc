@@ -554,6 +554,37 @@ export default function DashboardPage() {
           </DialogContent>
         </Dialog>
         <WhatsAppSendDialog open={showWhatsApp} onClose={() => setShowWhatsApp(false)} defaultType="daily_sales" branches={branches} />
+
+        {/* Widget Customization Dialog */}
+        <Dialog open={showWidgetSettings} onOpenChange={setShowWidgetSettings}>
+          <DialogContent className="max-w-sm" data-testid="widget-settings-dialog">
+            <DialogHeader><DialogTitle className="font-outfit">Customize Dashboard</DialogTitle></DialogHeader>
+            <p className="text-sm text-muted-foreground">Choose which sections to show on your dashboard.</p>
+            <div className="space-y-3 mt-2">
+              {[
+                { key: 'stats', label: 'Main Stats (Sales, Expenses, Profit)' },
+                { key: 'charts', label: 'Quick Charts (Branch Sales, Expense Pie)' },
+                { key: 'cashBank', label: 'Cash & Bank In Hand' },
+                { key: 'paymentMode', label: 'Payment Mode Breakdown' },
+                { key: 'spending', label: 'Spending Breakdown' },
+                { key: 'dues', label: 'Supplier Dues, Fines & Salaries' },
+                { key: 'vatSummary', label: 'VAT Summary' },
+              ].map(w => (
+                <div key={w.key} className="flex items-center gap-3 p-2.5 bg-stone-50 rounded-lg hover:bg-stone-100 cursor-pointer transition-colors" onClick={() => toggleWidget(w.key)}>
+                  <button className={`w-8 h-5 rounded-full relative transition-colors ${widgets[w.key] ? 'bg-emerald-500' : 'bg-stone-300'}`} data-testid={`widget-toggle-${w.key}`}>
+                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${widgets[w.key] ? 'left-3.5' : 'left-0.5'}`} />
+                  </button>
+                  <span className="text-sm font-medium flex-1">{w.label}</span>
+                  {widgets[w.key] ? <Eye size={14} className="text-emerald-500" /> : <EyeOff size={14} className="text-stone-400" />}
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-2">
+              <Button variant="outline" size="sm" className="flex-1 rounded-xl" onClick={() => { const all = {}; Object.keys(DEFAULT_WIDGETS).forEach(k => all[k] = true); setWidgets(all); saveWidgetPrefs(all); }}>Show All</Button>
+              <Button size="sm" className="flex-1 rounded-xl" onClick={() => setShowWidgetSettings(false)}>Done</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
