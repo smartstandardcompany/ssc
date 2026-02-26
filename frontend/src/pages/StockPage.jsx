@@ -281,6 +281,7 @@ export default function StockPage() {
                     {balance.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">No stock data yet. Add items and stock entries to get started.</td></tr>}
                   </tbody>
                 </table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
