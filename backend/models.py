@@ -244,6 +244,13 @@ class Employee(BaseModel):
     ticket_used: int = 0
     notes: Optional[str] = None
     active: bool = True
+    status: str = "active"
+    resignation_date: Optional[str] = None
+    last_working_day: Optional[str] = None
+    notice_period_days: int = 30
+    termination_reason: Optional[str] = None
+    final_settlement_amount: Optional[float] = None
+    final_settlement_paid: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class EmployeeCreate(BaseModel):
