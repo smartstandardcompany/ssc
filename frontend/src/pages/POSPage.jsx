@@ -66,7 +66,7 @@ export default function POSPage() {
           notes: description || 'POS Sale',
           date: new Date().toISOString(),
           payment_details: [{
-            payment_mode: paymentMode,
+            mode: paymentMode,
             amount: saleAmount,
             discount: 0
           }]
