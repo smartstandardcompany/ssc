@@ -432,6 +432,7 @@ class Invoice(BaseModel):
     payment_mode: str = "cash"
     payment_details: List[dict] = []
     sale_id: Optional[str] = None
+    image_url: Optional[str] = None
     date: datetime
     notes: Optional[str] = None
     status: str = "paid"
