@@ -265,7 +265,7 @@ export default function EmployeesPage() {
                     return (
                     <tr key={emp.id} className="border-b border-border hover:bg-secondary/50" data-testid="employee-row">
                       <td className="p-3 text-sm font-medium">{emp.name}<div className="text-xs text-muted-foreground">{emp.document_id || ''}</div></td>
-                      <td className="p-3 text-sm">{emp.position || '-'}</td>
+                      <td className="p-3 text-sm">{(() => { const jt = jobTitles.find(j => j.id === emp.job_title_id); return jt ? <Badge variant="outline" className="capitalize">{jt.title}</Badge> : <span className="text-muted-foreground">{emp.position || '-'}</span>; })()}</td>
                       <td className="p-3 text-sm text-right font-medium"> SAR {(emp.salary || 0).toFixed(2)}</td>
                       <td className="p-3 text-sm text-right">
                         {(pend.pending_salary || 0) > 0 ? <span className="font-bold text-error"> SAR {pend.pending_salary.toFixed(2)}</span> : <span className="text-success font-medium">Paid</span>}
