@@ -425,13 +425,17 @@ class Invoice(BaseModel):
     items: List[dict] = []
     subtotal: float = 0
     discount: float = 0
+    vat_rate: float = 15.0
+    vat_amount: float = 0
     total: float = 0
+    total_with_vat: float = 0
     payment_mode: str = "cash"
     payment_details: List[dict] = []
     sale_id: Optional[str] = None
     date: datetime
     notes: Optional[str] = None
     status: str = "paid"
+    buyer_vat_number: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     created_by: str
 
