@@ -114,6 +114,10 @@ async def run_scheduled_job(job_type: str):
             report = await _build_low_stock_report()
         elif job_type == "expense_summary":
             report = await _build_expense_report()
+        elif job_type == "weekly_digest":
+            report = await _build_period_digest(7)
+        elif job_type == "monthly_digest":
+            report = await _build_period_digest(30)
         else:
             log_entry["status"] = "unknown_type"
             await db.scheduler_logs.insert_one(log_entry)
