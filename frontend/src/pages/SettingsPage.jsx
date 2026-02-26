@@ -415,8 +415,8 @@ export default function SettingsPage() {
                   <p className="text-sm text-muted-foreground">Configure automated WhatsApp/Email reports. Make sure WhatsApp and/or Email are configured first.</p>
                   <div className="space-y-3" data-testid="scheduler-jobs">
                     {schedulerJobs.map(job => (
-                      <div key={job.job_type} className="flex items-center gap-4 p-3 border rounded-xl bg-stone-50/50" data-testid={`scheduler-job-${job.job_type}`}>
-                        <div className="flex items-center gap-2">
+                      <div key={job.job_type} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 border rounded-xl bg-stone-50/50" data-testid={`scheduler-job-${job.job_type}`}>
+                        <div className="flex items-center gap-2 min-w-[180px]">
                           <Checkbox checked={job.enabled} onCheckedChange={async (v) => {
                             try {
                               await api.put(`/scheduler/config/${job.job_type}`, { enabled: v });
@@ -429,7 +429,33 @@ export default function SettingsPage() {
                             <p className="text-xs text-muted-foreground">{job.job_type.replace(/_/g, ' ')}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 ml-auto">
+                        <div className="flex items-center gap-2 ml-0 sm:ml-auto flex-wrap">
+                          {/* Day selector for weekly */}
+                          {job.job_type === 'weekly_digest' && (
+                            <select className="h-8 text-xs border rounded-lg px-2 bg-white"
+                              value={job.day_of_week || 'sun'}
+                              onChange={async (e) => {
+                                try {
+                                  await api.put(`/scheduler/config/${job.job_type}`, { day_of_week: e.target.value });
+                                  setSchedulerJobs(prev => prev.map(j => j.job_type === job.job_type ? { ...j, day_of_week: e.target.value } : j));
+                                } catch { toast.error('Failed'); }
+                              }}>
+                              {['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].map(d => <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>)}
+                            </select>
+                          )}
+                          {/* Day selector for monthly */}
+                          {job.job_type === 'monthly_digest' && (
+                            <select className="h-8 text-xs border rounded-lg px-2 bg-white"
+                              value={job.day || 1}
+                              onChange={async (e) => {
+                                try {
+                                  await api.put(`/scheduler/config/${job.job_type}`, { day: parseInt(e.target.value) });
+                                  setSchedulerJobs(prev => prev.map(j => j.job_type === job.job_type ? { ...j, day: parseInt(e.target.value) } : j));
+                                } catch { toast.error('Failed'); }
+                              }}>
+                              {Array.from({ length: 28 }, (_, i) => i + 1).map(d => <option key={d} value={d}>Day {d}</option>)}
+                            </select>
+                          )}
                           <Label className="text-xs">Time:</Label>
                           <Input type="time" className="h-8 w-28 text-xs" value={`${String(job.hour || 0).padStart(2,'0')}:${String(job.minute || 0).padStart(2,'0')}`}
                             onChange={async (e) => {
