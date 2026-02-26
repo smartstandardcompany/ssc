@@ -5,13 +5,16 @@ Data entry application to track sales, expenses, and supplier payments. Evolved 
 
 ## Architecture
 - **Backend:** FastAPI + MongoDB (Motor async) + JWT Auth + Pydantic
+  - **Entry point:** `server.py` (79 lines) — imports 19 modular routers
+  - **Routers:** `/app/backend/routers/` — auth, bank_statements, branches, customers, dashboard, documents, employees, expenses, exports, invoices, job_titles, partners, reports, sales, settings, shifts, stock, suppliers, whatsapp
+  - **Shared:** `database.py` (DB connection, auth helpers), `models.py` (Pydantic models)
 - **Frontend:** React + TailwindCSS + Shadcn/UI + Recharts
 - **AI:** GPT-4o via Emergent LLM Key (invoice OCR)
 - **Messaging:** Twilio WhatsApp integration
 - **Deployment:** Docker + Nginx + Railway (PWA enabled)
 
 ## Credentials
-- Admin: SSC@SSC.com / Aa147258369SsC@
+- Admin: ss@ssc.com / Aa147258369Ssc@
 - Employee: ahmed@test.com / emp@123
 
 ## All Implemented Features
@@ -30,58 +33,47 @@ Data entry application to track sales, expenses, and supplier payments. Evolved 
 - Branch-specific stock, +/- quantity controls, bulk submission
 
 ### HR Management with Job Titles
-- **15 pre-defined job titles:** Chef, Sous Chef, Line Cook, Cashier, Waiter, Manager, Supervisor, Driver, Cleaner, Accountant, Delivery, Security, Kitchen Helper, Receptionist, Barista
-- **Custom titles:** Add any title with department & salary range
-- **Salary structure:** Min/max salary per title, auto-fill on assignment
-- **Job Title Manager:** Full CRUD in Employees page
+- 15 pre-defined job titles + custom titles with department & salary range
+- Salary structure: Min/max salary per title, auto-fill on assignment
 - Employee CRUD, salary payments, loan tracking, leave management
-- Employee self-service portal, payslip PDFs (with job title)
+- Employee self-service portal, payslip PDFs, shift scheduling
+
+### Shift Scheduling
+- Shift CRUD, shift assignments, bulk assignment
+- Attendance tracking with late detection, overtime calculation
+- Attendance summary reports
 
 ### WhatsApp Notifications
-- Flexible phone number — enter recipient each time
-- Reports: Daily Sales, Expense Summary, Low Stock Alert, Branch Report
-- Buttons on Dashboard, Expenses, Stock pages
+- Flexible phone number, Daily Sales, Expense, Low Stock, Branch reports
 
 ### Bank Reconciliation
 - Side-by-side: Bank POS deposits vs SSC Track bank sales
-- 1-day offset (today's sale = tomorrow's bank deposit)
-- Summary cards, CSV export, color-coded status
+- Bank statement upload/analysis (Alinma & Albilad PDF/XLS parser)
 
 ### Deployment & PWA
-- Enhanced Settings → Deploy tab with:
-  - Railway (Recommended), VPS, Render deployment options
-  - GoDaddy DNS setup (CNAME for Railway, A record for VPS)
-  - Environment variables reference
-  - PWA install guide for Android (Chrome) and iPhone (Safari)
+- Railway, VPS, Render deployment guides with GoDaddy DNS setup
+- PWA install guide for Android and iPhone
 
 ### Other Modules
 - Asset & Liability Tracking (Documents, Fines, Company Loans, Partners)
 - Cash Flow (Branch transfers, company balance, inter-branch dues)
-- Bank Statement Analysis (Alinma & Albilad PDF/XLS parser)
 - Dashboard with KPIs, Reports, PDF/Excel export
 - Role-based access, Email/WhatsApp settings, Data import, Backup
 
-## Completed Tasks (This Session - Feb 26, 2026)
-- [x] Expense For Branch feature — tested (iteration 9)
-- [x] Fixed bcrypt warning (4.2.1)
-- [x] Stock Management + Kitchen pages — tested (iteration 10)
+## Completed Tasks
+- [x] All financial management features
+- [x] Stock Management + Kitchen pages
 - [x] Invoice OCR with GPT-4o
-- [x] WhatsApp Notification Triggers — tested (iteration 11)
-- [x] Bank Reconciliation UI — tested (iteration 11)
-- [x] Job Titles (15 default + custom) — tested (iteration 12)
-- [x] Enhanced deployment guide (GoDaddy + PWA) — tested (iteration 12)
-- [x] Fixed SAR currency in InvoicesPage
+- [x] WhatsApp Notification Triggers
+- [x] Bank Reconciliation UI
+- [x] Job Titles (15 default + custom)
+- [x] Enhanced deployment guide (GoDaddy + PWA)
+- [x] Shift scheduling system
+- [x] **P0: Backend Refactoring** — server.py (5235 lines) → 79-line entry point + 19 modular routers. All 43 API tests passed. (Feb 26, 2026)
 
 ## Upcoming Tasks
-- **P2:** Refactor server.py (>5700 lines) into separate routers/models/services
-- **P2:** Break down large frontend components
-- Item-level P&L report (purchased cost vs sold revenue per item)
-
-## Key API Endpoints
-- `GET/POST/PUT/DELETE /api/job-titles` — Job title CRUD
-- `POST /api/whatsapp/send-to` — Send report to flexible phone
-- `GET /api/bank-statements/{id}/reconciliation` — POS reconciliation
-- `POST /api/stock/entries`, `POST /api/stock/entries/bulk` — Stock in
-- `POST /api/stock/usage/bulk` — Kitchen usage
-- `GET /api/stock/balance`, `GET /api/stock/report` — Stock data
-- `POST /api/stock/scan-invoice` — Invoice OCR (GPT-4o)
+- **P1:** Link Job Titles to Permissions (map job titles → permission sets, apply at login)
+- **P2:** Enhance Bank Reconciliation UI (dedicated reconciliation page)
+- **P3:** Automated WhatsApp Notification Triggers (scheduled daily reports)
+- **P4:** Advanced Stock/Inventory Reporting (consumption, wastage, profitability)
+- **P3 (Issue):** Fix bcrypt warning on startup (recurring)
