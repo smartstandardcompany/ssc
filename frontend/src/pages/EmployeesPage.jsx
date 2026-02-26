@@ -540,31 +540,71 @@ export default function EmployeesPage() {
         </Dialog>
 
         {/* Job Title Manager Dialog */}
-        <Dialog open={showJobTitleManager} onOpenChange={setShowJobTitleManager}>
-          <DialogContent className="max-w-xl" data-testid="job-title-manager-dialog">
+        <Dialog open={showJobTitleManager} onOpenChange={(v) => { setShowJobTitleManager(v); if (!v) setEditingJT(null); }}>
+          <DialogContent className="max-w-2xl" data-testid="job-title-manager-dialog">
             <DialogHeader><DialogTitle className="font-outfit">Manage Job Titles</DialogTitle></DialogHeader>
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-              <div className="grid grid-cols-4 gap-2 items-end">
-                <div><Label className="text-xs">Title *</Label><Input value={newJobTitle.title} onChange={(e) => setNewJobTitle({ ...newJobTitle, title: e.target.value })} placeholder="e.g. Chef" className="h-9" data-testid="new-jt-title" /></div>
-                <div><Label className="text-xs">Department</Label><Input value={newJobTitle.department} onChange={(e) => setNewJobTitle({ ...newJobTitle, department: e.target.value })} placeholder="e.g. Kitchen" className="h-9" /></div>
-                <div><Label className="text-xs">Min Salary</Label><Input type="number" value={newJobTitle.min_salary} onChange={(e) => setNewJobTitle({ ...newJobTitle, min_salary: e.target.value })} placeholder="SAR" className="h-9" /></div>
-                <Button size="sm" className="h-9 rounded-xl" data-testid="add-jt-btn" onClick={async () => {
-                  if (!newJobTitle.title) { toast.error('Title required'); return; }
-                  try {
-                    await api.post('/job-titles', { ...newJobTitle, min_salary: parseFloat(newJobTitle.min_salary) || 0, max_salary: parseFloat(newJobTitle.max_salary) || 0 });
-                    toast.success('Job title added');
-                    setNewJobTitle({ title: '', department: '', min_salary: '', max_salary: '' });
-                    const r = await api.get('/job-titles'); setJobTitles(r.data);
-                  } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
-                }}><Plus size={14} className="mr-1" />Add</Button>
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+              {/* Add/Edit Form */}
+              <div className="space-y-3 p-3 border rounded-xl bg-stone-50/50">
+                <div className="grid grid-cols-4 gap-2 items-end">
+                  <div><Label className="text-xs">Title *</Label><Input value={editingJT ? editingJT.title : newJobTitle.title} onChange={(e) => editingJT ? setEditingJT({ ...editingJT, title: e.target.value }) : setNewJobTitle({ ...newJobTitle, title: e.target.value })} placeholder="e.g. Chef" className="h-9" data-testid="new-jt-title" /></div>
+                  <div><Label className="text-xs">Department</Label><Input value={editingJT ? editingJT.department : newJobTitle.department} onChange={(e) => editingJT ? setEditingJT({ ...editingJT, department: e.target.value }) : setNewJobTitle({ ...newJobTitle, department: e.target.value })} placeholder="e.g. Kitchen" className="h-9" /></div>
+                  <div><Label className="text-xs">Min Salary</Label><Input type="number" value={editingJT ? editingJT.min_salary : newJobTitle.min_salary} onChange={(e) => editingJT ? setEditingJT({ ...editingJT, min_salary: e.target.value }) : setNewJobTitle({ ...newJobTitle, min_salary: e.target.value })} placeholder="SAR" className="h-9" /></div>
+                  <div><Label className="text-xs">Max Salary</Label><Input type="number" value={editingJT ? editingJT.max_salary : newJobTitle.max_salary} onChange={(e) => editingJT ? setEditingJT({ ...editingJT, max_salary: e.target.value }) : setNewJobTitle({ ...newJobTitle, max_salary: e.target.value })} placeholder="SAR" className="h-9" /></div>
+                </div>
+                <div>
+                  <Label className="text-xs mb-1 block">Permissions (Pages this role can access)</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ALL_PERMISSIONS.map(p => {
+                      const perms = editingJT ? (editingJT.permissions || []) : (newJobTitle.permissions || []);
+                      const active = perms.includes(p.key);
+                      return (
+                        <button key={p.key} type="button" data-testid={`perm-toggle-${p.key}`}
+                          className={`px-2.5 py-1 text-xs rounded-lg border transition-all ${active ? 'bg-orange-100 border-orange-400 text-orange-700 font-medium' : 'bg-white border-stone-200 text-stone-500 hover:border-stone-300'}`}
+                          onClick={() => {
+                            const newPerms = active ? perms.filter(x => x !== p.key) : [...perms, p.key];
+                            editingJT ? setEditingJT({ ...editingJT, permissions: newPerms }) : setNewJobTitle({ ...newJobTitle, permissions: newPerms });
+                          }}>
+                          {p.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  {editingJT ? (
+                    <>
+                      <Button size="sm" className="h-8 rounded-xl" data-testid="save-jt-btn" onClick={async () => {
+                        try {
+                          await api.put(`/job-titles/${editingJT.id}`, { ...editingJT, min_salary: parseFloat(editingJT.min_salary) || 0, max_salary: parseFloat(editingJT.max_salary) || 0 });
+                          toast.success('Job title updated');
+                          setEditingJT(null);
+                          const r = await api.get('/job-titles'); setJobTitles(r.data);
+                        } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+                      }}><Edit size={14} className="mr-1" />Save Changes</Button>
+                      <Button size="sm" variant="outline" className="h-8 rounded-xl" onClick={() => setEditingJT(null)}>Cancel</Button>
+                    </>
+                  ) : (
+                    <Button size="sm" className="h-8 rounded-xl" data-testid="add-jt-btn" onClick={async () => {
+                      if (!newJobTitle.title) { toast.error('Title required'); return; }
+                      try {
+                        await api.post('/job-titles', { ...newJobTitle, min_salary: parseFloat(newJobTitle.min_salary) || 0, max_salary: parseFloat(newJobTitle.max_salary) || 0 });
+                        toast.success('Job title added');
+                        setNewJobTitle({ title: '', department: '', min_salary: '', max_salary: '', permissions: [] });
+                        const r = await api.get('/job-titles'); setJobTitles(r.data);
+                      } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+                    }}><Plus size={14} className="mr-1" />Add</Button>
+                  )}
+                </div>
               </div>
+              {/* Table */}
               <div className="border rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
                   <thead><tr className="bg-stone-50 border-b">
                     <th className="text-left p-2 font-medium">Title</th>
                     <th className="text-left p-2 font-medium">Department</th>
                     <th className="text-right p-2 font-medium">Salary Range</th>
-                    <th className="text-right p-2 font-medium">Employees</th>
+                    <th className="text-left p-2 font-medium">Permissions</th>
                     <th className="text-right p-2 font-medium">Actions</th>
                   </tr></thead>
                   <tbody>
@@ -573,8 +613,16 @@ export default function EmployeesPage() {
                         <td className="p-2 font-medium">{jt.title}</td>
                         <td className="p-2 text-muted-foreground">{jt.department || '-'}</td>
                         <td className="p-2 text-right">SAR {jt.min_salary?.toFixed(0) || 0} - {jt.max_salary?.toFixed(0) || 0}</td>
-                        <td className="p-2 text-right"><Badge variant="outline">{employees.filter(e => e.job_title_id === jt.id).length}</Badge></td>
-                        <td className="p-2 text-right">
+                        <td className="p-2">
+                          <div className="flex flex-wrap gap-1">
+                            {(jt.permissions || []).length > 0 ?
+                              (jt.permissions || []).slice(0, 3).map(p => <Badge key={p} variant="outline" className="text-[10px] py-0">{p}</Badge>)
+                              : <span className="text-xs text-stone-400">None</span>}
+                            {(jt.permissions || []).length > 3 && <Badge variant="outline" className="text-[10px] py-0">+{jt.permissions.length - 3}</Badge>}
+                          </div>
+                        </td>
+                        <td className="p-2 text-right flex gap-1 justify-end">
+                          <Button size="sm" variant="ghost" className="h-7" data-testid={`edit-jt-${jt.id}`} onClick={() => setEditingJT({ ...jt, min_salary: jt.min_salary || 0, max_salary: jt.max_salary || 0 })}><Edit size={12} /></Button>
                           <Button size="sm" variant="ghost" className="h-7 text-error" onClick={async () => {
                             if (window.confirm(`Delete "${jt.title}"?`)) {
                               await api.delete(`/job-titles/${jt.id}`);
