@@ -181,7 +181,7 @@ export default function DashboardPage() {
       <div className={`space-y-8 min-h-screen p-1 rounded-2xl ${theme === 'dark' ? 'bg-gradient-to-br ' + t.bg + ' text-white' : ''}`}>
         <div className="flex justify-between items-start flex-wrap gap-3">
           <div>
-            <h1 className={`text-4xl font-bold font-outfit mb-2 ${t.accent}`} data-testid="dashboard-title">Dashboard</h1>
+            <h1 className={`text-2xl sm:text-4xl font-bold font-outfit mb-1 ${t.accent}`} data-testid="dashboard-title">Dashboard</h1>
             <p className={theme === 'dark' ? 'text-stone-400' : 'text-muted-foreground'}>Smart Standard Company - Business Overview</p>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
@@ -265,7 +265,7 @@ export default function DashboardPage() {
 
         {/* Cash & Bank In Hand */}
         <div>
-          <h2 className="text-2xl font-bold font-outfit mb-4">Cash & Bank In Hand</h2>
+          <h2 className="text-lg sm:text-2xl font-bold font-outfit mb-4">Cash & Bank In Hand</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card className="stat-card border-border border-cash/30 bg-gradient-to-br from-cash/5 to-cash/10" data-testid="cash-in-hand-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -292,7 +292,7 @@ export default function DashboardPage() {
 
         {/* Payment Mode Breakdown */}
         <div>
-          <h2 className="text-2xl font-bold font-outfit mb-4">Payment Mode Breakdown</h2>
+          <h2 className="text-lg sm:text-2xl font-bold font-outfit mb-4">Payment Mode Breakdown</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {paymentModeCards.map((card) => {
               const Icon = card.icon;
