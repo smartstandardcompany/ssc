@@ -105,6 +105,8 @@ function App() {
           <Route path="/company-loans" element={isAuthenticated ? <CompanyLoansPage /> : <Navigate to="/login" />} />
           <Route path="/bank-statements" element={isAuthenticated ? <BankStatementsPage /> : <Navigate to="/login" />} />
           <Route path="/invoices" element={isAuthenticated ? <InvoicesPage /> : <Navigate to="/login" />} />
+          <Route path="/stock" element={isAuthenticated ? <StockPage /> : <Navigate to="/login" />} />
+          <Route path="/kitchen" element={isAuthenticated ? <KitchenPage /> : <Navigate to="/login" />} />
           <Route path="/users" element={isAuthenticated ? <UsersPage /> : <Navigate to="/login" />} />
         </Routes>
       </BrowserRouter>
