@@ -284,8 +284,10 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+        )}
 
         {/* Cash & Bank In Hand */}
+        {widgets.cashBank && (
         <div>
           <h2 className="text-lg sm:text-2xl font-bold font-outfit mb-4">Cash & Bank In Hand</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
