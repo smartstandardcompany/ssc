@@ -386,7 +386,7 @@ export default function InvoicesPage() {
                     </tr>
                     );
                   })}
-                  {filtered.length === 0 && <tr><td colSpan={10} className="p-8 text-center text-muted-foreground">No invoices yet</td></tr>}
+                  {filtered.length === 0 && <tr><td colSpan={11} className="p-8 text-center text-muted-foreground">No invoices yet</td></tr>}
                 </tbody>
               </table>
             </div>
