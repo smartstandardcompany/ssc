@@ -313,8 +313,10 @@ export default function DashboardPage() {
             </Card>
           </div>
         </div>
+        )}
 
         {/* Payment Mode Breakdown */}
+        {widgets.paymentMode && (
         <div>
           <h2 className="text-lg sm:text-2xl font-bold font-outfit mb-4">Payment Mode Breakdown</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
