@@ -53,7 +53,18 @@ export default function EmployeesPage() {
   const [formData, setFormData] = useState({ name: '', document_id: '', phone: '', email: '', position: '', job_title_id: '', branch_id: '', salary: '', pay_frequency: 'monthly', join_date: '', document_expiry: '', annual_leave_entitled: 30, sick_leave_entitled: 15, notes: '' });
   const [payData, setPayData] = useState({ payment_type: 'salary', amount: '', payment_mode: 'cash', branch_id: '', period: '', date: new Date().toISOString().split('T')[0], notes: '' });
   const [leaveData, setLeaveData] = useState({ leave_type: 'annual', start_date: '', end_date: '', days: '', reason: '' });
-  const [newJobTitle, setNewJobTitle] = useState({ title: '', department: '', min_salary: '', max_salary: '' });
+  const [newJobTitle, setNewJobTitle] = useState({ title: '', department: '', min_salary: '', max_salary: '', permissions: [] });
+  const [editingJT, setEditingJT] = useState(null);
+
+  const ALL_PERMISSIONS = [
+    { key: 'dashboard', label: 'Dashboard' }, { key: 'sales', label: 'Sales' }, { key: 'invoices', label: 'Invoices' },
+    { key: 'branches', label: 'Branches' }, { key: 'customers', label: 'Customers' }, { key: 'suppliers', label: 'Suppliers' },
+    { key: 'supplier_payments', label: 'Supplier Payments' }, { key: 'expenses', label: 'Expenses' },
+    { key: 'cash_transfers', label: 'Cash Transfers' }, { key: 'employees', label: 'Employees' },
+    { key: 'stock', label: 'Stock' }, { key: 'kitchen', label: 'Kitchen' }, { key: 'shifts', label: 'Schedule' },
+    { key: 'documents', label: 'Documents' }, { key: 'reports', label: 'Reports' },
+    { key: 'credit_report', label: 'Credit Report' }, { key: 'supplier_report', label: 'Supplier Report' },
+  ];
 
   useEffect(() => { fetchData(); }, []);
 
