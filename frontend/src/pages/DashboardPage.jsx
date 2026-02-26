@@ -466,6 +466,8 @@ export default function DashboardPage() {
             </Card>
           </div>
         )}
+        </>
+        )}
 
         {/* Upcoming Recurring Expenses */}
         {stats?.upcoming_expenses?.length > 0 && (
