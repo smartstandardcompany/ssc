@@ -32,8 +32,11 @@ Data entry application to track sales, expenses, and supplier payments. Evolved 
 - Card-based UI for daily item usage recording
 - Branch-specific stock, +/- quantity controls, bulk submission
 
-### HR Management with Job Titles
+### HR Management with Job Titles & Permissions (P1 - DONE)
 - 15 pre-defined job titles + custom titles with department & salary range
+- **Job Title Permissions:** Each job title maps to a set of page permissions (dashboard, sales, invoices, expenses, etc.)
+- **Permission sync:** On login, employee's job title permissions are merged into user permissions. On link-user, job title permissions are applied automatically.
+- **Permission propagation:** When a job title's permissions are updated, all linked employee users are synced.
 - Salary structure: Min/max salary per title, auto-fill on assignment
 - Employee CRUD, salary payments, loan tracking, leave management
 - Employee self-service portal, payslip PDFs, shift scheduling
@@ -46,9 +49,14 @@ Data entry application to track sales, expenses, and supplier payments. Evolved 
 ### WhatsApp Notifications
 - Flexible phone number, Daily Sales, Expense, Low Stock, Branch reports
 
-### Bank Reconciliation
+### Bank Reconciliation & Dedicated Reconciliation Page (P2 - DONE)
 - Side-by-side: Bank POS deposits vs SSC Track bank sales
 - Bank statement upload/analysis (Alinma & Albilad PDF/XLS parser)
+- **Dedicated Reconciliation Page** at `/reconciliation`:
+  - Statement selector, summary cards (Bank POS Total, App Sales Total, Difference, Matched, Discrepancies)
+  - Table with status indicators (Matched, Mismatch, Bank Only, App Only)
+  - Manual flag/notes feature per row (Verified OK, Needs Investigation, Resolved, Ignored)
+  - Status filter and search by branch/date
 
 ### Deployment & PWA
 - Railway, VPS, Render deployment guides with GoDaddy DNS setup
@@ -69,11 +77,11 @@ Data entry application to track sales, expenses, and supplier payments. Evolved 
 - [x] Job Titles (15 default + custom)
 - [x] Enhanced deployment guide (GoDaddy + PWA)
 - [x] Shift scheduling system
-- [x] **P0: Backend Refactoring** — server.py (5235 lines) → 79-line entry point + 19 modular routers. All 43 API tests passed. (Feb 26, 2026)
+- [x] P0: Backend Refactoring — server.py → 79-line entry point + 19 modular routers (Feb 26, 2026)
+- [x] P1: Link Job Titles to Permissions — permissions field on job titles, sync to users (Feb 26, 2026)
+- [x] P2: Dedicated Reconciliation Page — /reconciliation with flags & filtering (Feb 26, 2026)
 
 ## Upcoming Tasks
-- **P1:** Link Job Titles to Permissions (map job titles → permission sets, apply at login)
-- **P2:** Enhance Bank Reconciliation UI (dedicated reconciliation page)
 - **P3:** Automated WhatsApp Notification Triggers (scheduled daily reports)
 - **P4:** Advanced Stock/Inventory Reporting (consumption, wastage, profitability)
 - **P3 (Issue):** Fix bcrypt warning on startup (recurring)
