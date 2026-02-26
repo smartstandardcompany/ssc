@@ -439,7 +439,7 @@ export default function SalesPage() {
                                 p.mode === 'bank' ? 'bg-bank/20 text-bank border-bank/30' :
                                 'bg-credit/20 text-credit border-credit/30'
                               }`}>
-                                {p.mode}: ${p.amount.toFixed(2)}
+                                {p.mode}: SAR {p.amount.toFixed(2)}
                               </span>
                             ))}
                           </div>
