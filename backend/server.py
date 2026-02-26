@@ -2733,6 +2733,10 @@ async def generate_letter(body: dict, current_user: User = Depends(get_current_u
     name = emp["name"]
     doc_id = emp.get("document_id", "N/A")
     position = emp.get("position", "N/A")
+    if emp.get("job_title_id"):
+        jt = await db.job_titles.find_one({"id": emp["job_title_id"]}, {"_id": 0})
+        if jt:
+            position = jt["title"]
     salary = emp.get("salary", 0)
     join = emp.get("join_date", "")
     if isinstance(join, str) and join: join = datetime.fromisoformat(join).strftime("%d %B %Y")
