@@ -39,20 +39,22 @@ class TestIteration11:
         assert "Phone number required" in resp.json().get("detail", "")
         print("PASS: WhatsApp send-to requires phone number")
     
-    def test_02_whatsapp_send_to_returns_not_configured_error(self):
-        """POST /api/whatsapp/send-to with phone but no Twilio config returns error"""
-        # Twilio credentials are empty in .env, so this should fail with config error
+    def test_02_whatsapp_send_to_with_daily_sales(self):
+        """POST /api/whatsapp/send-to with phone and daily_sales report type"""
+        # Twilio is configured in the database, so this should work
         resp = self.session.post(f"{BASE_URL}/api/whatsapp/send-to", json={
             "phone": "+966500000000",
             "report_type": "daily_sales"
         })
-        # Should return 400 with "WhatsApp not configured" message
-        assert resp.status_code == 400, f"Expected 400, got {resp.status_code}: {resp.text}"
-        detail = resp.json().get("detail", "")
-        assert "WhatsApp not configured" in detail or "not configured" in detail.lower(), f"Expected 'not configured' error, got: {detail}"
-        print("PASS: WhatsApp send-to returns 'not configured' error when Twilio not set up")
+        # Should return 200 with message sent confirmation
+        assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
+        data = resp.json()
+        assert "message" in data, "Response should have 'message' field"
+        assert "preview" in data, "Response should have 'preview' field with report content"
+        assert "Daily Sales" in data.get("preview", ""), "Preview should contain 'Daily Sales'"
+        print(f"PASS: WhatsApp send-to daily_sales returns preview: {data.get('preview', '')[:100]}...")
     
-    def test_03_whatsapp_send_to_accepts_phone_and_report_type(self):
+    def test_03_whatsapp_send_to_accepts_all_report_types(self):
         """Verify send-to endpoint accepts phone and various report types"""
         report_types = ["daily_sales", "expense_summary", "low_stock", "branch_report"]
         for rt in report_types:
@@ -60,17 +62,24 @@ class TestIteration11:
                 "phone": "+966500000000",
                 "report_type": rt
             })
-            # Should return 400 (not configured) not 422 (validation error)
-            assert resp.status_code == 400, f"Expected 400 for report_type={rt}, got {resp.status_code}"
-            print(f"PASS: WhatsApp send-to accepts report_type={rt}")
+            # Should return 200 when Twilio is configured
+            assert resp.status_code == 200, f"Expected 200 for report_type={rt}, got {resp.status_code}: {resp.text}"
+            data = resp.json()
+            assert "message" in data, f"Response for {rt} should have 'message' field"
+            assert "preview" in data, f"Response for {rt} should have 'preview' field"
+            print(f"PASS: WhatsApp send-to accepts report_type={rt}, preview length: {len(data.get('preview', ''))}")
     
-    def test_04_whatsapp_send_to_validates_report_type(self):
+    def test_04_whatsapp_send_to_rejects_invalid_report_type(self):
         """POST /api/whatsapp/send-to with invalid report_type should fail"""
-        # First, we need to check if the endpoint validates report type
-        # Based on code, unknown report_type returns 400 with "Unknown report type"
-        # But this only happens after the Twilio config check passes
-        # Since Twilio is not configured, we can't test this validation
-        print("SKIP: Cannot test invalid report_type validation because Twilio config check happens first")
+        resp = self.session.post(f"{BASE_URL}/api/whatsapp/send-to", json={
+            "phone": "+966500000000",
+            "report_type": "invalid_type"
+        })
+        # Should return 400 with "Unknown report type" error
+        assert resp.status_code == 400, f"Expected 400 for invalid report_type, got {resp.status_code}"
+        detail = resp.json().get("detail", "")
+        assert "Unknown report type" in detail, f"Expected 'Unknown report type' error, got: {detail}"
+        print("PASS: WhatsApp send-to rejects invalid report_type with 400 error")
     
     # ===== Bank Statement & Reconciliation Tests =====
     
