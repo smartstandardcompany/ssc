@@ -8,11 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, AlertTriangle, DollarSign, Settings2 } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle, DollarSign, Settings2, MessageCircle } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
+import { WhatsAppSendDialog } from '@/components/WhatsAppSendDialog';
 import { BranchFilter } from '@/components/BranchFilter';
 import { DateFilter } from '@/components/DateFilter';
 
