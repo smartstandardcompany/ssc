@@ -26,6 +26,8 @@ export default function BankStatementsPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadData, setUploadData] = useState({ bank_name: '', branch_id: '' });
   const [showPosManager, setShowPosManager] = useState(false);
+  const [reconciliation, setReconciliation] = useState(null);
+  const [reconLoading, setReconLoading] = useState(false);
 
   useEffect(() => { fetchData(); }, []);
   const fetchData = async () => {
