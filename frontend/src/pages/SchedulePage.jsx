@@ -50,6 +50,8 @@ export default function SchedulePage() {
   const [newShift, setNewShift] = useState({ name: '', start_time: '08:00', end_time: '16:00', break_minutes: 60, days: ['Mon','Tue','Wed','Thu','Fri','Sat'], color: '#F5841F' });
   const [assignData, setAssignData] = useState({ employee_id: '', shift_id: '', dates: [] });
   const [timeData, setTimeData] = useState({ actual_in: '', actual_out: '' });
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiRecommendations, setAiRecommendations] = useState(null);
 
   useEffect(() => {
     const init = async () => {
