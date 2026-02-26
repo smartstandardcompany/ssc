@@ -2,87 +2,77 @@
 The user initially requested a data entry application to track sales, expenses, and supplier payments. Over the course of development, this has evolved into a comprehensive business management ERP system named SSC Track.
 
 **PRODUCT REQUIREMENTS:**
-- **Financial Management:** Sales (Bank/Cash/Online/Credit), Expenses (with categories/sub-categories), Supplier Payments, Customer Credit Management, Invoicing with an item master list.
-- **HR Management:** Employee database, detailed salary payments (including bonus, overtime, advance, deductions), leave tracking (annual, sick), loan management, and an Employee Self-Service Portal for leave requests and payment acknowledgments.
+- **Financial Management:** Sales (Bank/Cash/Online/Credit), Expenses (with categories/sub-categories), Supplier Payments, Customer Credit Management, Invoicing with an item master list, Item-level Profit & Loss (P&L) reporting.
+- **HR Management:** Employee database with Job Titles (affecting salary and permissions), detailed salary payments (including bonus, overtime, advance, deductions), leave tracking (annual, sick), loan management, an Employee Self-Service Portal, and Staff Shift Scheduling.
+- **Stock Management:** Inventory tracking with item costs, stock-in from supplier invoices (with OCR for data entry), and stock-out tracking for usage (e.g., by a chef).
 - **Asset & Liability Tracking:** Document management with expiry alerts and file attachments, tracking of company fines/penalties, company loans, and partner investments/salaries.
 - **Cash Flow Management:** Branch-to-branch cash transfers, a central company balance, and tracking of inter-branch dues with payback options.
-- **Bank Reconciliation:** A powerful Bank Statement Analyzer that parses PDF/XLS files from Alinma and Albilad banks, automatically categorizes transactions (POS Sales, Fees, VAT, SADAD bills, SARIE transfers), reconciles POS sales against app data, and groups transactions by sender/receiver and POS machine.
-- **Reporting & Analytics:** A multi-tab dashboard with KPIs (% of sales, vs previous period), charts, and alerts (branch loss, upcoming expenses, dues). An advanced reporting module with period-over-period and branch-to-branch comparisons. PDF/XLS export capabilities on all pages.
-- **Administration:** Granular role-based access control, self-service settings for Email (SMTP) and WhatsApp (Twilio), company branding, data import from XLS, and a one-click database backup feature.
-- **Deployment & Accessibility:** The application is a Progressive Web App (PWA) and has been prepared for deployment on Railway with a multi-stage Dockerfile.
+- **Bank Reconciliation:** A powerful Bank Statement Analyzer that parses PDF/XLS files, automatically categorizes transactions, and includes a reconciliation tool to compare bank POS deposits against app sales data.
+- **Reporting & Analytics:** A multi-tab dashboard with KPIs, charts, and alerts. An advanced reporting module with period-over-period and branch-to-branch comparisons.
+- **Administration:** Granular role-based access control, self-service settings for Email (SMTP) and WhatsApp (Twilio), company branding, data import from XLS, a one-click database backup feature, and an in-app deployment guide.
+- **Deployment & Accessibility:** The application is a Progressive Web App (PWA) and is prepared for deployment on servers like GoDaddy, with instructions provided within the app.
 
 **User's preferred language**: English
 
 **what currently exists?**
-A feature-rich, full-stack ERP application named SSC Track. It has a FastAPI backend and a React frontend with a premium, branded UI. The application supports over 25 modules, including a sophisticated bank statement analyzer, detailed HR management with an employee portal, comprehensive financial tracking, and granular user permissions. The application is configured as a PWA and includes deployment scripts for Railway.
+A feature-rich, full-stack ERP application named SSC Track with a FastAPI backend and a React/Shadcn UI frontend. The application supports a wide range of modules, including a sophisticated bank statement analyzer, detailed HR management with an employee portal and job titles, comprehensive financial tracking, a new stock management system with invoice OCR, an item-level P&L report, and a staff scheduling system. The backend has undergone initial refactoring to separate models and database logic from the main server file.
 
 **Last working item**:
-    - Last item agent was working: The user asked how to record an expense where one branch pays for another. The agent identified that the existing expense form was insufficient for non-supplier cross-branch expenses and started adding an Expense For Branch dropdown to the form. The backend model and endpoint were updated, but the frontend implementation was the last step.
-    - Status: IN PROGRESS
-    - Agent Testing Done: N
-    - Which testing method agent to use? Frontend testing agent. After the UI is confirmed, create a test case where Branch A pays an expense for Branch B, and verify on the Dashboard that the Branch-to-Branch Dues are correctly updated.
+    - Last item agent was working: The agent just completed a large batch of work which included: an Item-level P&L report, the initial phase of a major backend refactor, and a new Staff Schedule/Shift Management feature. The last action was to call the testing agent to perform a full regression test on all newly added features.
+    - Status: USER VERIFICATION PENDING
+    - Agent Testing Done: Y
+    - Which testing method agent to use? The testing agent has already been invoked. The next agent must start by reading the results from the latest test report at  and address any failures before proceeding.
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: Complete the Expense For Branch feature. (Priority: P0)
-
-  Issues Detail:
-  - Issue 1: 
-     - Attempted fixes: The agent updated the backend  model and  endpoint to handle an . The frontend work on  to include the new dropdown was started but not completed or tested.
-     - Next debug checklist: 
-        1. View  to ensure the new Expense For Branch dropdown is correctly implemented in the Add Expense form.
-        2. Ensure the  function passes the  to the  endpoint.
-        3. Create an expense where Paid From is  and Expense For Branch is .
-        4. Navigate to the Dashboard and verify that the Branch-to-Branch Dues card shows that  is owed money by .
-     - Why fix this issue and what will be achieved with the fix? This will complete a core user request for accurately tracking all types of inter-branch payments and dues.
-     - Status:  IN PROGRESS
-     - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? Both
-     - Blocked on other issue: None
+  - None.
 
 **In progress Task List**:
- - None
+  - Task 1: Complete Backend Refactoring (Priority: P0)
+     - Where to resume: The agent successfully moved Pydantic models to  and database/auth helpers to . The next critical step is to break down the ~5,000-line  file by moving the API routes into a modular structure within a new  directory (e.g., , , ).
+     - What will be achieved with this? This will significantly improve the backend's maintainability, scalability, and organization, making future development much easier and safer.
+     - Status: IN PROGRESS
+     - Should Test frontend/backend/both after fix? backend
+     - Blocked on something: No.
 
 **Upcoming and Future Tasks**
     Upcoming Tasks:
-    - **P0:** Complete WhatsApp Notification Triggers: The backend has endpoints for sending various reports via WhatsApp (e.g., daily sales summary), but the frontend lacks the UI (buttons/toggles) to trigger these automatically or on-demand from the relevant pages. Implement these triggers in the UI.
-    - **P1:** Enhance Bank Reconciliation UI: The bank statement analyzer is powerful but the UI is basic. Create a dedicated reconciliation page where users can see SSC Track sales side-by-side with bank POS deposits and manually match or flag discrepancies.
+    - **P1:** Link Job Titles to Permissions: The user requested that job titles should affect user permissions. Currently, job titles define salary ranges, but are not linked to the role-based access control system. This requires creating a mapping between a  and a set of permissions, and applying it when an employee logs in.
+    - **P2:** Enhance Bank Reconciliation UI: The original handoff mentioned creating a more dedicated reconciliation page where users can see SSC Track sales side-by-side with bank POS deposits and manually match or flag discrepancies. This is still a valuable enhancement.
 
     Future Tasks:
-    - **P2:** Refactor : The main backend file is now over 5,000 lines long. It should be broken down into a more scalable structure with separate files for API routers (e.g., , ), data models (), and services/business logic.
+    - **P3:** Automated WhatsApp Notification Triggers: While the agent implemented flexible, on-demand report sending via WhatsApp, the original idea of setting up automated, scheduled triggers (e.g., send daily sales summary every night) has not been implemented.
+    - **P4:** Advanced Stock/Inventory Reporting: Build more detailed reports on stock consumption, wastage, and profitability over time.
 
 **Completed work in this session**
-- **Full Rebranding:** Rebranded the entire app to SSC Track with the user's logo and a custom orange/amber color theme. Implemented a premium, modern UI/UX across the login page, sidebar, and dashboard.
-- **Currency Change:** System-wide change from  to  (Saudi Riyal) on all pages and PDF/Excel exports.
-- **New Modules Created:**
-  - **Bank Statement Analyzer:** Parses PDF/XLS files from Alinma & Bilad banks, categorizes transactions (POS, SADAD, SARIE, Fees, VAT), and reconciles data.
-  - **Partners:** Tracks partner investments, salaries, and loans.
-  - **Company Loans:** Manages loans taken by the company.
-  - **Fines & Penalties:** Tracks government fines and employee salary deductions, with file proof uploads.
-  - **Cash Transfers:** Manages cash/bank movements between branches and a central company account.
-  - **Help Page:** A comprehensive in-app guide explaining all features.
-- **Major Feature Enhancements:**
-  - **Employees:** Implemented a full HR system including salary history, old balance tracking, bonus/deduction payments, and an employee portal with attendance (time-in/out), document management, and a request system (for letters/loans).
-  - **Dashboard:** Added advanced analytics including cash/bank in-hand, VAT payable calculation, period-over-period comparison indicators (e.g., ▲ 15%), and alerts for supplier/salary/fine dues and branch losses.
-  - **Branch-to-Branch Dues:** Implemented logic to track all cross-branch payments and added a Record Payback feature on the dashboard.
-  - **User Management:** Enabled granular, module-specific permissions for user roles.
-  - **Settings:** Added self-service configuration for Email (SMTP) and WhatsApp, a multi-format data import tool, and a one-click database backup feature.
-  - **UI Simplification:** Redesigned the Sales and Expenses pages with color-coded, clickable chips for easier data entry.
-- **Deployment & PWA:**
-  - Converted the application into a Progressive Web App (PWA) for native-like installation on devices.
-  - Created a multi-stage , , and startup scripts to enable seamless deployment on the Railway platform.
-  - Resolved multiple critical deployment-blocking bugs.
+- **Feature: Expense For Branch**: Implemented the ability for one branch to pay an expense for another, ensuring inter-branch dues are correctly tracked on the dashboard.
+- **Feature: Stock Management & Invoice OCR**:
+    - Built a full stock management module for tracking item costs, purchases, and current inventory levels.
+    - Integrated a Gemini-powered OCR via  to scan uploaded supplier invoices and automatically suggest items for stock-in.
+    - Created a Stock page for management and a simplified Kitchen page for chefs to record item consumption.
+- **Feature: Item-Level P&L Report**: Added a new report that calculates profit and margin for each inventory item by comparing its purchase cost against its revenue from customer invoices.
+- **Feature: Staff Schedule / Shift Management**:
+    - Created a new module to define work shifts (e.g., Morning Shift) and assign employees to them on a weekly calendar.
+    - Added a Schedule page with a visual weekly calendar, shift management tools, and an attendance summary.
+- **Feature: Job Titles Management**:
+    - Replaced the free-text Position field with a structured Job Title system.
+    - Created a Manage Job Titles interface to define titles, departments, and associated salary ranges. Employee forms now use this data.
+- **Feature: Enhanced WhatsApp Triggers**: Implemented UI dialogs on the Dashboard, Stock, and Expenses pages to allow users to send reports to any specified WhatsApp number on-demand.
+- **Feature: Enhanced Bank Reconciliation**: Added a Reconciliation tab to the bank statement analysis view, which automatically compares bank POS deposits against app sales data with a 1-day offset to find discrepancies.
+- **Enhancement: Deployment & PWA Guide**: Added a new Deploy tab in the Settings page with instructions for hosting on GoDaddy and for installing the app as a PWA on staff devices.
+- **Refactor: Initial Backend Split**: Started a major refactor of  by extracting all Pydantic models into  and database/auth helpers into .
+- **Fixes**: Addressed a recurring  warning and fixed currency symbols () on the Invoices page.
 
 **Earlier issues found/mentioned but not fixed**
    - Issue 1:
-     - Description: The backend logs show a recurring  warning upon startup, likely due to a dependency version mismatch.
-     - Debug checklist: Check  and  versions in  and pin them to compatible versions.
-     - Why to solve this issue and what will be achieved with this? It will clean up the logs and prevent potential future authentication-related bugs.
+     - Description: The backend log intermittently shows a  warning on startup. This is a known compatibility issue with the  library.
+     - Debug checklist: While the agent pinned versions which temporarily fixed it, the issue returned. A more robust fix might involve investigating the exact dependency versions required by the latest .
+     - Why to solve this issue and what will be achieved with this? It's a low-priority warning but fixing it cleans up the logs and removes any risk of future authentication-related bugs.
      - Should Test frontend/backend/both after fix: backend
      - Is recurring issue? Y
 
 **Known issue recurrence from previous fork**
-- None.
+  - None.
 
 **Code Architecture**
 
@@ -91,8 +81,7 @@ A feature-rich, full-stack ERP application named SSC Track. It has a FastAPI bac
 - **Backend:** FastAPI, Pydantic, Motor (async MongoDB driver), JWT for auth.
 - **Frontend:** React, TailwindCSS, Shadcn UI, Recharts for graphs.
 - **Database:** MongoDB.
-- **Deployment:** Docker, Nginx (as a reverse proxy in Docker), Railway.
-- **PWA:** Service Workers for offline capabilities and installability.
+- **Integrations:** Twilio (WhatsApp),  (for Gemini OCR).
 - **File Parsing:** usage: pdfplumber [-h] [--structure | --structure-text]
                   [--format {csv,json,text}] [--types TYPES [TYPES ...]]
                   [--include-attrs INCLUDE_ATTRS [INCLUDE_ATTRS ...]]
@@ -121,109 +110,85 @@ options:
   --laparams LAPARAMS
   --precision PRECISION
   --pages PAGES [PAGES ...]
-  --indent INDENT       Indent level for JSON pretty-printing. and  for bank statement analysis.
+  --indent INDENT       Indent level for JSON pretty-printing., .
+- **Deployment:** Docker, Nginx, Railway.
+- **PWA:** Service Workers.
 
 **key DB schema**
-- **User:** {email, hashed_password, role, permissions: [str]}
-- **Employee:** {name, salary, branch_id, user_id, annual_leave_entitlement, ticket_entitlement, loan_balance, old_balance, ...}
-- **Sale:** {branch_id, customer_id, total_amount, discount, payment_details, ...}
-- **Invoice:** {invoice_number, customer_id, items: [{name, qty, price}], ...}
-- **Item:** {name, price}
-- **BankStatement:** {filename, bank_name, transactions: [{date, desc, amount, category, ...}]}
-- **Partner:** {name, salary, investment_balance, loan_balance}
-- **CompanyLoan:** {lender, amount, interest_rate, balance, ...}
-- **Fine:** {fine_number, source, amount, status, employee_id, file_path, ...}
-- **RecurringExpense:** {description, category, amount, frequency, next_due_date, branch_id}
-- **CashTransfer:** {from_branch, to_branch, amount, mode, ...}
-- **SalaryHistory:** {employee_id, old_salary, new_salary, effective_date}
-- **BranchPayback:** {from_branch, to_branch, amount, mode, date}
+- **StockItem:** {name, category, unit, current_stock, last_cost_price, average_cost_price}
+- **StockLog:** {item_id, branch_id, type: ['in', 'out', 'adjustment'], quantity, cost_price}
+- **JobTitle:** {name, department, base_salary, max_salary}
+- **Shift:** {name, start_time, end_time, branch_id}
+- **ShiftAssignment:** {employee_id, shift_id, date, status: ['scheduled', 'attended', 'absent']}
 
 **changes in tech stack**
-- Added usage: pdfplumber [-h] [--structure | --structure-text]
-                  [--format {csv,json,text}] [--types TYPES [TYPES ...]]
-                  [--include-attrs INCLUDE_ATTRS [INCLUDE_ATTRS ...]]
-                  [--exclude-attrs EXCLUDE_ATTRS [EXCLUDE_ATTRS ...]]
-                  [--laparams LAPARAMS] [--precision PRECISION]
-                  [--pages PAGES [PAGES ...]] [--indent INDENT]
-                  [infile]
-
-positional arguments:
-  infile
-
-options:
-  -h, --help            show this help message and exit
-  --structure           Write the structure tree as JSON. All other arguments
-                        except --pages, --laparams, and --indent will be
-                        ignored
-  --structure-text      Write the structure tree as JSON including text
-                        contents. All other arguments except --pages,
-                        --laparams, and --indent will be ignored
-  --format {csv,json,text}
-  --types TYPES [TYPES ...]
-  --include-attrs INCLUDE_ATTRS [INCLUDE_ATTRS ...]
-                        Include *only* these object attributes in output.
-  --exclude-attrs EXCLUDE_ATTRS [EXCLUDE_ATTRS ...]
-                        Exclude these object attributes from output.
-  --laparams LAPARAMS
-  --precision PRECISION
-  --pages PAGES [PAGES ...]
-  --indent INDENT       Indent level for JSON pretty-printing. and  for bank statement parsing.
+- Added  library for accessing Gemini Pro Vision for invoice OCR.
+- Pinned  and  in an attempt to fix a warning.
 
 **All files of reference**
-- : The single, monolithic backend file containing all API logic.
-- : Directory containing over 30 React page components.
-- : Controls the main navigation and role-based access.
-- : Defines the multi-stage build process for production deployment.
-- : Configuration file for deploying on Railway.
-- : Script to start Nginx and the Uvicorn server in the production container.
+- **Created Files:**
+  - : Contains MongoDB connection setup and authentication utility functions.
+  - : Contains all Pydantic models for the application.
+  - : UI for managing inventory, viewing stock logs, and scanning invoices.
+  - : Simplified UI for chefs to record item usage.
+  - : UI for managing staff shifts and schedules.
+  - : Reusable dialog for sending reports via WhatsApp.
+- **Updated Files:**
+  - : Major refactoring in progress; routes for all new features were added here.
+  - : Reworked to use the new Job Titles system.
+  - : Added the new Item P&L report tab.
+  - : Added the new Reconciliation feature.
+  - : Added routes for the new pages.
+  - : Added navigation links for the new pages.
 
 **Areas that need refactoring**:
-- ** is critically monolithic (>5000 lines).** It urgently needs to be broken down into separate files for routers, models, and services to be maintainable.
-- Many frontend components are still large and handle state, data fetching, and UI logic in one file. They could be broken down into smaller, reusable components.
+- **:** This remains the highest priority. The agent started the work, but all API routes (~5000 lines) are still in this single file. They must be split into the  directory to make the codebase maintainable.
 
 **key api endpoints**
-- : Uploads and analyzes bank statement PDF/XLS files.
-- : Returns the full analysis of a statement.
-- : Gets a summary of pending salaries and active leaves, broken down by branch.
-- : Calculates the net dues between branches after accounting for paybacks.
-- :  endpoint to update user details, including granular permissions.
-- : Creates and returns a JSON backup of the entire database.
-- : Imports data from XLS files for various modules.
+- : (POST) Uploads an invoice image for OCR processing.
+- , : (GET, POST) Full CRUD for stock items and logging stock movements.
+- : (GET) Calculates and returns item-level Profit & Loss data.
+- : (POST) Sends a specified report to a user-provided phone number.
+- : (POST) Runs the bank POS vs. app sales reconciliation.
+- : (GET, POST, PUT, DELETE) Full CRUD for managing Job Titles.
+- , : (GET, POST, DELETE) Full CRUD for managing shifts and employee assignments.
 
 **Critical Info for New Agent**
-- **Monolithic Backend:** Be aware that  contains all backend logic. Use search to navigate it efficiently. Refactoring this file should be a high-priority future task.
-- **Bank Statement Parser:** The logic in  is highly specific to Alinma and Bilad bank formats. Adding a new bank will require extending this function with new parsing rules.
-- **Deployment:** The app is configured for Railway. The  uses a multi-stage build to create a production-ready container with Nginx serving the React frontend and proxying API requests to the FastAPI backend.
-- **User Permissions:** Page visibility is controlled in  based on the  array in the user object stored in localStorage.
+- **Start by Reviewing Test Results:** Your first action must be to read the test report at . The previous agent completed a large set of features and invoked the testing agent as its final step. You must address any failures before continuing.
+- **Backend Refactoring is Mid-flight:** The backend refactoring is a critical, ongoing task. Models and DB logic are separate, but all routes are still in . Your next major task, after any test fixes, should be to continue this refactoring by creating and populating the  directory.
+- **Job Titles & Permissions:** The user wants job titles to control permissions. This logic has not been implemented and is a pending upcoming task.
 
 **documents and test reports created in this job**
-- : Contains product requirements and a changelog.
-- : Test reports from the testing agent are stored here.
-- The app can now generate PDF reports for customers and employees.
+- 
+- 
+- 
+-  (Most recent)
+-  (Updated with latest features)
 
 **Last 10 User Messages and any pending HUMAN messages** 
-1. **User:** How to handle expenses where one branch pays for another? - **Status: In Progress**. Agent is implementing an Expense For Branch field.
-2. **User:** How to move cash from a branch to the central company? - **Status: Implemented**. Agent explained the Cash Transfer module and added a Company Balance summary.
-3. **User:** How do I add an invested amount for a partner? - **Status: Implemented**. Agent improved the UI by adding a dedicated Add Investment button.
-4. **User:** Improve the UI for adding expenses/suppliers. - **Status: Implemented**. Agent redesigned the forms to use color-coded, clickable chips.
-5. **User:** Do the same for the Sales page. - **Status: Implemented**. Agent redesigned the Sales page with color-coded chips for branch/customer selection.
-6. **User:** Please update the Help page with new features. - **Status: Implemented**.
-7. **User:** Analyzed attached bank statements. - **Status: Implemented**. Agent built a bank statement analyzer.
-8. **User:** How to deploy the app? - **Status: Completed**. Agent provided a detailed guide and created deployment files.
-9. **User:** Build failed on Railway. - **Status: Resolved**. Agent fixed two critical deployment bugs (missing dependency, incorrect Node.js version).
-10. **User:** Default admin user is not working. - **Status: Resolved**. Agent created the user and fixed a case-sensitivity bug in the login logic.
+1. **User (Message 388):** Set priorities: 1) P&L Report, 2) Backend Refactor. Also approved the agent's suggestion for a Staff Schedule feature. **Status: Implemented.** Agent built P&L, started the refactor, and built the schedule feature.
+2. **User (Message 385):** please process all above - Approved the plan to finish the Job Titles feature. **Status: Implemented.**
+3. **User (Message 286):** Clarified requirements for deployment guide (in-app) and job titles (common defaults, user-addable, affects salary & permissions). **Status: Partially Implemented.** Salary link is done, permission link is pending.
+4. **User (Message 283):** Requested help deploying to GoDaddy, a way to install the app for employees (PWA), and a Job Titles feature. **Status: Implemented.**
+5. **User (Message 280):** pls process it - Approved the plan to finish the Reconciliation and WhatsApp features. **Status: Implemented.**
+6. **User (Message 171):** Provided requirements for WhatsApp (flexible number) and Bank Reconciliation (full period, 1-day POS offset). **Status: Implemented.**
+7. **User (Message 168):** p0 p1 please process - Approved the plan to work on WhatsApp triggers and Bank Reconciliation UI. **Status: Implemented.**
+8. **User (Message 67):** Clarified invoice OCR requirements (mobile camera upload) and stock management (branch-specific, easy for chefs). **Status: Implemented.**
+9. **User (Message 64):** Requested invoice scanning (OCR) for stock management, item-level profit reporting, and a smart way to manage restaurant stock. **Status: Implemented.**
+10. **User (Message 5):** yes pls process - Gave initial approval to start working on the Expense for Branch feature. **Status: Implemented.**
 
 **Project Health Check:**
-- **Broken:** None. The core application is stable.
+- **Broken:** None. The application was stable and passed testing before the last handoff. The next agent must confirm this by checking the latest test report.
 - **Mocked:** N/A.
 
 **3rd Party Integrations**
-- **Twilio** : For sending WhatsApp notifications. Configured in **Settings -> WhatsApp**.
-- **ReportLab** : For generating PDF reports (Customer Statements, Payslips).
-- **Openpyxl** / **xlrd**: For parsing and generating Excel/XLS files.
+- **Twilio** : For sending WhatsApp notifications.
+- **ReportLab** : For generating PDF reports.
+- **Openpyxl / xlrd**: For parsing and generating Excel/XLS files.
+- **Emergent Integrations** : For Gemini-powered OCR on invoices. Uses Emergent LLM Key.
 
 **Testing status**
-  - Testing agent used after significant changes: YES, frequently throughout the session.
+  - Testing agent used after significant changes: YES (4 times in this session).
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: []
   - Known regressions: None.
@@ -237,5 +202,5 @@ options:
   - **Password:** 
 
 **What agent forgot to execute**
-- The major refactoring of  into a scalable structure was identified as a need but never performed.
-- While the backend supports sending a daily sales summary via WhatsApp, there is no frontend UI to schedule or trigger this automatically.</analysis>
+- **Link Job Titles to Permissions:** The user explicitly requested that job titles determine user permissions. The agent implemented job titles with salary structures but did not create the logic to link them to the permission system.
+- **Complete the  Refactor:** This was planned as a P2 task and was started, but the most significant part—splitting the routes into the  directory—is still pending.</analysis>
