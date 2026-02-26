@@ -1,0 +1,85 @@
+{
+  "summary": "Iteration 21: Invoice Image Upload Feature - All tests passed. Backend: 13/13 API tests passed. Frontend: All UI features verified including image upload, thumbnail display, image viewer dialog, replace/remove actions, and print preview with attached image.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Invoices Table",
+        "issues": ["React hydration warning: <tr> inside <span> - cosmetic issue, does not affect functionality (existing issue from previous iterations)"]
+      }
+    ]
+  },
+
+  "passed_tests": [
+    "Backend: Admin login successful (ss@ssc.com)",
+    "Backend: GET /api/invoices returns image_url field for invoices",
+    "Backend: GET /api/invoices/images/{filename} serves existing image (200)",
+    "Backend: GET /api/invoices/images/nonexistent returns 404",
+    "Backend: POST /api/invoices/{id}/upload-image uploads image successfully",
+    "Backend: Uploaded image is accessible via GET /api/invoices/images/{filename}",
+    "Backend: Invoice record updated with correct image_url after upload",
+    "Backend: POST /api/invoices/{id}/upload-image rejects non-image files (400)",
+    "Backend: DELETE /api/invoices/{id}/image removes image from invoice",
+    "Backend: Invoice image_url is null after deletion",
+    "Backend: POST /api/invoices/{id}/upload-image returns 404 for non-existent invoice",
+    "Backend: DELETE /api/invoices/{id}/image returns 404 for non-existent invoice",
+    "Backend: Image replacement works - old image replaced with new image",
+    "Frontend: Invoices page loads with Img column in table",
+    "Frontend: Invoices without images show upload icon (dashed border) in Img column",
+    "Frontend: Clicking upload icon opens file picker",
+    "Frontend: After uploading, success toast 'Image uploaded to invoice' shown",
+    "Frontend: Thumbnail appears in Img column after upload",
+    "Frontend: Clicking thumbnail opens Image Viewer dialog",
+    "Frontend: Image Viewer shows full image preview",
+    "Frontend: Image Viewer has Replace button",
+    "Frontend: Image Viewer has Remove button",
+    "Frontend: Print Invoice dialog shows 'Attached Image / صورة مرفقة' section",
+    "Frontend: Print preview displays the attached image"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_iteration21_image_upload.py",
+    "/app/test_reports/pytest/pytest_results_iter21.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "Backend image upload endpoint properly validates file types (jpg, jpeg, png, webp, gif)",
+    "Images stored at /app/backend/uploads/invoices/ with unique filenames (invoice_id + uuid)",
+    "Image URL format: /api/invoices/images/{filename} - clean REST API",
+    "Invoice model has optional image_url field that gets populated on upload",
+    "Frontend properly displays upload icon (dashed border) for invoices without images",
+    "Frontend shows thumbnail (8x8 rounded) for invoices with images",
+    "Image Viewer dialog has proper data-testid attributes for testing",
+    "Print preview includes 'Attached Image' section with bilingual label (English/Arabic)",
+    "File input uses proper accept='image/*' attribute for better UX"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_iteration21_image_upload.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (13/13 tests passed)",
+    "frontend": "100% (14/14 UI features verified)"
+  },
+
+  "test_credentials": {
+    "admin": {"email": "ss@ssc.com", "password": "Aa147258369Ssc@"}
+  },
+
+  "seed_data_creation": "Test image uploaded to INV-00009 during testing, then cleaned up by backend tests",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Iteration 21 complete. Invoice Image Upload feature fully tested and working. Backend: POST /api/invoices/{id}/upload-image, GET /api/invoices/images/{filename}, DELETE /api/invoices/{id}/image all working. Frontend: Upload icons shown for invoices without images, thumbnails for those with images. Image Viewer dialog allows viewing, replacing, and removing images. Print preview includes attached images at the bottom. React hydration warning in tables remains a cosmetic issue from previous iterations."
+}
