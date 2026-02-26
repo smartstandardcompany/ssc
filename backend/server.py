@@ -5075,6 +5075,112 @@ async def analyze_statement(stmt_id: str, current_user: User = Depends(get_curre
         "total_pos_sales": sum(t.get("credit",0) for t in txns if t.get("category") == "pos_sales"),
     }
 
+# POS Reconciliation - side-by-side with 1-day offset
+@api_router.get("/bank-statements/{stmt_id}/reconciliation")
+async def get_pos_reconciliation(stmt_id: str, current_user: User = Depends(get_current_user)):
+    stmt = await db.bank_statements.find_one({"id": stmt_id}, {"_id": 0})
+    if not stmt:
+        raise HTTPException(status_code=404, detail="Statement not found")
+    
+    txns = stmt.get("transactions", [])
+    branches_list = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branch_map = {b["id"]: b["name"] for b in branches_list}
+    pos_mappings = {m["machine_id"]: m for m in await db.pos_machines.find({}, {"_id": 0}).to_list(100)}
+    
+    # Get all POS deposits from bank grouped by date
+    bank_pos_by_date = {}
+    for t in txns:
+        if t.get("category") != "pos_sales":
+            continue
+        date_str = t.get("date", "")[:10]
+        if not date_str:
+            continue
+        mid = t.get("machine_id", "")
+        mapping = pos_mappings.get(mid, {})
+        branch_name = branch_map.get(mapping.get("branch_id", ""), "Unmapped")
+        key = f"{date_str}|{branch_name}"
+        if key not in bank_pos_by_date:
+            bank_pos_by_date[key] = {"date": date_str, "branch": branch_name, "bank_amount": 0, "txn_count": 0, "machines": set()}
+        bank_pos_by_date[key]["bank_amount"] += t.get("credit", 0)
+        bank_pos_by_date[key]["txn_count"] += 1
+        if mid:
+            bank_pos_by_date[key]["machines"].add(mid)
+    
+    # Get all SSC Track bank sales grouped by date (offset -1 day since POS deposits arrive next day)
+    all_sales = await db.sales.find({}, {"_id": 0}).to_list(50000)
+    app_sales_by_date = {}
+    for s in all_sales:
+        bid = s.get("branch_id", "")
+        bname = branch_map.get(bid, "Unknown")
+        bank_amt = sum(p["amount"] for p in s.get("payment_details", []) if p.get("mode") == "bank")
+        if bank_amt <= 0:
+            continue
+        sale_date = s.get("date", "")[:10]
+        if not sale_date:
+            continue
+        # Bank deposits arrive 1 day after the sale
+        try:
+            sale_dt = datetime.fromisoformat(sale_date)
+            deposit_date = (sale_dt + timedelta(days=1)).strftime("%Y-%m-%d")
+        except:
+            deposit_date = sale_date
+        key = f"{deposit_date}|{bname}"
+        if key not in app_sales_by_date:
+            app_sales_by_date[key] = {"date": deposit_date, "sale_date": sale_date, "branch": bname, "app_amount": 0, "sale_count": 0}
+        app_sales_by_date[key]["app_amount"] += bank_amt
+        app_sales_by_date[key]["sale_count"] += 1
+    
+    # Merge into reconciliation rows
+    all_keys = set(list(bank_pos_by_date.keys()) + list(app_sales_by_date.keys()))
+    rows = []
+    total_bank = 0
+    total_app = 0
+    matched_count = 0
+    discrepancy_count = 0
+    
+    for key in sorted(all_keys):
+        bank_data = bank_pos_by_date.get(key)
+        app_data = app_sales_by_date.get(key)
+        bank_amt = bank_data["bank_amount"] if bank_data else 0
+        app_amt = app_data["app_amount"] if app_data else 0
+        diff = bank_amt - app_amt
+        date_str = key.split("|")[0]
+        branch = key.split("|")[1] if "|" in key else ""
+        
+        status = "matched" if abs(diff) < 1 else ("bank_only" if app_amt == 0 else ("app_only" if bank_amt == 0 else "mismatch"))
+        if status == "matched":
+            matched_count += 1
+        else:
+            discrepancy_count += 1
+        
+        total_bank += bank_amt
+        total_app += app_amt
+        
+        rows.append({
+            "deposit_date": date_str,
+            "sale_date": app_data["sale_date"] if app_data else "",
+            "branch": branch,
+            "bank_amount": round(bank_amt, 2),
+            "app_amount": round(app_amt, 2),
+            "difference": round(diff, 2),
+            "status": status,
+            "bank_txns": bank_data["txn_count"] if bank_data else 0,
+            "app_sales": app_data["sale_count"] if app_data else 0,
+            "machines": list(bank_data["machines"]) if bank_data else []
+        })
+    
+    return {
+        "rows": rows,
+        "summary": {
+            "total_bank_pos": round(total_bank, 2),
+            "total_app_sales": round(total_app, 2),
+            "total_difference": round(total_bank - total_app, 2),
+            "matched_count": matched_count,
+            "discrepancy_count": discrepancy_count,
+            "total_rows": len(rows)
+        }
+    }
+
 # Export Routes
 @api_router.post("/export/reports")
 async def export_reports(export_request: ExportRequest, current_user: User = Depends(get_current_user)):
