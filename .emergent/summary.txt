@@ -1,67 +1,43 @@
 <analysis>**original_problem_statement:**
-The user wants a data entry application to track sales, expenses, and supplier payments.
+The user initially requested a data entry application to track sales, expenses, and supplier payments. Over the course of development, this has evolved into a comprehensive business management ERP system named SSC Track.
 
 **PRODUCT REQUIREMENTS:**
-- **Sales Tracking:**
-    - Differentiate between bank and cash sales.
-    - Log sales per branch with date.
-    - Branches should be selectable from a list.
-    - Track online sales from different customers.
-    - Customer names should be editable.
-    - Include an option for credit sales.
-    - Record how online sales are received (cash or bank).
-    - Add a discount option for sales.
-    - Auto-calculate total amounts on the sales page (total, bank, cash, credit).
-- **Supplier Management:**
-    - Track payments to suppliers (cash, bank, or credit).
-    - Track income.
-    - Add suppliers and assign them to branches.
-    - Operators should select a supplier when adding expenses.
-    - Option to pay credit owed to suppliers and track the balance.
-    - Add categories for suppliers.
-- **Expense Tracking:**
-    - Log general expenses like salary, rent, maintenance, VAT, and insurance.
-    - Add expenses by category.
-- **Customer Management:**
-    - Add customers and assign them to specific branches, noting some customers may be shared across all branches.
-- **Reporting:**
-    - Export data to PDF and XLS formats.
-    - A credit sales report showing total credit given, received, and remaining.
-    - Option to receive/update payments directly from the credit report.
-    - Supplier report.
-    - Category report.
-- **User Management:**
-    - User roles and access control.
-- **Notifications:**
-    - WhatsApp notifications for daily sales updates (total sales, total expenses per branch).
+- **Financial Management:** Sales (Bank/Cash/Online/Credit), Expenses (with categories/sub-categories), Supplier Payments, Customer Credit Management, Invoicing with an item master list.
+- **HR Management:** Employee database, detailed salary payments (including bonus, overtime, advance, deductions), leave tracking (annual, sick), loan management, and an Employee Self-Service Portal for leave requests and payment acknowledgments.
+- **Asset & Liability Tracking:** Document management with expiry alerts and file attachments, tracking of company fines/penalties, company loans, and partner investments/salaries.
+- **Cash Flow Management:** Branch-to-branch cash transfers, a central company balance, and tracking of inter-branch dues with payback options.
+- **Bank Reconciliation:** A powerful Bank Statement Analyzer that parses PDF/XLS files from Alinma and Albilad banks, automatically categorizes transactions (POS Sales, Fees, VAT, SADAD bills, SARIE transfers), reconciles POS sales against app data, and groups transactions by sender/receiver and POS machine.
+- **Reporting & Analytics:** A multi-tab dashboard with KPIs (% of sales, vs previous period), charts, and alerts (branch loss, upcoming expenses, dues). An advanced reporting module with period-over-period and branch-to-branch comparisons. PDF/XLS export capabilities on all pages.
+- **Administration:** Granular role-based access control, self-service settings for Email (SMTP) and WhatsApp (Twilio), company branding, data import from XLS, and a one-click database backup feature.
+- **Deployment & Accessibility:** The application is a Progressive Web App (PWA) and has been prepared for deployment on Railway with a multi-stage Dockerfile.
 
 **User's preferred language**: English
 
 **what currently exists?**
-A full-stack web application with a FastAPI backend and a React frontend. The application supports user authentication, and CRUD operations for sales, expenses, customers, suppliers, and branches. It includes features like split payments for sales, a credit sales report, data export to PDF/Excel, and backend logic for WhatsApp notifications. Backend models and routes have been created for most of the requested features, including supplier categories and user roles, but the corresponding frontend UI is incomplete.
+A feature-rich, full-stack ERP application named SSC Track. It has a FastAPI backend and a React frontend with a premium, branded UI. The application supports over 25 modules, including a sophisticated bank statement analyzer, detailed HR management with an employee portal, comprehensive financial tracking, and granular user permissions. The application is configured as a PWA and includes deployment scripts for Railway.
 
 **Last working item**:
-    - Last item agent was working: The agent was debugging an issue where the user reported being unable to add customers and suppliers. The agent identified a frontend compilation error due to a parsing error in . The agent attempted a fix, but the compilation error persisted in the logs, indicating the fix was not successful or complete. The last action was to restart the frontend.
+    - Last item agent was working: The user asked how to record an expense where one branch pays for another. The agent identified that the existing expense form was insufficient for non-supplier cross-branch expenses and started adding an Expense For Branch dropdown to the form. The backend model and endpoint were updated, but the frontend implementation was the last step.
     - Status: IN PROGRESS
     - Agent Testing Done: N
-    - Which testing method agent to use? Frontend testing agent (after fixing the compilation error to verify the UI functionality).
+    - Which testing method agent to use? Frontend testing agent. After the UI is confirmed, create a test case where Branch A pays an expense for Branch B, and verify on the Dashboard that the Branch-to-Branch Dues are correctly updated.
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: Frontend compilation fails, preventing the app from working. (Priority: P0)
+  - Issue 1: Complete the Expense For Branch feature. (Priority: P0)
 
   Issues Detail:
   - Issue 1: 
-     - Attempted fixes: The agent tried to fix syntax errors in  and . The last logs show  and specifically mention a parsing error at . The agent's fix was insufficient.
+     - Attempted fixes: The agent updated the backend  model and  endpoint to handle an . The frontend work on  to include the new dropdown was started but not completed or tested.
      - Next debug checklist: 
-        1. View the file  again, focusing on line 217 and the surrounding code block to identify the syntax error (likely a missing semicolon, bracket, or tag).
-        2. Correct the syntax error using .
-        3. Check frontend logs () to confirm that webpack compiles successfully without errors.
-        4. Once compiled, take a screenshot to verify the Customers page loads correctly.
-     - Why fix this issue and what will be achieved with the fix? This is a critical blocking issue. Fixing it will make the frontend application usable again, allowing the user and agent to test the customer and supplier creation functionality.
+        1. View  to ensure the new Expense For Branch dropdown is correctly implemented in the Add Expense form.
+        2. Ensure the  function passes the  to the  endpoint.
+        3. Create an expense where Paid From is  and Expense For Branch is .
+        4. Navigate to the Dashboard and verify that the Branch-to-Branch Dues card shows that  is owed money by .
+     - Why fix this issue and what will be achieved with the fix? This will complete a core user request for accurately tracking all types of inter-branch payments and dues.
      - Status:  IN PROGRESS
-     - Is recurring issue? Y
-     - Should Test frontend/backend/both after fix? frontend
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? Both
      - Blocked on other issue: None
 
 **In progress Task List**:
@@ -69,135 +45,197 @@ A full-stack web application with a FastAPI backend and a React frontend. The ap
 
 **Upcoming and Future Tasks**
     Upcoming Tasks:
-    - **P0:** Implement UI for Supplier Categories: Update the  and  to allow users to select/add a category when creating/editing suppliers and expenses.
-    - **P1:** Implement UI for User Role Management: Create a UI in  to manage user roles as requested by the user.
-    - **P1:** Create Supplier Report Page: Create a new frontend page to display the supplier report data available from the  endpoint.
-    - **P1:** Create Category Report Page: Create a new frontend page to display the category report data available from the  endpoint.
+    - **P0:** Complete WhatsApp Notification Triggers: The backend has endpoints for sending various reports via WhatsApp (e.g., daily sales summary), but the frontend lacks the UI (buttons/toggles) to trigger these automatically or on-demand from the relevant pages. Implement these triggers in the UI.
+    - **P1:** Enhance Bank Reconciliation UI: The bank statement analyzer is powerful but the UI is basic. Create a dedicated reconciliation page where users can see SSC Track sales side-by-side with bank POS deposits and manually match or flag discrepancies.
 
     Future Tasks:
-    - **P2:** Implement WhatsApp Notifications: The backend logic and Twilio dependency are in place, but there is no frontend interface to configure a phone number or trigger the daily summary message. This feature needs to be fully implemented and tested.
+    - **P2:** Refactor : The main backend file is now over 5,000 lines long. It should be broken down into a more scalable structure with separate files for API routers (e.g., , ), data models (), and services/business logic.
 
 **Completed work in this session**
-- **Framework:** Initial full-stack application setup (FastAPI, React).
-- **Authentication:** User registration and login system (, ).
-- **Core Features (Backend & Frontend):**
-  - Branch Management ().
-  - Customer Management with branch assignment ().
-  - Sales entry with split payments and discounts ().
-  - Supplier Payments tracking ().
-  - Expense tracking ().
-- **Reporting:**
-  - Dashboard with key metrics ().
-  - Data export to PDF & Excel on the Reports page ().
-  - Credit Sales Report with payment reception ().
-- **Backend Models:** Created Pydantic models for all major entities including ,  (with ),  (with ), and  ().
-- **Data Migration:** Implemented a data migration function () in  to update old database records to a new schema, preventing validation errors.
+- **Full Rebranding:** Rebranded the entire app to SSC Track with the user's logo and a custom orange/amber color theme. Implemented a premium, modern UI/UX across the login page, sidebar, and dashboard.
+- **Currency Change:** System-wide change from  to  (Saudi Riyal) on all pages and PDF/Excel exports.
+- **New Modules Created:**
+  - **Bank Statement Analyzer:** Parses PDF/XLS files from Alinma & Bilad banks, categorizes transactions (POS, SADAD, SARIE, Fees, VAT), and reconciles data.
+  - **Partners:** Tracks partner investments, salaries, and loans.
+  - **Company Loans:** Manages loans taken by the company.
+  - **Fines & Penalties:** Tracks government fines and employee salary deductions, with file proof uploads.
+  - **Cash Transfers:** Manages cash/bank movements between branches and a central company account.
+  - **Help Page:** A comprehensive in-app guide explaining all features.
+- **Major Feature Enhancements:**
+  - **Employees:** Implemented a full HR system including salary history, old balance tracking, bonus/deduction payments, and an employee portal with attendance (time-in/out), document management, and a request system (for letters/loans).
+  - **Dashboard:** Added advanced analytics including cash/bank in-hand, VAT payable calculation, period-over-period comparison indicators (e.g., ▲ 15%), and alerts for supplier/salary/fine dues and branch losses.
+  - **Branch-to-Branch Dues:** Implemented logic to track all cross-branch payments and added a Record Payback feature on the dashboard.
+  - **User Management:** Enabled granular, module-specific permissions for user roles.
+  - **Settings:** Added self-service configuration for Email (SMTP) and WhatsApp, a multi-format data import tool, and a one-click database backup feature.
+  - **UI Simplification:** Redesigned the Sales and Expenses pages with color-coded, clickable chips for easier data entry.
+- **Deployment & PWA:**
+  - Converted the application into a Progressive Web App (PWA) for native-like installation on devices.
+  - Created a multi-stage , , and startup scripts to enable seamless deployment on the Railway platform.
+  - Resolved multiple critical deployment-blocking bugs.
 
 **Earlier issues found/mentioned but not fixed**
    - Issue 1:
-     - Description: The backend logs show a recurring  warning upon startup.
-     - Debug checklist: While the agent dismissed this as a non-critical warning, it indicates a potential dependency version mismatch between  and . This should be investigated if authentication issues arise. The fix would involve checking the installed versions and potentially pinning them to compatible versions in .
+     - Description: The backend logs show a recurring  warning upon startup, likely due to a dependency version mismatch.
+     - Debug checklist: Check  and  versions in  and pin them to compatible versions.
      - Why to solve this issue and what will be achieved with this? It will clean up the logs and prevent potential future authentication-related bugs.
      - Should Test frontend/backend/both after fix: backend
      - Is recurring issue? Y
 
 **Known issue recurrence from previous fork**
-  - N/A
+- None.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Backend:** FastAPI, Pydantic for data modeling, MongoDB (via ), JWT for authentication, Passlib/Bcrypt for password hashing.
-- **Frontend:** React, TailwindCSS, Shadcn/UI components,  for toasts.
+- **Backend:** FastAPI, Pydantic, Motor (async MongoDB driver), JWT for auth.
+- **Frontend:** React, TailwindCSS, Shadcn UI, Recharts for graphs.
 - **Database:** MongoDB.
-- **Architecture:** Monolithic full-stack application within a single repository.
+- **Deployment:** Docker, Nginx (as a reverse proxy in Docker), Railway.
+- **PWA:** Service Workers for offline capabilities and installability.
+- **File Parsing:** usage: pdfplumber [-h] [--structure | --structure-text]
+                  [--format {csv,json,text}] [--types TYPES [TYPES ...]]
+                  [--include-attrs INCLUDE_ATTRS [INCLUDE_ATTRS ...]]
+                  [--exclude-attrs EXCLUDE_ATTRS [EXCLUDE_ATTRS ...]]
+                  [--laparams LAPARAMS] [--precision PRECISION]
+                  [--pages PAGES [PAGES ...]] [--indent INDENT]
+                  [infile]
+
+positional arguments:
+  infile
+
+options:
+  -h, --help            show this help message and exit
+  --structure           Write the structure tree as JSON. All other arguments
+                        except --pages, --laparams, and --indent will be
+                        ignored
+  --structure-text      Write the structure tree as JSON including text
+                        contents. All other arguments except --pages,
+                        --laparams, and --indent will be ignored
+  --format {csv,json,text}
+  --types TYPES [TYPES ...]
+  --include-attrs INCLUDE_ATTRS [INCLUDE_ATTRS ...]
+                        Include *only* these object attributes in output.
+  --exclude-attrs EXCLUDE_ATTRS [EXCLUDE_ATTRS ...]
+                        Exclude these object attributes from output.
+  --laparams LAPARAMS
+  --precision PRECISION
+  --pages PAGES [PAGES ...]
+  --indent INDENT       Indent level for JSON pretty-printing. and  for bank statement analysis.
 
 **key DB schema**
-- **User:** {username, email, hashed_password, role}
-- **Branch:** {name}
-- **Customer:** {name, phone, address, branch_id}
-- **Supplier:** {name, contact_person, phone, address, category, current_credit, branch_id}
-- **Sale:** {branch_id, customer_id, sale_type, notes, total_amount, discount, payment_details: [{amount, mode, status}]}
-- **Expense:** {date, category, description, amount, payment_mode, supplier_id}
-- **SupplierPayment:** {supplier_id, date, amount, payment_mode, notes}
-- **SupplierCategory:** {name}
-- **ExpenseCategory:** {name}
+- **User:** {email, hashed_password, role, permissions: [str]}
+- **Employee:** {name, salary, branch_id, user_id, annual_leave_entitlement, ticket_entitlement, loan_balance, old_balance, ...}
+- **Sale:** {branch_id, customer_id, total_amount, discount, payment_details, ...}
+- **Invoice:** {invoice_number, customer_id, items: [{name, qty, price}], ...}
+- **Item:** {name, price}
+- **BankStatement:** {filename, bank_name, transactions: [{date, desc, amount, category, ...}]}
+- **Partner:** {name, salary, investment_balance, loan_balance}
+- **CompanyLoan:** {lender, amount, interest_rate, balance, ...}
+- **Fine:** {fine_number, source, amount, status, employee_id, file_path, ...}
+- **RecurringExpense:** {description, category, amount, frequency, next_due_date, branch_id}
+- **CashTransfer:** {from_branch, to_branch, amount, mode, ...}
+- **SalaryHistory:** {employee_id, old_salary, new_salary, effective_date}
+- **BranchPayback:** {from_branch, to_branch, amount, mode, date}
 
 **changes in tech stack**
-- None.
+- Added usage: pdfplumber [-h] [--structure | --structure-text]
+                  [--format {csv,json,text}] [--types TYPES [TYPES ...]]
+                  [--include-attrs INCLUDE_ATTRS [INCLUDE_ATTRS ...]]
+                  [--exclude-attrs EXCLUDE_ATTRS [EXCLUDE_ATTRS ...]]
+                  [--laparams LAPARAMS] [--precision PRECISION]
+                  [--pages PAGES [PAGES ...]] [--indent INDENT]
+                  [infile]
+
+positional arguments:
+  infile
+
+options:
+  -h, --help            show this help message and exit
+  --structure           Write the structure tree as JSON. All other arguments
+                        except --pages, --laparams, and --indent will be
+                        ignored
+  --structure-text      Write the structure tree as JSON including text
+                        contents. All other arguments except --pages,
+                        --laparams, and --indent will be ignored
+  --format {csv,json,text}
+  --types TYPES [TYPES ...]
+  --include-attrs INCLUDE_ATTRS [INCLUDE_ATTRS ...]
+                        Include *only* these object attributes in output.
+  --exclude-attrs EXCLUDE_ATTRS [EXCLUDE_ATTRS ...]
+                        Exclude these object attributes from output.
+  --laparams LAPARAMS
+  --precision PRECISION
+  --pages PAGES [PAGES ...]
+  --indent INDENT       Indent level for JSON pretty-printing. and  for bank statement parsing.
 
 **All files of reference**
-- : The core FastAPI application containing all API endpoints, database models, and business logic.
-- : Defines the application's routes and component structure.
-- : Directory containing all the main page components of the React application.
-- : **(Currently has a bug)** Page for managing customers.
-- : Page for adding and viewing sales, including split payments and discounts.
-- : Python dependencies. New libraries like , ,  were added.
+- : The single, monolithic backend file containing all API logic.
+- : Directory containing over 30 React page components.
+- : Controls the main navigation and role-based access.
+- : Defines the multi-stage build process for production deployment.
+- : Configuration file for deploying on Railway.
+- : Script to start Nginx and the Uvicorn server in the production container.
 
 **Areas that need refactoring**:
-- The frontend page components (e.g., , ) are becoming very large and handle state management, data fetching, and rendering logic in a single file. They should be broken down into smaller, reusable components (e.g., a separate  component, a  component) to improve maintainability.
+- ** is critically monolithic (>5000 lines).** It urgently needs to be broken down into separate files for routers, models, and services to be maintainable.
+- Many frontend components are still large and handle state, data fetching, and UI logic in one file. They could be broken down into smaller, reusable components.
 
 **key api endpoints**
-- : /register, /token (login)
-- : /me, /{user_id}
-- : CRUD endpoints
-- : CRUD endpoints
-- : CRUD endpoints
-- : CRUD endpoints
-- : CRUD endpoints
-- : CRUD endpoints
-- , : CRUD endpoints
-- : /dashboard-stats, /credit-report, /supplier-report, /category-report
-- : /sales/pdf, /sales/excel
-- : Endpoint to send WhatsApp notifications.
+- : Uploads and analyzes bank statement PDF/XLS files.
+- : Returns the full analysis of a statement.
+- : Gets a summary of pending salaries and active leaves, broken down by branch.
+- : Calculates the net dues between branches after accounting for paybacks.
+- :  endpoint to update user details, including granular permissions.
+- : Creates and returns a JSON backup of the entire database.
+- : Imports data from XLS files for various modules.
 
 **Critical Info for New Agent**
-- **Data Model Evolution:** The data models (especially for  and ) have been modified multiple times. A data migration function was added to  to handle backward compatibility. Any future model changes must account for existing data to avoid validation errors.
-- **Frontend Compilation Error:** The immediate priority is to fix the frontend compilation error in . The application is currently broken.
-- **Incomplete Features:** Several features have been implemented on the backend but lack a corresponding frontend UI (e.g., supplier categories, user role management, supplier/category reports). You will need to build these UIs.
+- **Monolithic Backend:** Be aware that  contains all backend logic. Use search to navigate it efficiently. Refactoring this file should be a high-priority future task.
+- **Bank Statement Parser:** The logic in  is highly specific to Alinma and Bilad bank formats. Adding a new bank will require extending this function with new parsing rules.
+- **Deployment:** The app is configured for Railway. The  uses a multi-stage build to create a production-ready container with Nginx serving the React frontend and proxying API requests to the FastAPI backend.
+- **User Permissions:** Page visibility is controlled in  based on the  array in the user object stored in localStorage.
 
 **documents and test reports created in this job**
-- 
-- 
+- : Contains product requirements and a changelog.
+- : Test reports from the testing agent are stored here.
+- The app can now generate PDF reports for customers and employees.
 
-**Last 10 User Messages and any pending HUMAN messages**
-1. **User (Latest):** getting error which adding customers and suppliers - **Status: In Progress**. Agent is trying to fix a frontend compilation error.
-2. **User:** in credit sale please add the discount options... - **Status: Partially Implemented**. Backend and Sales page UI updated for discounts. Category management UI and User roles UI are pending.
-3. **User:** the application not working - **Status: In Progress**. Led to the current debugging session for a frontend compilation error.
-4. **User:** in credit report please also give the option to recived the amount update... - **Status: Implemented**. Backend and frontend were updated for credit report payments, customer branch assignments, and supplier categories (backend only).
-5. **User:** in sale the total amount it shoud calculate by it self... - **Status: Implemented**. The sales page was updated for auto-calculation, and a credit sales report page was created.
-6. **User:** the app not working good the last update is not updateded - **Status: Resolved**. Agent fixed a backend data validation issue by adding a migration script.
-7. **User:** user management options i needed to control the access... - **Status: Partially Implemented**. Backend models and routes were updated for user roles, split payments, and supplier management. The frontend was partially updated, but the implementation was incomplete, leading to user confusion.
-8. **User:** please give the options for data export in pdf and xls... - **Status: Implemented**. Agent added backend logic for PDF/Excel export and WhatsApp integration. The export buttons were added to the frontend.
-9. **User:** user management options i needed to control the access... - **Status: Duplicate request, see item 7.**
-10. **User:** yes i need the all options above u asked - **Status: Completed**. This was the user's confirmation to proceed with the initial set of features.
+**Last 10 User Messages and any pending HUMAN messages** 
+1. **User:** How to handle expenses where one branch pays for another? - **Status: In Progress**. Agent is implementing an Expense For Branch field.
+2. **User:** How to move cash from a branch to the central company? - **Status: Implemented**. Agent explained the Cash Transfer module and added a Company Balance summary.
+3. **User:** How do I add an invested amount for a partner? - **Status: Implemented**. Agent improved the UI by adding a dedicated Add Investment button.
+4. **User:** Improve the UI for adding expenses/suppliers. - **Status: Implemented**. Agent redesigned the forms to use color-coded, clickable chips.
+5. **User:** Do the same for the Sales page. - **Status: Implemented**. Agent redesigned the Sales page with color-coded chips for branch/customer selection.
+6. **User:** Please update the Help page with new features. - **Status: Implemented**.
+7. **User:** Analyzed attached bank statements. - **Status: Implemented**. Agent built a bank statement analyzer.
+8. **User:** How to deploy the app? - **Status: Completed**. Agent provided a detailed guide and created deployment files.
+9. **User:** Build failed on Railway. - **Status: Resolved**. Agent fixed two critical deployment bugs (missing dependency, incorrect Node.js version).
+10. **User:** Default admin user is not working. - **Status: Resolved**. Agent created the user and fixed a case-sensitivity bug in the login logic.
 
 **Project Health Check:**
-- **Broken:** The frontend is not compiling due to a syntax error in . The application is not functional in its current state.
-- **Mocked:** N/A
+- **Broken:** None. The core application is stable.
+- **Mocked:** N/A.
 
 **3rd Party Integrations**
-- **Twilio** : For WhatsApp notifications. Requires , , and  in .
-- **ReportLab** : For PDF generation.
-- **Openpyxl** : For Excel (XLSX) file generation.
+- **Twilio** : For sending WhatsApp notifications. Configured in **Settings -> WhatsApp**.
+- **ReportLab** : For generating PDF reports (Customer Statements, Payslips).
+- **Openpyxl** / **xlrd**: For parsing and generating Excel/XLS files.
 
 **Testing status**
-  - Testing agent used after significant changes: YES (earlier in the session)
+  - Testing agent used after significant changes: YES, frequently throughout the session.
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: []
-  - Known regressions: The entire frontend is non-functional due to a compilation error.
+  - Known regressions: None.
 
 **Credentials to test flow:**
-Use the registration page to create a new user. The first registered user is automatically assigned the 'admin' role.
-- **Email:** 
-- **Password:**  (or any password you set during registration)
+- **Admin:**
+  - **Email:** 
+  - **Password:** 
+- **Employee:**
+  - **Email:** 
+  - **Password:** 
 
 **What agent forgot to execute**
-- The agent has not yet built the frontend UI for:
-    - Selecting/adding categories on the Suppliers and Expenses pages.
-    - Managing user roles.
-    - Displaying the Supplier Report.
-    - Displaying the Category Report.
-- The WhatsApp notification feature has backend logic but no frontend implementation for configuration or triggering.
-- The agent failed to correctly fix the syntax error in , leading to a recurring compilation failure.</analysis>
+- The major refactoring of  into a scalable structure was identified as a need but never performed.
+- While the backend supports sending a daily sales summary via WhatsApp, there is no frontend UI to schedule or trigger this automatically.</analysis>
