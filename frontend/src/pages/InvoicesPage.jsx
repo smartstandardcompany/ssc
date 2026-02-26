@@ -136,6 +136,9 @@ export default function InvoicesPage() {
 
   // Get credit remaining for an invoice by checking its linked sale
   const [salesData, setSalesData] = useState([]);
+  const [uploadingId, setUploadingId] = useState(null);
+  const [viewImage, setViewImage] = useState(null);
+  const imageInputRef = useRef(null);
   useEffect(() => {
     api.get('/sales').then(r => setSalesData(r.data)).catch(() => {});
   }, [invoices]);
