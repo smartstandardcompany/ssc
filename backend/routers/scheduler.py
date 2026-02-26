@@ -104,6 +104,61 @@ async def _send_email(subject: str, body_text: str):
         pass
 
 
+async def _build_period_digest(days: int):
+    """Build a weekly or monthly sales/expense digest report."""
+    end = datetime.now(timezone.utc)
+    start = end - timedelta(days=days)
+    start_str = start.strftime("%Y-%m-%d")
+    end_str = end.strftime("%Y-%m-%d")
+    period_label = f"Last {days} Days" if days != 7 else "Weekly" if days == 7 else "Monthly"
+
+    sales = await db.sales.find({"date": {"$gte": start_str, "$lte": end_str}}, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find({"date": {"$gte": start_str, "$lte": end_str}}, {"_id": 0}).to_list(10000)
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+
+    total_sales = sum(s.get("final_amount", s["amount"] - s.get("discount", 0)) for s in sales)
+    total_expenses = sum(e["amount"] for e in expenses)
+    net_profit = total_sales - total_expenses
+    cash = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "cash")
+    bank = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "bank")
+
+    lines = [
+        f"*SSC Track - {period_label} Digest*",
+        f"Period: {start_str} to {end_str}",
+        f"",
+        f"*Summary:*",
+        f"Total Sales: SAR {total_sales:,.2f} ({len(sales)} transactions)",
+        f"Total Expenses: SAR {total_expenses:,.2f} ({len(expenses)} entries)",
+        f"Net Profit: SAR {net_profit:,.2f}",
+        f"",
+        f"*Payment Breakdown:*",
+        f"Cash: SAR {cash:,.2f}",
+        f"Bank: SAR {bank:,.2f}",
+        f"",
+    ]
+
+    # Branch breakdown
+    if branches:
+        lines.append("*Branch Summary:*")
+        for b in branches:
+            bs = sum(s.get("final_amount", s["amount"] - s.get("discount", 0)) for s in sales if s.get("branch_id") == b["id"])
+            be = sum(e["amount"] for e in expenses if e.get("branch_id") == b["id"])
+            if bs > 0 or be > 0:
+                lines.append(f"  {b['name']}: Sales SAR {bs:,.0f} | Exp SAR {be:,.0f} | Profit SAR {bs-be:,.0f}")
+
+    # Top expense categories
+    cats = {}
+    for e in expenses:
+        cats[e.get("category", "Other")] = cats.get(e.get("category", "Other"), 0) + e["amount"]
+    if cats:
+        lines.append("")
+        lines.append("*Top Expense Categories:*")
+        for cat, amt in sorted(cats.items(), key=lambda x: -x[1])[:5]:
+            lines.append(f"  {cat.replace('_', ' ').title()}: SAR {amt:,.0f}")
+
+    return "\n".join(lines)
+
+
 async def run_scheduled_job(job_type: str):
     """Execute a scheduled notification job."""
     log_entry = {"job_type": job_type, "triggered_at": datetime.now(timezone.utc).isoformat(), "status": "running"}
