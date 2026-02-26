@@ -484,6 +484,7 @@ export default function StockPage() {
             </div>
           </DialogContent>
         </Dialog>
+        <WhatsAppSendDialog open={showWhatsApp} onClose={() => setShowWhatsApp(false)} defaultType="low_stock" branches={branches} branchId={branchFilter} />
       </div>
     </DashboardLayout>
   );
