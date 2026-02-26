@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Clock, ChevronLeft, ChevronRight, UserCheck, AlertTriangle } from 'lucide-react';
+import { Plus, Clock, ChevronLeft, ChevronRight, UserCheck, AlertTriangle, Sparkles, Loader2 } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 
