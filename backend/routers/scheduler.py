@@ -237,9 +237,22 @@ async def get_scheduler_config(current_user: User = Depends(get_current_user)):
             {"job_type": "daily_sales", "label": "Daily Sales Summary", "enabled": False, "hour": 21, "minute": 0, "channels": ["whatsapp"]},
             {"job_type": "low_stock", "label": "Low Stock Alert", "enabled": False, "hour": 8, "minute": 0, "channels": ["whatsapp"]},
             {"job_type": "expense_summary", "label": "Expense Summary", "enabled": False, "hour": 21, "minute": 30, "channels": ["whatsapp"]},
+            {"job_type": "weekly_digest", "label": "Weekly Digest", "enabled": False, "hour": 9, "minute": 0, "day_of_week": "sun", "channels": ["email"]},
+            {"job_type": "monthly_digest", "label": "Monthly Digest", "enabled": False, "hour": 9, "minute": 0, "day": 1, "channels": ["email"]},
         ]
         for d in defaults:
             await db.scheduler_config.insert_one(d)
+        configs = await db.scheduler_config.find({}, {"_id": 0}).to_list(50)
+    # Ensure new job types exist for existing users
+    existing_types = [c["job_type"] for c in configs]
+    new_defaults = []
+    if "weekly_digest" not in existing_types:
+        new_defaults.append({"job_type": "weekly_digest", "label": "Weekly Digest", "enabled": False, "hour": 9, "minute": 0, "day_of_week": "sun", "channels": ["email"]})
+    if "monthly_digest" not in existing_types:
+        new_defaults.append({"job_type": "monthly_digest", "label": "Monthly Digest", "enabled": False, "hour": 9, "minute": 0, "day": 1, "channels": ["email"]})
+    for d in new_defaults:
+        await db.scheduler_config.insert_one(d)
+    if new_defaults:
         configs = await db.scheduler_config.find({}, {"_id": 0}).to_list(50)
     return configs
 
