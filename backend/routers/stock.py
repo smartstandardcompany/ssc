@@ -183,6 +183,145 @@ async def get_stock_report(branch_id: Optional[str] = None, current_user: User =
         "low_stock_items": low_stock_items
     }
 
+@router.get("/stock/report/consumption")
+async def get_consumption_report(branch_id: Optional[str] = None, days: int = 30, current_user: User = Depends(get_current_user)):
+    """Consumption analysis: usage per item over time with daily averages."""
+    cutoff = (datetime.now(timezone.utc) - __import__('datetime').timedelta(days=days)).isoformat()
+    u_query = {"date": {"$gte": cutoff}}
+    if branch_id:
+        u_query["branch_id"] = branch_id
+    usage = await db.stock_usage.find(u_query, {"_id": 0}).to_list(50000)
+    items = await db.items.find({}, {"_id": 0}).to_list(1000)
+    item_map = {i["id"]: i for i in items}
+    # Per item: total used, daily average, daily breakdown
+    item_usage = {}
+    daily_totals = {}
+    for u in usage:
+        iid = u["item_id"]
+        qty = u.get("quantity", 0)
+        date_str = (u.get("date", "")[:10]) if isinstance(u.get("date"), str) else ""
+        if iid not in item_usage:
+            item_usage[iid] = {"total": 0, "days": {}}
+        item_usage[iid]["total"] += qty
+        item_usage[iid]["days"][date_str] = item_usage[iid]["days"].get(date_str, 0) + qty
+        daily_totals[date_str] = daily_totals.get(date_str, 0) + qty
+    result = []
+    for iid, data in sorted(item_usage.items(), key=lambda x: -x[1]["total"]):
+        item = item_map.get(iid, {})
+        active_days = len(data["days"]) or 1
+        result.append({
+            "item_id": iid, "item_name": item.get("name", "Unknown"),
+            "unit": item.get("unit", "pc"), "category": item.get("category", ""),
+            "total_used": round(data["total"], 2),
+            "daily_avg": round(data["total"] / active_days, 2),
+            "active_days": active_days,
+            "cost_per_unit": item.get("cost_price", 0),
+            "total_cost": round(data["total"] * item.get("cost_price", 0), 2),
+        })
+    # Daily trend
+    daily_trend = [{"date": d, "total": round(v, 2)} for d, v in sorted(daily_totals.items())]
+    return {"items": result, "daily_trend": daily_trend, "period_days": days, "total_consumption_cost": round(sum(r["total_cost"] for r in result), 2)}
+
+
+@router.get("/stock/report/profitability")
+async def get_profitability_report(branch_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    """Item profitability: cost price vs sale price, margin analysis."""
+    items = await db.items.find({}, {"_id": 0}).to_list(1000)
+    e_query = {"branch_id": branch_id} if branch_id else {}
+    entries = await db.stock_entries.find(e_query, {"_id": 0}).to_list(50000)
+    usage = await db.stock_usage.find(e_query, {"_id": 0}).to_list(50000)
+    # Calculate avg cost from entries
+    item_costs = {}
+    item_qty_in = {}
+    for e in entries:
+        iid = e["item_id"]
+        item_costs[iid] = item_costs.get(iid, 0) + (e["quantity"] * e.get("unit_cost", 0))
+        item_qty_in[iid] = item_qty_in.get(iid, 0) + e["quantity"]
+    item_qty_out = {}
+    for u in usage:
+        item_qty_out[u["item_id"]] = item_qty_out.get(u["item_id"], 0) + u["quantity"]
+    result = []
+    total_cost = 0
+    total_revenue_potential = 0
+    for item in items:
+        iid = item["id"]
+        qi = item_qty_in.get(iid, 0)
+        qo = item_qty_out.get(iid, 0)
+        if qi == 0 and qo == 0:
+            continue
+        avg_cost = item_costs.get(iid, 0) / qi if qi > 0 else item.get("cost_price", 0)
+        sale_price = item.get("unit_price", 0)
+        margin = sale_price - avg_cost if sale_price > 0 else 0
+        margin_pct = (margin / sale_price * 100) if sale_price > 0 else 0
+        consumed_cost = qo * avg_cost
+        consumed_revenue = qo * sale_price
+        total_cost += consumed_cost
+        total_revenue_potential += consumed_revenue
+        result.append({
+            "item_id": iid, "item_name": item["name"],
+            "unit": item.get("unit", "pc"), "category": item.get("category", ""),
+            "avg_cost": round(avg_cost, 2), "sale_price": round(sale_price, 2),
+            "margin": round(margin, 2), "margin_pct": round(margin_pct, 1),
+            "qty_purchased": round(qi, 2), "qty_consumed": round(qo, 2),
+            "balance": round(qi - qo, 2),
+            "consumed_cost": round(consumed_cost, 2),
+            "consumed_revenue": round(consumed_revenue, 2),
+            "consumed_profit": round(consumed_revenue - consumed_cost, 2),
+        })
+    result.sort(key=lambda x: -x["consumed_profit"])
+    return {
+        "items": result,
+        "total_consumed_cost": round(total_cost, 2),
+        "total_consumed_revenue": round(total_revenue_potential, 2),
+        "total_profit": round(total_revenue_potential - total_cost, 2),
+        "avg_margin_pct": round(sum(r["margin_pct"] for r in result) / len(result), 1) if result else 0,
+    }
+
+
+@router.get("/stock/report/wastage")
+async def get_wastage_report(branch_id: Optional[str] = None, days: int = 30, current_user: User = Depends(get_current_user)):
+    """Wastage tracking: items with usage marked as waste/expired."""
+    cutoff = (datetime.now(timezone.utc) - __import__('datetime').timedelta(days=days)).isoformat()
+    u_query = {"date": {"$gte": cutoff}}
+    if branch_id:
+        u_query["branch_id"] = branch_id
+    all_usage = await db.stock_usage.find(u_query, {"_id": 0}).to_list(50000)
+    items = await db.items.find({}, {"_id": 0}).to_list(1000)
+    item_map = {i["id"]: i for i in items}
+    # Separate wastage from regular usage
+    waste_usage = [u for u in all_usage if u.get("used_by", "").lower() in ("waste", "wastage", "expired", "damaged")]
+    normal_usage = [u for u in all_usage if u.get("used_by", "").lower() not in ("waste", "wastage", "expired", "damaged")]
+    waste_by_item = {}
+    for u in waste_usage:
+        iid = u["item_id"]
+        waste_by_item[iid] = waste_by_item.get(iid, 0) + u["quantity"]
+    normal_by_item = {}
+    for u in normal_usage:
+        iid = u["item_id"]
+        normal_by_item[iid] = normal_by_item.get(iid, 0) + u["quantity"]
+    result = []
+    total_waste_cost = 0
+    for iid, waste_qty in sorted(waste_by_item.items(), key=lambda x: -x[1]):
+        item = item_map.get(iid, {})
+        normal_qty = normal_by_item.get(iid, 0)
+        total_qty = waste_qty + normal_qty
+        waste_pct = (waste_qty / total_qty * 100) if total_qty > 0 else 0
+        cost = waste_qty * item.get("cost_price", 0)
+        total_waste_cost += cost
+        result.append({
+            "item_id": iid, "item_name": item.get("name", "Unknown"),
+            "unit": item.get("unit", "pc"),
+            "waste_qty": round(waste_qty, 2), "normal_qty": round(normal_qty, 2),
+            "waste_pct": round(waste_pct, 1), "waste_cost": round(cost, 2),
+        })
+    return {
+        "items": result,
+        "total_waste_cost": round(total_waste_cost, 2),
+        "total_waste_entries": len(waste_usage),
+        "period_days": days,
+    }
+
+
 # Invoice OCR - Scan invoice image
 @router.post("/stock/scan-invoice")
 async def scan_invoice_image(body: dict, current_user: User = Depends(get_current_user)):
