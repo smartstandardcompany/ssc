@@ -212,6 +212,17 @@ export default function StockPage() {
             <TabsTrigger value="entries">Stock In Log ({entries.length})</TabsTrigger>
             <TabsTrigger value="usage">Usage Log ({usage.length})</TabsTrigger>
             <TabsTrigger value="items">Item Master ({items.length})</TabsTrigger>
+            <TabsTrigger value="reports" data-testid="stock-reports-tab" onClick={async () => {
+              try {
+                const br = branchFilter || undefined;
+                const [cR, pR, wR] = await Promise.all([
+                  api.get('/stock/report/consumption', { params: { days: reportDays, branch_id: br } }),
+                  api.get('/stock/report/profitability', { params: { branch_id: br } }),
+                  api.get('/stock/report/wastage', { params: { days: reportDays, branch_id: br } }),
+                ]);
+                setConsumptionReport(cR.data); setProfitReport(pR.data); setWastageReport(wR.data);
+              } catch { toast.error('Failed to load reports'); }
+            }}>Reports</TabsTrigger>
           </TabsList>
 
           {/* CURRENT STOCK BALANCE */}
