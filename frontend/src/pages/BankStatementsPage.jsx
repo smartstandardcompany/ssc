@@ -52,6 +52,13 @@ export default function BankStatementsPage() {
     try {
       const [dR, aR] = await Promise.all([api.get(`/bank-statements/${id}`), api.get(`/bank-statements/${id}/analysis`)]);
       setDetail(dR.data); setAnalysis(aR.data);
+      // Load reconciliation
+      setReconLoading(true);
+      try {
+        const rR = await api.get(`/bank-statements/${id}/reconciliation`);
+        setReconciliation(rR.data);
+      } catch { setReconciliation(null); }
+      finally { setReconLoading(false); }
     } catch { toast.error('Failed'); }
   };
 
