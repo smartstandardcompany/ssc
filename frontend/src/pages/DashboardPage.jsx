@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { DollarSign, TrendingUp, TrendingDown, AlertCircle, Wallet, Building2, CreditCard, AlertTriangle, ArrowLeftRight, MessageCircle } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, AlertCircle, Wallet, Building2, CreditCard, AlertTriangle, ArrowLeftRight, MessageCircle, Settings2, Eye, EyeOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -24,6 +24,14 @@ const THEMES = {
   green: { bg: 'from-emerald-50 to-teal-50', card: 'border-emerald-100', accent: 'text-emerald-600' },
 };
 const PIE_COLORS = ['#F5841F', '#22C55E', '#0EA5E9', '#EF4444', '#F59E0B', '#8B5CF6'];
+
+const DEFAULT_WIDGETS = { stats: true, charts: true, cashBank: true, paymentMode: true, spending: true, dues: true, branchDues: true, vatSummary: true };
+
+function getWidgetPrefs() {
+  try { return { ...DEFAULT_WIDGETS, ...JSON.parse(localStorage.getItem('dashboard_widgets') || '{}') }; }
+  catch { return DEFAULT_WIDGETS; }
+}
+function saveWidgetPrefs(prefs) { localStorage.setItem('dashboard_widgets', JSON.stringify(prefs)); }
 
 export default function DashboardPage() {
   const [stats, setStats] = useState(null);
