@@ -194,7 +194,20 @@ export default function EmployeesPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div><Label>Name *</Label><Input value={formData.name} data-testid="emp-name" onChange={(e) => setFormData({ ...formData, name: e.target.value })} required /></div>
                     <div><Label>Document ID</Label><Input value={formData.document_id} data-testid="emp-doc-id" onChange={(e) => setFormData({ ...formData, document_id: e.target.value })} /></div>
-                    <div><Label>Position</Label><Input value={formData.position} onChange={(e) => setFormData({ ...formData, position: e.target.value })} /></div>
+                    <div><Label>Job Title</Label>
+                      <Select value={formData.job_title_id || "none"} onValueChange={(v) => {
+                        const jt = jobTitles.find(j => j.id === v);
+                        const updates = { job_title_id: v === "none" ? "" : v, position: jt?.title || '' };
+                        if (jt && !formData.salary && jt.min_salary > 0) updates.salary = jt.min_salary;
+                        setFormData({ ...formData, ...updates });
+                      }}>
+                        <SelectTrigger data-testid="employee-job-title"><SelectValue placeholder="Select Job Title" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No Title</SelectItem>
+                          {jobTitles.filter(j => j.active !== false).map(j => <SelectItem key={j.id} value={j.id}>{j.title} {j.department ? `(${j.department})` : ''}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div><Label>Monthly Salary</Label><Input type="number" step="0.01" value={formData.salary} data-testid="emp-salary" onChange={(e) => setFormData({ ...formData, salary: e.target.value })} /></div>
                     <div><Label>Branch</Label>
                       <Select value={formData.branch_id || "all"} onValueChange={(v) => setFormData({ ...formData, branch_id: v === "all" ? "" : v })}>
