@@ -8,11 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Package, TrendingDown, TrendingUp, AlertTriangle, Camera, Loader2, MessageCircle } from 'lucide-react';
+import { Plus, Package, TrendingDown, TrendingUp, AlertTriangle, Camera, Loader2, MessageCircle, BarChart3 } from 'lucide-react';
 import { WhatsAppSendDialog } from '@/components/WhatsAppSendDialog';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 export default function StockPage() {
   const [items, setItems] = useState([]);
