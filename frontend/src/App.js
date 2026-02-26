@@ -28,6 +28,8 @@ import CompanyLoansPage from "./pages/CompanyLoansPage";
 import BankStatementsPage from "./pages/BankStatementsPage";
 import InvoicesPage from "./pages/InvoicesPage";
 import UsersPage from "./pages/UsersPage";
+import StockPage from "./pages/StockPage";
+import KitchenPage from "./pages/KitchenPage";
 import { Toaster } from "@/components/ui/sonner";
 
 function App() {
