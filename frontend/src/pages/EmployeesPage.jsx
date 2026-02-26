@@ -55,6 +55,10 @@ export default function EmployeesPage() {
   const [leaveData, setLeaveData] = useState({ leave_type: 'annual', start_date: '', end_date: '', days: '', reason: '' });
   const [newJobTitle, setNewJobTitle] = useState({ title: '', department: '', min_salary: '', max_salary: '', permissions: [] });
   const [editingJT, setEditingJT] = useState(null);
+  const [resignDialog, setResignDialog] = useState(null);
+  const [resignForm, setResignForm] = useState({ resignation_date: '', notice_period_days: 30, reason: '', status: 'resigned' });
+  const [settlementDialog, setSettlementDialog] = useState(null);
+  const [settlement, setSettlement] = useState(null);
 
   const ALL_PERMISSIONS = [
     { key: 'dashboard', label: 'Dashboard' }, { key: 'sales', label: 'Sales' }, { key: 'invoices', label: 'Invoices' },
