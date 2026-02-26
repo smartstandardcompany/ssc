@@ -163,6 +163,7 @@ export default function ReportsPage() {
             <TabsTrigger value="period">Period Compare</TabsTrigger>
             <TabsTrigger value="branch">Branch vs Branch</TabsTrigger>
             <TabsTrigger value="trend">Trends</TabsTrigger>
+            <TabsTrigger value="item_pnl" data-testid="item-pnl-tab">Item P&L</TabsTrigger>
             <TabsTrigger value="detailed">Detailed</TabsTrigger>
           </TabsList>
 
