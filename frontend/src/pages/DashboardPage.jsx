@@ -338,8 +338,10 @@ export default function DashboardPage() {
             })}
           </div>
         </div>
+        )}
 
         {/* Spending Breakdown */}
+        {widgets.spending && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="border-border">
             <CardHeader><CardTitle className="font-outfit text-base">Cash vs Bank Spending</CardTitle></CardHeader>
