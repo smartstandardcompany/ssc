@@ -83,10 +83,11 @@ export default function ExpensesPage() {
         sub_category: formData.sub_category ? formData.category : null,
         amount: parseFloat(formData.amount),
         branch_id: formData.branch_id || null, supplier_id: formData.supplier_id || null,
+        expense_for_branch_id: formData.expense_for_branch_id || null,
         date: new Date(formData.date).toISOString()
       });
       toast.success('Expense added');
-      setFormData({ category: '', sub_category: '', description: '', amount: '', payment_mode: 'cash', branch_id: '', supplier_id: '', date: new Date().toISOString().split('T')[0], notes: '' });
+      setFormData({ category: '', sub_category: '', description: '', amount: '', payment_mode: 'cash', branch_id: '', expense_for_branch_id: '', supplier_id: '', date: new Date().toISOString().split('T')[0], notes: '' });
       fetchData();
     } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
   };
