@@ -34,6 +34,7 @@ import SchedulePage from "./pages/SchedulePage";
 import ReconciliationPage from "./pages/ReconciliationPage";
 import POSPage from "./pages/POSPage";
 import POSAnalyticsPage from "./pages/POSAnalyticsPage";
+import TransfersPage from "./pages/TransfersPage";
 import { Toaster } from "@/components/ui/sonner";
 
 function App() {
@@ -116,6 +117,7 @@ function App() {
           <Route path="/reconciliation" element={isAuthenticated ? <ReconciliationPage /> : <Navigate to="/login" />} />
           <Route path="/pos" element={isAuthenticated ? <POSPage /> : <Navigate to="/login" />} />
           <Route path="/pos-analytics" element={isAuthenticated ? <POSAnalyticsPage /> : <Navigate to="/login" />} />
+          <Route path="/transfers" element={isAuthenticated ? <TransfersPage /> : <Navigate to="/login" />} />
         </Routes>
       </BrowserRouter>
       <Toaster position="top-right" richColors />
