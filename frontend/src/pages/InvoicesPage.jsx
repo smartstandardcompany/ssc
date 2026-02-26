@@ -84,7 +84,11 @@ export default function InvoicesPage() {
   const calcTotals = () => {
     const subtotal = formData.items.reduce((s, item) => s + (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0), 0);
     const discount = parseFloat(formData.discount) || 0;
-    return { subtotal, discount, total: subtotal - discount };
+    const total = subtotal - discount;
+    const vatEnabled = companySettings.vat_enabled;
+    const vatRate = parseFloat(companySettings.vat_rate || 15);
+    const vatAmount = vatEnabled ? Math.round(total * vatRate / 100 * 100) / 100 : 0;
+    return { subtotal, discount, total, vatEnabled, vatRate, vatAmount, totalWithVat: total + vatAmount };
   };
 
   const handleSubmit = async (e) => {
