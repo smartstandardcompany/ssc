@@ -313,7 +313,8 @@ export default function InvoicesPage() {
                       <td className="p-3 text-center"><Badge variant="secondary">{inv.items?.length || 0}</Badge></td>
                       <td className="p-3 text-sm text-right"> SAR {inv.subtotal.toFixed(2)}</td>
                       <td className="p-3 text-sm text-right text-error">{inv.discount > 0 ? `-SAR ${inv.discount.toFixed(2)}` : '-'}</td>
-                      <td className="p-3 text-sm text-right font-bold"> SAR {inv.total.toFixed(2)}</td>
+                      <td className="p-3 text-sm text-right font-bold"> SAR {(inv.total_with_vat || inv.total)?.toFixed(2)}</td>
+                      <td className="p-3 text-sm text-right text-blue-600">{(inv.vat_amount || 0) > 0 ? `SAR ${inv.vat_amount.toFixed(2)}` : '-'}</td>
                       <td className="p-3"><Badge className={inv.payment_mode === 'cash' ? 'bg-cash/20 text-cash' : inv.payment_mode === 'bank' ? 'bg-bank/20 text-bank' : 'bg-credit/20 text-credit'}>{inv.payment_mode}</Badge></td>
                       <td className="p-3 text-right">{creditRem > 0 ? <span className="font-bold text-warning"> SAR {creditRem.toFixed(2)}</span> : <span className="text-muted-foreground">-</span>}</td>
                       <td className="p-3 text-right">
