@@ -58,10 +58,18 @@ export default function POSPage() {
     setSubmitting(true);
     try {
       if (entryType === 'sale') {
+        const saleAmount = parseFloat(amount);
         const payload = {
-          amount: parseFloat(amount), payment_mode: paymentMode,
-          branch_id: branch, description: description || 'POS Sale',
+          sale_type: 'pos',
+          amount: saleAmount,
+          branch_id: branch,
+          notes: description || 'POS Sale',
           date: new Date().toISOString(),
+          payment_details: [{
+            payment_mode: paymentMode,
+            amount: saleAmount,
+            discount: 0
+          }]
         };
         if (paymentMode === 'credit' && customerId) payload.customer_id = customerId;
         await api.post('/sales', payload);
