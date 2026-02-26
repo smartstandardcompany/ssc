@@ -348,6 +348,20 @@ export default function InvoicesPage() {
                       <td className="p-3 text-sm text-right font-bold"> SAR {(inv.total_with_vat || inv.total)?.toFixed(2)}</td>
                       <td className="p-3 text-sm text-right text-blue-600">{(inv.vat_amount || 0) > 0 ? `SAR ${inv.vat_amount.toFixed(2)}` : '-'}</td>
                       <td className="p-3"><Badge className={inv.payment_mode === 'cash' ? 'bg-cash/20 text-cash' : inv.payment_mode === 'bank' ? 'bg-bank/20 text-bank' : 'bg-credit/20 text-credit'}>{inv.payment_mode}</Badge></td>
+                      <td className="p-3 text-center">
+                        {inv.image_url ? (
+                          <button onClick={() => setViewImage(inv)} className="inline-flex items-center justify-center" data-testid={`view-image-${inv.id}`}>
+                            <img src={`${process.env.REACT_APP_BACKEND_URL}${inv.image_url}`} alt="" className="w-8 h-8 rounded object-cover border border-stone-200 hover:ring-2 hover:ring-orange-300 transition-all" />
+                          </button>
+                        ) : (
+                          <label className="cursor-pointer inline-flex items-center justify-center">
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files[0] && handleImageUpload(inv.id, e.target.files[0])} />
+                            <span className={`inline-flex items-center justify-center w-8 h-8 rounded border border-dashed border-stone-300 text-stone-400 hover:border-orange-400 hover:text-orange-500 transition-all ${uploadingId === inv.id ? 'animate-pulse' : ''}`} data-testid={`upload-image-${inv.id}`}>
+                              <Upload size={14} />
+                            </span>
+                          </label>
+                        )}
+                      </td>
                       <td className="p-3 text-right">{creditRem > 0 ? <span className="font-bold text-warning"> SAR {creditRem.toFixed(2)}</span> : <span className="text-muted-foreground">-</span>}</td>
                       <td className="p-3 text-right">
                         <div className="flex gap-1 justify-end">
