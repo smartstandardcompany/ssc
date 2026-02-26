@@ -36,6 +36,17 @@ async def login(credentials: UserLogin):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     if not verify_password(credentials.password, user_doc["password"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+    # Check if user is linked to an employee with a job title → apply job title permissions
+    employee = await db.employees.find_one({"user_id": user_doc["id"]}, {"_id": 0})
+    if employee and employee.get("job_title_id"):
+        job_title = await db.job_titles.find_one({"id": employee["job_title_id"]}, {"_id": 0})
+        if job_title and job_title.get("permissions"):
+            jt_perms = job_title["permissions"]
+            existing_perms = set(user_doc.get("permissions", []))
+            merged = list(existing_perms | set(jt_perms))
+            if set(merged) != existing_perms:
+                await db.users.update_one({"id": user_doc["id"]}, {"$set": {"permissions": merged}})
+                user_doc["permissions"] = merged
     user = User(**{k: v for k, v in user_doc.items() if k != "password"})
     access_token = create_access_token(data={"sub": user.id})
     return Token(access_token=access_token, token_type="bearer", user=user)
