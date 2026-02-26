@@ -218,6 +218,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Main Stats Grid */}
+        {widgets.stats && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {statCards.map((card) => {
             const Icon = card.icon;
@@ -241,6 +242,7 @@ export default function DashboardPage() {
             );
           })}
         </div>
+        )}
 
         {/* Branch Loss Alerts */}
         {stats?.branch_loss_alerts?.length > 0 && (
@@ -258,6 +260,7 @@ export default function DashboardPage() {
         )}
 
         {/* Quick Charts */}
+        {widgets.charts && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {stats?.expense_by_category && Object.keys(stats.expense_by_category).length > 0 && (
             <Card className={t.card}>
