@@ -115,6 +115,7 @@ function App() {
           <Route path="/users" element={isAuthenticated ? <UsersPage /> : <Navigate to="/login" />} />
           <Route path="/reconciliation" element={isAuthenticated ? <ReconciliationPage /> : <Navigate to="/login" />} />
           <Route path="/pos" element={isAuthenticated ? <POSPage /> : <Navigate to="/login" />} />
+          <Route path="/pos-analytics" element={isAuthenticated ? <POSAnalyticsPage /> : <Navigate to="/login" />} />
         </Routes>
       </BrowserRouter>
       <Toaster position="top-right" richColors />
