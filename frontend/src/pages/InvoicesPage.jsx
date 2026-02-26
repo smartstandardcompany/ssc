@@ -319,6 +319,16 @@ export default function InvoicesPage() {
                       <td className="p-3 text-right">{creditRem > 0 ? <span className="font-bold text-warning"> SAR {creditRem.toFixed(2)}</span> : <span className="text-muted-foreground">-</span>}</td>
                       <td className="p-3 text-right">
                         <div className="flex gap-1 justify-end">
+                          <Button size="sm" variant="outline" className="h-8 text-xs" data-testid="print-invoice-btn"
+                            onClick={async () => {
+                              setPrintInvoice(inv);
+                              try {
+                                const { data: qr } = await api.get(`/invoices/${inv.id}/zatca-qr`);
+                                setQrData(qr.qr_data);
+                              } catch { setQrData(null); }
+                            }}>
+                            <Printer size={14} className="mr-1" />Print
+                          </Button>
                           {creditRem > 0 && (
                             <Button size="sm" variant="outline" onClick={() => { setReceivingInvoice({ ...inv, credit_remaining: creditRem }); setReceiveData({ payment_mode: 'cash', amount: '', discount: '' }); setShowReceiveDialog(true); }} className="h-8 text-xs" data-testid="receive-invoice-credit">
                               <DollarSign size={14} className="mr-1" />Receive
