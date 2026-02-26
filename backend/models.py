@@ -448,6 +448,7 @@ class InvoiceCreate(BaseModel):
     payment_details: Optional[List[dict]] = None
     date: datetime
     notes: Optional[str] = None
+    buyer_vat_number: Optional[str] = None
 
 class Item(BaseModel):
     model_config = ConfigDict(extra="ignore")
