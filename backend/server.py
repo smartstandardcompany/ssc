@@ -25,6 +25,7 @@ from routers import (
     shifts,
     stock,
     suppliers,
+    transfers,
     whatsapp,
 )
 
@@ -59,6 +60,7 @@ for module in [
     shifts,
     stock,
     suppliers,
+    transfers,
     whatsapp,
 ]:
     app.include_router(module.router, prefix="/api")
