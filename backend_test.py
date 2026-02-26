@@ -4,7 +4,7 @@ from datetime import datetime
 import json
 
 class DataEntryAPITester:
-    def __init__(self, base_url="https://ssc-track-erp.preview.emergentagent.com"):
+    def __init__(self, base_url="https://erp-refactor-main.preview.emergentagent.com"):
         self.base_url = base_url
         self.token = None
         self.user_id = None
