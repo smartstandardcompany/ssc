@@ -527,6 +527,60 @@ export default function EmployeesPage() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Job Title Manager Dialog */}
+        <Dialog open={showJobTitleManager} onOpenChange={setShowJobTitleManager}>
+          <DialogContent className="max-w-xl" data-testid="job-title-manager-dialog">
+            <DialogHeader><DialogTitle className="font-outfit">Manage Job Titles</DialogTitle></DialogHeader>
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+              <div className="grid grid-cols-4 gap-2 items-end">
+                <div><Label className="text-xs">Title *</Label><Input value={newJobTitle.title} onChange={(e) => setNewJobTitle({ ...newJobTitle, title: e.target.value })} placeholder="e.g. Chef" className="h-9" data-testid="new-jt-title" /></div>
+                <div><Label className="text-xs">Department</Label><Input value={newJobTitle.department} onChange={(e) => setNewJobTitle({ ...newJobTitle, department: e.target.value })} placeholder="e.g. Kitchen" className="h-9" /></div>
+                <div><Label className="text-xs">Min Salary</Label><Input type="number" value={newJobTitle.min_salary} onChange={(e) => setNewJobTitle({ ...newJobTitle, min_salary: e.target.value })} placeholder="SAR" className="h-9" /></div>
+                <Button size="sm" className="h-9 rounded-xl" data-testid="add-jt-btn" onClick={async () => {
+                  if (!newJobTitle.title) { toast.error('Title required'); return; }
+                  try {
+                    await api.post('/job-titles', { ...newJobTitle, min_salary: parseFloat(newJobTitle.min_salary) || 0, max_salary: parseFloat(newJobTitle.max_salary) || 0 });
+                    toast.success('Job title added');
+                    setNewJobTitle({ title: '', department: '', min_salary: '', max_salary: '' });
+                    const r = await api.get('/job-titles'); setJobTitles(r.data);
+                  } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+                }}><Plus size={14} className="mr-1" />Add</Button>
+              </div>
+              <div className="border rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead><tr className="bg-stone-50 border-b">
+                    <th className="text-left p-2 font-medium">Title</th>
+                    <th className="text-left p-2 font-medium">Department</th>
+                    <th className="text-right p-2 font-medium">Salary Range</th>
+                    <th className="text-right p-2 font-medium">Employees</th>
+                    <th className="text-right p-2 font-medium">Actions</th>
+                  </tr></thead>
+                  <tbody>
+                    {jobTitles.map(jt => (
+                      <tr key={jt.id} className="border-b hover:bg-stone-50" data-testid={`jt-row-${jt.id}`}>
+                        <td className="p-2 font-medium">{jt.title}</td>
+                        <td className="p-2 text-muted-foreground">{jt.department || '-'}</td>
+                        <td className="p-2 text-right">SAR {jt.min_salary?.toFixed(0) || 0} - {jt.max_salary?.toFixed(0) || 0}</td>
+                        <td className="p-2 text-right"><Badge variant="outline">{employees.filter(e => e.job_title_id === jt.id).length}</Badge></td>
+                        <td className="p-2 text-right">
+                          <Button size="sm" variant="ghost" className="h-7 text-error" onClick={async () => {
+                            if (window.confirm(`Delete "${jt.title}"?`)) {
+                              await api.delete(`/job-titles/${jt.id}`);
+                              const r = await api.get('/job-titles'); setJobTitles(r.data);
+                              toast.success('Deleted');
+                            }
+                          }}><Trash2 size={12} /></Button>
+                        </td>
+                      </tr>
+                    ))}
+                    {jobTitles.length === 0 && <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">No job titles</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
