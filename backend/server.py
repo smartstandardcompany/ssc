@@ -4362,6 +4362,94 @@ async def send_custom_wa(body: dict, current_user: User = Depends(get_current_us
     if ok: return {"message": "Message sent"}
     raise HTTPException(status_code=500, detail=err)
 
+# Flexible WhatsApp send - user provides phone number each time
+@api_router.post("/whatsapp/send-to")
+async def send_whatsapp_to_number(body: dict, current_user: User = Depends(get_current_user)):
+    phone = body.get("phone", "").strip()
+    report_type = body.get("report_type", "daily_sales")
+    branch_id = body.get("branch_id")
+    if not phone:
+        raise HTTPException(status_code=400, detail="Phone number required")
+    config = await db.whatsapp_config.find_one({}, {"_id": 0})
+    if not config or not config.get("account_sid") or not config.get("auth_token"):
+        raise HTTPException(status_code=400, detail="WhatsApp not configured. Go to Settings → WhatsApp to set up Twilio credentials.")
+    
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branch_map = {b["id"]: b["name"] for b in branches}
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = today_start + timedelta(days=1)
+    
+    if report_type == "daily_sales":
+        sales = await db.sales.find({"date": {"$gte": today_start.isoformat(), "$lt": today_end.isoformat()}}, {"_id": 0}).to_list(5000)
+        expenses = await db.expenses.find({"date": {"$gte": today_start.isoformat(), "$lt": today_end.isoformat()}}, {"_id": 0}).to_list(5000)
+        total_sales = sum(s.get("final_amount", s["amount"]) for s in sales)
+        total_exp = sum(e["amount"] for e in expenses)
+        branch_lines = ""
+        for b in branches:
+            bt = sum(s.get("final_amount", s["amount"]) for s in sales if s.get("branch_id") == b["id"])
+            if bt > 0:
+                branch_lines += f"  {b['name']}: SAR {bt:,.2f}\n"
+        msg = f"*SSC Track - Daily Sales*\n{datetime.now().strftime('%d %b %Y')}\n\nTotal Sales: SAR {total_sales:,.2f}\nTotal Expenses: SAR {total_exp:,.2f}\nNet: SAR {(total_sales - total_exp):,.2f}\n"
+        if branch_lines:
+            msg += f"\nBranch Sales:\n{branch_lines}"
+    elif report_type == "low_stock":
+        query = {"branch_id": branch_id} if branch_id else {}
+        balance_items = []
+        items = await db.items.find({}, {"_id": 0}).to_list(1000)
+        entries = await db.stock_entries.find(query, {"_id": 0}).to_list(10000)
+        usage_records = await db.stock_usage.find(query, {"_id": 0}).to_list(10000)
+        stock_in = {}
+        for e in entries:
+            stock_in[e["item_id"]] = stock_in.get(e["item_id"], 0) + e["quantity"]
+        stock_out = {}
+        for u in usage_records:
+            stock_out[u["item_id"]] = stock_out.get(u["item_id"], 0) + u["quantity"]
+        low_items = []
+        for item in items:
+            si = stock_in.get(item["id"], 0)
+            so = stock_out.get(item["id"], 0)
+            bal = si - so
+            min_lvl = item.get("min_stock_level", 0)
+            if min_lvl > 0 and bal <= min_lvl:
+                low_items.append(f"  {item['name']}: {bal} {item.get('unit','pc')} (min: {min_lvl})")
+        branch_name = branch_map.get(branch_id, "All Branches") if branch_id else "All Branches"
+        msg = f"*SSC Track - Low Stock Alert*\n{branch_name}\n\n"
+        if low_items:
+            msg += "\n".join(low_items)
+        else:
+            msg += "All items are above minimum stock level."
+    elif report_type == "expense_summary":
+        expenses = await db.expenses.find({"date": {"$gte": today_start.isoformat(), "$lt": today_end.isoformat()}}, {"_id": 0}).to_list(5000)
+        total = sum(e["amount"] for e in expenses)
+        cat_totals = {}
+        for e in expenses:
+            cat_totals[e["category"]] = cat_totals.get(e["category"], 0) + e["amount"]
+        cat_lines = "\n".join(f"  {k}: SAR {v:,.2f}" for k, v in sorted(cat_totals.items(), key=lambda x: -x[1]))
+        msg = f"*SSC Track - Expense Summary*\n{datetime.now().strftime('%d %b %Y')}\n\nTotal: SAR {total:,.2f}\n"
+        if cat_lines:
+            msg += f"\nBy Category:\n{cat_lines}"
+    elif report_type == "branch_report":
+        sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+        expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
+        lines = ["*SSC Track - Branch Report*\n"]
+        target = [b for b in branches if b["id"] == branch_id] if branch_id else branches
+        for br in target:
+            bid = br["id"]
+            br_sales = sum(s.get("final_amount", s["amount"]) for s in sales if s.get("branch_id") == bid)
+            br_exp = sum(e["amount"] for e in expenses if e.get("branch_id") == bid)
+            profit = br_sales - br_exp
+            lines.append(f"*{br['name']}*: Sales SAR {br_sales:,.0f} | Exp SAR {br_exp:,.0f} | {'Profit' if profit>=0 else 'LOSS'} SAR {profit:,.0f}")
+        msg = "\n".join(lines)
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown report type: {report_type}")
+    
+    try:
+        client_tw = Client(config["account_sid"], config["auth_token"])
+        client_tw.messages.create(from_=f'whatsapp:{config["phone_number"]}', body=msg, to=f'whatsapp:{phone}')
+        return {"message": f"Report sent to {phone}", "preview": msg}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"WhatsApp send failed: {str(e)}")
+
 @api_router.post("/whatsapp/send-supplier-report")
 async def send_supplier_report_wa(current_user: User = Depends(get_current_user)):
     suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
