@@ -178,10 +178,17 @@ export default function ExpensesPage() {
                       </Select>
                     </div>
                     <div>
-                      <Label>Branch</Label>
+                      <Label>Paid From (Branch)</Label>
                       <Select value={formData.branch_id || "none"} onValueChange={(v) => setFormData({ ...formData, branch_id: v === "none" ? "" : v })}>
-                        <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-10" data-testid="expense-paid-from-branch"><SelectValue /></SelectTrigger>
                         <SelectContent><SelectItem value="none">No Branch</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Expense For Branch</Label>
+                      <Select value={formData.expense_for_branch_id || "none"} onValueChange={(v) => setFormData({ ...formData, expense_for_branch_id: v === "none" ? "" : v })}>
+                        <SelectTrigger className="h-10" data-testid="expense-for-branch"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectItem value="none">Same as Paid From</SelectItem>{branches.filter(b => b.id !== formData.branch_id).map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
                     <div>
@@ -193,7 +200,7 @@ export default function ExpensesPage() {
                       <Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="What was this for?" className="h-10" />
                     </div>
                     <div className="flex items-end">
-                      <Button type="submit" className="rounded-xl w-full h-10"><Plus size={16} className="mr-2" />Add Expense</Button>
+                      <Button type="submit" className="rounded-xl w-full h-10" data-testid="add-expense-btn"><Plus size={16} className="mr-2" />Add Expense</Button>
                     </div>
                   </div>
                 </form>
