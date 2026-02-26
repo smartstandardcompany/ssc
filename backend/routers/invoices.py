@@ -31,30 +31,40 @@ async def create_invoice(data: InvoiceCreate, current_user: User = Depends(get_c
         subtotal += item_total
     discount = data.discount or 0
     total = subtotal - discount
+    # VAT calculation (ZATCA)
+    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    vat_enabled = company.get("vat_enabled", False)
+    vat_rate = float(company.get("vat_rate", 15)) if vat_enabled else 0
+    vat_amount = round(total * vat_rate / 100, 2) if vat_enabled else 0
+    total_with_vat = round(total + vat_amount, 2)
     count = await db.invoices.count_documents({})
     inv_number = f"INV-{count + 1:05d}"
     if data.payment_details:
         payment_details = data.payment_details
     else:
-        payment_details = [{"mode": data.payment_mode, "amount": total}]
+        payment_details = [{"mode": data.payment_mode, "amount": total_with_vat if vat_enabled else total}]
     invoice = Invoice(
         invoice_number=inv_number, branch_id=data.branch_id or None,
         customer_id=data.customer_id or None, customer_name=customer_name,
-        items=items, subtotal=subtotal, discount=discount, total=total,
+        items=items, subtotal=subtotal, discount=discount,
+        vat_rate=vat_rate, vat_amount=vat_amount,
+        total=total, total_with_vat=total_with_vat,
         payment_mode=data.payment_mode, payment_details=payment_details,
-        date=data.date, notes=data.notes, created_by=current_user.id
+        date=data.date, notes=data.notes, created_by=current_user.id,
+        buyer_vat_number=data.buyer_vat_number,
     )
     inv_dict = invoice.model_dump()
     inv_dict["date"] = inv_dict["date"].isoformat()
     inv_dict["created_at"] = inv_dict["created_at"].isoformat()
     await db.invoices.insert_one(inv_dict)
+    sale_total = total_with_vat if vat_enabled else total
     cash_bank_paid = sum(p["amount"] for p in payment_details if p.get("mode") in ["cash", "bank"])
     credit_in_details = sum(p["amount"] for p in payment_details if p.get("mode") == "credit")
-    credit_amount = max(0, credit_in_details if credit_in_details > 0 else total - cash_bank_paid)
+    credit_amount = max(0, credit_in_details if credit_in_details > 0 else sale_total - cash_bank_paid)
     sale = Sale(
         sale_type="branch" if not data.customer_id else "online",
         branch_id=data.branch_id or None, customer_id=data.customer_id or None,
-        amount=subtotal, discount=discount, final_amount=total,
+        amount=subtotal, discount=discount, final_amount=sale_total,
         payment_details=payment_details, credit_amount=credit_amount,
         credit_received=0, date=data.date, notes=f"Invoice {inv_number}",
         created_by=current_user.id
