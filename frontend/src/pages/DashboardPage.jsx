@@ -204,6 +204,9 @@ export default function DashboardPage() {
             <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowWhatsApp(true)} data-testid="dashboard-whatsapp-btn">
               <MessageCircle size={14} className="mr-1" />WhatsApp
             </Button>
+            <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowWidgetSettings(true)} data-testid="customize-dashboard-btn">
+              <Settings2 size={14} className="mr-1" />Customize
+            </Button>
             {Object.keys(THEMES).map(th => (
               <button key={th} onClick={() => changeTheme(th)} className={`px-3 py-1 rounded-lg text-xs font-medium border transition-all capitalize ${theme === th ? 'bg-primary text-white border-primary' : 'bg-white border-stone-200 hover:border-primary'}`}>{th}</button>
             ))}
