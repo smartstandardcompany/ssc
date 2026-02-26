@@ -279,8 +279,16 @@ export default function EmployeesPage() {
                   {employees.filter(emp => branchFilter.length === 0 || branchFilter.includes(emp.branch_id) || !emp.branch_id).map((emp) => {
                     const pend = getPending(emp.id);
                     return (
-                    <tr key={emp.id} className="border-b border-border hover:bg-secondary/50" data-testid="employee-row">
-                      <td className="p-3 text-sm font-medium">{emp.name}<div className="text-xs text-muted-foreground">{emp.document_id || ''}</div></td>
+                    <tr key={emp.id} className={`border-b border-border hover:bg-secondary/50 ${emp.status === 'resigned' || emp.status === 'on_notice' ? 'bg-amber-50/30' : emp.status === 'left' || emp.status === 'terminated' ? 'bg-red-50/30' : ''}`} data-testid="employee-row">
+                      <td className="p-3 text-sm font-medium">
+                        {emp.name}
+                        <div className="text-xs text-muted-foreground">{emp.document_id || ''}</div>
+                        {emp.status && emp.status !== 'active' && (
+                          <Badge className={`mt-0.5 text-[10px] ${emp.status === 'resigned' || emp.status === 'on_notice' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                            {emp.status.replace('_', ' ')}
+                          </Badge>
+                        )}
+                      </td>
                       <td className="p-3 text-sm">{(() => { const jt = jobTitles.find(j => j.id === emp.job_title_id); return jt ? <Badge variant="outline" className="capitalize">{jt.title}</Badge> : <span className="text-muted-foreground">{emp.position || '-'}</span>; })()}</td>
                       <td className="p-3 text-sm text-right font-medium"> SAR {(emp.salary || 0).toFixed(2)}</td>
                       <td className="p-3 text-sm text-right">
