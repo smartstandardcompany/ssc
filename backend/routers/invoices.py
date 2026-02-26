@@ -77,6 +77,39 @@ async def create_invoice(data: InvoiceCreate, current_user: User = Depends(get_c
     inv_dict["sale_id"] = sale.id
     return {k: v for k, v in inv_dict.items() if k != '_id'}
 
+
+@router.get("/invoices/{invoice_id}/zatca-qr")
+async def get_zatca_qr(invoice_id: str, current_user: User = Depends(get_current_user)):
+    """Generate ZATCA Phase 1 TLV QR code data for an invoice."""
+    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not inv:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    import base64, struct
+    def tlv_encode(tag, value):
+        value_bytes = value.encode('utf-8')
+        return struct.pack(f'BB{len(value_bytes)}s', tag, len(value_bytes), value_bytes)
+    seller_name = company.get("company_name", "SSC Track")
+    vat_number = company.get("vat_number", "")
+    timestamp = inv.get("date", inv.get("created_at", ""))
+    if hasattr(timestamp, 'isoformat'):
+        timestamp = timestamp.isoformat()
+    total = str(round(inv.get("total_with_vat", inv.get("total", 0)), 2))
+    vat_amount = str(round(inv.get("vat_amount", 0), 2))
+    tlv_data = b''
+    tlv_data += tlv_encode(1, seller_name)
+    tlv_data += tlv_encode(2, vat_number)
+    tlv_data += tlv_encode(3, timestamp)
+    tlv_data += tlv_encode(4, total)
+    tlv_data += tlv_encode(5, vat_amount)
+    qr_base64 = base64.b64encode(tlv_data).decode('ascii')
+    return {
+        "qr_data": qr_base64,
+        "seller_name": seller_name, "vat_number": vat_number,
+        "timestamp": timestamp, "total": total, "vat_amount": vat_amount,
+        "invoice_number": inv.get("invoice_number", ""),
+    }
+
 @router.delete("/invoices/{invoice_id}")
 async def delete_invoice(invoice_id: str, current_user: User = Depends(get_current_user)):
     inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
