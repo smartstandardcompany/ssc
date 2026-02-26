@@ -801,9 +801,9 @@ async def register(user_data: UserCreate):
     
     # Set default permissions based on role
     if role == "admin":
-        permissions = ["sales", "expenses", "reports", "branches", "customers", "suppliers", "users"]
+        permissions = ["sales", "expenses", "reports", "branches", "customers", "suppliers", "users", "stock", "kitchen"]
     elif role == "manager":
-        permissions = ["sales", "expenses", "reports", "branches", "customers", "suppliers"]
+        permissions = ["sales", "expenses", "reports", "branches", "customers", "suppliers", "stock", "kitchen"]
     else:
         permissions = ["sales", "expenses"]
     
