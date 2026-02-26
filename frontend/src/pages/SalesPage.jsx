@@ -187,12 +187,12 @@ export default function SalesPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
-            <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="sales-page-title">Sales Management</h1>
-            <p className="text-muted-foreground">Track sales with flexible payment options</p>
+            <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-1" data-testid="sales-page-title">Sales Management</h1>
+            <p className="text-sm text-muted-foreground">Track sales with flexible payment options</p>
           </div>
-          <div className="flex gap-3 items-center flex-wrap">
+          <div className="flex gap-2 items-center flex-wrap">
             <BranchFilter onChange={setBranchFilter} />
             <DateFilter onFilterChange={setDateFilter} />
             <ExportButtons dataType="sales" />
@@ -200,8 +200,9 @@ export default function SalesPage() {
             onClick={() => setShowForm(!showForm)}
             data-testid="add-sale-button"
             className="rounded-full"
+            size="sm"
           >
-            <Plus size={18} className="mr-2" />
+            <Plus size={16} className="mr-1" />
             Add Sale
           </Button>
           </div>
