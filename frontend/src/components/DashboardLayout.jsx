@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, ShoppingCart, Store, Users, Truck, Receipt, BarChart3, LogOut, Shield, CreditCard, FileText, Tags, UserCheck, FileWarning, Bell, User as UserIcon, Settings, ArrowLeftRight, FileInput, AlertTriangle, Handshake, HelpCircle, Building2, Package, ChefHat, CalendarClock, ArrowDownUp } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Store, Users, Truck, Receipt, BarChart3, LogOut, Shield, CreditCard, FileText, Tags, UserCheck, FileWarning, Bell, User as UserIcon, Settings, ArrowLeftRight, FileInput, AlertTriangle, Handshake, HelpCircle, Building2, Package, ChefHat, CalendarClock, ArrowDownUp, Activity } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { toast } from 'sonner';
