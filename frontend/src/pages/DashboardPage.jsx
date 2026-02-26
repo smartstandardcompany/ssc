@@ -46,7 +46,15 @@ export default function DashboardPage() {
   const [paybackData, setPaybackData] = useState({ from_branch_id: '', to_branch_id: '', amount: '', payment_mode: 'cash' });
   const [branches, setBranches] = useState([]);
   const [showWhatsApp, setShowWhatsApp] = useState(false);
+  const [widgets, setWidgets] = useState(getWidgetPrefs());
+  const [showWidgetSettings, setShowWidgetSettings] = useState(false);
   const t = THEMES[theme] || THEMES.default;
+
+  const toggleWidget = (key) => {
+    const updated = { ...widgets, [key]: !widgets[key] };
+    setWidgets(updated);
+    saveWidgetPrefs(updated);
+  };
 
   const changeTheme = (newTheme) => { setTheme(newTheme); localStorage.setItem('dashboard_theme', newTheme); };
   const [dateFilter, setDateFilter] = useState({ start: null, end: null, period: 'all' });
