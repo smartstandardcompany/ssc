@@ -3976,7 +3976,7 @@ async def backup_database(current_user: User = Depends(get_current_user)):
                     "supplier_payments", "salary_payments", "employees", "leaves", "documents",
                     "categories", "invoices", "items", "cash_transfers", "notifications",
                     "employee_requests", "recurring_expenses", "email_settings", "whatsapp_config",
-                    "notification_prefs", "whatsapp_settings", "stock_entries", "stock_usage"]
+                    "notification_prefs", "whatsapp_settings", "stock_entries", "stock_usage", "job_titles"]
     
     backup_data = {"backup_date": datetime.now(timezone.utc).isoformat(), "app": "SSC Track", "collections": {}}
     
