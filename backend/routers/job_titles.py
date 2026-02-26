@@ -6,21 +6,21 @@ from models import User, JobTitle
 router = APIRouter()
 
 DEFAULT_JOB_TITLES = [
-    {"title": "Chef", "department": "Kitchen", "min_salary": 2000, "max_salary": 5000},
-    {"title": "Sous Chef", "department": "Kitchen", "min_salary": 1800, "max_salary": 4000},
-    {"title": "Line Cook", "department": "Kitchen", "min_salary": 1500, "max_salary": 3000},
-    {"title": "Cashier", "department": "Front", "min_salary": 1500, "max_salary": 3000},
-    {"title": "Waiter", "department": "Front", "min_salary": 1200, "max_salary": 2500},
-    {"title": "Manager", "department": "Management", "min_salary": 4000, "max_salary": 8000},
-    {"title": "Supervisor", "department": "Management", "min_salary": 3000, "max_salary": 6000},
-    {"title": "Driver", "department": "Operations", "min_salary": 1500, "max_salary": 3000},
-    {"title": "Cleaner", "department": "Operations", "min_salary": 1200, "max_salary": 2000},
-    {"title": "Accountant", "department": "Finance", "min_salary": 3000, "max_salary": 6000},
-    {"title": "Delivery", "department": "Operations", "min_salary": 1500, "max_salary": 3000},
-    {"title": "Security", "department": "Operations", "min_salary": 1500, "max_salary": 2500},
-    {"title": "Kitchen Helper", "department": "Kitchen", "min_salary": 1200, "max_salary": 2000},
-    {"title": "Receptionist", "department": "Front", "min_salary": 1500, "max_salary": 3000},
-    {"title": "Barista", "department": "Front", "min_salary": 1500, "max_salary": 3000},
+    {"title": "Chef", "department": "Kitchen", "min_salary": 2000, "max_salary": 5000, "permissions": ["kitchen", "stock"]},
+    {"title": "Sous Chef", "department": "Kitchen", "min_salary": 1800, "max_salary": 4000, "permissions": ["kitchen", "stock"]},
+    {"title": "Line Cook", "department": "Kitchen", "min_salary": 1500, "max_salary": 3000, "permissions": ["kitchen"]},
+    {"title": "Cashier", "department": "Front", "min_salary": 1500, "max_salary": 3000, "permissions": ["sales", "invoices", "customers"]},
+    {"title": "Waiter", "department": "Front", "min_salary": 1200, "max_salary": 2500, "permissions": ["sales"]},
+    {"title": "Manager", "department": "Management", "min_salary": 4000, "max_salary": 8000, "permissions": ["dashboard", "sales", "invoices", "branches", "customers", "suppliers", "supplier_payments", "expenses", "employees", "stock", "kitchen", "shifts", "reports", "credit_report", "supplier_report", "documents", "cash_transfers"]},
+    {"title": "Supervisor", "department": "Management", "min_salary": 3000, "max_salary": 6000, "permissions": ["dashboard", "sales", "invoices", "customers", "expenses", "stock", "kitchen", "shifts", "reports"]},
+    {"title": "Driver", "department": "Operations", "min_salary": 1500, "max_salary": 3000, "permissions": []},
+    {"title": "Cleaner", "department": "Operations", "min_salary": 1200, "max_salary": 2000, "permissions": []},
+    {"title": "Accountant", "department": "Finance", "min_salary": 3000, "max_salary": 6000, "permissions": ["dashboard", "sales", "invoices", "expenses", "suppliers", "supplier_payments", "reports", "credit_report", "supplier_report", "cash_transfers"]},
+    {"title": "Delivery", "department": "Operations", "min_salary": 1500, "max_salary": 3000, "permissions": ["sales"]},
+    {"title": "Security", "department": "Operations", "min_salary": 1500, "max_salary": 2500, "permissions": []},
+    {"title": "Kitchen Helper", "department": "Kitchen", "min_salary": 1200, "max_salary": 2000, "permissions": ["kitchen"]},
+    {"title": "Receptionist", "department": "Front", "min_salary": 1500, "max_salary": 3000, "permissions": ["sales", "customers"]},
+    {"title": "Barista", "department": "Front", "min_salary": 1500, "max_salary": 3000, "permissions": ["sales", "kitchen"]},
 ]
 
 @router.get("/job-titles")
@@ -40,7 +40,8 @@ async def create_job_title(body: dict, current_user: User = Depends(get_current_
     jt = JobTitle(
         title=body["title"], department=body.get("department", ""),
         min_salary=float(body.get("min_salary", 0)), max_salary=float(body.get("max_salary", 0)),
-        description=body.get("description", "")
+        description=body.get("description", ""),
+        permissions=body.get("permissions", [])
     )
     td = jt.model_dump()
     td["created_at"] = td["created_at"].isoformat()
@@ -50,7 +51,7 @@ async def create_job_title(body: dict, current_user: User = Depends(get_current_
 @router.put("/job-titles/{title_id}")
 async def update_job_title(title_id: str, body: dict, current_user: User = Depends(get_current_user)):
     update_data = {}
-    for field in ["title", "department", "min_salary", "max_salary", "description", "active"]:
+    for field in ["title", "department", "min_salary", "max_salary", "description", "active", "permissions"]:
         if field in body:
             update_data[field] = body[field]
     if "min_salary" in update_data:
