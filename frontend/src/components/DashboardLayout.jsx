@@ -88,10 +88,10 @@ function NavGroup({ group, userRole, userPerms, currentPath, onNavigate }) {
     return true;
   });
 
-  if (filteredItems.length === 0) return null;
-
   const hasActive = filteredItems.some(i => i.path === currentPath);
   const [open, setOpen] = useState(hasActive);
+
+  if (filteredItems.length === 0) return null;
 
   return (
     <div className="mb-1">
