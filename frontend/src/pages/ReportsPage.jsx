@@ -27,6 +27,8 @@ export default function ReportsPage() {
   const [compareBranch2, setCompareBranch2] = useState('');
   const [comparePeriod, setComparePeriod] = useState('month');
   const [branchFilter, setBranchFilter] = useState([]);
+  const [itemPnl, setItemPnl] = useState(null);
+  const [pnlBranch, setPnlBranch] = useState('');
 
   const [filters, setFilters] = useState({ startDate: '', endDate: '', type: 'all' });
 
