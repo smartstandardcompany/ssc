@@ -158,6 +158,9 @@ export default function StockPage() {
                 {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
               </SelectContent>
             </Select>
+            <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowWhatsApp(true)} data-testid="stock-whatsapp-btn">
+              <MessageCircle size={14} className="mr-1" />WhatsApp
+            </Button>
             <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowScanDialog(true)} data-testid="scan-invoice-btn">
               <Camera size={14} className="mr-1" />Scan Invoice
             </Button>
