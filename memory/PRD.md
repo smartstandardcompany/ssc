@@ -1,7 +1,7 @@
 # SSC Track - ERP System PRD
 
 ## Original Problem Statement
-Data entry application to track sales, expenses, and supplier payments. Evolved into a comprehensive business management ERP named "SSC Track" with restaurant stock management, invoice OCR, and bank reconciliation.
+Data entry application to track sales, expenses, and supplier payments. Evolved into a comprehensive business management ERP named "SSC Track" with restaurant stock management, invoice OCR, bank reconciliation, and HR with job titles.
 
 ## Architecture
 - **Backend:** FastAPI + MongoDB (Motor async) + JWT Auth + Pydantic
@@ -17,82 +17,71 @@ Data entry application to track sales, expenses, and supplier payments. Evolved 
 ## All Implemented Features
 
 ### Financial Management
-- Sales: split payments, discounts, branch/online, credit tracking
-- Expenses: categories/sub-categories, Expense For Branch (cross-branch dues)
-- Supplier payments with credit limit enforcement
-- Customer credit management, Invoicing with item master
-- Currency: SAR (Saudi Riyal)
+- Sales, Expenses (with cross-branch tracking), Supplier Payments
+- Customer credit, Invoicing with item master, Currency: SAR
 
 ### Stock Management
-- Item Master: items with cost_price, sale_price, unit, category, min_stock_level
-- Stock In: manual entry or bulk import from scanned invoices, per-branch tracking
-- Invoice OCR: scan supplier invoices via mobile camera — AI extracts items/qty/prices (GPT-4o)
-- Stock Balance: real-time per-branch levels, low stock alerts
-- Stock Reports: total stock value, consumed value
+- Item Master with cost/sale prices, units, min_stock_level
+- Stock In/Out per branch, Invoice OCR (GPT-4o via mobile camera)
+- Real-time balance, low stock alerts, stock reports
 
 ### Kitchen / Chef Interface
-- Simplified card-based UI for chefs to record daily item usage
+- Card-based UI for daily item usage recording
 - Branch-specific stock, +/- quantity controls, bulk submission
-- Stock auto-deducts on usage, recent usage history
 
-### WhatsApp Notifications (P0 - DONE)
-- Flexible phone number — enter recipient number each time
-- Report types: Daily Sales Summary, Expense Summary, Low Stock Alert, Branch Report
-- WhatsApp buttons on Dashboard, Expenses, Stock pages
-- Reusable WhatsAppSendDialog component
-- Requires Twilio config in Settings → WhatsApp
-
-### Bank Reconciliation (P1 - DONE)
-- New "Reconciliation" tab in Bank Statement analysis
-- Side-by-side: Bank POS deposits vs SSC Track bank sales
-- 1-day offset: today's sale appears as tomorrow's bank deposit
-- Summary cards: Bank POS Total, App Sales Total, Difference, Matched, Discrepancies
-- Status: Matched / Bank Only / App Only / Mismatch
-- CSV export for reconciliation data
-
-### HR Management
+### HR Management with Job Titles
+- **15 pre-defined job titles:** Chef, Sous Chef, Line Cook, Cashier, Waiter, Manager, Supervisor, Driver, Cleaner, Accountant, Delivery, Security, Kitchen Helper, Receptionist, Barista
+- **Custom titles:** Add any title with department & salary range
+- **Salary structure:** Min/max salary per title, auto-fill on assignment
+- **Job Title Manager:** Full CRUD in Employees page
 - Employee CRUD, salary payments, loan tracking, leave management
-- Employee self-service portal, payslip PDFs
+- Employee self-service portal, payslip PDFs (with job title)
 
-### Asset & Liability Tracking
-- Documents with expiry alerts, Fines & Penalties, Company Loans, Partners
+### WhatsApp Notifications
+- Flexible phone number — enter recipient each time
+- Reports: Daily Sales, Expense Summary, Low Stock Alert, Branch Report
+- Buttons on Dashboard, Expenses, Stock pages
 
-### Cash Flow Management
-- Branch-to-branch transfers, company balance, inter-branch dues with payback
+### Bank Reconciliation
+- Side-by-side: Bank POS deposits vs SSC Track bank sales
+- 1-day offset (today's sale = tomorrow's bank deposit)
+- Summary cards, CSV export, color-coded status
 
-### Bank Statement Analysis
-- PDF/XLS parser for Alinma & Albilad banks, POS reconciliation
+### Deployment & PWA
+- Enhanced Settings → Deploy tab with:
+  - Railway (Recommended), VPS, Render deployment options
+  - GoDaddy DNS setup (CNAME for Railway, A record for VPS)
+  - Environment variables reference
+  - PWA install guide for Android (Chrome) and iPhone (Safari)
 
-### Reporting & Analytics
-- Dashboard with KPIs, period comparison, PDF/Excel export
-
-### Administration
-- Role-based access with granular permissions
-- Email/WhatsApp settings, data import, database backup
+### Other Modules
+- Asset & Liability Tracking (Documents, Fines, Company Loans, Partners)
+- Cash Flow (Branch transfers, company balance, inter-branch dues)
+- Bank Statement Analysis (Alinma & Albilad PDF/XLS parser)
+- Dashboard with KPIs, Reports, PDF/Excel export
+- Role-based access, Email/WhatsApp settings, Data import, Backup
 
 ## Completed Tasks (This Session - Feb 26, 2026)
-- [x] Expense For Branch feature (P0) — tested 100% (iteration 9)
-- [x] Fixed bcrypt warning (upgraded to 4.2.1)
-- [x] Stock Management module — tested 100% (iteration 10)
-- [x] Kitchen/Chef page — tested 100% (iteration 10)
+- [x] Expense For Branch feature — tested (iteration 9)
+- [x] Fixed bcrypt warning (4.2.1)
+- [x] Stock Management + Kitchen pages — tested (iteration 10)
 - [x] Invoice OCR with GPT-4o
-- [x] WhatsApp Notification Triggers (P0) — tested 100% (iteration 11)
-- [x] Bank Reconciliation UI (P1) — tested 100% (iteration 11)
+- [x] WhatsApp Notification Triggers — tested (iteration 11)
+- [x] Bank Reconciliation UI — tested (iteration 11)
+- [x] Job Titles (15 default + custom) — tested (iteration 12)
+- [x] Enhanced deployment guide (GoDaddy + PWA) — tested (iteration 12)
 - [x] Fixed SAR currency in InvoicesPage
 
 ## Upcoming Tasks
-- **P2:** Refactor server.py (>5400 lines) into separate routers/models/services
+- **P2:** Refactor server.py (>5700 lines) into separate routers/models/services
 - **P2:** Break down large frontend components
+- Item-level P&L report (purchased cost vs sold revenue per item)
 
 ## Key API Endpoints
-- `POST /api/whatsapp/send-to` — Send report to flexible phone number
-- `GET /api/bank-statements/{id}/reconciliation` — POS reconciliation with 1-day offset
+- `GET/POST/PUT/DELETE /api/job-titles` — Job title CRUD
+- `POST /api/whatsapp/send-to` — Send report to flexible phone
+- `GET /api/bank-statements/{id}/reconciliation` — POS reconciliation
 - `POST /api/stock/entries`, `POST /api/stock/entries/bulk` — Stock in
 - `POST /api/stock/usage/bulk` — Kitchen usage
-- `GET /api/stock/balance?branch_id=` — Current stock per branch
+- `GET /api/stock/balance`, `GET /api/stock/report` — Stock data
 - `POST /api/stock/scan-invoice` — Invoice OCR (GPT-4o)
-
-## DB Collections
-- `stock_entries`, `stock_usage` — Stock tracking
-- `whatsapp_config` — Twilio WhatsApp settings
-- Items extended: cost_price, unit, min_stock_level
