@@ -5669,6 +5669,100 @@ async def get_stock_report(branch_id: Optional[str] = None, current_user: User =
         "low_stock_items": low_stock_items
     }
 
+# Item-level P&L Report
+@api_router.get("/reports/item-pnl")
+async def get_item_pnl(branch_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    items = await db.items.find({}, {"_id": 0}).to_list(1000)
+    e_query = {"branch_id": branch_id} if branch_id else {}
+    u_query = {"branch_id": branch_id} if branch_id else {}
+    i_query = {"branch_id": branch_id} if branch_id else {}
+    
+    entries = await db.stock_entries.find(e_query, {"_id": 0}).to_list(10000)
+    usage_records = await db.stock_usage.find(u_query, {"_id": 0}).to_list(10000)
+    invoices = await db.invoices.find(i_query, {"_id": 0}).to_list(10000)
+    
+    # Stock in: per item
+    purchased_qty = {}
+    purchased_cost = {}
+    for e in entries:
+        purchased_qty[e["item_id"]] = purchased_qty.get(e["item_id"], 0) + e["quantity"]
+        purchased_cost[e["item_id"]] = purchased_cost.get(e["item_id"], 0) + (e["quantity"] * e.get("unit_cost", 0))
+    
+    # Kitchen usage: per item
+    used_qty = {}
+    for u in usage_records:
+        used_qty[u["item_id"]] = used_qty.get(u["item_id"], 0) + u["quantity"]
+    
+    # Sold via invoices: match by item name (case-insensitive)
+    item_name_map = {item["name"].lower(): item["id"] for item in items}
+    sold_qty = {}
+    sold_revenue = {}
+    for inv in invoices:
+        for line in inv.get("items", []):
+            desc = (line.get("description") or line.get("name", "")).lower().strip()
+            item_id = item_name_map.get(desc)
+            if item_id:
+                qty = float(line.get("quantity", 0))
+                total = float(line.get("total", 0))
+                sold_qty[item_id] = sold_qty.get(item_id, 0) + qty
+                sold_revenue[item_id] = sold_revenue.get(item_id, 0) + total
+    
+    # Build P&L per item
+    rows = []
+    total_cost = 0
+    total_revenue = 0
+    total_profit = 0
+    
+    for item in items:
+        iid = item["id"]
+        p_qty = purchased_qty.get(iid, 0)
+        p_cost = purchased_cost.get(iid, 0)
+        u_qty = used_qty.get(iid, 0)
+        s_qty = sold_qty.get(iid, 0)
+        s_rev = sold_revenue.get(iid, 0)
+        
+        if p_qty == 0 and u_qty == 0 and s_qty == 0:
+            continue
+        
+        avg_cost = p_cost / p_qty if p_qty > 0 else item.get("cost_price", 0)
+        cost_of_sold = avg_cost * s_qty
+        profit = s_rev - cost_of_sold
+        margin = (profit / s_rev * 100) if s_rev > 0 else 0
+        current_stock = p_qty - u_qty
+        
+        total_cost += cost_of_sold
+        total_revenue += s_rev
+        total_profit += profit
+        
+        rows.append({
+            "item_id": iid, "item_name": item["name"],
+            "category": item.get("category", ""),
+            "unit": item.get("unit", "piece"),
+            "purchased_qty": round(p_qty, 2),
+            "purchased_cost": round(p_cost, 2),
+            "avg_cost": round(avg_cost, 2),
+            "used_qty": round(u_qty, 2),
+            "sold_qty": round(s_qty, 2),
+            "sold_revenue": round(s_rev, 2),
+            "cost_of_sold": round(cost_of_sold, 2),
+            "profit": round(profit, 2),
+            "margin": round(margin, 1),
+            "current_stock": round(current_stock, 2)
+        })
+    
+    rows.sort(key=lambda x: -x["sold_revenue"])
+    
+    return {
+        "rows": rows,
+        "summary": {
+            "total_items": len(rows),
+            "total_cost": round(total_cost, 2),
+            "total_revenue": round(total_revenue, 2),
+            "total_profit": round(total_profit, 2),
+            "overall_margin": round((total_profit / total_revenue * 100) if total_revenue > 0 else 0, 1)
+        }
+    }
+
 # Invoice OCR - Scan invoice image to extract items
 @api_router.post("/stock/scan-invoice")
 async def scan_invoice_image(body: dict, current_user: User = Depends(get_current_user)):
