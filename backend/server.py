@@ -1,19 +1,14 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Form
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import FileResponse, StreamingResponse
-from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 import shutil
 from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import List, Optional
 import uuid
 from datetime import datetime, timezone, timedelta
-from passlib.context import CryptContext
-from jose import JWTError, jwt
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -25,22 +20,32 @@ import pandas as pd
 from io import BytesIO
 from twilio.rest import Client
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
-
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+# Import shared modules
+from database import db, client, hash_password, verify_password, create_access_token, get_current_user, security, ROOT_DIR
+from models import (
+    User, UserCreate, UserUpdate, UserLogin, Token,
+    Branch, BranchCreate, Customer, CustomerCreate,
+    Sale, SaleCreate, SalePayment,
+    Supplier, SupplierCreate, SupplierPayment, SupplierPaymentCreate, SupplierCreditPayment,
+    Expense, ExpenseCreate, DashboardStats,
+    WhatsAppSettings, WhatsAppSettingsCreate, ExportRequest,
+    Category, CategoryCreate,
+    Employee, EmployeeCreate, Document, DocumentCreate,
+    SalaryPayment, SalaryPaymentCreate, Leave, LeaveCreate,
+    EmployeeRequest, EmployeeRequestCreate, Notification,
+    CashTransfer, CashTransferCreate,
+    InvoiceItem, Invoice, InvoiceCreate, Item, ItemCreate,
+    StockEntry, StockUsage, RecurringExpense, JobTitle, RecurringExpenseCreate,
+    Attendance, EmployeeDocument, EmployeeDocumentCreate,
+    Fine, FineCreate, SalaryDeduction, SalaryDeductionCreate,
+    SalaryHistory, BranchPayback,
+    Partner, PartnerCreate, CompanyLoan, CompanyLoanPayment,
+    PartnerTransaction, PartnerTransactionCreate,
+    Shift, ShiftAssignment,
+)
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-security = HTTPBearer()
-
-SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "your-secret-key-change-in-production")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 10080
 
 # Models
 class User(BaseModel):
