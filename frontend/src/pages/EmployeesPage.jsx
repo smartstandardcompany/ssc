@@ -193,17 +193,17 @@ export default function EmployeesPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
           <div>
-            <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="employees-page-title">Employees</h1>
-            <p className="text-muted-foreground">Payroll, loans, leaves & document tracking</p>
+            <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-1" data-testid="employees-page-title">Employees</h1>
+            <p className="text-sm text-muted-foreground">Payroll, loans, leaves & document tracking</p>
           </div>
-          <div className="flex gap-3 items-center">
+          <div className="flex gap-2 items-center flex-wrap">
             <BranchFilter onChange={setBranchFilter} />
             <ExportButtons dataType="employees" />
             <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowJobTitleManager(true)} data-testid="manage-job-titles-btn"><Briefcase size={14} className="mr-1" />Job Titles</Button>
             <Dialog open={showDialog} onOpenChange={(o) => { setShowDialog(o); if (!o) resetForm(); }}>
-              <DialogTrigger asChild><Button className="rounded-full" data-testid="add-employee-button"><Plus size={18} className="mr-2" />Add Employee</Button></DialogTrigger>
+              <DialogTrigger asChild><Button size="sm" className="rounded-full" data-testid="add-employee-button"><Plus size={14} className="mr-1" />Add Employee</Button></DialogTrigger>
               <DialogContent className="max-w-2xl" data-testid="employee-dialog">
                 <DialogHeader><DialogTitle className="font-outfit">{editingEmp ? 'Edit' : 'Add'} Employee</DialogTitle></DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 max-h-[65vh] overflow-y-auto pr-2">
