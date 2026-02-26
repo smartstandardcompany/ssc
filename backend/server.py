@@ -545,6 +545,18 @@ class StockUsage(BaseModel):
 class RecurringExpense(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+
+# Job Title
+class JobTitle(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    department: Optional[str] = None
+    min_salary: float = 0
+    max_salary: float = 0
+    description: Optional[str] = None
+    active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     name: str
     category: str
     amount: float
