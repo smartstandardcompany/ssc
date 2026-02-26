@@ -500,6 +500,23 @@ class StockUsage(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     created_by: str
 
+class StockTransfer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    from_branch_id: str
+    to_branch_id: str
+    items: List[dict] = []
+    reason: Optional[str] = None
+    status: str = "pending"
+    requested_by: str
+    requested_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[str] = None
+    completed_at: Optional[str] = None
+    rejection_reason: Optional[str] = None
+    notes: Optional[str] = None
+
+
 class RecurringExpense(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
