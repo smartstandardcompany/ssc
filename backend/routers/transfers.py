@@ -66,10 +66,18 @@ async def create_stock_transfer(body: dict, current_user: User = Depends(get_cur
     })
     # Try WhatsApp notification
     try:
-        from routers.whatsapp import _send_wa_message
-        item_lines = "\n".join(f"  - {i['item_name']}: {i['quantity']} {i.get('unit', 'pc')}" for i in items)
-        msg = f"*Stock Transfer Request*\nFrom: {b_map.get(to_branch, 'N/A')}\nTo: {b_map.get(from_branch, 'N/A')}\nItems:\n{item_lines}\nReason: {body.get('reason', 'N/A')}"
-        await _send_wa_message(msg)
+        config = await db.whatsapp_config.find_one({}, {"_id": 0})
+        if config and config.get("account_sid") and config.get("auth_token"):
+            from twilio.rest import Client
+            client = Client(config["account_sid"], config["auth_token"])
+            item_lines = "\n".join(f"  - {i['item_name']}: {i['quantity']} {i.get('unit', 'pc')}" for i in items)
+            msg = f"*Stock Transfer Request*\nFrom: {b_map.get(to_branch, 'N/A')}\nTo: {b_map.get(from_branch, 'N/A')}\nItems:\n{item_lines}\nReason: {body.get('reason', 'N/A')}"
+            recipients = [r.strip() for r in config.get("recipient_number", "").split(",") if r.strip()]
+            for r in recipients:
+                try:
+                    client.messages.create(from_=f'whatsapp:{config["phone_number"]}', body=msg, to=f'whatsapp:{r}')
+                except:
+                    pass
     except:
         pass
     return {k: v for k, v in t_dict.items() if k != '_id'}
