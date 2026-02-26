@@ -356,6 +356,165 @@ export default function StockPage() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* REPORTS */}
+          <TabsContent value="reports">
+            <div className="space-y-4" data-testid="stock-reports">
+              {/* Summary Cards */}
+              {profitReport && (
+                <div className="grid grid-cols-4 gap-3">
+                  <Card className="border-stone-100"><CardContent className="pt-4 pb-3">
+                    <p className="text-xs text-muted-foreground">Total Consumption Cost</p>
+                    <p className="text-lg font-bold font-outfit text-red-600">SAR {consumptionReport?.total_consumption_cost?.toLocaleString() || 0}</p>
+                    <p className="text-[10px] text-muted-foreground">Last {reportDays} days</p>
+                  </CardContent></Card>
+                  <Card className="border-stone-100"><CardContent className="pt-4 pb-3">
+                    <p className="text-xs text-muted-foreground">Potential Revenue</p>
+                    <p className="text-lg font-bold font-outfit text-emerald-600">SAR {profitReport?.total_consumed_revenue?.toLocaleString() || 0}</p>
+                  </CardContent></Card>
+                  <Card className="border-stone-100"><CardContent className="pt-4 pb-3">
+                    <p className="text-xs text-muted-foreground">Gross Profit</p>
+                    <p className="text-lg font-bold font-outfit text-blue-600">SAR {profitReport?.total_profit?.toLocaleString() || 0}</p>
+                    <p className="text-[10px] text-muted-foreground">Avg Margin: {profitReport?.avg_margin_pct || 0}%</p>
+                  </CardContent></Card>
+                  <Card className="border-stone-100"><CardContent className="pt-4 pb-3">
+                    <p className="text-xs text-muted-foreground">Wastage Loss</p>
+                    <p className="text-lg font-bold font-outfit text-amber-600">SAR {wastageReport?.total_waste_cost?.toLocaleString() || 0}</p>
+                    <p className="text-[10px] text-muted-foreground">{wastageReport?.total_waste_entries || 0} entries</p>
+                  </CardContent></Card>
+                </div>
+              )}
+
+              {/* Consumption Chart */}
+              {consumptionReport?.daily_trend?.length > 0 && (
+                <Card className="border-stone-100">
+                  <CardHeader className="py-3"><CardTitle className="text-sm font-outfit">Daily Consumption Trend</CardTitle></CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={consumptionReport.daily_trend}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <Tooltip />
+                        <Bar dataKey="total" fill="#f97316" radius={[4, 4, 0, 0]} name="Units Used" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Profitability Table */}
+              {profitReport?.items?.length > 0 && (
+                <Card className="border-stone-100">
+                  <CardHeader className="py-3"><CardTitle className="text-sm font-outfit">Item Profitability</CardTitle></CardHeader>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm" data-testid="profitability-table">
+                        <thead><tr className="bg-stone-50 border-y border-stone-100">
+                          <th className="text-left p-2 font-medium text-xs">Item</th>
+                          <th className="text-right p-2 font-medium text-xs">Avg Cost</th>
+                          <th className="text-right p-2 font-medium text-xs">Sale Price</th>
+                          <th className="text-right p-2 font-medium text-xs">Margin %</th>
+                          <th className="text-right p-2 font-medium text-xs">Consumed</th>
+                          <th className="text-right p-2 font-medium text-xs">Cost</th>
+                          <th className="text-right p-2 font-medium text-xs">Revenue</th>
+                          <th className="text-right p-2 font-medium text-xs">Profit</th>
+                        </tr></thead>
+                        <tbody>
+                          {profitReport.items.map((item, i) => (
+                            <tr key={i} className="border-b border-stone-50 hover:bg-stone-50/50">
+                              <td className="p-2 font-medium">{item.item_name} <span className="text-xs text-stone-400">{item.unit}</span></td>
+                              <td className="p-2 text-right font-mono text-xs">{item.avg_cost?.toFixed(2)}</td>
+                              <td className="p-2 text-right font-mono text-xs">{item.sale_price?.toFixed(2)}</td>
+                              <td className="p-2 text-right"><Badge variant="outline" className={`text-[10px] ${item.margin_pct > 30 ? 'border-emerald-300 text-emerald-600' : item.margin_pct > 0 ? 'border-amber-300 text-amber-600' : 'border-red-300 text-red-600'}`}>{item.margin_pct}%</Badge></td>
+                              <td className="p-2 text-right font-mono text-xs">{item.qty_consumed}</td>
+                              <td className="p-2 text-right font-mono text-xs text-red-600">{item.consumed_cost?.toLocaleString()}</td>
+                              <td className="p-2 text-right font-mono text-xs text-emerald-600">{item.consumed_revenue?.toLocaleString()}</td>
+                              <td className={`p-2 text-right font-mono text-xs font-medium ${item.consumed_profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{item.consumed_profit?.toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Consumption Table */}
+              {consumptionReport?.items?.length > 0 && (
+                <Card className="border-stone-100">
+                  <CardHeader className="py-3"><CardTitle className="text-sm font-outfit">Consumption Analysis (Last {reportDays} days)</CardTitle></CardHeader>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm" data-testid="consumption-table">
+                        <thead><tr className="bg-stone-50 border-y border-stone-100">
+                          <th className="text-left p-2 font-medium text-xs">Item</th>
+                          <th className="text-right p-2 font-medium text-xs">Total Used</th>
+                          <th className="text-right p-2 font-medium text-xs">Daily Avg</th>
+                          <th className="text-right p-2 font-medium text-xs">Active Days</th>
+                          <th className="text-right p-2 font-medium text-xs">Cost/Unit</th>
+                          <th className="text-right p-2 font-medium text-xs">Total Cost</th>
+                        </tr></thead>
+                        <tbody>
+                          {consumptionReport.items.map((item, i) => (
+                            <tr key={i} className="border-b border-stone-50 hover:bg-stone-50/50">
+                              <td className="p-2 font-medium">{item.item_name} <span className="text-xs text-stone-400">{item.unit}</span></td>
+                              <td className="p-2 text-right font-mono text-xs">{item.total_used}</td>
+                              <td className="p-2 text-right font-mono text-xs">{item.daily_avg}</td>
+                              <td className="p-2 text-right text-xs">{item.active_days}</td>
+                              <td className="p-2 text-right font-mono text-xs">{item.cost_per_unit?.toFixed(2)}</td>
+                              <td className="p-2 text-right font-mono text-xs font-medium">{item.total_cost?.toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Wastage Table */}
+              {wastageReport?.items?.length > 0 && (
+                <Card className="border-stone-100">
+                  <CardHeader className="py-3"><CardTitle className="text-sm font-outfit">Wastage Report</CardTitle></CardHeader>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm" data-testid="wastage-table">
+                        <thead><tr className="bg-stone-50 border-y border-stone-100">
+                          <th className="text-left p-2 font-medium text-xs">Item</th>
+                          <th className="text-right p-2 font-medium text-xs">Wasted</th>
+                          <th className="text-right p-2 font-medium text-xs">Normal Use</th>
+                          <th className="text-right p-2 font-medium text-xs">Waste %</th>
+                          <th className="text-right p-2 font-medium text-xs">Waste Cost</th>
+                        </tr></thead>
+                        <tbody>
+                          {wastageReport.items.map((item, i) => (
+                            <tr key={i} className="border-b border-stone-50 hover:bg-stone-50/50">
+                              <td className="p-2 font-medium">{item.item_name}</td>
+                              <td className="p-2 text-right font-mono text-xs text-red-600">{item.waste_qty} {item.unit}</td>
+                              <td className="p-2 text-right font-mono text-xs">{item.normal_qty} {item.unit}</td>
+                              <td className="p-2 text-right"><Badge variant="outline" className={`text-[10px] ${item.waste_pct > 10 ? 'border-red-300 text-red-600' : 'border-amber-300 text-amber-600'}`}>{item.waste_pct}%</Badge></td>
+                              <td className="p-2 text-right font-mono text-xs font-medium text-red-600">SAR {item.waste_cost?.toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {!consumptionReport && !profitReport && (
+                <Card className="border-border border-dashed">
+                  <CardContent className="py-12 text-center">
+                    <BarChart3 size={36} className="mx-auto text-stone-300 mb-2" />
+                    <p className="text-muted-foreground">Click the Reports tab to load stock analytics</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+
         </Tabs>
 
         {/* ADD ITEM DIALOG */}
