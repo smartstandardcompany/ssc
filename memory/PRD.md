@@ -1,12 +1,12 @@
 # SSC Track - ERP System PRD
 
 ## Original Problem Statement
-Data entry application to track sales, expenses, and supplier payments. Evolved into a comprehensive business management ERP named "SSC Track" with restaurant stock management, invoice OCR, bank reconciliation, HR, AI scheduling, ZATCA-compliant invoicing, and real-time POS analytics.
+Data entry application to track sales, expenses, and supplier payments. Evolved into a comprehensive business management ERP named "SSC Track" with restaurant stock management, invoice OCR, bank reconciliation, HR, AI scheduling, ZATCA invoicing, real-time POS analytics, and multi-branch inventory transfers.
 
 ## Architecture
 - **Backend:** FastAPI + MongoDB (Motor async) + JWT Auth + Pydantic + APScheduler
-  - **Entry point:** `server.py` — imports 20 modular routers
-  - **Routers:** auth, bank_statements, branches, customers, dashboard, documents, employees, expenses, exports, invoices, job_titles, partners, reports, sales, scheduler, settings, shifts, stock, suppliers, whatsapp
+  - **Entry point:** `server.py` — imports 21 modular routers
+  - **Routers:** auth, bank_statements, branches, customers, dashboard, documents, employees, expenses, exports, invoices, job_titles, partners, reports, sales, scheduler, settings, shifts, stock, suppliers, transfers, whatsapp
 - **Frontend:** React + TailwindCSS + Shadcn/UI + Recharts + qrcode.react
 - **AI:** GPT-4o via Emergent LLM Key (invoice OCR + shift recommendations)
 - **Messaging:** Twilio WhatsApp
@@ -18,67 +18,54 @@ Data entry application to track sales, expenses, and supplier payments. Evolved 
 
 ## All Implemented Features
 
-### Real-Time POS Analytics (NEW - Feb 26, 2026)
-- Dedicated `/pos-analytics` page with auto-refresh every 12s
-- 5 KPI cards: Total Sales, Expenses, Net, Transactions, Avg Ticket
-- Branch Leaderboard (ranked by revenue)
-- Hourly Sales Breakdown chart (Recharts)
-- Top Cashiers ranking
-- Payment Mode pie chart (Cash/Bank/Online/Credit)
-- Live Sales Feed with real-time ticker
+### Multi-Branch Inventory Transfer (NEW - Feb 26, 2026)
+- Request/Approve/Reject/Complete workflow
+- Source/destination branch selection with item picker
+- Auto stock adjustment on completion (stock-out from source, stock-in at destination)
+- WhatsApp notification on new transfer request
+- Status tracking: Pending → Approved → Completed / Rejected
+- Dedicated `/transfers` page with tabs (Pending, Approved, History)
+- Summary cards, TransferCard UI with approve/reject/complete actions
 
-### ZATCA-Compliant Invoicing (NEW - Feb 26, 2026)
-- VAT (15%) calculation on invoices (configurable in Settings)
-- ZATCA Phase 1 (Fatoorah) QR code with TLV encoding (5 tags)
-- Bilingual Arabic + English invoice layout
-- Print dialog: Tax Invoice / فاتورة ضريبية
-- Fields: Invoice number, date, buyer/seller, items, subtotal, discount, VAT, total
-- QR code embedded in print preview (qrcode.react)
-- Company VAT number from Settings
+### Real-Time POS Analytics
+- `/pos-analytics` with 5 KPIs, branch leaderboard, hourly chart, live feed
+
+### ZATCA-Compliant Invoicing
+- VAT (15%), Phase 1 QR code (TLV encoding), bilingual Arabic+English print
 
 ### Mobile POS / Quick Entry
-- `/pos` page with touch-friendly UI
-- Sale/Expense toggle, quick amounts, 4 payment modes
+- `/pos` with touch-friendly sale/expense recording
 
 ### Employee Resignation / Exit Management
-- Status tracking: Active, Resigned, On Notice, Terminated, Left
-- Settlement calculator, complete exit with account deactivation
+- Status tracking, settlement calculator, account deactivation
 
 ### AI-Powered Shift Scheduling
-- GPT-4o analyzes 30-day attendance history
-- Generates optimal 7-day schedule, one-click apply
+- GPT-4o attendance analysis, optimal schedule generation
 
 ### Financial Management
 - Sales, Expenses, Supplier Payments, Customer credit, Invoicing
 
 ### Stock Management & Reporting
-- Item Master, Stock In/Out, Invoice OCR, Consumption/Profitability/Wastage reports
+- Item Master, Stock In/Out, OCR, Consumption/Profitability/Wastage reports
 
 ### HR with Job Titles & Permissions
-- 15 default titles, permission sync on login, self-service portal
+- 15 default titles, permission sync, self-service portal
 
 ### Automated Scheduler
-- APScheduler: Daily Sales, Low Stock, Expense Summary
+- Daily Sales, Low Stock, Expense Summary (APScheduler)
 
 ### Bank Reconciliation
-- Dedicated page with side-by-side comparison, manual flagging
+- Dedicated page with manual flagging
 
 ### Other
 - Shifts, Kitchen, WhatsApp, Assets, Cash Flow, Dashboard, Reports, RBAC, PWA
 
 ## Completed Tasks (All)
-- [x] All original financial/HR/stock features
-- [x] P0: Backend Refactoring (Feb 26, 2026)
-- [x] P1: Job Titles to Permissions (Feb 26, 2026)
-- [x] P2: Dedicated Reconciliation Page (Feb 26, 2026)
-- [x] P3: Automated Scheduler (Feb 26, 2026)
-- [x] P4: Stock Reports (Feb 26, 2026)
-- [x] Mobile POS / Quick Entry (Feb 26, 2026)
-- [x] Employee Resignation/Exit (Feb 26, 2026)
-- [x] AI Shift Scheduling (Feb 26, 2026)
-- [x] Real-Time POS Analytics (Feb 26, 2026)
-- [x] ZATCA-Compliant Invoicing (Feb 26, 2026)
-- [x] bcrypt warning fix (Feb 26, 2026)
+- [x] All original features
+- [x] P0-P4: Refactoring, Permissions, Reconciliation, Scheduler, Stock Reports
+- [x] Mobile POS, Employee Exit, AI Scheduling
+- [x] Real-Time POS Analytics, ZATCA Invoicing
+- [x] Multi-Branch Inventory Transfer (Feb 26, 2026)
 
 ## Upcoming Tasks
-- None pending from requirements - all completed
+- None pending - all completed
