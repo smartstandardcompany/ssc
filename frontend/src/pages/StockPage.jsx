@@ -229,6 +229,29 @@ export default function StockPage() {
           <TabsContent value="balance">
             <Card className="border-stone-100">
               <CardContent className="pt-4">
+                {/* Mobile card view */}
+                <div className="sm:hidden space-y-2">
+                  {balance.map(b => (
+                    <div key={b.item_id} className={`p-3 border rounded-xl ${b.low_stock ? 'bg-red-50/50 border-red-200' : 'bg-white'}`} data-testid={`stock-card-${b.item_id}`}>
+                      <div className="flex justify-between items-start mb-1.5">
+                        <div>
+                          <p className="text-sm font-bold">{b.item_name}</p>
+                          <span className="text-[10px] text-muted-foreground capitalize">{b.unit}</span>
+                        </div>
+                        {b.low_stock ? <Badge className="bg-red-100 text-red-600 text-[10px]">Low Stock</Badge> : <Badge className="bg-emerald-100 text-emerald-600 text-[10px]">OK</Badge>}
+                      </div>
+                      <div className="grid grid-cols-4 gap-1.5 text-center text-[10px]">
+                        <div className="p-1 bg-emerald-50 rounded"><p className="text-muted-foreground">In</p><p className="font-bold text-emerald-600">{b.stock_in}</p></div>
+                        <div className="p-1 bg-red-50 rounded"><p className="text-muted-foreground">Used</p><p className="font-bold text-red-600">{b.stock_used}</p></div>
+                        <div className="p-1 bg-stone-50 rounded"><p className="text-muted-foreground">Bal</p><p className="font-bold">{b.balance}</p></div>
+                        <div className="p-1 bg-blue-50 rounded"><p className="text-muted-foreground">Value</p><p className="font-bold text-blue-600">SAR {(b.avg_cost * b.balance).toFixed(0)}</p></div>
+                      </div>
+                    </div>
+                  ))}
+                  {balance.length === 0 && <p className="text-center text-muted-foreground py-8">No stock data yet</p>}
+                </div>
+                {/* Desktop table */}
+                <div className="hidden sm:block overflow-x-auto">
                 <table className="w-full" data-testid="stock-balance-table">
                   <thead><tr className="border-b">
                     <th className="text-left p-3 text-sm font-medium">Item</th>
