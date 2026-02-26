@@ -379,7 +379,7 @@ export default function EmployeesPage() {
         {/* Employee Summary Dialog */}
         <Dialog open={showSummary} onOpenChange={setShowSummary}>
           <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto" data-testid="summary-dialog">
-            <DialogHeader><DialogTitle className="font-outfit">Payment Summary - {empSummary?.employee?.name}</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle className="font-outfit">Payment Summary - {empSummary?.employee?.name} {(() => { const jt = jobTitles.find(j => j.id === empSummary?.employee?.job_title_id); return jt ? <Badge variant="outline" className="ml-2 capitalize">{jt.title}</Badge> : ''; })()}</DialogTitle></DialogHeader>
             {empSummary && (
               <Tabs defaultValue="payments">
                 <TabsList className="mb-4"><TabsTrigger value="payments">Payments</TabsTrigger><TabsTrigger value="loan">Loan</TabsTrigger><TabsTrigger value="leave">Leave</TabsTrigger><TabsTrigger value="deductions">Deductions</TabsTrigger><TabsTrigger value="salary_history">Salary History</TabsTrigger><TabsTrigger value="docs">Documents</TabsTrigger></TabsList>
