@@ -669,6 +669,71 @@ export default function EmployeesPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Resignation Dialog */}
+        <Dialog open={!!resignDialog} onOpenChange={(v) => !v && setResignDialog(null)}>
+          <DialogContent className="max-w-sm" data-testid="resign-dialog">
+            <DialogHeader><DialogTitle className="font-outfit">Employee Resignation / Exit</DialogTitle></DialogHeader>
+            {resignDialog && (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">Processing exit for <strong>{resignDialog.name}</strong></p>
+                <div>
+                  <Label className="text-xs">Status</Label>
+                  <Select value={resignForm.status} onValueChange={(v) => setResignForm({ ...resignForm, status: v })}>
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="resigned">Resigned</SelectItem>
+                      <SelectItem value="on_notice">On Notice Period</SelectItem>
+                      <SelectItem value="terminated">Terminated</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div><Label className="text-xs">Resignation Date</Label><Input type="date" value={resignForm.resignation_date} onChange={(e) => setResignForm({ ...resignForm, resignation_date: e.target.value })} className="h-9" /></div>
+                <div><Label className="text-xs">Notice Period (days)</Label><Input type="number" value={resignForm.notice_period_days} onChange={(e) => setResignForm({ ...resignForm, notice_period_days: parseInt(e.target.value) || 0 })} className="h-9" /></div>
+                <div><Label className="text-xs">Reason</Label><Input value={resignForm.reason} onChange={(e) => setResignForm({ ...resignForm, reason: e.target.value })} placeholder="e.g. Personal reasons" className="h-9" /></div>
+                <Button className="w-full rounded-xl" data-testid="confirm-resign-btn" onClick={async () => {
+                  try {
+                    await api.post(`/employees/${resignDialog.id}/resign`, resignForm);
+                    toast.success(`${resignDialog.name} marked as ${resignForm.status}`);
+                    setResignDialog(null);
+                    const r = await api.get('/employees'); setEmployees(r.data);
+                  } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+                }}>Confirm</Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Settlement Dialog */}
+        <Dialog open={!!settlementDialog} onOpenChange={(v) => !v && setSettlementDialog(null)}>
+          <DialogContent className="max-w-md" data-testid="settlement-dialog">
+            <DialogHeader><DialogTitle className="font-outfit">Final Settlement</DialogTitle></DialogHeader>
+            {settlement && settlementDialog && (
+              <div className="space-y-3">
+                <div className="bg-stone-50 rounded-xl p-3 space-y-2 text-sm">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Employee</span><span className="font-medium">{settlement.employee_name}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Status</span><Badge variant="outline">{settlement.status}</Badge></div>
+                  {settlement.resignation_date && <div className="flex justify-between"><span className="text-muted-foreground">Resignation Date</span><span>{settlement.resignation_date}</span></div>}
+                  {settlement.last_working_day && <div className="flex justify-between"><span className="text-muted-foreground">Last Working Day</span><span>{settlement.last_working_day}</span></div>}
+                  <hr />
+                  <div className="flex justify-between"><span className="text-muted-foreground">Pending Salary</span><span className="font-mono">SAR {settlement.pending_salary?.toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Leave Balance ({settlement.leave_balance_days} days)</span><span className="font-mono text-emerald-600">+SAR {settlement.leave_encashment?.toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Loan Balance</span><span className="font-mono text-red-600">-SAR {settlement.loan_balance?.toFixed(2)}</span></div>
+                  <hr />
+                  <div className="flex justify-between text-base font-bold"><span>Total Settlement</span><span className={settlement.total_settlement >= 0 ? 'text-emerald-600' : 'text-red-600'}>SAR {settlement.total_settlement?.toFixed(2)}</span></div>
+                </div>
+                <Button className="w-full rounded-xl" data-testid="complete-exit-btn" onClick={async () => {
+                  try {
+                    await api.post(`/employees/${settlementDialog.id}/complete-exit`, { settlement_amount: settlement.total_settlement, paid: true, status: 'left' });
+                    toast.success('Employee exit completed');
+                    setSettlementDialog(null); setSettlement(null);
+                    const r = await api.get('/employees'); setEmployees(r.data);
+                  } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+                }}>Complete Exit & Deactivate Account</Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
