@@ -297,6 +297,7 @@ export default function InvoicesPage() {
                   <th className="text-right p-3 font-medium text-sm">Subtotal</th>
                   <th className="text-right p-3 font-medium text-sm">Discount</th>
                   <th className="text-right p-3 font-medium text-sm">Total</th>
+                  <th className="text-right p-3 font-medium text-sm">VAT</th>
                   <th className="text-left p-3 font-medium text-sm">Payment</th>
                   <th className="text-right p-3 font-medium text-sm">Credit Due</th>
                   <th className="text-right p-3 font-medium text-sm">Actions</th>
