@@ -441,8 +441,11 @@ export default function DashboardPage() {
             </Card>
           )}
         </div>
+        )}
 
         {/* VAT Section (toggleable) */}
+        {widgets.vatSummary && (
+        <>
         <div className="flex items-center gap-3 mt-2">
           <Checkbox checked={showVat} onCheckedChange={setShowVat} id="vat-toggle" />
           <Label htmlFor="vat-toggle" className="cursor-pointer text-sm font-medium">Show VAT 15% Calculation</Label>
