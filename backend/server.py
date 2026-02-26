@@ -3239,7 +3239,11 @@ async def get_branch_dues(current_user: User = Depends(get_current_user)):
     
     for e in expenses:
         pay_b = e.get("branch_id")
-        if e.get("supplier_id"):
+        expense_for_b = e.get("expense_for_branch_id")
+        if expense_for_b and pay_b and expense_for_b != pay_b:
+            key = f"{branch_map.get(pay_b, '?')} paid for {branch_map.get(expense_for_b, '?')} (expense)"
+            dues[key] = dues.get(key, 0) + e["amount"]
+        elif e.get("supplier_id"):
             sup = suppliers.get(e["supplier_id"], {})
             sup_b = sup.get("branch_id")
             if pay_b and sup_b and pay_b != sup_b:
