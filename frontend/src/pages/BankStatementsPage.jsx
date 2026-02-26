@@ -106,7 +106,7 @@ export default function BankStatementsPage() {
             <CardHeader><CardTitle className="font-outfit">{detail.bank_name} Analysis - {detail.transaction_count} Transactions</CardTitle></CardHeader>
             <CardContent>
               <Tabs defaultValue="summary">
-                <TabsList className="flex-wrap"><TabsTrigger value="summary">Summary</TabsTrigger><TabsTrigger value="senders">Senders/Receivers</TabsTrigger><TabsTrigger value="pos">POS by Branch</TabsTrigger><TabsTrigger value="mismatch">Mismatches</TabsTrigger><TabsTrigger value="suppliers">Supplier Payments</TabsTrigger><TabsTrigger value="daily">Daily</TabsTrigger><TabsTrigger value="all">All Transactions</TabsTrigger></TabsList>
+                <TabsList className="flex-wrap"><TabsTrigger value="summary">Summary</TabsTrigger><TabsTrigger value="reconciliation" data-testid="reconciliation-tab">Reconciliation</TabsTrigger><TabsTrigger value="senders">Senders/Receivers</TabsTrigger><TabsTrigger value="pos">POS by Branch</TabsTrigger><TabsTrigger value="mismatch">Mismatches</TabsTrigger><TabsTrigger value="suppliers">Supplier Payments</TabsTrigger><TabsTrigger value="daily">Daily</TabsTrigger><TabsTrigger value="all">All Transactions</TabsTrigger></TabsList>
 
                 <TabsContent value="summary" className="space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
