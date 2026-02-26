@@ -226,6 +226,46 @@ export default function SettingsPage() {
 
           <TabsContent value="company">
             <div className="space-y-6">
+              {/* ZATCA Invoicing Toggle - Prominent */}
+              <Card className="border-orange-200 bg-orange-50/30" data-testid="zatca-settings-card">
+                <CardHeader className="pb-3">
+                  <CardTitle className="font-outfit flex items-center gap-2">
+                    <FileCheck size={18} className="text-orange-600" />
+                    ZATCA Invoicing
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">Enable or disable ZATCA-compliant VAT invoicing. When enabled, invoices will include VAT calculations and a QR code as required by Saudi tax authority.</p>
+                  <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-orange-100">
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-stone-800">Enable ZATCA VAT on Invoices</p>
+                      <p className="text-xs text-stone-500 mt-0.5">Adds VAT line items and QR code to all generated invoices</p>
+                    </div>
+                    <Switch
+                      checked={companyInfo.vat_enabled}
+                      onCheckedChange={(v) => setCompanyInfo({ ...companyInfo, vat_enabled: v })}
+                      data-testid="zatca-toggle"
+                    />
+                  </div>
+                  {companyInfo.vat_enabled && (
+                    <div className="grid grid-cols-2 gap-4 p-4 bg-white rounded-xl border border-orange-100">
+                      <div>
+                        <Label className="text-xs">VAT Rate (%)</Label>
+                        <Input type="number" value={companyInfo.vat_rate} onChange={(e) => setCompanyInfo({ ...companyInfo, vat_rate: e.target.value })} className="h-9 mt-1" data-testid="vat-rate-input" />
+                      </div>
+                      <div>
+                        <Label className="text-xs">VAT Registration Number</Label>
+                        <Input value={companyInfo.vat_number} onChange={(e) => setCompanyInfo({ ...companyInfo, vat_number: e.target.value })} className="h-9 mt-1" placeholder="3xxxxxxxxx00003" data-testid="vat-number-input" />
+                      </div>
+                    </div>
+                  )}
+                  <Button onClick={async () => {
+                    try { await api.post('/settings/company', companyInfo); toast.success('ZATCA settings saved'); }
+                    catch { toast.error('Failed'); }
+                  }} className="rounded-xl bg-orange-600 hover:bg-orange-700" data-testid="save-zatca-btn">Save ZATCA Settings</Button>
+                </CardContent>
+              </Card>
+
               <Card className="border-stone-100">
                 <CardHeader><CardTitle className="font-outfit">Company Information & Address</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
@@ -239,13 +279,6 @@ export default function SettingsPage() {
                     <div><Label>Phone</Label><Input value={companyInfo.phone} onChange={(e) => setCompanyInfo({ ...companyInfo, phone: e.target.value })} /></div>
                     <div><Label>Email</Label><Input value={companyInfo.email} onChange={(e) => setCompanyInfo({ ...companyInfo, email: e.target.value })} /></div>
                     <div><Label>CR Number</Label><Input value={companyInfo.cr_number} onChange={(e) => setCompanyInfo({ ...companyInfo, cr_number: e.target.value })} placeholder="Commercial Registration" /></div>
-                    <div><Label>VAT Number</Label><Input value={companyInfo.vat_number} onChange={(e) => setCompanyInfo({ ...companyInfo, vat_number: e.target.value })} /></div>
-                    <div className="col-span-2 flex items-center gap-4 p-3 bg-stone-50 rounded-xl border">
-                      <Checkbox checked={companyInfo.vat_enabled} onCheckedChange={(v) => setCompanyInfo({ ...companyInfo, vat_enabled: v })} />
-                      <Label>Enable ZATCA VAT on Invoices</Label>
-                      {companyInfo.vat_enabled && <Input type="number" value={companyInfo.vat_rate} onChange={(e) => setCompanyInfo({ ...companyInfo, vat_rate: e.target.value })} className="w-20 h-8" />}
-                      {companyInfo.vat_enabled && <span className="text-sm text-muted-foreground">%</span>}
-                    </div>
                   </div>
                   <Button onClick={async () => {
                     try { await api.post('/settings/company', companyInfo); toast.success('Company info saved'); }
