@@ -1,6 +1,9 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import Depends, HTTPException
+# Fix bcrypt 4.x compat with passlib
+import warnings
+warnings.filterwarnings("ignore", message=".*bcrypt.*__about__.*")
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timezone, timedelta
