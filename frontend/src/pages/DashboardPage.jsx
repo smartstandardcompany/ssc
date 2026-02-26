@@ -185,6 +185,9 @@ export default function DashboardPage() {
             <p className={theme === 'dark' ? 'text-stone-400' : 'text-muted-foreground'}>Smart Standard Company - Business Overview</p>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
+            <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowWhatsApp(true)} data-testid="dashboard-whatsapp-btn">
+              <MessageCircle size={14} className="mr-1" />WhatsApp
+            </Button>
             {Object.keys(THEMES).map(th => (
               <button key={th} onClick={() => changeTheme(th)} className={`px-3 py-1 rounded-lg text-xs font-medium border transition-all capitalize ${theme === th ? 'bg-primary text-white border-primary' : 'bg-white border-stone-200 hover:border-primary'}`}>{th}</button>
             ))}
