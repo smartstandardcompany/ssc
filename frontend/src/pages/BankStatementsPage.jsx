@@ -124,6 +124,71 @@ export default function BankStatementsPage() {
                   </div>}
                 </TabsContent>
 
+                {/* RECONCILIATION TAB */}
+                <TabsContent value="reconciliation" className="space-y-4" data-testid="reconciliation-content">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-sm font-medium">POS Sales Reconciliation</p>
+                      <p className="text-xs text-muted-foreground">Bank POS deposits vs SSC Track bank sales (1-day offset: today's sale → tomorrow's bank deposit)</p>
+                    </div>
+                    {reconciliation && <Button size="sm" variant="outline" className="rounded-xl" onClick={() => {
+                      const csv = 'Deposit Date,Sale Date,Branch,Bank Amount,App Amount,Difference,Status\n' + reconciliation.rows.map(r => `${r.deposit_date},${r.sale_date},${r.branch},${r.bank_amount},${r.app_amount},${r.difference},${r.status}`).join('\n');
+                      const blob = new Blob([csv], {type: 'text/csv'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'pos_reconciliation.csv'; a.click();
+                      toast.success('Exported');
+                    }}><Upload size={14} className="mr-1" />Export CSV</Button>}
+                  </div>
+                  {reconLoading ? <div className="text-center py-8">Loading reconciliation...</div> : !reconciliation ? (
+                    <div className="text-center py-8 text-muted-foreground">No reconciliation data available</div>
+                  ) : (
+                    <>
+                      {/* Summary Cards */}
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        <div className="p-3 bg-success/10 rounded-xl text-center"><div className="text-xs text-muted-foreground">Bank POS Total</div><div className="text-lg font-bold text-success">SAR {reconciliation.summary.total_bank_pos.toFixed(0)}</div></div>
+                        <div className="p-3 bg-primary/10 rounded-xl text-center"><div className="text-xs text-muted-foreground">App Sales Total</div><div className="text-lg font-bold text-primary">SAR {reconciliation.summary.total_app_sales.toFixed(0)}</div></div>
+                        <div className={`p-3 rounded-xl text-center ${Math.abs(reconciliation.summary.total_difference) < 1 ? 'bg-success/10' : 'bg-error/10'}`}><div className="text-xs text-muted-foreground">Difference</div><div className={`text-lg font-bold ${Math.abs(reconciliation.summary.total_difference) < 1 ? 'text-success' : 'text-error'}`}>SAR {reconciliation.summary.total_difference.toFixed(2)}</div></div>
+                        <div className="p-3 bg-success/10 rounded-xl text-center"><div className="text-xs text-muted-foreground">Matched</div><div className="text-lg font-bold text-success">{reconciliation.summary.matched_count}</div></div>
+                        <div className="p-3 bg-warning/10 rounded-xl text-center"><div className="text-xs text-muted-foreground">Discrepancies</div><div className="text-lg font-bold text-warning">{reconciliation.summary.discrepancy_count}</div></div>
+                      </div>
+
+                      {/* Side-by-side Table */}
+                      <div className="max-h-[500px] overflow-y-auto border rounded-xl">
+                        <table className="w-full" data-testid="reconciliation-table">
+                          <thead className="sticky top-0 bg-stone-50 z-10"><tr className="border-b">
+                            <th className="text-left p-2 text-xs font-medium">Bank Date</th>
+                            <th className="text-left p-2 text-xs font-medium">Sale Date</th>
+                            <th className="text-left p-2 text-xs font-medium">Branch</th>
+                            <th className="text-right p-2 text-xs font-medium">Bank POS</th>
+                            <th className="text-right p-2 text-xs font-medium">App Sales</th>
+                            <th className="text-right p-2 text-xs font-medium">Difference</th>
+                            <th className="text-center p-2 text-xs font-medium">Status</th>
+                          </tr></thead>
+                          <tbody>
+                            {reconciliation.rows.map((r, i) => (
+                              <tr key={i} className={`border-b hover:bg-stone-50 ${r.status === 'matched' ? '' : r.status === 'bank_only' ? 'bg-warning/5' : r.status === 'app_only' ? 'bg-info/5' : 'bg-error/5'}`}>
+                                <td className="p-2 text-sm">{r.deposit_date}</td>
+                                <td className="p-2 text-sm">{r.sale_date || <span className="text-muted-foreground">-</span>}</td>
+                                <td className="p-2 text-sm">{r.branch}</td>
+                                <td className="p-2 text-sm text-right font-medium text-success">{r.bank_amount > 0 ? `SAR ${r.bank_amount.toFixed(2)}` : '-'}</td>
+                                <td className="p-2 text-sm text-right font-medium text-primary">{r.app_amount > 0 ? `SAR ${r.app_amount.toFixed(2)}` : '-'}</td>
+                                <td className={`p-2 text-sm text-right font-bold ${Math.abs(r.difference) < 1 ? 'text-success' : 'text-error'}`}>{r.difference !== 0 ? `SAR ${r.difference.toFixed(2)}` : '-'}</td>
+                                <td className="p-2 text-center">
+                                  <Badge className={
+                                    r.status === 'matched' ? 'bg-success/20 text-success' :
+                                    r.status === 'bank_only' ? 'bg-warning/20 text-warning' :
+                                    r.status === 'app_only' ? 'bg-info/20 text-info' :
+                                    'bg-error/20 text-error'
+                                  }>{r.status === 'matched' ? 'Matched' : r.status === 'bank_only' ? 'Bank Only' : r.status === 'app_only' ? 'App Only' : 'Mismatch'}</Badge>
+                                </td>
+                              </tr>
+                            ))}
+                            {reconciliation.rows.length === 0 && <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">No POS transactions to reconcile. Ensure POS machines are mapped to branches.</td></tr>}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  )}
+                </TabsContent>
+
                 <TabsContent value="senders">
                   <div className="flex justify-between items-center mb-3">
                     <p className="text-sm text-muted-foreground">Grouped by sender/receiver - totals at bottom</p>
