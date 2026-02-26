@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, ShoppingCart, Store, Users, Truck, Receipt, BarChart3, LogOut, Shield, CreditCard, FileText, Tags, UserCheck, FileWarning, Bell, User as UserIcon, Settings, ArrowLeftRight, FileInput, AlertTriangle, Handshake, HelpCircle, Building2, Package, ChefHat, CalendarClock, ArrowDownUp, Activity } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Store, Users, Truck, Receipt, BarChart3, LogOut, Shield, CreditCard, FileText, Tags, UserCheck, FileWarning, Bell, User as UserIcon, Settings, ArrowLeftRight, FileInput, AlertTriangle, Handshake, HelpCircle, Building2, Package, ChefHat, CalendarClock, ArrowDownUp, Activity, PackageCheck } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { toast } from 'sonner';
@@ -53,7 +53,7 @@ export const DashboardLayout = ({ children }) => {
     { path: '/reconciliation', icon: ArrowDownUp, label: 'Reconciliation', roles: ['admin'], perm: 'reports' },
     { path: '/employees', icon: UserCheck, label: 'Employees', roles: ['admin', 'manager'], perm: 'employees' },
     { path: '/stock', icon: Package, label: 'Stock', roles: ['admin', 'manager'], perm: 'stock' },
-    { path: '/transfers', icon: ArrowLeftRight, label: 'Transfers', roles: ['admin', 'manager'], perm: 'stock' },
+    { path: '/transfers', icon: PackageCheck, label: 'Transfers', roles: ['admin', 'manager'], perm: 'stock' },
     { path: '/kitchen', icon: ChefHat, label: 'Kitchen', roles: ['admin', 'manager', 'operator'], perm: 'kitchen' },
     { path: '/schedule', icon: CalendarClock, label: 'Schedule', roles: ['admin', 'manager'], perm: 'shifts' },
     { path: '/documents', icon: FileWarning, label: 'Documents', roles: ['admin', 'manager'], perm: 'documents' },
