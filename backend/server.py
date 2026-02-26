@@ -493,7 +493,10 @@ class Item(BaseModel):
     name: str
     description: Optional[str] = None
     unit_price: float = 0
+    cost_price: float = 0
     category: Optional[str] = None
+    unit: Optional[str] = "piece"
+    min_stock_level: float = 0
     active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
