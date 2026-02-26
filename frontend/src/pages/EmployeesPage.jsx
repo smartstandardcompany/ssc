@@ -311,6 +311,23 @@ export default function EmployeesPage() {
                           <Button size="sm" variant="outline" onClick={() => { setPayingEmp(emp); setPayData(d => ({ ...d, amount: emp.salary || '', period: format(new Date(), 'MMM yyyy') })); setShowPayDialog(true); }} data-testid="pay-salary-btn" className="h-7 text-xs"><DollarSign size={12} className="mr-1" />Pay</Button>
                           <Button size="sm" variant="outline" onClick={() => { setLeaveEmp(emp); setShowLeaveDialog(true); }} data-testid="add-leave-btn" className="h-7 text-xs"><Calendar size={12} className="mr-1" />Leave</Button>
                           <Button size="sm" variant="ghost" onClick={() => handleEdit(emp)} className="h-7 text-xs"><Edit size={12} /></Button>
+                          {(!emp.status || emp.status === 'active') && (
+                            <Button size="sm" variant="ghost" className="h-7 text-xs text-amber-600" data-testid="resign-btn"
+                              onClick={() => { setResignDialog(emp); setResignForm({ resignation_date: new Date().toISOString().split('T')[0], notice_period_days: 30, reason: '', status: 'resigned' }); }}>
+                              <UserX size={12} />
+                            </Button>
+                          )}
+                          {(emp.status === 'resigned' || emp.status === 'on_notice' || emp.status === 'terminated') && (
+                            <Button size="sm" variant="ghost" className="h-7 text-xs text-blue-600" data-testid="settlement-btn"
+                              onClick={async () => {
+                                try {
+                                  const { data } = await api.get(`/employees/${emp.id}/settlement`);
+                                  setSettlement(data); setSettlementDialog(emp);
+                                } catch { toast.error('Failed to load settlement'); }
+                              }}>
+                              <Calculator size={12} className="mr-1" />Exit
+                            </Button>
+                          )}
                           <Button size="sm" variant="ghost" onClick={() => handleDelete(emp.id)} className="h-7 text-xs text-error"><Trash2 size={12} /></Button>
                         </div>
                       </td>
