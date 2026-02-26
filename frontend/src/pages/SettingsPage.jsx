@@ -385,35 +385,44 @@ export default function SettingsPage() {
                         <li>Go to <a href="https://www.mongodb.com/atlas" target="_blank" rel="noreferrer" className="text-primary underline">mongodb.com/atlas</a></li>
                         <li>Create free account → Create free cluster (M0)</li>
                         <li>Click Connect → Get connection string</li>
+                        <li>Whitelist your server IP (or 0.0.0.0/0 for any)</li>
                       </ol>
                     </div>
                     
                     <div className="p-4 border rounded-xl bg-stone-50">
                       <h3 className="font-semibold text-sm mb-2">Step 3: Deploy (Choose One)</h3>
                       <div className="space-y-3 mt-2">
-                        <div className="p-3 bg-white rounded-lg border">
-                          <div className="font-medium text-xs">Option A: Railway.app (Easiest)</div>
-                          <ol className="text-xs text-muted-foreground mt-1 ml-4 list-decimal">
+                        <div className="p-3 bg-white rounded-lg border border-primary/30">
+                          <div className="font-medium text-xs flex items-center gap-2"><Badge className="bg-primary text-white">Recommended</Badge> Railway.app (Fastest & Easiest)</div>
+                          <ol className="text-xs text-muted-foreground mt-2 ml-4 list-decimal space-y-1">
                             <li>Go to <a href="https://railway.app" target="_blank" rel="noreferrer" className="text-primary underline">railway.app</a> → Sign in with GitHub</li>
                             <li>Click "New Project" → "Deploy from GitHub Repo"</li>
-                            <li>Select your repo → Set environment variables</li>
+                            <li>Select your repo → It auto-detects the Dockerfile</li>
+                            <li>Add environment variables (see Step 4 below)</li>
+                            <li>Railway gives you a URL like <code className="bg-stone-200 px-1 rounded">ssctrack.up.railway.app</code></li>
+                            <li>In <strong>GoDaddy DNS</strong>: Add a CNAME record pointing your subdomain to Railway URL</li>
+                          </ol>
+                          <p className="text-xs mt-2 text-primary font-medium">Cost: ~$5/month. Your data is safe on MongoDB Atlas.</p>
+                        </div>
+                        <div className="p-3 bg-white rounded-lg border">
+                          <div className="font-medium text-xs">GoDaddy VPS / Any VPS (Full Control)</div>
+                          <ol className="text-xs text-muted-foreground mt-1 ml-4 list-decimal space-y-1">
+                            <li>Get a Linux VPS (GoDaddy, DigitalOcean, or Hetzner — $5-10/mo)</li>
+                            <li>SSH into server: <code className="bg-stone-200 px-1 rounded">ssh root@your-server-ip</code></li>
+                            <li>Install Docker: <code className="bg-stone-200 px-1 rounded">curl -fsSL https://get.docker.com | sh</code></li>
+                            <li>Clone repo: <code className="bg-stone-200 px-1 rounded">git clone your-repo-url && cd your-repo</code></li>
+                            <li>Create <code className="bg-stone-200 px-1 rounded">.env</code> file with your settings</li>
+                            <li>Build & run: <code className="bg-stone-200 px-1 rounded">docker build -t ssctrack . && docker run -d -p 80:80 --env-file .env ssctrack</code></li>
+                            <li>In <strong>GoDaddy DNS</strong>: Add an A record pointing your domain to server IP</li>
                           </ol>
                         </div>
                         <div className="p-3 bg-white rounded-lg border">
-                          <div className="font-medium text-xs">Option B: VPS (DigitalOcean/Hetzner)</div>
-                          <ol className="text-xs text-muted-foreground mt-1 ml-4 list-decimal">
-                            <li>Get a VPS ($5-10/mo) → Install Docker</li>
-                            <li>Clone your GitHub repo</li>
-                            <li>Run: docker-compose up</li>
-                            <li>Point your domain to the server IP</li>
-                          </ol>
-                        </div>
-                        <div className="p-3 bg-white rounded-lg border">
-                          <div className="font-medium text-xs">Option C: Your Existing Website</div>
-                          <ol className="text-xs text-muted-foreground mt-1 ml-4 list-decimal">
-                            <li>Your hosting needs to support Node.js + Python</li>
-                            <li>Upload code via FTP/SSH</li>
-                            <li>Install dependencies and run</li>
+                          <div className="font-medium text-xs">Render.com (Free Tier Available)</div>
+                          <ol className="text-xs text-muted-foreground mt-1 ml-4 list-decimal space-y-1">
+                            <li>Go to <a href="https://render.com" target="_blank" rel="noreferrer" className="text-primary underline">render.com</a> → Connect GitHub</li>
+                            <li>Create "Web Service" from your repo</li>
+                            <li>Set environment variables → Deploy</li>
+                            <li>Add custom domain in Render dashboard</li>
                           </ol>
                         </div>
                       </div>
@@ -426,13 +435,63 @@ export default function SettingsPage() {
                         <p>DB_NAME=ssctrack</p>
                         <p>SECRET_KEY=your-secret-key-here</p>
                         <p>REACT_APP_BACKEND_URL=https://yourdomain.com</p>
+                        <p># Optional - for WhatsApp:</p>
+                        <p>TWILIO_ACCOUNT_SID=your-sid</p>
+                        <p>TWILIO_AUTH_TOKEN=your-token</p>
+                        <p>TWILIO_PHONE_NUMBER=+1234567890</p>
+                        <p># Optional - for Invoice OCR:</p>
+                        <p>EMERGENT_LLM_KEY=your-key</p>
                       </div>
+                    </div>
+
+                    <div className="p-4 border rounded-xl bg-stone-50">
+                      <h3 className="font-semibold text-sm mb-2">GoDaddy Domain Setup</h3>
+                      <ol className="text-xs text-muted-foreground space-y-1 ml-4 list-decimal">
+                        <li>Login to <a href="https://dcc.godaddy.com" target="_blank" rel="noreferrer" className="text-primary underline">GoDaddy Domain Manager</a></li>
+                        <li>Select your domain → DNS → Manage Records</li>
+                        <li><strong>For Railway/Render:</strong> Add CNAME record → Name: <code className="bg-stone-200 px-1 rounded">app</code> → Value: <code className="bg-stone-200 px-1 rounded">your-app.up.railway.app</code></li>
+                        <li><strong>For VPS:</strong> Add A record → Name: <code className="bg-stone-200 px-1 rounded">app</code> → Value: <code className="bg-stone-200 px-1 rounded">your-server-ip</code></li>
+                        <li>Wait 10-30 min for DNS to propagate</li>
+                        <li>Your app will be live at <code className="bg-stone-200 px-1 rounded">app.yourdomain.com</code></li>
+                      </ol>
                     </div>
                     
                     <div className="p-4 border rounded-xl bg-orange-50 border-orange-200">
                       <h3 className="font-semibold text-sm mb-2 text-orange-800">Step 5: Import Your Data</h3>
                       <p className="text-xs text-orange-700">After deploying, go to Settings → Import Data tab to upload your existing data from Excel files.</p>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-stone-100">
+                <CardHeader><CardTitle className="font-outfit">Install App on Phones (PWA)</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground">SSC Track is a Progressive Web App — employees can install it like a native app on their phones. No app store needed!</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 border rounded-xl bg-stone-50">
+                      <h3 className="font-semibold text-sm mb-2">Android (Chrome)</h3>
+                      <ol className="text-xs text-muted-foreground space-y-1 ml-4 list-decimal">
+                        <li>Open your app URL in Chrome browser</li>
+                        <li>Login with their account</li>
+                        <li>Tap the <strong>3 dots menu</strong> (top right)</li>
+                        <li>Tap <strong>"Add to Home screen"</strong> or <strong>"Install app"</strong></li>
+                        <li>Confirm → App icon appears on home screen</li>
+                      </ol>
+                    </div>
+                    <div className="p-4 border rounded-xl bg-stone-50">
+                      <h3 className="font-semibold text-sm mb-2">iPhone (Safari)</h3>
+                      <ol className="text-xs text-muted-foreground space-y-1 ml-4 list-decimal">
+                        <li>Open your app URL in <strong>Safari</strong> (must be Safari)</li>
+                        <li>Login with their account</li>
+                        <li>Tap the <strong>Share button</strong> (square with arrow)</li>
+                        <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
+                        <li>Confirm → App icon appears on home screen</li>
+                      </ol>
+                    </div>
+                  </div>
+                  <div className="p-3 bg-primary/5 rounded-xl border border-primary/20">
+                    <p className="text-xs"><strong>Tip:</strong> Create employee accounts in Users page with appropriate permissions. Each employee logs in with their own account and only sees the modules they have access to (Sales, Kitchen, etc.)</p>
                   </div>
                 </CardContent>
               </Card>
