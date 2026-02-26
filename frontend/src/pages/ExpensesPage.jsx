@@ -214,20 +214,21 @@ export default function ExpensesPage() {
               <CardHeader><CardTitle className="font-outfit text-base flex justify-between">All Expenses <span className="text-error">Total: SAR {totalExp.toFixed(2)}</span></CardTitle></CardHeader>
               <CardContent>
                 <table className="w-full"><thead><tr className="border-b">
-                  <th className="text-left p-3 text-sm font-medium">Date</th><th className="text-left p-3 text-sm font-medium">Category</th><th className="text-left p-3 text-sm font-medium">Description</th><th className="text-left p-3 text-sm font-medium">Branch</th><th className="text-right p-3 text-sm font-medium">Amount</th><th className="text-left p-3 text-sm font-medium">Mode</th><th className="text-right p-3 text-sm font-medium">Actions</th>
+                  <th className="text-left p-3 text-sm font-medium">Date</th><th className="text-left p-3 text-sm font-medium">Category</th><th className="text-left p-3 text-sm font-medium">Description</th><th className="text-left p-3 text-sm font-medium">Paid From</th><th className="text-left p-3 text-sm font-medium">Expense For</th><th className="text-right p-3 text-sm font-medium">Amount</th><th className="text-left p-3 text-sm font-medium">Mode</th><th className="text-right p-3 text-sm font-medium">Actions</th>
                 </tr></thead><tbody>
                   {filtered.map(e => (
-                    <tr key={e.id} className="border-b hover:bg-stone-50">
+                    <tr key={e.id} className="border-b hover:bg-stone-50" data-testid={`expense-row-${e.id}`}>
                       <td className="p-3 text-sm">{format(new Date(e.date), 'MMM dd, yyyy')}</td>
                       <td className="p-3"><Badge variant="secondary" className="capitalize">{e.category?.replace('_',' ')}</Badge>{e.sub_category && <Badge variant="outline" className="ml-1 text-xs capitalize">{e.sub_category}</Badge>}</td>
                       <td className="p-3 text-sm">{e.description || '-'}</td>
                       <td className="p-3 text-sm">{branches.find(b => b.id === e.branch_id)?.name || '-'}</td>
+                      <td className="p-3 text-sm">{e.expense_for_branch_id ? <Badge variant="outline" className="bg-amber-50 border-amber-300 text-amber-700">{branches.find(b => b.id === e.expense_for_branch_id)?.name || '-'}</Badge> : <span className="text-muted-foreground">-</span>}</td>
                       <td className="p-3 text-sm text-right font-bold">SAR {e.amount.toFixed(2)}</td>
                       <td className="p-3"><Badge className={`capitalize ${e.payment_mode === 'cash' ? 'bg-cash/20 text-cash' : e.payment_mode === 'bank' ? 'bg-bank/20 text-bank' : 'bg-credit/20 text-credit'}`}>{e.payment_mode}</Badge></td>
                       <td className="p-3 text-right"><Button size="sm" variant="ghost" onClick={async () => { if(window.confirm('Delete?')) { await api.delete(`/expenses/${e.id}`); fetchData(); }}} className="h-7 text-error"><Trash2 size={12} /></Button></td>
                     </tr>
                   ))}
-                  {filtered.length === 0 && <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">No expenses</td></tr>}
+                  {filtered.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">No expenses</td></tr>}
                 </tbody></table>
               </CardContent>
             </Card>
