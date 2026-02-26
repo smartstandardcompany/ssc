@@ -35,7 +35,7 @@ export default function ExpensesPage() {
 
   const [formData, setFormData] = useState({
     category: '', sub_category: '', description: '', amount: '',
-    payment_mode: 'cash', branch_id: '', supplier_id: '',
+    payment_mode: 'cash', branch_id: '', expense_for_branch_id: '', supplier_id: '',
     date: new Date().toISOString().split('T')[0], notes: ''
   });
 
