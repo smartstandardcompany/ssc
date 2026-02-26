@@ -152,8 +152,8 @@ export default function StockPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-start flex-wrap gap-3">
           <div>
-            <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="stock-title">Stock Management</h1>
-            <p className="text-muted-foreground">Track inventory, stock in/out, and item usage</p>
+            <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-1" data-testid="stock-title">Stock Management</h1>
+            <p className="text-sm text-muted-foreground">Track inventory, stock in/out, and item usage</p>
           </div>
           <div className="flex gap-2 flex-wrap">
             <Select value={branchFilter || "all"} onValueChange={(v) => setBranchFilter(v === "all" ? "" : v)}>
