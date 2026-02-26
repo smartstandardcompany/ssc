@@ -377,6 +377,87 @@ export default function InvoicesPage() {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* ZATCA Invoice Print Dialog */}
+        <Dialog open={!!printInvoice} onOpenChange={(v) => !v && setPrintInvoice(null)}>
+          <DialogContent className="max-w-lg" data-testid="print-invoice-dialog">
+            <DialogHeader><DialogTitle className="font-outfit">Tax Invoice / فاتورة ضريبية</DialogTitle></DialogHeader>
+            {printInvoice && (
+              <div id="invoice-print-area">
+                <div className="border rounded-lg p-4 space-y-3 text-sm bg-white" data-testid="invoice-preview">
+                  {/* Header */}
+                  <div className="text-center border-b pb-3">
+                    <p className="text-lg font-bold">{companySettings.company_name || 'SSC Track'}</p>
+                    <p className="text-xs text-muted-foreground">{companySettings.address || ''}</p>
+                    {companySettings.vat_number && <p className="text-xs mt-1">VAT No / الرقم الضريبي: <strong>{companySettings.vat_number}</strong></p>}
+                    <p className="text-base font-bold mt-2 border-y py-1">TAX INVOICE / فاتورة ضريبية</p>
+                  </div>
+                  {/* Invoice Info */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                    <div>Invoice No / رقم الفاتورة: <strong>{printInvoice.invoice_number}</strong></div>
+                    <div className="text-right">Date / التاريخ: <strong>{new Date(printInvoice.date).toLocaleDateString('en-GB')}</strong></div>
+                    <div>Customer / العميل: <strong>{printInvoice.customer_name || 'Walk-in / عميل نقدي'}</strong></div>
+                    <div className="text-right">Payment / الدفع: <strong>{printInvoice.payment_mode}</strong></div>
+                    {printInvoice.buyer_vat_number && <div>Buyer VAT / ضريبة المشتري: <strong>{printInvoice.buyer_vat_number}</strong></div>}
+                  </div>
+                  {/* Items Table */}
+                  <table className="w-full text-xs border">
+                    <thead><tr className="bg-stone-100 border-b">
+                      <th className="p-1.5 text-left"># </th>
+                      <th className="p-1.5 text-left">Description / الوصف</th>
+                      <th className="p-1.5 text-center">Qty / الكمية</th>
+                      <th className="p-1.5 text-right">Price / السعر</th>
+                      <th className="p-1.5 text-right">Total / المجموع</th>
+                    </tr></thead>
+                    <tbody>
+                      {(printInvoice.items || []).map((item, i) => (
+                        <tr key={i} className="border-b"><td className="p-1.5">{i + 1}</td>
+                          <td className="p-1.5">{item.description}</td>
+                          <td className="p-1.5 text-center">{item.quantity}</td>
+                          <td className="p-1.5 text-right">{item.unit_price?.toFixed(2)}</td>
+                          <td className="p-1.5 text-right">{item.total?.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {/* Totals */}
+                  <div className="space-y-1 text-xs border-t pt-2">
+                    <div className="flex justify-between"><span>Subtotal / المجموع الفرعي</span><span>SAR {printInvoice.subtotal?.toFixed(2)}</span></div>
+                    {printInvoice.discount > 0 && <div className="flex justify-between text-red-600"><span>Discount / الخصم</span><span>-SAR {printInvoice.discount?.toFixed(2)}</span></div>}
+                    <div className="flex justify-between"><span>Taxable Amount / المبلغ الخاضع للضريبة</span><span>SAR {printInvoice.total?.toFixed(2)}</span></div>
+                    {(printInvoice.vat_amount || 0) > 0 && (
+                      <div className="flex justify-between text-blue-600 font-medium"><span>VAT ({printInvoice.vat_rate || 15}%) / ضريبة القيمة المضافة</span><span>SAR {printInvoice.vat_amount?.toFixed(2)}</span></div>
+                    )}
+                    <div className="flex justify-between text-base font-bold border-t pt-1"><span>Total / الإجمالي</span><span>SAR {(printInvoice.total_with_vat || printInvoice.total)?.toFixed(2)}</span></div>
+                  </div>
+                  {/* QR Code */}
+                  {qrData && (
+                    <div className="flex items-center gap-3 border-t pt-2">
+                      <QRCodeSVG value={qrData} size={80} data-testid="zatca-qr" />
+                      <div className="text-[10px] text-muted-foreground">
+                        <p className="font-medium">ZATCA QR / رمز هيئة الزكاة</p>
+                        <p>Seller / البائع: {companySettings.company_name || 'SSC Track'}</p>
+                        {companySettings.vat_number && <p>VAT No: {companySettings.vat_number}</p>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <Button className="flex-1 rounded-xl" data-testid="print-btn" onClick={() => {
+                    const area = document.getElementById('invoice-print-area');
+                    if (area) {
+                      const w = window.open('', '_blank', 'width=600,height=800');
+                      w.document.write(`<html><head><title>${printInvoice.invoice_number}</title><style>body{font-family:Arial,sans-serif;padding:20px;font-size:12px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:4px}th{background:#f5f5f5;text-align:left}.text-right{text-align:right}.text-center{text-align:center}.bold{font-weight:bold}.border-t{border-top:1px solid #ddd;padding-top:4px;margin-top:4px}svg{display:block}</style></head><body>${area.innerHTML}</body></html>`);
+                      w.document.close();
+                      w.print();
+                    }
+                  }}><Printer size={14} className="mr-1" />Print</Button>
+                  <Button variant="outline" className="rounded-xl" onClick={() => setPrintInvoice(null)}>Close</Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
