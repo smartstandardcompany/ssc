@@ -160,3 +160,83 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
         "vat_payable": round((total_sales - total_supplier_payments) * 0.15, 2),
         "branch_loss_alerts": branch_alerts_list,
     }
+
+
+
+@router.get("/dashboard/live-analytics")
+async def get_live_analytics(current_user: User = Depends(get_current_user)):
+    """Real-time POS analytics: recent sales, branch leaderboard, cashier stats."""
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    today_end = (now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)).isoformat()
+
+    sales = await db.sales.find({"date": {"$gte": today_start, "$lt": today_end}}, {"_id": 0}).sort("created_at", -1).to_list(5000)
+    expenses = await db.expenses.find({"date": {"$gte": today_start, "$lt": today_end}}, {"_id": 0}).to_list(5000)
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    users = await db.users.find({}, {"_id": 0}).to_list(500)
+    branch_map = {b["id"]: b["name"] for b in branches}
+    user_map = {u["id"]: u["name"] for u in users}
+
+    total_sales = sum(s.get("final_amount", s["amount"]) for s in sales)
+    total_expenses = sum(e["amount"] for e in expenses)
+    total_count = len(sales)
+    avg_ticket = round(total_sales / total_count, 2) if total_count > 0 else 0
+
+    # Recent 15 sales
+    recent = []
+    for s in sales[:15]:
+        modes = [p["mode"] for p in s.get("payment_details", [])]
+        recent.append({
+            "id": s["id"], "amount": s.get("final_amount", s["amount"]),
+            "branch": branch_map.get(s.get("branch_id"), "N/A"),
+            "cashier": user_map.get(s.get("created_by"), "N/A"),
+            "mode": ", ".join(modes) if modes else s.get("payment_mode", "cash"),
+            "time": s.get("created_at", s.get("date", "")),
+            "description": s.get("description", s.get("notes", ""))[:40],
+        })
+
+    # Branch leaderboard
+    branch_stats = {}
+    for s in sales:
+        bid = s.get("branch_id", "unknown")
+        if bid not in branch_stats:
+            branch_stats[bid] = {"name": branch_map.get(bid, "N/A"), "total": 0, "count": 0}
+        branch_stats[bid]["total"] += s.get("final_amount", s["amount"])
+        branch_stats[bid]["count"] += 1
+    leaderboard = sorted(branch_stats.values(), key=lambda x: -x["total"])
+
+    # Cashier stats
+    cashier_stats = {}
+    for s in sales:
+        cid = s.get("created_by", "unknown")
+        if cid not in cashier_stats:
+            cashier_stats[cid] = {"name": user_map.get(cid, "N/A"), "total": 0, "count": 0}
+        cashier_stats[cid]["total"] += s.get("final_amount", s["amount"])
+        cashier_stats[cid]["count"] += 1
+    top_cashiers = sorted(cashier_stats.values(), key=lambda x: -x["total"])
+
+    # Hourly breakdown
+    hourly = {}
+    for s in sales:
+        t = s.get("created_at", s.get("date", ""))
+        if isinstance(t, str) and len(t) >= 13:
+            h = t[11:13]
+            hourly[h] = hourly.get(h, 0) + s.get("final_amount", s["amount"])
+    hourly_chart = [{"hour": f"{h}:00", "amount": round(v, 2)} for h, v in sorted(hourly.items())]
+
+    # Payment mode breakdown
+    mode_totals = {"cash": 0, "bank": 0, "online": 0, "credit": 0}
+    for s in sales:
+        for p in s.get("payment_details", []):
+            m = p.get("mode", "cash")
+            mode_totals[m] = mode_totals.get(m, 0) + p.get("amount", 0)
+
+    return {
+        "total_sales": round(total_sales, 2), "total_expenses": round(total_expenses, 2),
+        "net": round(total_sales - total_expenses, 2),
+        "sales_count": total_count, "avg_ticket": avg_ticket,
+        "recent_sales": recent, "branch_leaderboard": leaderboard,
+        "top_cashiers": top_cashiers[:10], "hourly_chart": hourly_chart,
+        "payment_modes": mode_totals,
+        "timestamp": now.isoformat(),
+    }
