@@ -30,6 +30,10 @@ export default function StockPage() {
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [showWhatsApp, setShowWhatsApp] = useState(false);
+  const [consumptionReport, setConsumptionReport] = useState(null);
+  const [profitReport, setProfitReport] = useState(null);
+  const [wastageReport, setWastageReport] = useState(null);
+  const [reportDays, setReportDays] = useState(30);
 
   const [newItem, setNewItem] = useState({ name: '', cost_price: '', unit_price: '', unit: 'piece', category: '', min_stock_level: '' });
   const [stockInData, setStockInData] = useState({ item_id: '', branch_id: '', quantity: '', unit_cost: '', supplier_id: '', date: new Date().toISOString().split('T')[0], notes: '' });
