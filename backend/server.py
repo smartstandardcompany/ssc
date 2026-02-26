@@ -5215,6 +5215,8 @@ async def get_attendance_summary(branch_id: Optional[str] = None, month: Optiona
     
     return list(emp_summary.values())
 
+app.include_router(api_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
