@@ -198,6 +198,7 @@ class Expense(BaseModel):
     amount: float
     payment_mode: str
     branch_id: Optional[str] = None
+    expense_for_branch_id: Optional[str] = None
     supplier_id: Optional[str] = None
     date: datetime
     notes: Optional[str] = None
@@ -211,6 +212,7 @@ class ExpenseCreate(BaseModel):
     amount: float
     payment_mode: str
     branch_id: Optional[str] = None
+    expense_for_branch_id: Optional[str] = None
     supplier_id: Optional[str] = None
     date: datetime
     notes: Optional[str] = None
@@ -1451,7 +1453,7 @@ async def get_expenses(current_user: User = Depends(get_current_user)):
 async def create_expense(expense_data: ExpenseCreate, current_user: User = Depends(get_current_user)):
     # Clean empty strings
     data = expense_data.model_dump()
-    for f in ['branch_id', 'supplier_id', 'sub_category']:
+    for f in ['branch_id', 'supplier_id', 'sub_category', 'expense_for_branch_id']:
         if data.get(f) == '':
             data[f] = None
     
