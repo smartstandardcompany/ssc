@@ -241,7 +241,7 @@ export default function SettingsPage() {
                     <div><Label>VAT Number</Label><Input value={companyInfo.vat_number} onChange={(e) => setCompanyInfo({ ...companyInfo, vat_number: e.target.value })} /></div>
                     <div className="col-span-2 flex items-center gap-4 p-3 bg-stone-50 rounded-xl border">
                       <Checkbox checked={companyInfo.vat_enabled} onCheckedChange={(v) => setCompanyInfo({ ...companyInfo, vat_enabled: v })} />
-                      <Label>Enable VAT Calculation on Dashboard</Label>
+                      <Label>Enable ZATCA VAT on Invoices</Label>
                       {companyInfo.vat_enabled && <Input type="number" value={companyInfo.vat_rate} onChange={(e) => setCompanyInfo({ ...companyInfo, vat_rate: e.target.value })} className="w-20 h-8" />}
                       {companyInfo.vat_enabled && <span className="text-sm text-muted-foreground">%</span>}
                     </div>
