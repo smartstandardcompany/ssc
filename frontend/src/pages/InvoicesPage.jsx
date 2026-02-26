@@ -487,6 +487,13 @@ export default function InvoicesPage() {
                       </div>
                     </div>
                   )}
+                  {/* Attached Image */}
+                  {printInvoice.image_url && (
+                    <div className="border-t pt-2 mt-2">
+                      <p className="text-xs font-medium mb-1">Attached Image / صورة مرفقة</p>
+                      <img src={`${process.env.REACT_APP_BACKEND_URL}${printInvoice.image_url}`} alt="Invoice attachment" className="max-w-full max-h-48 rounded border" />
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-2 mt-3">
                   <Button className="flex-1 rounded-xl" data-testid="print-btn" onClick={() => {
