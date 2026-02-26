@@ -5062,8 +5062,6 @@ Extract every line item. For Arabic text, translate item names to English. If qu
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"OCR failed: {str(e)}")
 
-app.include_router(api_router)
-
 # Shift Management Routes
 @api_router.get("/shifts")
 async def get_shifts(branch_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
