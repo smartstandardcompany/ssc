@@ -53,6 +53,7 @@ export const DashboardLayout = ({ children }) => {
     { path: '/reconciliation', icon: ArrowDownUp, label: 'Reconciliation', roles: ['admin'], perm: 'reports' },
     { path: '/employees', icon: UserCheck, label: 'Employees', roles: ['admin', 'manager'], perm: 'employees' },
     { path: '/stock', icon: Package, label: 'Stock', roles: ['admin', 'manager'], perm: 'stock' },
+    { path: '/transfers', icon: ArrowLeftRight, label: 'Transfers', roles: ['admin', 'manager'], perm: 'stock' },
     { path: '/kitchen', icon: ChefHat, label: 'Kitchen', roles: ['admin', 'manager', 'operator'], perm: 'kitchen' },
     { path: '/schedule', icon: CalendarClock, label: 'Schedule', roles: ['admin', 'manager'], perm: 'shifts' },
     { path: '/documents', icon: FileWarning, label: 'Documents', roles: ['admin', 'manager'], perm: 'documents' },
