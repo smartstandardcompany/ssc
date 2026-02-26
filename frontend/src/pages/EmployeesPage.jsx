@@ -186,6 +186,7 @@ export default function EmployeesPage() {
           <div className="flex gap-3 items-center">
             <BranchFilter onChange={setBranchFilter} />
             <ExportButtons dataType="employees" />
+            <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowJobTitleManager(true)} data-testid="manage-job-titles-btn"><Briefcase size={14} className="mr-1" />Job Titles</Button>
             <Dialog open={showDialog} onOpenChange={(o) => { setShowDialog(o); if (!o) resetForm(); }}>
               <DialogTrigger asChild><Button className="rounded-full" data-testid="add-employee-button"><Plus size={18} className="mr-2" />Add Employee</Button></DialogTrigger>
               <DialogContent className="max-w-2xl" data-testid="employee-dialog">
