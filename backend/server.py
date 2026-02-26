@@ -5218,8 +5218,6 @@ def generate_excel_report(sales, expenses, supplier_payments, branches, customer
         headers={"Content-Disposition": "attachment; filename=sales_report.xlsx"}
     )
 
-app.include_router(api_router)
-
 # Stock management routes on main api_router
 @api_router.get("/stock/entries")
 async def get_stock_entries(branch_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
