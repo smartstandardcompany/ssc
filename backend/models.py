@@ -1,0 +1,738 @@
+from pydantic import BaseModel, Field, ConfigDict, EmailStr
+from typing import List, Optional
+from datetime import datetime, timezone
+import uuid
+
+class User(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    email: EmailStr
+    name: str
+    role: str = "operator"
+    branch_id: Optional[str] = None
+    permissions: List[str] = []
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str
+    name: str
+    role: Optional[str] = "operator"
+    branch_id: Optional[str] = None
+    permissions: Optional[List[str]] = []
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+    branch_id: Optional[str] = None
+    permissions: Optional[List[str]] = None
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    user: User
+
+class Branch(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    location: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class BranchCreate(BaseModel):
+    name: str
+    location: Optional[str] = None
+
+class Customer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    branch_id: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CustomerCreate(BaseModel):
+    name: str
+    branch_id: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+
+class Sale(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    sale_type: str
+    branch_id: Optional[str] = None
+    customer_id: Optional[str] = None
+    amount: float
+    discount: float = 0
+    final_amount: float = 0
+    payment_details: Optional[List[dict]] = []
+    credit_amount: float = 0
+    credit_received: float = 0
+    date: datetime
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+    payment_mode: Optional[str] = None
+    payment_status: Optional[str] = None
+    received_mode: Optional[str] = None
+
+class SaleCreate(BaseModel):
+    sale_type: str
+    branch_id: Optional[str] = None
+    customer_id: Optional[str] = None
+    amount: float
+    discount: Optional[float] = 0
+    payment_details: List[dict]
+    date: datetime
+    notes: Optional[str] = None
+
+class SalePayment(BaseModel):
+    payment_mode: str
+    amount: float
+    discount: Optional[float] = 0
+
+class Supplier(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    category: Optional[str] = None
+    sub_category: Optional[str] = None
+    branch_id: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    account_number: Optional[str] = None
+    credit_limit: Optional[float] = 0
+    current_credit: Optional[float] = 0
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class SupplierCreate(BaseModel):
+    name: str
+    category: Optional[str] = None
+    sub_category: Optional[str] = None
+    branch_id: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    account_number: Optional[str] = None
+    credit_limit: Optional[float] = 0
+
+class SupplierPayment(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    supplier_id: str
+    supplier_name: str
+    amount: float
+    payment_mode: str
+    branch_id: Optional[str] = None
+    date: datetime
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+
+class SupplierPaymentCreate(BaseModel):
+    supplier_id: str
+    amount: float
+    payment_mode: str
+    branch_id: Optional[str] = None
+    date: datetime
+    notes: Optional[str] = None
+
+class SupplierCreditPayment(BaseModel):
+    payment_mode: str
+    amount: float
+    branch_id: Optional[str] = None
+
+class Expense(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    category: str
+    sub_category: Optional[str] = None
+    description: str
+    amount: float
+    payment_mode: str
+    branch_id: Optional[str] = None
+    expense_for_branch_id: Optional[str] = None
+    supplier_id: Optional[str] = None
+    date: datetime
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+
+class ExpenseCreate(BaseModel):
+    category: str
+    sub_category: Optional[str] = None
+    description: str
+    amount: float
+    payment_mode: str
+    branch_id: Optional[str] = None
+    expense_for_branch_id: Optional[str] = None
+    supplier_id: Optional[str] = None
+    date: datetime
+    notes: Optional[str] = None
+
+class DashboardStats(BaseModel):
+    total_sales: float
+    total_expenses: float
+    total_supplier_payments: float
+    net_profit: float
+    pending_credits: float
+    cash_sales: float
+    bank_sales: float
+    credit_sales: float
+
+class WhatsAppSettings(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    phone_number: str
+    enabled: bool = True
+    notification_time: str = "09:00"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class WhatsAppSettingsCreate(BaseModel):
+    phone_number: str
+    enabled: bool = True
+    notification_time: str = "09:00"
+
+class ExportRequest(BaseModel):
+    format: str
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    branch_id: Optional[str] = None
+
+class Category(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    type: str
+    parent_id: Optional[str] = None
+    description: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CategoryCreate(BaseModel):
+    name: str
+    type: str
+    parent_id: Optional[str] = None
+    description: Optional[str] = None
+
+class Employee(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    document_id: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    position: Optional[str] = None
+    job_title_id: Optional[str] = None
+    branch_id: Optional[str] = None
+    user_id: Optional[str] = None
+    salary: float = 0
+    pay_frequency: str = "monthly"
+    join_date: Optional[datetime] = None
+    document_expiry: Optional[datetime] = None
+    loan_balance: float = 0
+    old_salary_balance: float = 0
+    annual_leave_entitled: int = 30
+    sick_leave_entitled: int = 15
+    ticket_entitled: int = 1
+    ticket_years: int = 2
+    ticket_used: int = 0
+    notes: Optional[str] = None
+    active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class EmployeeCreate(BaseModel):
+    name: str
+    document_id: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    position: Optional[str] = None
+    job_title_id: Optional[str] = None
+    branch_id: Optional[str] = None
+    salary: float = 0
+    pay_frequency: Optional[str] = "monthly"
+    join_date: Optional[datetime] = None
+    document_expiry: Optional[datetime] = None
+    annual_leave_entitled: Optional[int] = 30
+    sick_leave_entitled: Optional[int] = 15
+    ticket_entitled: Optional[int] = 1
+    ticket_years: Optional[int] = 2
+    notes: Optional[str] = None
+
+class Document(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    document_type: str
+    document_number: Optional[str] = None
+    related_to: Optional[str] = None
+    issue_date: Optional[datetime] = None
+    expiry_date: datetime
+    alert_days: int = 30
+    file_path: Optional[str] = None
+    file_name: Optional[str] = None
+    notes: Optional[str] = None
+    status: str = "active"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class DocumentCreate(BaseModel):
+    name: str
+    document_type: str
+    document_number: Optional[str] = None
+    related_to: Optional[str] = None
+    issue_date: Optional[datetime] = None
+    expiry_date: datetime
+    alert_days: Optional[int] = 30
+    notes: Optional[str] = None
+
+class SalaryPayment(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    employee_id: str
+    employee_name: str
+    payment_type: str = "salary"
+    amount: float
+    payment_mode: str
+    branch_id: Optional[str] = None
+    period: str
+    date: datetime
+    notes: Optional[str] = None
+    acknowledged: bool = False
+    acknowledged_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+
+class SalaryPaymentCreate(BaseModel):
+    employee_id: str
+    payment_type: Optional[str] = "salary"
+    amount: float
+    payment_mode: str
+    branch_id: Optional[str] = None
+    period: str
+    date: datetime
+    notes: Optional[str] = None
+
+class Leave(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    employee_id: str
+    employee_name: str
+    leave_type: str
+    start_date: datetime
+    end_date: datetime
+    days: int
+    with_ticket: bool = False
+    reason: Optional[str] = None
+    status: str = "pending"
+    approved_by: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    rejection_reason: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class LeaveCreate(BaseModel):
+    employee_id: str
+    leave_type: str
+    start_date: datetime
+    end_date: datetime
+    days: int
+    with_ticket: Optional[bool] = False
+    reason: Optional[str] = None
+    status: Optional[str] = "pending"
+
+class EmployeeRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    employee_id: str
+    employee_name: str
+    request_type: str
+    subject: str
+    details: Optional[str] = None
+    amount: Optional[float] = None
+    status: str = "pending"
+    response: Optional[str] = None
+    processed_by: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class EmployeeRequestCreate(BaseModel):
+    request_type: str
+    subject: str
+    details: Optional[str] = None
+    amount: Optional[float] = None
+
+class Notification(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    title: str
+    message: str
+    type: str
+    read: bool = False
+    related_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CashTransfer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    from_branch_id: Optional[str] = None
+    to_branch_id: Optional[str] = None
+    from_branch_name: Optional[str] = None
+    to_branch_name: Optional[str] = None
+    amount: float
+    transfer_mode: str = "cash"
+    sender_name: str
+    receiver_name: str
+    date: datetime
+    notes: Optional[str] = None
+    status: str = "completed"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+
+class CashTransferCreate(BaseModel):
+    from_branch_id: Optional[str] = None
+    to_branch_id: Optional[str] = None
+    amount: float
+    transfer_mode: Optional[str] = "cash"
+    sender_name: str
+    receiver_name: str
+    date: datetime
+    notes: Optional[str] = None
+
+class InvoiceItem(BaseModel):
+    description: str
+    quantity: float = 1
+    unit_price: float
+    total: float = 0
+
+class Invoice(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    invoice_number: str
+    branch_id: Optional[str] = None
+    customer_id: Optional[str] = None
+    customer_name: Optional[str] = None
+    items: List[dict] = []
+    subtotal: float = 0
+    discount: float = 0
+    total: float = 0
+    payment_mode: str = "cash"
+    payment_details: List[dict] = []
+    sale_id: Optional[str] = None
+    date: datetime
+    notes: Optional[str] = None
+    status: str = "paid"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+
+class InvoiceCreate(BaseModel):
+    branch_id: Optional[str] = None
+    customer_id: Optional[str] = None
+    items: List[dict]
+    discount: Optional[float] = 0
+    payment_mode: str = "cash"
+    payment_details: Optional[List[dict]] = None
+    date: datetime
+    notes: Optional[str] = None
+
+class Item(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: Optional[str] = None
+    unit_price: float = 0
+    cost_price: float = 0
+    category: Optional[str] = None
+    unit: Optional[str] = "piece"
+    min_stock_level: float = 0
+    active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ItemCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    unit_price: float = 0
+    cost_price: float = 0
+    category: Optional[str] = None
+    unit: Optional[str] = "piece"
+    min_stock_level: float = 0
+
+class StockEntry(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    item_id: str
+    item_name: str
+    branch_id: str
+    quantity: float
+    unit_cost: float = 0
+    supplier_id: Optional[str] = None
+    source: str = "manual"
+    notes: Optional[str] = None
+    date: datetime
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+
+class StockUsage(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    item_id: str
+    item_name: str
+    branch_id: str
+    quantity: float
+    used_by: str
+    notes: Optional[str] = None
+    date: datetime
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+
+class RecurringExpense(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    category: str
+    amount: float
+    frequency: str = "monthly"
+    branch_id: Optional[str] = None
+    next_due_date: datetime
+    alert_days: int = 7
+    notes: Optional[str] = None
+    active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class JobTitle(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    department: Optional[str] = None
+    min_salary: float = 0
+    max_salary: float = 0
+    description: Optional[str] = None
+    active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class RecurringExpenseCreate(BaseModel):
+    name: str
+    category: str
+    amount: float
+    frequency: Optional[str] = "monthly"
+    branch_id: Optional[str] = None
+    next_due_date: datetime
+    alert_days: Optional[int] = 7
+    notes: Optional[str] = None
+
+class Attendance(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    employee_id: str
+    employee_name: str
+    date: str
+    time_in: Optional[datetime] = None
+    time_out: Optional[datetime] = None
+    status: str = "present"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class EmployeeDocument(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    employee_id: str
+    document_type: str
+    document_number: Optional[str] = None
+    issue_date: Optional[datetime] = None
+    expiry_date: Optional[datetime] = None
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class EmployeeDocumentCreate(BaseModel):
+    employee_id: str
+    document_type: str
+    document_number: Optional[str] = None
+    issue_date: Optional[datetime] = None
+    expiry_date: Optional[datetime] = None
+    notes: Optional[str] = None
+
+class Fine(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    fine_type: str
+    department: str
+    description: str
+    amount: float
+    branch_id: Optional[str] = None
+    employee_id: Optional[str] = None
+    payment_status: str = "unpaid"
+    paid_amount: float = 0
+    payment_mode: Optional[str] = None
+    fine_date: datetime
+    due_date: Optional[datetime] = None
+    paid_date: Optional[datetime] = None
+    deduct_from_salary: bool = False
+    monthly_deduction: float = 0
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class FineCreate(BaseModel):
+    fine_type: str
+    department: str
+    description: str
+    amount: float
+    branch_id: Optional[str] = None
+    employee_id: Optional[str] = None
+    fine_date: datetime
+    due_date: Optional[datetime] = None
+    deduct_from_salary: Optional[bool] = False
+    monthly_deduction: Optional[float] = 0
+    notes: Optional[str] = None
+
+class SalaryDeduction(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    employee_id: str
+    employee_name: str
+    deduction_type: str
+    amount: float
+    period: str
+    reason: str
+    fine_id: Optional[str] = None
+    branch_id: Optional[str] = None
+    date: datetime
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+
+class SalaryDeductionCreate(BaseModel):
+    employee_id: str
+    deduction_type: str
+    amount: float
+    period: str
+    reason: str
+    fine_id: Optional[str] = None
+    branch_id: Optional[str] = None
+    date: datetime
+
+class SalaryHistory(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    employee_id: str
+    old_salary: float
+    new_salary: float
+    effective_date: datetime
+    reason: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class BranchPayback(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    from_branch_id: str
+    to_branch_id: str
+    from_branch_name: str
+    to_branch_name: str
+    amount: float
+    payment_mode: str = "cash"
+    date: datetime
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+
+class Partner(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    share_percentage: float = 0
+    salary: float = 0
+    loan_balance: float = 0
+    salary_due: float = 0
+    notes: Optional[str] = None
+    active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class PartnerCreate(BaseModel):
+    name: str
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    share_percentage: Optional[float] = 0
+    salary: Optional[float] = 0
+    notes: Optional[str] = None
+
+class CompanyLoan(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    lender: str
+    loan_type: str
+    total_amount: float
+    paid_amount: float = 0
+    monthly_payment: float = 0
+    interest_rate: float = 0
+    branch_id: Optional[str] = None
+    start_date: datetime
+    notes: Optional[str] = None
+    status: str = "active"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CompanyLoanPayment(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    loan_id: str
+    amount: float
+    payment_mode: str = "bank"
+    branch_id: Optional[str] = None
+    date: datetime
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class PartnerTransaction(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    partner_id: str
+    partner_name: str
+    transaction_type: str
+    amount: float
+    payment_mode: str = "cash"
+    branch_id: Optional[str] = None
+    description: Optional[str] = None
+    date: datetime
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+
+class PartnerTransactionCreate(BaseModel):
+    partner_id: str
+    transaction_type: str
+    amount: float
+    payment_mode: Optional[str] = "cash"
+    branch_id: Optional[str] = None
+    description: Optional[str] = None
+    date: datetime
+
+# Shift/Schedule Models
+class Shift(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    branch_id: str
+    start_time: str  # "08:00"
+    end_time: str  # "16:00"
+    break_minutes: int = 60
+    days: List[str] = []  # ["Mon", "Tue", "Wed", "Thu", "Fri"]
+    color: Optional[str] = None
+    active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ShiftAssignment(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    employee_id: str
+    employee_name: str
+    shift_id: str
+    shift_name: str
+    branch_id: str
+    week_start: str  # "2026-02-23"
+    date: str  # specific date "2026-02-24"
+    actual_in: Optional[str] = None  # "08:05"
+    actual_out: Optional[str] = None  # "16:10"
+    status: str = "scheduled"  # "scheduled", "present", "late", "absent", "day_off"
+    overtime_hours: float = 0
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
