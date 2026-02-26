@@ -510,6 +510,7 @@ class JobTitle(BaseModel):
     min_salary: float = 0
     max_salary: float = 0
     description: Optional[str] = None
+    permissions: List[str] = []
     active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
