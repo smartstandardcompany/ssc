@@ -89,6 +89,81 @@ async def delete_employee(emp_id: str, current_user: User = Depends(get_current_
     if result.deleted_count == 0: raise HTTPException(status_code=404, detail="Employee not found")
     return {"message": "Employee deleted"}
 
+
+# Employee Status Management (Resignation / Termination)
+@router.post("/employees/{emp_id}/resign")
+async def resign_employee(emp_id: str, body: dict, current_user: User = Depends(get_current_user)):
+    emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    resignation_date = body.get("resignation_date", datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+    notice_days = int(body.get("notice_period_days", 30))
+    from datetime import timedelta as td
+    last_day = (datetime.fromisoformat(resignation_date) + td(days=notice_days)).strftime("%Y-%m-%d")
+    reason = body.get("reason", "Resignation")
+    update = {
+        "status": body.get("status", "resigned"),
+        "resignation_date": resignation_date,
+        "last_working_day": body.get("last_working_day", last_day),
+        "notice_period_days": notice_days,
+        "termination_reason": reason,
+    }
+    await db.employees.update_one({"id": emp_id}, {"$set": update})
+    return {"message": f"Employee marked as {update['status']}", "last_working_day": update["last_working_day"]}
+
+
+@router.get("/employees/{emp_id}/settlement")
+async def get_settlement(emp_id: str, current_user: User = Depends(get_current_user)):
+    emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    # Calculate: pending salary, leave encashment, loan balance
+    salary = emp.get("salary", 0)
+    daily_rate = salary / 30
+    # Check leaves used
+    leaves = await db.leaves.find({"employee_id": emp_id, "status": "approved"}, {"_id": 0}).to_list(1000)
+    annual_used = sum(l.get("days", 0) for l in leaves if l.get("leave_type") == "annual")
+    annual_entitled = emp.get("annual_leave_entitled", 30)
+    leave_balance = max(0, annual_entitled - annual_used)
+    leave_encashment = round(leave_balance * daily_rate, 2)
+    # Salary payments this month
+    current_month = datetime.now(timezone.utc).strftime("%Y-%m")
+    paid_this_month = await db.salary_payments.find({"employee_id": emp_id, "period": current_month, "payment_type": "salary"}, {"_id": 0}).to_list(10)
+    pending_salary = salary if not paid_this_month else 0
+    loan_balance = emp.get("loan_balance", 0)
+    total_settlement = round(pending_salary + leave_encashment - loan_balance, 2)
+    return {
+        "employee_id": emp_id,
+        "employee_name": emp.get("name", ""),
+        "status": emp.get("status", "active"),
+        "monthly_salary": salary,
+        "pending_salary": pending_salary,
+        "leave_balance_days": leave_balance,
+        "leave_encashment": leave_encashment,
+        "loan_balance": loan_balance,
+        "total_settlement": total_settlement,
+        "resignation_date": emp.get("resignation_date"),
+        "last_working_day": emp.get("last_working_day"),
+    }
+
+
+@router.post("/employees/{emp_id}/complete-exit")
+async def complete_exit(emp_id: str, body: dict, current_user: User = Depends(get_current_user)):
+    emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    settlement_amount = float(body.get("settlement_amount", 0))
+    await db.employees.update_one({"id": emp_id}, {"$set": {
+        "active": False, "status": body.get("status", "left"),
+        "final_settlement_amount": settlement_amount,
+        "final_settlement_paid": body.get("paid", True),
+    }})
+    # Deactivate user account
+    if emp.get("user_id"):
+        await db.users.update_one({"id": emp["user_id"]}, {"$set": {"permissions": [], "active": False}})
+    return {"message": "Employee exit completed, account deactivated"}
+
+
 # Salary Payments
 @router.get("/salary-payments")
 async def get_salary_payments(current_user: User = Depends(get_current_user)):
