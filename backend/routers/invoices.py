@@ -1,10 +1,15 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from datetime import datetime, timezone
+import uuid
+from pathlib import Path
 
-from database import db, get_current_user
+from database import db, get_current_user, ROOT_DIR
 from models import User, Sale, Invoice, InvoiceCreate
 
 router = APIRouter()
+
+UPLOAD_DIR = ROOT_DIR / "uploads" / "invoices"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 @router.get("/invoices")
 async def get_invoices(current_user: User = Depends(get_current_user)):
