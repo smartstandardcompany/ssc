@@ -30,6 +30,9 @@ export default function InvoicesPage() {
   const [customerSearch, setCustomerSearch] = useState('');
   const [branchFilter, setBranchFilter] = useState([]);
   const [dateFilter, setDateFilter] = useState({ start: null, end: null, period: 'all' });
+  const [printInvoice, setPrintInvoice] = useState(null);
+  const [qrData, setQrData] = useState(null);
+  const [companySettings, setCompanySettings] = useState({});
   const [formData, setFormData] = useState({
     branch_id: '', customer_id: '', payment_mode: 'cash', discount: '',
     date: new Date().toISOString().split('T')[0], notes: '',
