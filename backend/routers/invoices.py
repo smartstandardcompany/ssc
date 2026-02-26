@@ -115,6 +115,47 @@ async def get_zatca_qr(invoice_id: str, current_user: User = Depends(get_current
         "invoice_number": inv.get("invoice_number", ""),
     }
 
+@router.post("/invoices/{invoice_id}/upload-image")
+async def upload_invoice_image(invoice_id: str, file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not inv:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else 'png'
+    if ext not in ('jpg', 'jpeg', 'png', 'webp', 'gif'):
+        raise HTTPException(status_code=400, detail="Only image files allowed (jpg, png, webp, gif)")
+    filename = f"{invoice_id}_{uuid.uuid4().hex[:8]}.{ext}"
+    file_path = UPLOAD_DIR / filename
+    content = await file.read()
+    with open(file_path, "wb") as f:
+        f.write(content)
+    image_url = f"/api/invoices/images/{filename}"
+    await db.invoices.update_one({"id": invoice_id}, {"$set": {"image_url": image_url}})
+    return {"message": "Image uploaded", "image_url": image_url}
+
+
+@router.get("/invoices/images/{filename}")
+async def get_invoice_image(filename: str):
+    from fastapi.responses import FileResponse
+    file_path = UPLOAD_DIR / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Image not found")
+    return FileResponse(file_path)
+
+
+@router.delete("/invoices/{invoice_id}/image")
+async def delete_invoice_image(invoice_id: str, current_user: User = Depends(get_current_user)):
+    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not inv:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    if inv.get("image_url"):
+        filename = inv["image_url"].split("/")[-1]
+        file_path = UPLOAD_DIR / filename
+        if file_path.exists():
+            file_path.unlink()
+    await db.invoices.update_one({"id": invoice_id}, {"$set": {"image_url": None}})
+    return {"message": "Image removed"}
+
+
 @router.delete("/invoices/{invoice_id}")
 async def delete_invoice(invoice_id: str, current_user: User = Depends(get_current_user)):
     inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
