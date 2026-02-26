@@ -501,7 +501,40 @@ class ItemCreate(BaseModel):
     name: str
     description: Optional[str] = None
     unit_price: float = 0
+    cost_price: float = 0
     category: Optional[str] = None
+    unit: Optional[str] = "piece"
+    min_stock_level: float = 0
+
+# Stock Entry (stock received from supplier/manual)
+class StockEntry(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    item_id: str
+    item_name: str
+    branch_id: str
+    quantity: float
+    unit_cost: float = 0
+    supplier_id: Optional[str] = None
+    source: str = "manual"
+    notes: Optional[str] = None
+    date: datetime
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+
+# Stock Usage (chef/kitchen usage)
+class StockUsage(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    item_id: str
+    item_name: str
+    branch_id: str
+    quantity: float
+    used_by: str
+    notes: Optional[str] = None
+    date: datetime
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
 
 # Recurring Expense
 class RecurringExpense(BaseModel):
