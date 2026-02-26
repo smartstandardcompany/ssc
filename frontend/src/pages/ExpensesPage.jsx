@@ -33,6 +33,7 @@ export default function ExpensesPage() {
   const [newCat, setNewCat] = useState('');
   const [newSubCat, setNewSubCat] = useState({ name: '', parent: '' });
   const [newRecData, setNewRecData] = useState({ name: '', category: 'rent', amount: '', frequency: 'monthly', branch_id: '', next_due_date: '', alert_days: 7 });
+  const [showWhatsApp, setShowWhatsApp] = useState(false);
 
   const [formData, setFormData] = useState({
     category: '', sub_category: '', description: '', amount: '',
