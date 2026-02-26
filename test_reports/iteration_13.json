@@ -1,0 +1,98 @@
+{
+  "summary": "Iteration 13: Staff Schedule/Shifts and Item P&L Report features tested. Backend: 14/15 tests passed (1 failed due to wrong endpoint in test). Frontend: All features visible and functional with minor UI state issue. Backend refactoring verified - all existing APIs (login, branches, employees) still working.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "SchedulePage branch dropdown", "issue": "Branch selection doesn't persist properly when navigating between tabs or refreshing components. After selecting branch 'A', UI sometimes reverts to showing 'Test Branch'.", "selector": "[data-testid='schedule-branch-select']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Schedule page", "issues": ["React hydration warnings - span cannot be child of tbody/tr/thead. Cosmetic only, does not affect functionality."]},
+      {"screen": "Reports page", "issues": ["Same React hydration warning on Item P&L table. Cosmetic only."]}
+    ]
+  },
+
+  "passed_tests": [
+    "Backend: GET /api/ health check returns 'SSC Track API'",
+    "Backend: POST /api/auth/login works with SSC@SSC.com credentials",
+    "Backend: GET /api/branches returns list of branches (Test Branch, A, b, LV, ISL)",
+    "Backend: GET /api/employees returns list of employees",
+    "Backend: GET /api/shifts returns list of shifts (empty or populated)",
+    "Backend: POST /api/shifts creates shift (Morning 08:00-16:00) successfully",
+    "Backend: GET /api/shifts?branch_id=X filters shifts by branch",
+    "Backend: PUT /api/shifts/{id} updates shift (name, break_minutes)",
+    "Backend: DELETE /api/shifts/{id} deletes shift and cascades to assignments",
+    "Backend: GET /api/shift-assignments returns list of assignments",
+    "Backend: POST /api/shift-assignments creates assignment for employee/shift/date",
+    "Backend: POST /api/shift-assignments/bulk creates multiple assignments",
+    "Backend: PUT /api/shift-assignments/{id} with actual_in/out auto-calculates status and overtime",
+    "Backend: PUT /api/shift-assignments/{id} detects 'late' status when arrival >15 min after shift start",
+    "Backend: GET /api/shift-assignments/attendance-summary returns monthly summary (scheduled, present, late, absent, overtime_hours)",
+    "Backend: GET /api/reports/item-pnl returns P&L data with rows and summary",
+    "Backend: Item P&L row structure has all required columns (item_name, category, purchased_qty, cost, used_qty, sold_qty, revenue, profit, margin, stock)",
+    "Backend: GET /api/reports/item-pnl?branch_id=X filters by branch",
+    "Frontend: Login page loads and authenticates successfully",
+    "Frontend: Dashboard loads with all data",
+    "Frontend: Reports page shows 'Item P&L' tab",
+    "Frontend: Item P&L tab has 'Load P&L Report' button",
+    "Frontend: Clicking 'Load P&L Report' loads P&L data with summary cards (Items, Total Cost, Revenue, Profit, Margin)",
+    "Frontend: P&L table shows columns: Item, Category, Purchased, Cost, Kitchen Used, Sold, Revenue, Profit, Margin, Stock",
+    "Frontend: P&L has chart 'Top Items by Revenue'",
+    "Frontend: Schedule page (/schedule) loads with Weekly Schedule grid",
+    "Frontend: Schedule page has tabs: Weekly Schedule, Shifts, Attendance Summary",
+    "Frontend: 'New Shift' button opens Create Shift dialog",
+    "Frontend: Create Shift dialog has fields: Shift Name, Color, Start Time, End Time, Break (min), Working Days",
+    "Frontend: Creating shift shows 'Shift created' toast and updates Shifts tab count",
+    "Frontend: Shifts tab shows shift cards with name, time range, break, working days",
+    "Frontend: Attendance Summary tab has columns: Employee, Scheduled, Present, Late, Absent, Overtime (h), Attendance %"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_iteration13_shifts_pnl.py",
+    "/app/test_reports/pytest/pytest_results_iter13.xml"
+  ],
+
+  "action_items": [
+    "LOW: Fix branch dropdown state persistence in Schedule page - selection sometimes reverts after tab switches",
+    "COSMETIC: React hydration warnings in Schedule and Reports pages (span inside tbody/tr/thead) - not blocking functionality"
+  ],
+
+  "critical_code_review_comments": [
+    "Backend refactoring successful: models.py and database.py extracted from server.py",
+    "All existing APIs still functional after refactoring",
+    "Shift CRUD endpoints work correctly (GET, POST, PUT, DELETE)",
+    "Shift assignment with time tracking working (actual_in/out, auto status, overtime calculation)",
+    "Late status correctly detected when arrival >15 min after shift start",
+    "Attendance summary aggregates correctly (scheduled, present, late, absent, overtime)",
+    "Item P&L report calculates correctly: purchased_qty, purchased_cost, avg_cost, used_qty, sold_qty, sold_revenue, cost_of_sold, profit, margin, current_stock"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_iteration13_shifts_pnl.py"
+  ],
+
+  "success_rate": {
+    "backend": "93% (14/15 tests passed - 1 test used wrong endpoint /api/stock instead of /api/stock/entries)",
+    "frontend": "95% (all major features work, minor branch selection state issue)"
+  },
+
+  "test_credentials": {
+    "admin": {
+      "email": "SSC@SSC.com",
+      "password": "Aa147258369SsC@",
+      "role": "admin"
+    }
+  },
+
+  "seed_data_creation": "Created test shifts (Morning 08:00-16:00 for branch A), assigned employee Ahmed Khan to branch A, created shift assignments with time tracking (one 'present', one 'late').",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Iteration 13 complete. New features: 1) Staff Schedule/Shifts page with shift CRUD, assignment management, attendance tracking. 2) Item P&L Report in Reports page showing per-item profit/loss. Backend refactoring (models.py, database.py extracted) verified - all APIs work. Key notes: Branch 'A' (id: d805e6cb-f65a-4a09-8707-95f3f5e505bf) has employee Ahmed Khan. React hydration warnings are cosmetic only. Minor UI issue: branch dropdown in Schedule page doesn't always persist selection."
+}
