@@ -376,7 +376,7 @@ export default function EmployeesPage() {
                       </td>
                     </tr>
                   ); })}
-                  {employees.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">No employees yet</td></tr>}
+                  {employees.length === 0 && <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">No employees yet</td></tr>}
                 </tbody>
               </table>
             </div>
