@@ -260,7 +260,7 @@ async def get_scheduler_config(current_user: User = Depends(get_current_user)):
 @router.put("/scheduler/config/{job_type}")
 async def update_scheduler_config(job_type: str, body: dict, current_user: User = Depends(get_current_user)):
     update = {}
-    for field in ["enabled", "hour", "minute", "channels"]:
+    for field in ["enabled", "hour", "minute", "channels", "day_of_week", "day"]:
         if field in body:
             update[field] = body[field]
     if "hour" in update:
