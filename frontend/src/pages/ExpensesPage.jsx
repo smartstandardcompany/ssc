@@ -338,6 +338,7 @@ export default function ExpensesPage() {
             </div>
           </DialogContent>
         </Dialog>
+        <WhatsAppSendDialog open={showWhatsApp} onClose={() => setShowWhatsApp(false)} defaultType="expense_summary" branches={branches} />
       </div>
     </DashboardLayout>
   );
