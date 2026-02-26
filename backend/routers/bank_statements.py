@@ -455,3 +455,22 @@ async def get_pos_reconciliation(stmt_id: str, current_user: User = Depends(get_
         total_bank += bank_amt; total_app += app_amt
         rows.append({"deposit_date": date_str, "sale_date": app_data["sale_date"] if app_data else "", "branch": branch, "bank_amount": round(bank_amt, 2), "app_amount": round(app_amt, 2), "difference": round(diff, 2), "status": status, "bank_txns": bank_data["txn_count"] if bank_data else 0, "app_sales": app_data["sale_count"] if app_data else 0, "machines": list(bank_data["machines"]) if bank_data else []})
     return {"rows": rows, "summary": {"total_bank_pos": round(total_bank, 2), "total_app_sales": round(total_app, 2), "total_difference": round(total_bank - total_app, 2), "matched_count": matched_count, "discrepancy_count": discrepancy_count, "total_rows": len(rows)}}
+
+
+# Manual reconciliation flags
+@router.post("/bank-statements/{stmt_id}/reconciliation/flag")
+async def flag_reconciliation_row(stmt_id: str, body: dict, current_user: User = Depends(get_current_user)):
+    row_key = body.get("row_key", "")
+    flag = body.get("flag", "")
+    notes = body.get("notes", "")
+    await db.reconciliation_flags.update_one(
+        {"statement_id": stmt_id, "row_key": row_key},
+        {"$set": {"flag": flag, "notes": notes, "updated_by": current_user.id, "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True
+    )
+    return {"message": "Flag saved"}
+
+@router.get("/bank-statements/{stmt_id}/reconciliation/flags")
+async def get_reconciliation_flags(stmt_id: str, current_user: User = Depends(get_current_user)):
+    flags = await db.reconciliation_flags.find({"statement_id": stmt_id}, {"_id": 0}).to_list(10000)
+    return {f["row_key"]: {"flag": f["flag"], "notes": f.get("notes", "")} for f in flags}
