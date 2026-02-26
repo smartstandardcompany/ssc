@@ -37,6 +37,7 @@ export default function DashboardPage() {
   const [showPaybackDialog, setShowPaybackDialog] = useState(false);
   const [paybackData, setPaybackData] = useState({ from_branch_id: '', to_branch_id: '', amount: '', payment_mode: 'cash' });
   const [branches, setBranches] = useState([]);
+  const [showWhatsApp, setShowWhatsApp] = useState(false);
   const t = THEMES[theme] || THEMES.default;
 
   const changeTheme = (newTheme) => { setTheme(newTheme); localStorage.setItem('dashboard_theme', newTheme); };
