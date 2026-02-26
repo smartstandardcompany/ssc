@@ -52,11 +52,20 @@ async def link_employee_user(emp_id: str, body: dict, current_user: User = Depen
     if not emp: raise HTTPException(status_code=404, detail="Employee not found")
     email = body.get("email")
     if not email: raise HTTPException(status_code=400, detail="Email required")
+    # Resolve permissions from job title
+    jt_perms = ["self_service"]
+    if emp.get("job_title_id"):
+        jt = await db.job_titles.find_one({"id": emp["job_title_id"]}, {"_id": 0})
+        if jt and jt.get("permissions"):
+            jt_perms = list(set(jt_perms) | set(jt["permissions"]))
     existing = await db.users.find_one({"email": email}, {"_id": 0})
     if existing:
         await db.employees.update_one({"id": emp_id}, {"$set": {"user_id": existing["id"]}})
+        # Merge job title permissions into existing user
+        merged = list(set(existing.get("permissions", [])) | set(jt_perms))
+        await db.users.update_one({"id": existing["id"]}, {"$set": {"permissions": merged}})
         return {"message": f"Linked to existing user {email}", "user_id": existing["id"]}
-    user = User(email=email, name=emp["name"], role="employee", permissions=["self_service"])
+    user = User(email=email, name=emp["name"], role="employee", permissions=jt_perms)
     user_dict = user.model_dump()
     user_dict["password"] = hash_password("emp@123")
     user_dict["created_at"] = user_dict["created_at"].isoformat()
