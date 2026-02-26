@@ -216,7 +216,7 @@ export default function InvoicesPage() {
                               className={`h-9 text-xs rounded-full border-2 transition-all ${isSelected ? 'ring-2 ring-primary ring-offset-1 font-bold' : ''} ${colors[idx % colors.length]}`}
                               data-testid={`quick-item-SAR {m.id}`}
                               onClick={() => setFormData({ ...formData, items: [...formData.items.filter(i => i.description), { description: m.name, quantity: 1, unit_price: m.unit_price }] })}>
-                              {m.name} - ${m.unit_price}
+                              {m.name} - SAR {m.unit_price}
                             </Button>
                           );
                         })}
@@ -239,7 +239,7 @@ export default function InvoicesPage() {
                               {masterItems.length > 0 ? (
                                 <Select value="" onValueChange={(v) => selectMasterItem(i, v)}>
                                   <SelectTrigger className="h-8 border-0"><SelectValue placeholder={item.description || "Select item"} /></SelectTrigger>
-                                  <SelectContent>{masterItems.filter(m => m.active !== false).map(m => <SelectItem key={m.id} value={m.id}>{m.name} - ${m.unit_price}</SelectItem>)}</SelectContent>
+                                  <SelectContent>{masterItems.filter(m => m.active !== false).map(m => <SelectItem key={m.id} value={m.id}>{m.name} - SAR {m.unit_price}</SelectItem>)}</SelectContent>
                                 </Select>
                               ) : (
                                 <Input value={item.description} onChange={(e) => updateItem(i, 'description', e.target.value)} placeholder="Item description" className="h-8 border-0" data-testid={`item-desc-SAR {i}`} />
