@@ -59,8 +59,8 @@ export default function EmployeesPage() {
 
   const fetchData = async () => {
     try {
-      const [empRes, brRes, spRes, pendRes] = await Promise.all([api.get('/employees'), api.get('/branches'), api.get('/salary-payments'), api.get('/employees/pending-summary')]);
-      setEmployees(empRes.data); setBranches(brRes.data); setSalaryPayments(spRes.data); setPendingSummary(pendRes.data.employees || pendRes.data);
+      const [empRes, brRes, spRes, pendRes, jtRes] = await Promise.all([api.get('/employees'), api.get('/branches'), api.get('/salary-payments'), api.get('/employees/pending-summary'), api.get('/job-titles')]);
+      setEmployees(empRes.data); setBranches(brRes.data); setSalaryPayments(spRes.data); setPendingSummary(pendRes.data.employees || pendRes.data); setJobTitles(jtRes.data);
     } catch { toast.error('Failed to fetch data'); }
     finally { setLoading(false); }
   };
