@@ -31,6 +31,7 @@ import UsersPage from "./pages/UsersPage";
 import StockPage from "./pages/StockPage";
 import KitchenPage from "./pages/KitchenPage";
 import SchedulePage from "./pages/SchedulePage";
+import ReconciliationPage from "./pages/ReconciliationPage";
 import { Toaster } from "@/components/ui/sonner";
 
 function App() {
@@ -110,6 +111,7 @@ function App() {
           <Route path="/kitchen" element={isAuthenticated ? <KitchenPage /> : <Navigate to="/login" />} />
           <Route path="/schedule" element={isAuthenticated ? <SchedulePage /> : <Navigate to="/login" />} />
           <Route path="/users" element={isAuthenticated ? <UsersPage /> : <Navigate to="/login" />} />
+          <Route path="/reconciliation" element={isAuthenticated ? <ReconciliationPage /> : <Navigate to="/login" />} />
         </Routes>
       </BrowserRouter>
       <Toaster position="top-right" richColors />
