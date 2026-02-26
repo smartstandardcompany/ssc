@@ -36,6 +36,7 @@ export const DashboardLayout = ({ children }) => {
 
   const allNav = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard', roles: ['admin', 'manager', 'operator'], perm: 'dashboard' },
+    { path: '/pos', icon: ShoppingCart, label: 'Quick Entry', roles: ['admin', 'manager', 'operator', 'employee'], perm: 'sales' },
     { path: '/sales', icon: ShoppingCart, label: 'Sales', roles: ['admin', 'manager', 'operator'], perm: 'sales' },
     { path: '/invoices', icon: FileInput, label: 'Invoices', roles: ['admin', 'manager', 'operator'], perm: 'invoices' },
     { path: '/branches', icon: Store, label: 'Branches', roles: ['admin', 'manager'], perm: 'branches' },
