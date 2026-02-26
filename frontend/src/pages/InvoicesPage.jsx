@@ -149,6 +149,34 @@ export default function InvoicesPage() {
     return (sale.credit_amount || 0) - (sale.credit_received || 0);
   };
 
+  const handleImageUpload = async (invoiceId, file) => {
+    if (!file) return;
+    setUploadingId(invoiceId);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const { data } = await api.post(`/invoices/${invoiceId}/upload-image`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      toast.success('Image uploaded to invoice');
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Upload failed');
+    } finally {
+      setUploadingId(null);
+    }
+  };
+
+  const handleDeleteImage = async (invoiceId) => {
+    try {
+      await api.delete(`/invoices/${invoiceId}/image`);
+      toast.success('Image removed');
+      fetchData();
+    } catch {
+      toast.error('Failed to remove image');
+    }
+  };
+
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-64">Loading...</div></DashboardLayout>;
 
   const totals = calcTotals();
