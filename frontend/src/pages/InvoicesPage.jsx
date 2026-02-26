@@ -265,7 +265,11 @@ export default function InvoicesPage() {
                     <div className="p-3 bg-secondary/30 space-y-1 text-sm">
                       <div className="flex justify-between"><span>Subtotal:</span><span className="font-medium"> SAR {totals.subtotal.toFixed(2)}</span></div>
                       <div className="flex items-center gap-2"><span>Discount:</span><Input type="number" step="0.01" value={formData.discount} onChange={(e) => setFormData({ ...formData, discount: e.target.value })} className="h-7 w-24 text-right" placeholder="0.00" data-testid="invoice-discount" /></div>
-                      <div className="flex justify-between text-lg font-bold border-t pt-1"><span>Total:</span><span className="text-primary"> SAR {totals.total.toFixed(2)}</span></div>
+                      <div className="flex justify-between"><span>Net:</span><span className="font-medium"> SAR {totals.total.toFixed(2)}</span></div>
+                      {totals.vatEnabled && (
+                        <div className="flex justify-between text-blue-600"><span>VAT ({totals.vatRate}%):</span><span className="font-medium">SAR {totals.vatAmount.toFixed(2)}</span></div>
+                      )}
+                      <div className="flex justify-between text-lg font-bold border-t pt-1"><span>Total{totals.vatEnabled ? ' (incl. VAT)' : ''}:</span><span className="text-primary"> SAR {(totals.vatEnabled ? totals.totalWithVat : totals.total).toFixed(2)}</span></div>
                     </div>
                   </div>
                 </div>
