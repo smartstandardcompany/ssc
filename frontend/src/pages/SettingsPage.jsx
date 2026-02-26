@@ -373,6 +373,90 @@ export default function SettingsPage() {
             </div>
           </TabsContent>
 
+          <TabsContent value="scheduler">
+            <div className="space-y-4">
+              <Card className="border-border">
+                <CardHeader><CardTitle className="font-outfit">Automated Report Scheduler</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">Configure automated WhatsApp/Email reports. Make sure WhatsApp and/or Email are configured first.</p>
+                  <div className="space-y-3" data-testid="scheduler-jobs">
+                    {schedulerJobs.map(job => (
+                      <div key={job.job_type} className="flex items-center gap-4 p-3 border rounded-xl bg-stone-50/50" data-testid={`scheduler-job-${job.job_type}`}>
+                        <div className="flex items-center gap-2">
+                          <Checkbox checked={job.enabled} onCheckedChange={async (v) => {
+                            try {
+                              await api.put(`/scheduler/config/${job.job_type}`, { enabled: v });
+                              setSchedulerJobs(prev => prev.map(j => j.job_type === job.job_type ? { ...j, enabled: v } : j));
+                              toast.success(v ? 'Enabled' : 'Disabled');
+                            } catch { toast.error('Failed'); }
+                          }} />
+                          <div>
+                            <p className="font-medium text-sm">{job.label || job.job_type}</p>
+                            <p className="text-xs text-muted-foreground">{job.job_type.replace(/_/g, ' ')}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 ml-auto">
+                          <Label className="text-xs">Time:</Label>
+                          <Input type="time" className="h-8 w-28 text-xs" value={`${String(job.hour || 0).padStart(2,'0')}:${String(job.minute || 0).padStart(2,'0')}`}
+                            onChange={async (e) => {
+                              const [h, m] = e.target.value.split(':').map(Number);
+                              try {
+                                await api.put(`/scheduler/config/${job.job_type}`, { hour: h, minute: m });
+                                setSchedulerJobs(prev => prev.map(j => j.job_type === job.job_type ? { ...j, hour: h, minute: m } : j));
+                              } catch { toast.error('Failed'); }
+                            }} data-testid={`scheduler-time-${job.job_type}`} />
+                          <div className="flex gap-1">
+                            {['whatsapp', 'email'].map(ch => (
+                              <button key={ch} type="button" className={`px-2 py-1 text-[10px] rounded-md border ${(job.channels || []).includes(ch) ? 'bg-orange-100 border-orange-300 text-orange-700' : 'bg-white border-stone-200 text-stone-400'}`}
+                                onClick={async () => {
+                                  const channels = (job.channels || []).includes(ch) ? (job.channels || []).filter(c => c !== ch) : [...(job.channels || []), ch];
+                                  try {
+                                    await api.put(`/scheduler/config/${job.job_type}`, { channels });
+                                    setSchedulerJobs(prev => prev.map(j => j.job_type === job.job_type ? { ...j, channels } : j));
+                                  } catch { toast.error('Failed'); }
+                                }}>
+                                {ch === 'whatsapp' ? 'WA' : 'Email'}
+                              </button>
+                            ))}
+                          </div>
+                          <Button size="sm" variant="outline" className="h-7 text-xs rounded-lg" data-testid={`trigger-${job.job_type}`}
+                            onClick={async () => {
+                              try {
+                                await api.post(`/scheduler/trigger/${job.job_type}`);
+                                toast.success(`${job.label} triggered`);
+                                const logRes = await api.get('/scheduler/logs');
+                                setSchedulerLogs(logRes.data);
+                              } catch { toast.error('Failed to trigger'); }
+                            }}>
+                            <Play size={10} className="mr-1" />Test
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+              {schedulerLogs.length > 0 && (
+                <Card className="border-border">
+                  <CardHeader><CardTitle className="font-outfit text-sm">Recent Scheduler Logs</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="space-y-1 max-h-48 overflow-y-auto" data-testid="scheduler-logs">
+                      {schedulerLogs.slice(0, 20).map((log, i) => (
+                        <div key={i} className="flex items-center gap-3 text-xs p-2 border-b border-stone-50">
+                          <Badge variant="outline" className={`text-[10px] ${log.status === 'completed' ? 'border-emerald-300 text-emerald-600' : log.status === 'error' ? 'border-red-300 text-red-600' : 'border-stone-300'}`}>
+                            {log.status}
+                          </Badge>
+                          <span className="font-medium">{log.job_type?.replace(/_/g, ' ')}</span>
+                          <span className="text-muted-foreground ml-auto">{log.triggered_at ? new Date(log.triggered_at).toLocaleString() : ''}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+
           <TabsContent value="deploy">
             <div className="space-y-6">
               <Card className="border-stone-100">
