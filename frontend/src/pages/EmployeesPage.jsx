@@ -252,7 +252,7 @@ export default function EmployeesPage() {
               <table className="w-full" data-testid="employees-table">
                 <thead><tr className="border-b border-border">
                   <th className="text-left p-3 font-medium text-sm">Name</th>
-                  <th className="text-left p-3 font-medium text-sm">Position</th>
+                  <th className="text-left p-3 font-medium text-sm">Job Title</th>
                   <th className="text-right p-3 font-medium text-sm">Salary</th>
                   <th className="text-right p-3 font-medium text-sm">Pending</th>
                   <th className="text-right p-3 font-medium text-sm">Loan</th>
