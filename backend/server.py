@@ -271,6 +271,7 @@ class Employee(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     position: Optional[str] = None
+    job_title_id: Optional[str] = None
     branch_id: Optional[str] = None
     user_id: Optional[str] = None  # Linked user account for portal access
     salary: float = 0
@@ -294,6 +295,7 @@ class EmployeeCreate(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     position: Optional[str] = None
+    job_title_id: Optional[str] = None
     branch_id: Optional[str] = None
     salary: float = 0
     pay_frequency: Optional[str] = "monthly"
