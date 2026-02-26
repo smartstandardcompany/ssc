@@ -31,6 +31,8 @@ export default function SettingsPage() {
   const [companyInfo, setCompanyInfo] = useState({ company_name: 'Smart Standard Company', address_line1: '', address_line2: '', city: '', country: '', phone: '', email: '', cr_number: '', vat_number: '', vat_enabled: false, vat_rate: 15 });
   const [testEmail, setTestEmail] = useState('');
   const [loading, setLoading] = useState(true);
+  const [schedulerJobs, setSchedulerJobs] = useState([]);
+  const [schedulerLogs, setSchedulerLogs] = useState([]);
 
   useEffect(() => { fetchSettings(); }, []);
 
