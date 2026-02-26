@@ -191,7 +191,66 @@ export default function SchedulePage() {
             <TabsTrigger value="schedule">Weekly Schedule</TabsTrigger>
             <TabsTrigger value="shifts">Shifts ({branchShifts.length})</TabsTrigger>
             <TabsTrigger value="attendance">Attendance Summary</TabsTrigger>
+            {aiRecommendations && <TabsTrigger value="ai" data-testid="ai-tab"><Sparkles size={12} className="mr-1" />AI Suggestions ({aiRecommendations.length})</TabsTrigger>}
           </TabsList>
+
+          {/* AI RECOMMENDATIONS */}
+          {aiRecommendations && (
+            <TabsContent value="ai" data-testid="ai-recommendations">
+              <Card className="border-purple-100">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-sm font-outfit flex items-center gap-2"><Sparkles size={14} className="text-purple-500" />AI-Recommended Schedule</CardTitle>
+                    <Button size="sm" className="rounded-xl" data-testid="apply-ai-btn" onClick={async () => {
+                      const grouped = {};
+                      for (const rec of aiRecommendations) {
+                        if (!rec.shift_id || !rec.employee_id) continue;
+                        const key = `${rec.employee_id}|${rec.shift_id}`;
+                        if (!grouped[key]) grouped[key] = { employee_id: rec.employee_id, shift_id: rec.shift_id, dates: [] };
+                        if (rec.date) grouped[key].dates.push(rec.date);
+                      }
+                      try {
+                        for (const g of Object.values(grouped)) {
+                          if (g.dates.length > 0) {
+                            await api.post('/shift-assignments/bulk', {
+                              assignments: g.dates.map(d => ({ employee_id: g.employee_id, shift_id: g.shift_id, branch_id: branchId, date: d, week_start: weekStart }))
+                            });
+                          }
+                        }
+                        toast.success('AI schedule applied');
+                        fetchAssignments();
+                        setAiRecommendations(null);
+                      } catch (err) { toast.error(err.response?.data?.detail || 'Failed to apply'); }
+                    }}>Apply All</Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead><tr className="bg-purple-50 border-y border-purple-100">
+                        <th className="text-left p-2 text-xs font-medium">Employee</th>
+                        <th className="text-left p-2 text-xs font-medium">Shift</th>
+                        <th className="text-left p-2 text-xs font-medium">Day</th>
+                        <th className="text-left p-2 text-xs font-medium">Date</th>
+                        <th className="text-left p-2 text-xs font-medium">Reason</th>
+                      </tr></thead>
+                      <tbody>
+                        {aiRecommendations.map((rec, i) => (
+                          <tr key={i} className="border-b border-stone-50 hover:bg-purple-50/30">
+                            <td className="p-2 font-medium">{rec.employee_name}</td>
+                            <td className="p-2"><Badge variant="outline" className="text-xs">{rec.shift_name}</Badge></td>
+                            <td className="p-2">{rec.day}</td>
+                            <td className="p-2 font-mono text-xs">{rec.date}</td>
+                            <td className="p-2 text-xs text-muted-foreground">{rec.reason}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
           {/* WEEKLY SCHEDULE */}
           <TabsContent value="schedule" data-testid="schedule-grid">
