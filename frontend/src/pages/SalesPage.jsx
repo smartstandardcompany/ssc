@@ -447,7 +447,7 @@ export default function SalesPage() {
                         <td className="p-3">
                           {remainingCredit > 0 ? (
                             <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-credit/20 text-credit border border-credit/30">
-                              ${remainingCredit.toFixed(2)}
+                              SAR {remainingCredit.toFixed(2)}
                             </span>
                           ) : (
                             <span className="text-xs text-muted-foreground">-</span>
