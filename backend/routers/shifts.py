@@ -156,3 +156,98 @@ async def get_attendance_summary(branch_id: Optional[str] = None, month: Optiona
             emp_summary[eid]["absent"] += 1
         emp_summary[eid]["overtime_hours"] += a.get("overtime_hours", 0)
     return list(emp_summary.values())
+
+
+
+# AI Shift Recommendation
+@router.post("/shifts/ai-recommend")
+async def ai_recommend_shifts(body: dict, current_user: User = Depends(get_current_user)):
+    branch_id = body.get("branch_id")
+    week_start = body.get("week_start", datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+    if not branch_id:
+        raise HTTPException(status_code=400, detail="branch_id required")
+    # Gather data for AI
+    employees = await db.employees.find({"active": True, "branch_id": branch_id}, {"_id": 0}).to_list(100)
+    if not employees:
+        employees = await db.employees.find({"active": True}, {"_id": 0}).to_list(100)
+    shifts = await db.shifts.find({"branch_id": branch_id}, {"_id": 0}).to_list(50)
+    if not shifts:
+        raise HTTPException(status_code=400, detail="No shifts defined for this branch")
+    # Get last 30 days of assignment history for attendance analysis
+    past_start = (datetime.fromisoformat(week_start) - timedelta(days=30)).strftime("%Y-%m-%d")
+    past_assignments = await db.shift_assignments.find(
+        {"branch_id": branch_id, "date": {"$gte": past_start}}, {"_id": 0}
+    ).to_list(10000)
+    # Build employee attendance stats
+    emp_stats = {}
+    for a in past_assignments:
+        eid = a["employee_id"]
+        if eid not in emp_stats:
+            emp_stats[eid] = {"scheduled": 0, "present": 0, "late": 0, "absent": 0, "overtime": 0}
+        emp_stats[eid]["scheduled"] += 1
+        s = a.get("status", "scheduled")
+        if s in ("present", "late"):
+            emp_stats[eid]["present"] += 1
+        if s == "late":
+            emp_stats[eid]["late"] += 1
+        if s == "absent":
+            emp_stats[eid]["absent"] += 1
+        emp_stats[eid]["overtime"] += a.get("overtime_hours", 0)
+    # Build prompt
+    emp_lines = []
+    for e in employees[:20]:
+        stats = emp_stats.get(e["id"], {})
+        reliability = round(stats.get("present", 0) / max(stats.get("scheduled", 1), 1) * 100)
+        emp_lines.append(f"- {e['name']} (ID: {e['id'][:8]}, Position: {e.get('position','N/A')}, Reliability: {reliability}%, Late: {stats.get('late',0)}x, OT: {stats.get('overtime',0):.1f}h)")
+    shift_lines = [f"- {s['name']} ({s['start_time']}-{s['end_time']}, Days: {','.join(s.get('days',[]))})" for s in shifts]
+    prompt = f"""You are a restaurant shift scheduling AI. Based on employee attendance data, create an optimal 7-day schedule.
+
+Branch shifts available:
+{chr(10).join(shift_lines)}
+
+Employees:
+{chr(10).join(emp_lines)}
+
+Week starting: {week_start}
+
+Rules:
+1. Prioritize reliable employees for busy shifts
+2. Give employees with high overtime some lighter days
+3. Ensure each shift has adequate coverage
+4. Frequently late employees should get later shifts when possible
+5. Distribute workload fairly across the week
+
+Return ONLY valid JSON array with this structure (no markdown):
+[
+  {{"employee_id": "first-8-chars", "employee_name": "Name", "shift_name": "Shift Name", "day": "Mon", "date": "YYYY-MM-DD", "reason": "brief reason"}}
+]
+Assign shifts for 7 days (Mon-Sun). Each employee should work 5-6 days."""
+    try:
+        import os
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="LLM key not configured")
+        import uuid as _uuid
+        chat = LlmChat(api_key=api_key, session_id=f"shift-ai-{_uuid.uuid4()}", system_message="You are a shift scheduling AI assistant.").with_model("openai", "gpt-4o")
+        response = await chat.send_message(UserMessage(text=prompt))
+        import json as json_module
+        cleaned = response.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            cleaned = cleaned.strip()
+        recommendations = json_module.loads(cleaned)
+        # Map truncated IDs back to full IDs
+        emp_map = {e["id"][:8]: e["id"] for e in employees}
+        shift_map = {s["name"]: s["id"] for s in shifts}
+        for rec in recommendations:
+            short_id = rec.get("employee_id", "")
+            rec["employee_id"] = emp_map.get(short_id, short_id)
+            rec["shift_id"] = shift_map.get(rec.get("shift_name", ""), "")
+        return {"recommendations": recommendations, "employee_count": len(employees), "shift_count": len(shifts)}
+    except Exception as e:
+        if "JSONDecodeError" in type(e).__name__:
+            return {"recommendations": [], "error": "AI returned invalid format", "raw": str(e)[:200]}
+        raise HTTPException(status_code=500, detail=f"AI recommendation failed: {str(e)[:200]}")
