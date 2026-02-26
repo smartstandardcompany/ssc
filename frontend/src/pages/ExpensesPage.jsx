@@ -119,10 +119,10 @@ export default function ExpensesPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-start flex-wrap gap-3">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
           <div>
-            <h1 className="text-4xl font-bold font-outfit mb-2">Expenses</h1>
-            <p className="text-muted-foreground">Track and manage all business expenses</p>
+            <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-1">Expenses</h1>
+            <p className="text-sm text-muted-foreground">Track and manage all business expenses</p>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
             <BranchFilter onChange={setBranchFilter} />
@@ -216,6 +216,32 @@ export default function ExpensesPage() {
             <Card className="border-stone-100">
               <CardHeader><CardTitle className="font-outfit text-base flex justify-between">All Expenses <span className="text-error">Total: SAR {totalExp.toFixed(2)}</span></CardTitle></CardHeader>
               <CardContent>
+                {/* Mobile card view */}
+                <div className="sm:hidden space-y-2">
+                  {filtered.map(e => (
+                    <div key={e.id} className="p-3 border rounded-xl bg-white space-y-2" data-testid={`expense-card-${e.id}`}>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <Badge variant="secondary" className="capitalize text-xs">{e.category?.replace('_',' ')}</Badge>
+                          {e.sub_category && <Badge variant="outline" className="ml-1 text-[10px] capitalize">{e.sub_category}</Badge>}
+                        </div>
+                        <span className="text-base font-bold text-red-600">SAR {e.amount.toFixed(2)}</span>
+                      </div>
+                      <p className="text-xs text-stone-600">{e.description || 'No description'}</p>
+                      <div className="flex justify-between items-center text-[10px] text-muted-foreground">
+                        <span>{format(new Date(e.date), 'MMM dd, yyyy')}</span>
+                        <div className="flex items-center gap-2">
+                          <Badge className={`capitalize text-[10px] ${e.payment_mode === 'cash' ? 'bg-cash/20 text-cash' : e.payment_mode === 'bank' ? 'bg-bank/20 text-bank' : 'bg-credit/20 text-credit'}`}>{e.payment_mode}</Badge>
+                          <span>{branches.find(b => b.id === e.branch_id)?.name || '-'}</span>
+                          <Button size="sm" variant="ghost" onClick={async () => { if(window.confirm('Delete?')) { await api.delete(`/expenses/${e.id}`); fetchData(); }}} className="h-6 w-6 p-0 text-error"><Trash2 size={12} /></Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {filtered.length === 0 && <p className="text-center text-muted-foreground py-8">No expenses</p>}
+                </div>
+                {/* Desktop table */}
+                <div className="hidden sm:block overflow-x-auto">
                 <table className="w-full"><thead><tr className="border-b">
                   <th className="text-left p-3 text-sm font-medium">Date</th><th className="text-left p-3 text-sm font-medium">Category</th><th className="text-left p-3 text-sm font-medium">Description</th><th className="text-left p-3 text-sm font-medium">Paid From</th><th className="text-left p-3 text-sm font-medium">Expense For</th><th className="text-right p-3 text-sm font-medium">Amount</th><th className="text-left p-3 text-sm font-medium">Mode</th><th className="text-right p-3 text-sm font-medium">Actions</th>
                 </tr></thead><tbody>
@@ -233,6 +259,7 @@ export default function ExpensesPage() {
                   ))}
                   {filtered.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">No expenses</td></tr>}
                 </tbody></table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
