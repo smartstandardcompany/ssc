@@ -264,7 +264,50 @@ export default function EmployeesPage() {
         <Card className="border-border">
           <CardHeader><CardTitle className="font-outfit">All Employees</CardTitle></CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            {/* Mobile card view */}
+            <div className="sm:hidden space-y-2">
+              {employees.filter(emp => branchFilter.length === 0 || branchFilter.includes(emp.branch_id) || !emp.branch_id).map((emp) => {
+                const pend = getPending(emp.id);
+                const jt = jobTitles.find(j => j.id === emp.job_title_id);
+                return (
+                  <div key={emp.id} className={`p-3 border rounded-xl space-y-2 ${emp.status === 'resigned' || emp.status === 'on_notice' ? 'bg-amber-50/30 border-amber-200' : emp.status === 'left' || emp.status === 'terminated' ? 'bg-red-50/30 border-red-200' : 'bg-white'}`} data-testid={`employee-card-${emp.id}`}>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-sm font-bold">{emp.name}</p>
+                        {jt && <Badge variant="outline" className="capitalize text-[10px] mt-0.5">{jt.title}</Badge>}
+                        {emp.status && emp.status !== 'active' && (
+                          <Badge className={`ml-1 text-[10px] ${emp.status === 'resigned' || emp.status === 'on_notice' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{emp.status.replace('_', ' ')}</Badge>
+                        )}
+                      </div>
+                      <span className="text-sm font-bold text-stone-700">SAR {(emp.salary || 0).toFixed(0)}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
+                      <div className="p-1.5 bg-stone-50 rounded-lg">
+                        <p className="text-muted-foreground">Pending</p>
+                        <p className={`font-bold ${(pend.pending_salary || 0) > 0 ? 'text-red-600' : 'text-emerald-600'}`}>{(pend.pending_salary || 0) > 0 ? `SAR ${pend.pending_salary.toFixed(0)}` : 'Paid'}</p>
+                      </div>
+                      <div className="p-1.5 bg-stone-50 rounded-lg">
+                        <p className="text-muted-foreground">Loan</p>
+                        <p className={`font-bold ${(emp.loan_balance || 0) > 0 ? 'text-amber-600' : 'text-stone-400'}`}>{(emp.loan_balance || 0) > 0 ? `SAR ${emp.loan_balance.toFixed(0)}` : '-'}</p>
+                      </div>
+                      <div className="p-1.5 bg-stone-50 rounded-lg">
+                        <p className="text-muted-foreground">Leave</p>
+                        <p className="font-bold"><span className="text-emerald-600">{pend.annual_leave_remaining || 0}A</span> <span className="text-blue-600">{pend.sick_leave_remaining || 0}S</span></p>
+                      </div>
+                    </div>
+                    <div className="flex gap-1 flex-wrap pt-1 border-t border-stone-100">
+                      <Button size="sm" variant="outline" onClick={() => viewSummary(emp)} className="h-7 text-[10px] flex-1"><Eye size={10} className="mr-0.5" />View</Button>
+                      <Button size="sm" variant="outline" onClick={() => { setPayingEmp(emp); setPayData(d => ({ ...d, amount: emp.salary || '', period: format(new Date(), 'MMM yyyy') })); setShowPayDialog(true); }} className="h-7 text-[10px] flex-1"><DollarSign size={10} className="mr-0.5" />Pay</Button>
+                      <Button size="sm" variant="outline" onClick={() => { setLeaveEmp(emp); setShowLeaveDialog(true); }} className="h-7 text-[10px] flex-1"><Calendar size={10} className="mr-0.5" />Leave</Button>
+                      <Button size="sm" variant="ghost" onClick={() => handleEdit(emp)} className="h-7 text-[10px]"><Edit size={10} /></Button>
+                    </div>
+                  </div>
+                );
+              })}
+              {employees.length === 0 && <p className="text-center text-muted-foreground py-8">No employees yet</p>}
+            </div>
+            {/* Desktop table */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full" data-testid="employees-table">
                 <thead><tr className="border-b border-border">
                   <th className="text-left p-3 font-medium text-sm">Name</th>
