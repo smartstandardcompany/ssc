@@ -449,7 +449,7 @@ class TestRegressions:
 
     def test_16_dashboard_still_works(self):
         """Regression: Dashboard API still returns data"""
-        response = self.client.get(f"{BASE_URL}/api/dashboard")
+        response = self.client.get(f"{BASE_URL}/api/dashboard/stats")
         assert response.status_code == 200
         print("✓ Dashboard API works")
 
