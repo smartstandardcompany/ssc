@@ -46,8 +46,9 @@ export default function InvoicesPage() {
 
   const fetchData = async () => {
     try {
-      const [iRes, bRes, cRes, itemsRes] = await Promise.all([api.get('/invoices'), api.get('/branches'), api.get('/customers'), api.get('/items')]);
+      const [iRes, bRes, cRes, itemsRes, coRes] = await Promise.all([api.get('/invoices'), api.get('/branches'), api.get('/customers'), api.get('/items'), api.get('/settings/company').catch(() => ({ data: {} }))]);
       setInvoices(iRes.data); setBranches(bRes.data); setCustomers(cRes.data); setMasterItems(itemsRes.data);
+      if (coRes.data) setCompanySettings(coRes.data);
     } catch { toast.error('Failed to fetch data'); }
     finally { setLoading(false); }
   };
