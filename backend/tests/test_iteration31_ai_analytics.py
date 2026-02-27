@@ -37,7 +37,7 @@ class TestAIPredictiveAnalytics:
         
         if login_response.status_code == 200:
             data = login_response.json()
-            token = data.get("token")
+            token = data.get("access_token") or data.get("token")
             if token:
                 self.session.headers.update({"Authorization": f"Bearer {token}"})
         else:
