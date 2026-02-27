@@ -2,6 +2,7 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { LayoutDashboard, ShoppingCart, FileInput, Store, Users, Truck, Receipt, ArrowLeftRight, AlertTriangle, Handshake, UserCheck, FileWarning, BarChart3, CreditCard, FileText, Settings, HelpCircle, Building2 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const sections = [
   { icon: LayoutDashboard, title: 'Dashboard', color: 'text-primary', items: [
