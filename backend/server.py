@@ -46,6 +46,7 @@ for module in [
     auth,
     bank_statements,
     branches,
+    cashier_pos,
     customers,
     dashboard,
     documents,
