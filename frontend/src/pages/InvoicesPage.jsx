@@ -234,7 +234,13 @@ export default function InvoicesPage() {
           <div className="flex gap-3 items-center flex-wrap">
             <BranchFilter onChange={setBranchFilter} />
             <DateFilter onFilterChange={setDateFilter} />
-            <Button onClick={() => setShowForm(!showForm)} className="rounded-full" data-testid="create-invoice-btn"><Plus size={18} className="mr-2" />New Invoice</Button>
+            <Button onClick={() => setShowForm(!showForm)} className="rounded-full" size="sm" data-testid="create-invoice-btn"><Plus size={16} className="mr-1" />New Invoice</Button>
+            <label className="cursor-pointer">
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files[0] && handleOcrScan(e.target.files[0])} />
+              <Button variant="outline" className="rounded-full" size="sm" asChild disabled={scanning} data-testid="ocr-scan-btn">
+                <span>{scanning ? 'Scanning...' : <><Image size={16} className="mr-1" />Scan Invoice (AI)</>}</span>
+              </Button>
+            </label>
           </div>
         </div>
 
