@@ -82,6 +82,42 @@ export default function InvoicesPage() {
   };
   const filteredCustomers = customers.filter(c => !customerSearch || c.name.toLowerCase().includes(customerSearch.toLowerCase()));
 
+  const handleOcrScan = async (file) => {
+    if (!file) return;
+    setScanning(true);
+    toast.loading('Scanning invoice with AI...', { id: 'ocr-scan' });
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise((resolve) => {
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.readAsDataURL(file);
+      });
+      const { data } = await api.post('/invoices/ocr-scan', { image: base64 });
+      // Auto-fill form
+      const items = (data.items || []).map(item => ({
+        description: item.description || item.name || '',
+        quantity: item.quantity || 1,
+        unit_price: item.unit_price || item.total || ''
+      }));
+      if (items.length === 0) items.push({ description: '', quantity: 1, unit_price: '' });
+      setFormData(prev => ({
+        ...prev,
+        items,
+        discount: data.discount || '',
+        notes: data.notes || prev.notes,
+        payment_mode: data.payment_mode || prev.payment_mode,
+        date: data.date || prev.date,
+        customer_id: data.customer_name ? (customers.find(c => c.name.toLowerCase().includes((data.customer_name || '').toLowerCase()))?.id || prev.customer_id) : prev.customer_id,
+      }));
+      toast.success(`Scanned ${items.length} items from invoice`, { id: 'ocr-scan' });
+      setShowForm(true);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'OCR scan failed', { id: 'ocr-scan' });
+    } finally {
+      setScanning(false);
+    }
+  };
+
   const calcTotals = () => {
     const subtotal = formData.items.reduce((s, item) => s + (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0), 0);
     const discount = parseFloat(formData.discount) || 0;
