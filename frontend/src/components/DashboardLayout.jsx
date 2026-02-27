@@ -261,19 +261,27 @@ export const DashboardLayout = ({ children }) => {
         )}
       </nav>
 
-      <div className="p-3 border-t border-stone-100 bg-white">
+      <div className="p-3 border-t border-stone-100 bg-white dark:bg-stone-900 dark:border-stone-700">
         <div className="flex items-center gap-2.5 mb-2.5">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-amber-400 flex items-center justify-center text-white font-bold text-xs shrink-0">
             {user.name?.charAt(0)?.toUpperCase() || 'U'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-stone-800 truncate" data-testid="user-name">{user.name}</p>
+            <p className="text-sm font-semibold text-stone-800 dark:text-stone-200 truncate" data-testid="user-name">{user.name}</p>
             <p className="text-[10px] text-stone-400 truncate">{user.email}</p>
           </div>
           <Badge className="bg-orange-50 text-orange-600 border-orange-200 capitalize text-[10px] shrink-0">{user.role}</Badge>
         </div>
+        <div className="flex gap-1.5 mb-1.5">
+          <button onClick={() => setDarkMode(!darkMode)} data-testid="dark-mode-toggle" className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border border-stone-200 dark:border-stone-600 text-stone-500 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 text-xs transition-colors">
+            {darkMode ? <Sun size={12} /> : <Moon size={12} />}{darkMode ? 'Light' : 'Dark'}
+          </button>
+          <button onClick={() => setShowShortcuts(true)} data-testid="shortcuts-btn" className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border border-stone-200 dark:border-stone-600 text-stone-500 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 text-xs transition-colors">
+            <Keyboard size={12} />Shortcuts
+          </button>
+        </div>
         <Button variant="outline" size="sm" onClick={handleLogout} data-testid="logout-button"
-          className="w-full rounded-lg border-stone-200 text-stone-500 hover:text-orange-600 hover:border-orange-200 hover:bg-orange-50 text-xs h-8">
+          className="w-full rounded-lg border-stone-200 text-stone-500 hover:text-orange-600 hover:border-orange-200 hover:bg-orange-50 text-xs h-8 dark:border-stone-600 dark:text-stone-300">
           <LogOut size={14} className="mr-1.5" />Logout
         </Button>
       </div>
