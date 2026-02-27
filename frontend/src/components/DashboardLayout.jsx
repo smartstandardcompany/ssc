@@ -105,7 +105,7 @@ function NavGroup({ group, userRole, userPerms, currentPath, onNavigate, t }) {
         data-testid={`nav-group-${group.label.toLowerCase()}`}
         className={`w-full flex items-center justify-between px-3 py-2 text-[11px] font-semibold uppercase tracking-wider rounded-lg transition-colors ${hasActive ? 'text-orange-600' : 'text-stone-400 hover:text-stone-600'}`}
       >
-        {group.label}
+        {t(navLabelToKey[group.label] || group.label)}
         <ChevronDown size={14} className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
@@ -126,7 +126,7 @@ function NavGroup({ group, userRole, userPerms, currentPath, onNavigate, t }) {
                 }`}
               >
                 <Icon size={16} strokeWidth={isActive ? 2.5 : 1.8} />
-                {item.label}
+                {t(navLabelToKey[item.label] || item.label)}
               </Link>
             );
           })}
