@@ -16,6 +16,7 @@ import { DateFilter } from '@/components/DateFilter';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function CashTransfersPage() {
+  const { t } = useLanguage();
   const [transfers, setTransfers] = useState([]);
   const [branches, setBranches] = useState([]);
   const [employees, setEmployees] = useState([]);
