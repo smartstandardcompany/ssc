@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { DollarSign, TrendingUp, TrendingDown, AlertCircle, Wallet, Building2, CreditCard, AlertTriangle, ArrowLeftRight, MessageCircle, Settings2, Eye, EyeOff } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, AlertCircle, Wallet, Building2, CreditCard, AlertTriangle, ArrowLeftRight, MessageCircle, Settings2, Eye, EyeOff, GripVertical, Lock, Unlock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -17,6 +17,9 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { DateFilter } from '@/components/DateFilter';
 import { WhatsAppSendDialog } from '@/components/WhatsAppSendDialog';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import GridLayout from 'react-grid-layout';
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
 
 const Sparkline = ({ data = [], color = '#22C55E', width = 60, height = 24 }) => {
   if (!data || data.length < 2) return null;
