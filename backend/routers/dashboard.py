@@ -162,6 +162,60 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
     }
 
 
+@router.get("/dashboard/today-vs-yesterday")
+async def get_today_vs_yesterday(current_user: User = Depends(get_current_user)):
+    """Compare today's performance vs yesterday."""
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    today_end = (now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)).isoformat()
+    yest_start = (now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)).isoformat()
+    yest_end = today_start
+
+    query = {}
+    if current_user.branch_id and current_user.role != "admin":
+        query["branch_id"] = current_user.branch_id
+
+    today_sales = await db.sales.find({**query, "date": {"$gte": today_start, "$lt": today_end}}, {"_id": 0}).to_list(5000)
+    today_exp = await db.expenses.find({**query, "date": {"$gte": today_start, "$lt": today_end}}, {"_id": 0}).to_list(5000)
+    yest_sales = await db.sales.find({**query, "date": {"$gte": yest_start, "$lt": yest_end}}, {"_id": 0}).to_list(5000)
+    yest_exp = await db.expenses.find({**query, "date": {"$gte": yest_start, "$lt": yest_end}}, {"_id": 0}).to_list(5000)
+
+    t_sales = sum(s.get("final_amount", s["amount"]) for s in today_sales)
+    t_exp = sum(e["amount"] for e in today_exp)
+    y_sales = sum(s.get("final_amount", s["amount"]) for s in yest_sales)
+    y_exp = sum(e["amount"] for e in yest_exp)
+
+    t_cash = sum(p["amount"] for s in today_sales for p in s.get("payment_details", []) if p.get("mode") == "cash")
+    t_bank = sum(p["amount"] for s in today_sales for p in s.get("payment_details", []) if p.get("mode") == "bank")
+    y_cash = sum(p["amount"] for s in yest_sales for p in s.get("payment_details", []) if p.get("mode") == "cash")
+    y_bank = sum(p["amount"] for s in yest_sales for p in s.get("payment_details", []) if p.get("mode") == "bank")
+
+    def pct(curr, prev):
+        if prev == 0:
+            return 100.0 if curr > 0 else 0.0
+        return round((curr - prev) / abs(prev) * 100, 1)
+
+    return {
+        "today": {
+            "sales": round(t_sales, 2), "expenses": round(t_exp, 2),
+            "profit": round(t_sales - t_exp, 2), "count": len(today_sales),
+            "cash": round(t_cash, 2), "bank": round(t_bank, 2),
+        },
+        "yesterday": {
+            "sales": round(y_sales, 2), "expenses": round(y_exp, 2),
+            "profit": round(y_sales - y_exp, 2), "count": len(yest_sales),
+            "cash": round(y_cash, 2), "bank": round(y_bank, 2),
+        },
+        "change": {
+            "sales": pct(t_sales, y_sales), "expenses": pct(t_exp, y_exp),
+            "profit": pct(t_sales - t_exp, y_sales - y_exp),
+            "count": pct(len(today_sales), len(yest_sales)),
+            "cash": pct(t_cash, y_cash), "bank": pct(t_bank, y_bank),
+        }
+    }
+
+
+
 
 @router.get("/dashboard/live-analytics")
 async def get_live_analytics(current_user: User = Depends(get_current_user)):
