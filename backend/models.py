@@ -767,3 +767,107 @@ class ShiftAssignment(BaseModel):
     overtime_hours: float = 0
     notes: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+
+# =====================================================
+# RESTAURANT POS MODELS
+# =====================================================
+
+class MenuItemModifier(BaseModel):
+    """Modifier option for a menu item (e.g., Size, Spice Level)"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str  # e.g., "Size", "Spice Level", "Add-ons"
+    options: List[dict] = []  # [{"name": "Small", "price": 0}, {"name": "Large", "price": 5}]
+    required: bool = False
+    multiple: bool = False  # Can select multiple options?
+
+class MenuItem(BaseModel):
+    """Menu item for restaurant POS"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    name_ar: Optional[str] = None  # Arabic name
+    description: Optional[str] = None
+    category: str = "main"  # main, appetizer, beverage, dessert, sides
+    price: float
+    cost_price: float = 0
+    image_url: Optional[str] = None
+    modifiers: List[dict] = []  # List of modifier groups
+    is_available: bool = True
+    branch_id: Optional[str] = None  # None = all branches
+    preparation_time: int = 10  # minutes
+    calories: Optional[int] = None
+    tags: List[str] = []  # vegetarian, spicy, popular, new
+    display_order: int = 0
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class MenuItemCreate(BaseModel):
+    name: str
+    name_ar: Optional[str] = None
+    description: Optional[str] = None
+    category: str = "main"
+    price: float
+    cost_price: float = 0
+    image_url: Optional[str] = None
+    modifiers: Optional[List[dict]] = []
+    is_available: bool = True
+    branch_id: Optional[str] = None
+    preparation_time: int = 10
+    calories: Optional[int] = None
+    tags: Optional[List[str]] = []
+    display_order: int = 0
+
+class POSOrder(BaseModel):
+    """POS order for restaurant"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    order_number: int  # Daily order number
+    branch_id: str
+    cashier_id: str
+    cashier_name: str
+    customer_id: Optional[str] = None
+    customer_name: Optional[str] = None
+    items: List[dict] = []  # [{item_id, name, quantity, unit_price, modifiers, subtotal}]
+    subtotal: float = 0
+    discount: float = 0
+    discount_type: str = "amount"  # amount or percent
+    tax: float = 0
+    tax_rate: float = 0.15  # 15% VAT
+    total: float = 0
+    payment_method: str = "cash"  # cash, card, online, split, credit
+    payment_details: List[dict] = []  # For split payments
+    status: str = "pending"  # pending, preparing, ready, completed, cancelled
+    order_type: str = "dine_in"  # dine_in, takeaway, delivery
+    table_number: Optional[str] = None
+    notes: Optional[str] = None
+    kitchen_notes: Optional[str] = None
+    sent_to_kitchen: bool = False
+    kitchen_sent_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class POSOrderCreate(BaseModel):
+    branch_id: str
+    customer_id: Optional[str] = None
+    items: List[dict]
+    discount: float = 0
+    discount_type: str = "amount"
+    payment_method: str = "cash"
+    payment_details: Optional[List[dict]] = []
+    order_type: str = "dine_in"
+    table_number: Optional[str] = None
+    notes: Optional[str] = None
+    kitchen_notes: Optional[str] = None
+
+class MenuCategory(BaseModel):
+    """Menu category for organizing items"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    name_ar: Optional[str] = None
+    icon: Optional[str] = None
+    color: Optional[str] = None
+    display_order: int = 0
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
