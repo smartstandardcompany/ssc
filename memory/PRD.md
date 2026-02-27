@@ -56,18 +56,30 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - Mobile card views for all data tables
 - Responsive headings and layouts
 - Currency consistency (SAR everywhere)
+- **Real-time Stock Alerts** - Banner at top of dashboard when items drop below minimum stock level
 
 ## Key API Endpoints
 - `/api/targets` + `/api/targets/progress` - Sales target CRUD & progress
 - `/api/reports/sales-forecast` - AI sales prediction
 - `/api/reports/analytics-pdf` - PDF export
+- `/api/reports/eod-summary?date=YYYY-MM-DD` - End-of-Day summary report
+- `/api/reports/partner-pnl` - Partner Profit & Loss report
+- `/api/stock/alerts` - Low stock alerts (items below min_stock_level)
 - `/api/expenses/auto-categorize` - AI expense categorization
 - `/api/invoices/ocr-scan` - Invoice OCR
 - `/api/dashboard/today-vs-yesterday` - Daily comparison
+- `/api/whatsapp/send-to` - Send reports via WhatsApp (6 report types)
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
 - Employee: ahmed@test.com / emp@123
 
+## Recently Completed (Feb 2026)
+- **Real-time Stock Alerts** - Polling-based alerts in DashboardLayout with expandable banner
+- **End-of-Day (EOD) Summary Report** - New tab in Reports page with date/branch filter, KPI cards, breakdowns, print
+- **Partner Profit & Loss (P&L)** - New tab in Reports page showing company summary and per-partner breakdown with monthly charts
+- **WhatsApp Report Integration** - Added EOD Summary and Partner P&L as report types in WhatsApp send dialog
+
 ## Backlog
-- Further user-requested enhancements
+- Additional AI features (predictive analytics enhancements)
+- Further UX refinements based on user feedback
