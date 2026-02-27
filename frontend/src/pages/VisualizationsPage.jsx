@@ -23,26 +23,29 @@ const fmt = (v) => `SAR ${Number(v || 0).toLocaleString(undefined, { minimumFrac
 
 // Custom Gauge Component
 const GaugeChart = ({ value, max, color, label, current, target, unit }) => {
-  const pct = Math.min(value / max, 1);
+  const clampedValue = Math.max(0, Math.min(value, max));
+  const pct = clampedValue / max;
   const angle = pct * 180;
   const rad = (a) => (a * Math.PI) / 180;
   const cx = 100, cy = 90, r = 70;
-  const x1 = cx - r * Math.cos(rad(0));
-  const y1 = cy - r * Math.sin(rad(0));
-  const x2 = cx - r * Math.cos(rad(angle));
-  const y2 = cy - r * Math.sin(rad(angle));
+  const bgPath = `M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`;
+  // Calculate the active arc endpoint
+  const endX = cx - r * Math.cos(rad(angle));
+  const endY = cy - r * Math.sin(rad(angle));
   const large = angle > 180 ? 1 : 0;
+  const activePath = pct > 0 ? `M ${cx - r} ${cy} A ${r} ${r} 0 ${large} 1 ${endX} ${endY}` : '';
+  const displayVal = value > max ? `>${max}` : value < 0 ? '0' : value;
   return (
     <div className="text-center">
       <svg viewBox="0 0 200 110" className="w-full max-w-[180px] mx-auto">
-        <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} fill="none" stroke="#e5e5e5" strokeWidth="12" strokeLinecap="round" />
-        {pct > 0 && <path d={`M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`} fill="none" stroke={color} strokeWidth="12" strokeLinecap="round" />}
-        <text x={cx} y={cy - 10} textAnchor="middle" className="text-2xl font-bold" fill={color} fontSize="22">{value}{unit}</text>
-        <text x={cx} y={cy + 10} textAnchor="middle" className="text-xs" fill="#78716c" fontSize="10">{label}</text>
+        <path d={bgPath} fill="none" stroke="#e5e5e5" strokeWidth="12" strokeLinecap="round" />
+        {pct > 0 && <path d={activePath} fill="none" stroke={color} strokeWidth="12" strokeLinecap="round" />}
+        <text x={cx} y={cy - 10} textAnchor="middle" fill={color} fontSize="22" fontWeight="bold">{displayVal}{unit}</text>
+        <text x={cx} y={cy + 10} textAnchor="middle" fill="#78716c" fontSize="10">{label}</text>
       </svg>
       <div className="text-[10px] text-muted-foreground mt-1">
         {typeof current === 'number' && typeof target === 'number' && (
-          <span>{typeof current === 'number' && current > 1000 ? fmt(current) : current} / {typeof target === 'number' && target > 1000 ? fmt(target) : target}</span>
+          <span>{typeof current === 'number' && Math.abs(current) > 1000 ? fmt(current) : current} / {typeof target === 'number' && Math.abs(target) > 1000 ? fmt(target) : target}</span>
         )}
       </div>
     </div>
