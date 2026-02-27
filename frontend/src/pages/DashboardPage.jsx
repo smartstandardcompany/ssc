@@ -187,7 +187,7 @@ export default function DashboardPage() {
       sparkColor: '#F5841F',
     },
     {
-      title: 'Pending Credits',
+      title: tr('pending_credits'),
       value: `SAR ${stats?.pending_credits?.toFixed(2) || '0.00'}`,
       icon: AlertCircle,
       color: 'text-warning',
