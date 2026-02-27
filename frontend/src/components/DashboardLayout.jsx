@@ -339,7 +339,7 @@ export const DashboardLayout = ({ children }) => {
       )}
 
       {/* Sidebar - desktop */}
-      <aside className="hidden lg:flex lg:flex-col w-60 bg-white border-r border-stone-100 fixed h-full overflow-hidden">
+      <aside className={`hidden lg:flex lg:flex-col w-60 bg-white ${isRTL ? 'border-l' : 'border-r'} border-stone-100 fixed ${isRTL ? 'right-0' : 'left-0'} h-full overflow-hidden dark:bg-stone-900 dark:border-stone-700`}>
         {sidebarContent}
       </aside>
 
