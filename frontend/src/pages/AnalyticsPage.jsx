@@ -309,6 +309,253 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
+        {/* AI Predictive Analytics Hub */}
+        <Card className="border-indigo-200 bg-indigo-50/10" data-testid="ai-analytics-hub">
+          <CardHeader>
+            <CardTitle className="font-outfit text-base flex items-center gap-2"><Zap size={16} className="text-indigo-600" />Predictive Analytics Hub</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Tabs value={aiTab} onValueChange={loadAiSection}>
+              <TabsList className="flex-wrap h-auto gap-1 mb-4">
+                <TabsTrigger value="expense_forecast" className="text-xs" data-testid="ai-expense-tab">Expense Forecast</TabsTrigger>
+                <TabsTrigger value="stock_reorder" className="text-xs" data-testid="ai-stock-tab">Stock Reorder</TabsTrigger>
+                <TabsTrigger value="revenue_trends" className="text-xs" data-testid="ai-revenue-tab">Revenue Trends</TabsTrigger>
+                <TabsTrigger value="customer_churn" className="text-xs" data-testid="ai-churn-tab">Customer Churn</TabsTrigger>
+                <TabsTrigger value="margin_optimizer" className="text-xs" data-testid="ai-margin-tab">Margin Optimizer</TabsTrigger>
+              </TabsList>
+
+              {/* Expense Forecast */}
+              <TabsContent value="expense_forecast">
+                {expenseForecast ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold">Predicted Expenses for {expenseForecast.next_month}</p>
+                        <p className="text-2xl font-bold text-red-600 font-outfit" data-testid="expense-forecast-total">{fmt(expenseForecast.total_predicted)}</p>
+                      </div>
+                      <Badge variant="outline" className="text-xs">Based on 6-month trends</Badge>
+                    </div>
+                    {expenseForecast.history?.length > 0 && (
+                      <ResponsiveContainer width="100%" height={200}>
+                        <BarChart data={expenseForecast.history}>
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                          <XAxis dataKey="month" tick={{ fontSize: 9 }} />
+                          <YAxis tick={{ fontSize: 10 }} />
+                          <Tooltip formatter={(v) => fmt(v)} />
+                          <Bar dataKey="total" name="Expenses" fill="#EF4444" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {expenseForecast.categories?.slice(0, 9).map(c => (
+                        <div key={c.category} className="flex items-center justify-between p-2.5 bg-white rounded-lg border text-xs">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className={`w-2 h-2 rounded-full ${c.trend === 'up' ? 'bg-red-500' : c.trend === 'down' ? 'bg-emerald-500' : 'bg-stone-400'}`} />
+                            <span className="font-medium truncate">{c.category}</span>
+                          </div>
+                          <span className="font-bold text-stone-700 shrink-0 ml-2">{fmt(c.predicted)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : <p className="text-center text-muted-foreground py-8">Loading expense forecast...</p>}
+              </TabsContent>
+
+              {/* Stock Reorder */}
+              <TabsContent value="stock_reorder">
+                {stockReorder ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-stone-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-stone-500">Total Items</p>
+                        <p className="text-xl font-bold font-outfit">{stockReorder.total_items}</p>
+                      </div>
+                      <div className="bg-red-50 rounded-xl p-3 text-center" data-testid="items-needing-reorder">
+                        <p className="text-xs text-red-600">Need Reorder</p>
+                        <p className="text-xl font-bold font-outfit text-red-700">{stockReorder.items_needing_reorder}</p>
+                      </div>
+                      <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-emerald-600">Tracked</p>
+                        <p className="text-xl font-bold font-outfit text-emerald-700">{stockReorder.predictions?.length || 0}</p>
+                      </div>
+                    </div>
+                    {stockReorder.predictions?.length > 0 ? (
+                      <div className="space-y-2">
+                        {stockReorder.predictions.slice(0, 15).map(p => (
+                          <div key={p.item_id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border ${p.urgency === 'critical' ? 'bg-red-50 border-red-200' : p.urgency === 'soon' ? 'bg-amber-50 border-amber-200' : 'bg-white'}`} data-testid={`reorder-${p.item_id}`}>
+                            <div className="flex items-center gap-2 min-w-0 mb-1 sm:mb-0">
+                              <Badge className={`text-[9px] shrink-0 ${p.urgency === 'critical' ? 'bg-red-500' : p.urgency === 'soon' ? 'bg-amber-500' : p.urgency === 'normal' ? 'bg-blue-500' : 'bg-emerald-500'}`}>{p.urgency}</Badge>
+                              <span className="text-sm font-medium truncate">{p.item_name}</span>
+                              {p.category && <span className="text-xs text-stone-400">({p.category})</span>}
+                            </div>
+                            <div className="flex items-center gap-4 text-xs shrink-0">
+                              <span>Balance: <b>{p.current_balance}</b> {p.unit}</span>
+                              <span>Usage: <b>{p.daily_usage}</b>/day</span>
+                              <span>Days Left: <b className={p.days_left <= 7 ? 'text-red-600' : 'text-stone-700'}>{p.days_left}</b></span>
+                              <span>Reorder by: <b>{p.reorder_date}</b></span>
+                              <span className="text-blue-600">Order: <b>{p.suggested_reorder_qty}</b> {p.unit}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : <p className="text-center text-muted-foreground py-6">No items with usage data to predict reorder timing.</p>}
+                  </div>
+                ) : <p className="text-center text-muted-foreground py-8">Loading stock reorder predictions...</p>}
+              </TabsContent>
+
+              {/* Revenue Trends */}
+              <TabsContent value="revenue_trends">
+                {revenueTrends ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="bg-blue-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-blue-600">Avg Weekly Growth</p>
+                        <p className={`text-lg font-bold font-outfit ${revenueTrends.growth?.avg_weekly >= 0 ? 'text-emerald-600' : 'text-red-600'}`} data-testid="avg-weekly-growth">{revenueTrends.growth?.avg_weekly > 0 ? '+' : ''}{revenueTrends.growth?.avg_weekly}%</p>
+                      </div>
+                      <div className="bg-purple-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-purple-600">Avg Monthly Growth</p>
+                        <p className={`text-lg font-bold font-outfit ${revenueTrends.growth?.avg_monthly >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{revenueTrends.growth?.avg_monthly > 0 ? '+' : ''}{revenueTrends.growth?.avg_monthly}%</p>
+                      </div>
+                      <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-emerald-600">Predicted Next Week</p>
+                        <p className="text-lg font-bold font-outfit text-emerald-700" data-testid="predicted-next-week">{fmt(revenueTrends.growth?.predicted_next_week)}</p>
+                      </div>
+                      <div className="bg-orange-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-orange-600">Weekly Data Points</p>
+                        <p className="text-lg font-bold font-outfit text-orange-700">{revenueTrends.weekly?.length || 0}</p>
+                      </div>
+                    </div>
+                    <div className="grid lg:grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="text-sm font-semibold mb-2">Weekly Revenue Trend</h4>
+                        <ResponsiveContainer width="100%" height={220}>
+                          <AreaChart data={revenueTrends.weekly}>
+                            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                            <XAxis dataKey="week" tick={{ fontSize: 9 }} />
+                            <YAxis tick={{ fontSize: 10 }} />
+                            <Tooltip formatter={(v) => fmt(v)} />
+                            <Area type="monotone" dataKey="sales" name="Sales" stroke="#22C55E" fill="#22C55E" fillOpacity={0.15} strokeWidth={2} />
+                            <Area type="monotone" dataKey="profit" name="Profit" stroke="#F5841F" fill="#F5841F" fillOpacity={0.1} strokeWidth={2} />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-semibold mb-2">Monthly Revenue Trend</h4>
+                        <ResponsiveContainer width="100%" height={220}>
+                          <BarChart data={revenueTrends.monthly}>
+                            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                            <XAxis dataKey="month" tick={{ fontSize: 9 }} />
+                            <YAxis tick={{ fontSize: 10 }} />
+                            <Tooltip formatter={(v) => fmt(v)} />
+                            <Legend />
+                            <Bar dataKey="sales" name="Sales" fill="#22C55E" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="expenses" name="Expenses" fill="#EF4444" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+                ) : <p className="text-center text-muted-foreground py-8">Loading revenue trends...</p>}
+              </TabsContent>
+
+              {/* Customer Churn */}
+              <TabsContent value="customer_churn">
+                {customerChurn ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3" data-testid="churn-summary">
+                      <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-emerald-600">Active</p>
+                        <p className="text-xl font-bold font-outfit text-emerald-700">{customerChurn.summary?.active}</p>
+                      </div>
+                      <div className="bg-amber-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-amber-600">Medium Risk</p>
+                        <p className="text-xl font-bold font-outfit text-amber-700">{customerChurn.summary?.medium_risk}</p>
+                      </div>
+                      <div className="bg-red-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-red-600">High Risk</p>
+                        <p className="text-xl font-bold font-outfit text-red-700">{customerChurn.summary?.high_risk}</p>
+                      </div>
+                      <div className="bg-stone-100 rounded-xl p-3 text-center">
+                        <p className="text-xs text-stone-600">Lost</p>
+                        <p className="text-xl font-bold font-outfit text-stone-700">{customerChurn.summary?.lost}</p>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm" data-testid="churn-table">
+                        <thead><tr className="border-b text-xs text-muted-foreground">
+                          <th className="text-left p-2">Customer</th><th className="text-left p-2">Phone</th><th className="text-right p-2">Last Purchase</th><th className="text-right p-2">Days Inactive</th><th className="text-right p-2">Purchases</th><th className="text-right p-2">Total Spent</th><th className="text-center p-2">Risk</th>
+                        </tr></thead>
+                        <tbody>
+                          {customerChurn.customers?.slice(0, 20).map(c => (
+                            <tr key={c.customer_id} className="border-b hover:bg-stone-50">
+                              <td className="p-2 font-medium">{c.name}</td>
+                              <td className="p-2 text-stone-500">{c.phone || '-'}</td>
+                              <td className="p-2 text-right text-xs">{c.last_purchase_date === 'Never' ? 'Never' : c.last_purchase_date?.slice(0, 10)}</td>
+                              <td className="p-2 text-right">{c.days_inactive > 900 ? '—' : c.days_inactive}</td>
+                              <td className="p-2 text-right">{c.purchase_count}</td>
+                              <td className="p-2 text-right">{fmt(c.total_spent)}</td>
+                              <td className="p-2 text-center"><Badge className={`text-[9px] ${c.risk_level === 'lost' ? 'bg-stone-500' : c.risk_level === 'high' ? 'bg-red-500' : c.risk_level === 'medium' ? 'bg-amber-500' : 'bg-emerald-500'}`}>{c.risk_level}</Badge></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : <p className="text-center text-muted-foreground py-8">Loading customer churn analysis...</p>}
+              </TabsContent>
+
+              {/* Margin Optimizer */}
+              <TabsContent value="margin_optimizer">
+                {marginOptimizer ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3" data-testid="margin-summary">
+                      <div className="bg-stone-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-stone-600">Items Analyzed</p>
+                        <p className="text-xl font-bold font-outfit">{marginOptimizer.total_analyzed}</p>
+                      </div>
+                      <div className="bg-amber-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-amber-600">Star Items</p>
+                        <p className="text-xl font-bold font-outfit text-amber-700">{marginOptimizer.stars}</p>
+                      </div>
+                      <div className="bg-blue-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-blue-600">To Promote</p>
+                        <p className="text-xl font-bold font-outfit text-blue-700">{marginOptimizer.to_promote}</p>
+                      </div>
+                      <div className="bg-red-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-red-600">Needs Review</p>
+                        <p className="text-xl font-bold font-outfit text-red-700">{marginOptimizer.to_review}</p>
+                      </div>
+                    </div>
+                    {marginOptimizer.items?.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm" data-testid="margin-table">
+                          <thead><tr className="border-b text-xs text-muted-foreground">
+                            <th className="text-left p-2">Item</th><th className="text-right p-2">Price</th><th className="text-right p-2">Cost</th><th className="text-right p-2">Margin</th><th className="text-right p-2">Qty Sold</th><th className="text-right p-2">Revenue</th><th className="text-right p-2">Profit</th><th className="text-center p-2">Action</th>
+                          </tr></thead>
+                          <tbody>
+                            {marginOptimizer.items?.slice(0, 20).map(m => (
+                              <tr key={m.item_id} className="border-b hover:bg-stone-50">
+                                <td className="p-2 font-medium">{m.item_name}</td>
+                                <td className="p-2 text-right">{fmt(m.unit_price)}</td>
+                                <td className="p-2 text-right text-stone-500">{fmt(m.cost_price)}</td>
+                                <td className={`p-2 text-right font-bold ${m.margin_pct >= 40 ? 'text-emerald-600' : m.margin_pct >= 20 ? 'text-blue-600' : 'text-red-600'}`}>{m.margin_pct}%</td>
+                                <td className="p-2 text-right">{m.total_qty_sold}</td>
+                                <td className="p-2 text-right">{fmt(m.total_revenue)}</td>
+                                <td className={`p-2 text-right font-bold ${m.total_profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{fmt(m.total_profit)}</td>
+                                <td className="p-2 text-center"><Badge className={`text-[9px] ${m.recommendation === 'star' ? 'bg-amber-500' : m.recommendation === 'promote' ? 'bg-blue-500' : m.recommendation === 'review' ? 'bg-red-500' : 'bg-stone-400'}`}>{m.recommendation}</Badge></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : <p className="text-center text-muted-foreground py-6">No items with sales data to analyze margins.</p>}
+                  </div>
+                ) : <p className="text-center text-muted-foreground py-8">Loading margin analysis...</p>}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+
         {/* Charts Row 1 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="border-stone-100">
