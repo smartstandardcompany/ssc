@@ -12,6 +12,7 @@ import { Plus, Package, TrendingDown, TrendingUp, AlertTriangle, Camera, Loader2
 import { WhatsAppSendDialog } from '@/components/WhatsAppSendDialog';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
