@@ -7,6 +7,7 @@ import { Bell, CheckCircle, XCircle, DollarSign, Calendar, FileWarning } from 'l
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const NOTIF_ICONS = {
   leave_approved: { icon: CheckCircle, color: 'text-success' },
