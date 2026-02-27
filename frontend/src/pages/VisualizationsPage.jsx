@@ -258,6 +258,8 @@ const TreemapContent = ({ x, y, width, height, name, value, depth, index }) => {
 };
 
 export default function VisualizationsPage() {
+  const navigate = useNavigate();
+  const { t: tr } = useLanguage();
   const [tab, setTab] = useState('heatmap');
   const [heatmapData, setHeatmapData] = useState(null);
   const [heatmapMetric, setHeatmapMetric] = useState('sales');
