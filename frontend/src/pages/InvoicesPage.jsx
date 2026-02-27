@@ -33,6 +33,7 @@ export default function InvoicesPage() {
   const [printInvoice, setPrintInvoice] = useState(null);
   const [qrData, setQrData] = useState(null);
   const [companySettings, setCompanySettings] = useState({});
+  const [scanning, setScanning] = useState(false);
   const [formData, setFormData] = useState({
     branch_id: '', customer_id: '', payment_mode: 'cash', discount: '',
     date: new Date().toISOString().split('T')[0], notes: '',
