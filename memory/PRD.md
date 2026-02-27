@@ -34,6 +34,12 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - Daily Summary, Top Customers, Cashier Performance reports
 - Dashboard Quick Stats with % change badges
 - Dashboard widget customization (show/hide sections)
+- **Predictive Analytics Hub** (5 AI modules):
+  - Expense Forecasting - predict next month by category (3-month moving avg)
+  - Stock Reorder Predictions - AI estimates reorder dates & quantities
+  - Revenue Trend Analysis - weekly/monthly with growth rates
+  - Customer Churn Risk - identify inactive customers (4 risk levels)
+  - Profit Margin Optimizer - item recommendations (star/promote/review/maintain)
 
 ### HR & People
 - Employee management with auto user creation
