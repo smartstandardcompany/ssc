@@ -13,7 +13,7 @@ import { Badge } from './ui/badge';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { navLabelToKey } from '@/lib/i18n';
+import { navLabelToKey, LANGUAGES } from '@/lib/i18n';
 
 const NAV_GROUPS = [
   {
