@@ -98,13 +98,23 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - Admin: ss@ssc.com / Aa147258369Ssc@
 - Employee: ahmed@test.com / emp@123
 
-## Recently Completed (Feb 2026)
-- **Multi-Language Support (Arabic/English):**
+## Recently Completed (Dec 2025)
+- **Full Multi-Language Support (4 Languages):**
   - LanguageContext with useLanguage hook and localStorage persistence
-  - Full Arabic translation (150+ strings: nav, dashboard, reports, analytics, visualizations)
-  - RTL layout auto-applied when Arabic selected (sidebar right, text alignment flipped)
-  - Language toggle in sidebar footer + mobile header ("عربي" / "EN")
-  - Dashboard stat cards, page titles, and nav labels all translated
+  - Full translations for English, Arabic (العربية), Urdu (اردو), Hindi (हिंदी)
+  - 150+ translation keys covering all major UI elements
+  - RTL layout auto-applied for Arabic and Urdu (dir="rtl")
+  - LTR layout for English and Hindi
+  - Language dropdown in sidebar footer (replaced cycle button)
+  - All pages have useLanguage hook integrated
+  - Dashboard, POS, Expenses, Stock, and navigation items translated
+
+- **Language Dropdown Implementation:**
+  - Converted language toggle from cycle button to dropdown menu
+  - Shows all 4 languages with flag indicators (EN, عر, ار, हि)
+  - Both desktop sidebar and mobile header have dropdown
+  - Selected language highlighted in dropdown
+
 - **Interactive Drill-Down on Visualizations:**
   - Heatmap day click → EOD Summary pre-filled with date
   - Funnel stage click → Customers or Sales page
@@ -112,6 +122,12 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
   - Waterfall step click → Sales (income) or Expenses (expense)
   - Radar branch click → Dashboard filtered by branch
   - "Click to drill down" hint text on all interactive charts
+
+- **Dashboard Widget Customization:**
+  - Toggle visibility for Stats, Charts, Cash/Bank, Payment Mode, Spending, Dues, VAT Summary
+  - Settings persist in localStorage
+  - react-grid-layout installed for future drag-and-drop
+
 - **Advanced Data Visualizations (10 features)** — Heatmap, Funnel, Treemap, Gauges, Radar, Waterfall, Money Flow, Time-Series, Export PNG
 - **Predictive Analytics Hub** — 5 AI modules
 - **Scheduled EOD Auto-Send, Dark Mode, Keyboard Shortcuts, Mobile Bottom Nav, Sparklines**
@@ -121,7 +137,7 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - **WhatsApp Report Integration** - EOD Summary and Partner P&L added as report types
 
 ## Backlog
-- Custom drag-and-drop dashboard widget builder
-- Translate remaining pages (Sales, Expenses, Employees, Stock, etc.) to Arabic
-- Additional language support (Urdu, Hindi)
+- Implement full drag-and-drop dashboard widget rearrangement (react-grid-layout installed)
+- Translate remaining hardcoded text (expense category buttons, chart labels)
+- Additional AI features (predictive analytics enhancements)
 - Further UX refinements based on user feedback
