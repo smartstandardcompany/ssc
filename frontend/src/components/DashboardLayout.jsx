@@ -321,9 +321,20 @@ export const DashboardLayout = ({ children }) => {
           <span className="text-base font-bold font-outfit bg-gradient-to-r from-orange-600 to-amber-500 bg-clip-text text-transparent">SSC Track</span>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => { const idx = LANGUAGES.findIndex(l => l.code === lang); setLang(LANGUAGES[(idx + 1) % LANGUAGES.length].code); }} data-testid="language-toggle-mobile" className="p-1 text-stone-500 hover:text-stone-700 dark:text-stone-300 text-xs font-bold">
-            {LANGUAGES.find(l => l.code !== lang)?.flag || 'EN'}
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button data-testid="language-dropdown-mobile" className="p-1 text-stone-500 hover:text-stone-700 dark:text-stone-300 text-xs font-bold flex items-center gap-1">
+                <Globe size={14} />{LANGUAGES.find(l => l.code === lang)?.flag || 'EN'}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-36">
+              {LANGUAGES.map((l) => (
+                <DropdownMenuItem key={l.code} onClick={() => setLang(l.code)} className={`cursor-pointer ${lang === l.code ? 'bg-orange-50 text-orange-600' : ''}`}>
+                  <span className="font-bold mr-2">{l.flag}</span>{l.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <button onClick={() => setDarkMode(!darkMode)} data-testid="dark-mode-toggle-mobile" className="p-1 text-stone-500 hover:text-stone-700 dark:text-stone-300">
             {darkMode ? <Sun size={16} /> : <Moon size={16} />}
           </button>
