@@ -40,11 +40,25 @@ const PIE_COLORS = ['#F5841F', '#22C55E', '#0EA5E9', '#EF4444', '#F59E0B', '#8B5
 
 const DEFAULT_WIDGETS = { stats: true, charts: true, cashBank: true, paymentMode: true, spending: true, dues: true, branchDues: true, vatSummary: true };
 
+const DEFAULT_LAYOUT = [
+  { i: 'stats', x: 0, y: 0, w: 12, h: 4, minW: 6 },
+  { i: 'charts', x: 0, y: 4, w: 12, h: 5, minW: 6 },
+  { i: 'cashBank', x: 0, y: 9, w: 12, h: 4, minW: 6 },
+  { i: 'paymentMode', x: 0, y: 13, w: 12, h: 4, minW: 6 },
+  { i: 'spending', x: 0, y: 17, w: 12, h: 5, minW: 6 },
+  { i: 'dues', x: 0, y: 22, w: 12, h: 5, minW: 6 },
+];
+
 function getWidgetPrefs() {
   try { return { ...DEFAULT_WIDGETS, ...JSON.parse(localStorage.getItem('dashboard_widgets') || '{}') }; }
   catch { return DEFAULT_WIDGETS; }
 }
 function saveWidgetPrefs(prefs) { localStorage.setItem('dashboard_widgets', JSON.stringify(prefs)); }
+function getLayoutPrefs() {
+  try { return JSON.parse(localStorage.getItem('dashboard_layout') || 'null') || DEFAULT_LAYOUT; }
+  catch { return DEFAULT_LAYOUT; }
+}
+function saveLayoutPrefs(layout) { localStorage.setItem('dashboard_layout', JSON.stringify(layout)); }
 
 export default function DashboardPage() {
   const [stats, setStats] = useState(null);
