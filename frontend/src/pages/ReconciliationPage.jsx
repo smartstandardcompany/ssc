@@ -29,6 +29,7 @@ const FLAG_OPTIONS = [
 ];
 
 export default function ReconciliationPage() {
+  const { t } = useLanguage();
   const [statements, setStatements] = useState([]);
   const [selectedStmt, setSelectedStmt] = useState('');
   const [reconciliation, setReconciliation] = useState(null);
