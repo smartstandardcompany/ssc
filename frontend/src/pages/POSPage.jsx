@@ -162,13 +162,13 @@ export default function POSPage() {
         {entryType === 'sale' && (
           <Card className="border-stone-200" data-testid="pos-multi-payment">
             <CardContent className="p-4 space-y-3">
-              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">Payment Amounts</p>
+              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">{t('payment_details')}</p>
 
               <div className="grid grid-cols-2 gap-3">
                 {/* Cash */}
                 <div className="space-y-1">
                   <Label className="text-xs text-stone-500 flex items-center gap-1.5">
-                    <Banknote size={13} className="text-emerald-500" /> Cash
+                    <Banknote size={13} className="text-emerald-500" /> {t('pos_cash')}
                   </Label>
                   <Input type="number" inputMode="decimal" value={cashAmount}
                     onChange={e => setCashAmount(e.target.value)} placeholder="0.00"
@@ -178,7 +178,7 @@ export default function POSPage() {
                 {/* Bank */}
                 <div className="space-y-1">
                   <Label className="text-xs text-stone-500 flex items-center gap-1.5">
-                    <CreditCard size={13} className="text-blue-500" /> Bank
+                    <CreditCard size={13} className="text-blue-500" /> {t('pos_bank')}
                   </Label>
                   <Input type="number" inputMode="decimal" value={bankAmount}
                     onChange={e => setBankAmount(e.target.value)} placeholder="0.00"
@@ -188,7 +188,7 @@ export default function POSPage() {
                 {/* Online */}
                 <div className="space-y-1">
                   <Label className="text-xs text-stone-500 flex items-center gap-1.5">
-                    <Smartphone size={13} className="text-purple-500" /> Online
+                    <Smartphone size={13} className="text-purple-500" /> {t('pos_online')}
                   </Label>
                   <Input type="number" inputMode="decimal" value={onlineAmount}
                     onChange={e => setOnlineAmount(e.target.value)} placeholder="0.00"
@@ -198,7 +198,7 @@ export default function POSPage() {
                 {/* Credit */}
                 <div className="space-y-1">
                   <Label className="text-xs text-stone-500 flex items-center gap-1.5">
-                    <Users size={13} className="text-amber-500" /> Credit
+                    <Users size={13} className="text-amber-500" /> {t('pos_credit')}
                   </Label>
                   <Input type="number" inputMode="decimal" value={creditAmount}
                     onChange={e => setCreditAmount(e.target.value)} placeholder="0.00"
@@ -209,7 +209,7 @@ export default function POSPage() {
               {/* Total */}
               {totalSaleAmount > 0 && (
                 <div className="flex items-center justify-between pt-2 border-t border-dashed border-stone-200">
-                  <span className="text-sm font-medium text-stone-600">Total</span>
+                  <span className="text-sm font-medium text-stone-600">{t('pos_total')}</span>
                   <span className="text-xl font-bold font-outfit text-emerald-600" data-testid="pos-total">SAR {totalSaleAmount.toLocaleString()}</span>
                 </div>
               )}
