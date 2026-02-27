@@ -39,6 +39,12 @@ export default function AnalyticsPage() {
   const [customerChurn, setCustomerChurn] = useState(null);
   const [marginOptimizer, setMarginOptimizer] = useState(null);
   const [aiTab, setAiTab] = useState('expense_forecast');
+  // New AI Analytics States
+  const [cashflowPrediction, setCashflowPrediction] = useState(null);
+  const [seasonalForecast, setSeasonalForecast] = useState(null);
+  const [employeePerformance, setEmployeePerformance] = useState(null);
+  const [expenseAnomalies, setExpenseAnomalies] = useState(null);
+  const [supplierOptimization, setSupplierOptimization] = useState(null);
 
   useEffect(() => { fetchAll(); }, []);
 
