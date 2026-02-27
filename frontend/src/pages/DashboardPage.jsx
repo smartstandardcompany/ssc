@@ -153,7 +153,7 @@ export default function DashboardPage() {
       sparkColor: '#22C55E',
     },
     {
-      title: 'Total Expenses',
+      title: tr('total_expenses'),
       value: `SAR ${stats?.total_expenses?.toFixed(2) || '0.00'}`,
       prev: stats?.prev_expenses,
       pct: stats?.expenses_pct_of_sales,
