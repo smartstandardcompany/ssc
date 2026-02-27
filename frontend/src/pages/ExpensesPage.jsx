@@ -144,7 +144,7 @@ export default function ExpensesPage() {
               <CardContent className="pt-6">
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <Label>Category *</Label>
+                    <Label>{t('category')} *</Label>
                     <div className="flex gap-2 flex-wrap mt-2">
                       {mainCats.map((c, i) => {
                         const colors = ['bg-orange-100 border-orange-300 text-orange-700', 'bg-green-100 border-green-300 text-green-700', 'bg-blue-100 border-blue-300 text-blue-700', 'bg-purple-100 border-purple-300 text-purple-700', 'bg-red-100 border-red-300 text-red-700', 'bg-cyan-100 border-cyan-300 text-cyan-700', 'bg-amber-100 border-amber-300 text-amber-700', 'bg-pink-100 border-pink-300 text-pink-700', 'bg-stone-100 border-stone-300 text-stone-700'];
