@@ -79,6 +79,14 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - `/api/reports/revenue-trends` - Weekly/monthly revenue trends with growth rates
 - `/api/reports/customer-churn` - Customer churn risk analysis
 - `/api/reports/margin-optimizer` - Item margin analysis & recommendations
+- `/api/reports/heatmap-data` - Daily activity data for 365-day heatmap
+- `/api/reports/sales-funnel` - Sales pipeline funnel with conversion rates
+- `/api/reports/expense-treemap` - Hierarchical expense breakdown
+- `/api/reports/kpi-gauges` - KPI gauge indicators
+- `/api/reports/branch-radar` - Multi-metric branch comparison
+- `/api/reports/cashflow-waterfall` - Cash flow waterfall chart data
+- `/api/reports/money-flow` - Money flow (Sankey-style) data
+- `/api/reports/time-series-compare` - Multi-period daily sales comparison
 - `/api/stock/alerts` - Low stock alerts (items below min_stock_level)
 - `/api/expenses/auto-categorize` - AI expense categorization
 - `/api/invoices/ocr-scan` - Invoice OCR
