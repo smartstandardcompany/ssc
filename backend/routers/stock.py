@@ -9,6 +9,40 @@ from models import User, StockEntry, StockUsage, Item
 
 router = APIRouter()
 
+@router.get("/stock/alerts")
+async def get_stock_alerts(branch_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    """Return items where current balance is at or below min_stock_level."""
+    items = await db.items.find({"min_stock_level": {"$gt": 0}}, {"_id": 0}).to_list(1000)
+    if not items:
+        return []
+    e_query = {"branch_id": branch_id} if branch_id else {}
+    u_query = {"branch_id": branch_id} if branch_id else {}
+    entries = await db.stock_entries.find(e_query, {"_id": 0}).to_list(10000)
+    usage = await db.stock_usage.find(u_query, {"_id": 0}).to_list(10000)
+    stock_in = {}
+    for e in entries:
+        stock_in[e["item_id"]] = stock_in.get(e["item_id"], 0) + e["quantity"]
+    stock_out = {}
+    for u in usage:
+        stock_out[u["item_id"]] = stock_out.get(u["item_id"], 0) + u["quantity"]
+    alerts = []
+    for item in items:
+        balance = stock_in.get(item["id"], 0) - stock_out.get(item["id"], 0)
+        if balance <= item["min_stock_level"]:
+            alerts.append({
+                "item_id": item["id"],
+                "item_name": item["name"],
+                "unit": item.get("unit", "piece"),
+                "category": item.get("category", ""),
+                "current_balance": round(balance, 2),
+                "min_level": item["min_stock_level"],
+                "deficit": round(item["min_stock_level"] - balance, 2),
+            })
+    alerts.sort(key=lambda x: x["deficit"], reverse=True)
+    return alerts
+
+
+
 @router.get("/stock/entries")
 async def get_stock_entries(branch_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
     query = {}
