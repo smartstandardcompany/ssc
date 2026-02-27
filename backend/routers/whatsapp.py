@@ -228,6 +228,53 @@ async def send_whatsapp_to_number(body: dict, current_user: User = Depends(get_c
             profit = br_sales - br_exp
             lines.append(f"*{br['name']}*: Sales SAR {br_sales:,.0f} | Exp SAR {br_exp:,.0f} | {'Profit' if profit>=0 else 'LOSS'} SAR {profit:,.0f}")
         msg = "\n".join(lines)
+    elif report_type == "eod_summary":
+        report_date = body.get("report_date", datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+        day_s = f"{report_date}T00:00:00"
+        day_e = f"{report_date}T23:59:59"
+        sq = {"date": {"$gte": day_s, "$lte": day_e}}
+        eq = {"date": {"$gte": day_s, "$lte": day_e}}
+        spq = {"date": {"$gte": day_s, "$lte": day_e}, "supplier_id": {"$exists": True, "$ne": None}}
+        if branch_id:
+            sq["branch_id"] = branch_id
+            eq["branch_id"] = branch_id
+            spq["branch_id"] = branch_id
+        sales = await db.sales.find(sq, {"_id": 0}).to_list(10000)
+        expenses = await db.expenses.find(eq, {"_id": 0}).to_list(10000)
+        sp = await db.supplier_payments.find(spq, {"_id": 0}).to_list(10000)
+        ts = sum(s.get("final_amount", s["amount"]) for s in sales)
+        te = sum(e["amount"] for e in expenses)
+        tsp = sum(p["amount"] for p in sp)
+        s_cash = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "cash")
+        s_bank = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "bank")
+        bn = branch_map.get(branch_id, "All Branches") if branch_id else "All Branches"
+        msg = f"*SSC Track - EOD Summary*\n{report_date} | {bn}\n\n"
+        msg += f"*Sales:* SAR {ts:,.2f} ({len(sales)} txn)\n"
+        msg += f"  Cash: SAR {s_cash:,.2f} | Bank: SAR {s_bank:,.2f}\n"
+        msg += f"*Expenses:* SAR {te:,.2f} ({len(expenses)} items)\n"
+        msg += f"*Supplier Payments:* SAR {tsp:,.2f}\n"
+        msg += f"\n*Net Profit:* SAR {(ts - te - tsp):,.2f}\n"
+        msg += f"*Cash in Hand:* SAR {(s_cash - sum(e['amount'] for e in expenses if e.get('payment_mode')=='cash') - sum(p['amount'] for p in sp if p.get('payment_mode')=='cash')):,.2f}"
+    elif report_type == "partner_pnl":
+        partners = await db.partners.find({}, {"_id": 0}).to_list(100)
+        transactions_data = await db.partner_transactions.find({}, {"_id": 0}).to_list(10000)
+        sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+        expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
+        sp = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
+        total_rev = sum(s.get("final_amount", s["amount"]) for s in sales)
+        total_exp = sum(e["amount"] for e in expenses)
+        total_spp = sum(p["amount"] for p in sp)
+        net = total_rev - total_exp - total_spp
+        msg = f"*SSC Track - Partner P&L*\n\nCompany Net Profit: SAR {net:,.2f}\n"
+        for partner in partners:
+            pt = [t for t in transactions_data if t.get("partner_id") == partner["id"]]
+            inv = sum(t["amount"] for t in pt if t.get("transaction_type") == "investment")
+            wd = sum(t["amount"] for t in pt if t.get("transaction_type") in ["withdrawal", "profit_share", "expense"])
+            share = partner.get("share_percentage", 0)
+            entitled = (net * share / 100) if share > 0 else 0
+            msg += f"\n*{partner['name']}* ({share}%)\n"
+            msg += f"  Invested: SAR {inv:,.2f} | Withdrawn: SAR {wd:,.2f}\n"
+            msg += f"  Balance: SAR {(inv - wd):,.2f} | Profit Share: SAR {entitled:,.2f}"
     else:
         raise HTTPException(status_code=400, detail=f"Unknown report type: {report_type}")
     try:
