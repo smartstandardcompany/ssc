@@ -13,8 +13,10 @@ import { format } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
 import { DateFilter } from '@/components/DateFilter';
 import { BranchFilter } from '@/components/BranchFilter';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function SupplierPaymentsPage() {
+  const { t } = useLanguage();
   const [payments, setPayments] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [branches, setBranches] = useState([]);
