@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, AlertTriangle, DollarSign, Settings2, MessageCircle } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
 import { WhatsAppSendDialog } from '@/components/WhatsAppSendDialog';
