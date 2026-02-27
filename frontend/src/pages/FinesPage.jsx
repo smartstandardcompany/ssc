@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Trash2, DollarSign, AlertTriangle, Upload, Download } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
 import { BranchFilter } from '@/components/BranchFilter';
 import { ExportButtons } from '@/components/ExportButtons';
