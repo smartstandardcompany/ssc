@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="15" skipped="0" tests="15" time="5.977" timestamp="2026-02-27T22:16:31.005026+00:00" hostname="agent-env-4a4bbac0-8ef9-44b8-b778-08463195722e"><testcase classname="backend.tests.test_iteration31_ai_analytics.TestAIPredictiveAnalytics" name="test_cashflow_prediction_endpoint_returns_200" time="0.687"><failure message="AssertionError: Expected 200, got 403: {&quot;detail&quot;:&quot;Not authenticated&quot;}&#10;assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_iteration31_ai_analytics.py:53: in test_cashflow_prediction_endpoint_returns_200
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+E   AssertionError: Expected 200, got 403: {"detail":"Not authenticated"}
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration31_ai_analytics.TestAIPredictiveAnalytics" name="test_cashflow_prediction_has_required_fields" time="0.357"><failure message="assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_iteration31_ai_analytics.py:59: in test_cashflow_prediction_has_required_fields
+    assert response.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration31_ai_analytics.TestAIPredictiveAnalytics" name="test_cashflow_prediction_with_custom_days" time="0.362"><failure message="assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_iteration31_ai_analytics.py:85: in test_cashflow_prediction_with_custom_days
+    assert response.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration31_ai_analytics.TestAIPredictiveAnalytics" name="test_seasonal_forecast_endpoint_returns_200" time="0.359"><failure message="AssertionError: Expected 200, got 403: {&quot;detail&quot;:&quot;Not authenticated&quot;}&#10;assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_iteration31_ai_analytics.py:110: in test_seasonal_forecast_endpoint_returns_200
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+E   AssertionError: Expected 200, got 403: {"detail":"Not authenticated"}
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration31_ai_analytics.TestAIPredictiveAnalytics" name="test_seasonal_forecast_has_required_fields" time="0.368"><failure message="assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_iteration31_ai_analytics.py:116: in test_seasonal_forecast_has_required_fields
+    assert response.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration31_ai_analytics.TestAIPredictiveAnalytics" name="test_seasonal_forecast_next_week_predictions" time="0.366"><failure message="assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_iteration31_ai_analytics.py:139: in test_seasonal_forecast_next_week_predictions
+    assert response.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration31_ai_analytics.TestAIPredictiveAnalytics" name="test_employee_performance_endpoint_returns_200" time="0.374"><failure message="AssertionError: Expected 200, got 403: {&quot;detail&quot;:&quot;Not authenticated&quot;}&#10;assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_iteration31_ai_analytics.py:161: in test_employee_performance_endpoint_returns_200
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+E   AssertionError: Expected 200, got 403: {"detail":"Not authenticated"}
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration31_ai_analytics.TestAIPredictiveAnalytics" name="test_employee_performance_has_required_fields" time="0.381"><failure message="assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_iteration31_ai_analytics.py:167: in test_employee_performance_has_required_fields
+    assert response.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration31_ai_analytics.TestAIPredictiveAnalytics" name="test_employee_performance_employee_structure" time="0.366"><failure message="assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_iteration31_ai_analytics.py:188: in test_employee_performance_employee_structure
+    assert response.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration31_ai_analytics.TestAIPredictiveAnalytics" name="test_expense_anomalies_endpoint_returns_200" time="0.395"><failure message="AssertionError: Expected 200, got 403: {&quot;detail&quot;:&quot;Not authenticated&quot;}&#10;assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_iteration31_ai_analytics.py:227: in test_expense_anomalies_endpoint_returns_200
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+E   AssertionError: Expected 200, got 403: {"detail":"Not authenticated"}
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration31_ai_analytics.TestAIPredictiveAnalytics" name="test_expense_anomalies_has_required_fields" time="0.350"><failure message="assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_iteration31_ai_analytics.py:233: in test_expense_anomalies_has_required_fields
+    assert response.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration31_ai_analytics.TestAIPredictiveAnalytics" name="test_expense_anomalies_category_analysis" time="0.371"><failure message="assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_iteration31_ai_analytics.py:255: in test_expense_anomalies_category_analysis
+    assert response.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration31_ai_analytics.TestAIPredictiveAnalytics" name="test_supplier_optimization_endpoint_returns_200" time="0.358"><failure message="AssertionError: Expected 200, got 403: {&quot;detail&quot;:&quot;Not authenticated&quot;}&#10;assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_iteration31_ai_analytics.py:279: in test_supplier_optimization_endpoint_returns_200
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+E   AssertionError: Expected 200, got 403: {"detail":"Not authenticated"}
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration31_ai_analytics.TestAIPredictiveAnalytics" name="test_supplier_optimization_has_required_fields" time="0.362"><failure message="assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_iteration31_ai_analytics.py:285: in test_supplier_optimization_has_required_fields
+    assert response.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration31_ai_analytics.TestAIPredictiveAnalytics" name="test_supplier_optimization_supplier_structure" time="0.354"><failure message="assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_iteration31_ai_analytics.py:313: in test_supplier_optimization_supplier_structure
+    assert response.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase></testsuite></testsuites>
