@@ -100,6 +100,24 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 
 ## Recently Completed (Dec 2025)
 
+- **Restaurant POS Payment Refinements:**
+  - 3 payment options: Cash, Bank, Credit (removed Online)
+  - Credit payment requires customer selection from dropdown
+  - Branch fixed to cashier's assigned branch (displayed in header)
+  - All sales automatically recorded to cashier's branch
+
+- **Kitchen Display System (KDS) at `/kds`:**
+  - PIN-based authentication (default: 1234)
+  - Dark theme optimized for kitchen environments
+  - Auto-refresh every 5 seconds for new orders
+  - Displays orders with "preparing" status
+  - URGENT badge for orders > 10 minutes old
+  - Order cards show: order #, items, modifiers, time elapsed
+  - "Ready" button to mark orders as ready
+  - "Served" button to mark ready orders as completed
+  - Sound notifications for new orders (toggleable)
+  - Branch filter dropdown for multi-branch kitchens
+
 - **Restaurant POS Cashier Interface (Foodics-Style):**
   - Dedicated `/cashier` login and `/cashier/pos` interface
   - Separate cashier authentication (role-based: admin, cashier, manager)
