@@ -507,7 +507,8 @@ export default function VisualizationsPage() {
                     </div>
                     {waterfallData ? (
                       <>
-                        <WaterfallChart data={waterfallData.waterfall} />
+                        <WaterfallChart data={waterfallData.waterfall} onStepClick={drillWaterfall} />
+                        <p className="text-[10px] text-muted-foreground text-center">{tr('viz_click_drill')}</p>
                         <div className="flex items-center gap-4 text-xs mt-3">
                           <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-emerald-500" /><span>Income</span></div>
                           <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-red-500" /><span>Expense</span></div>
