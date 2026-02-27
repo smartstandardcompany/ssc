@@ -220,7 +220,7 @@ export default function POSPage() {
         {/* Credit: Customer select */}
         {entryType === 'sale' && parseFloat(creditAmount || 0) > 0 && (
           <Select value={customerId} onValueChange={setCustomerId}>
-            <SelectTrigger className="h-11 rounded-xl text-sm" data-testid="pos-customer"><SelectValue placeholder="Select Customer (for credit)" /></SelectTrigger>
+            <SelectTrigger className="h-11 rounded-xl text-sm" data-testid="pos-customer"><SelectValue placeholder={t('pos_customer')} /></SelectTrigger>
             <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
           </Select>
         )}
@@ -234,7 +234,7 @@ export default function POSPage() {
                 placeholder="0.00" className="h-14 pl-10 text-2xl font-bold font-outfit rounded-xl text-center" data-testid="pos-amount" />
             </div>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="h-11 rounded-xl text-sm" data-testid="pos-category"><SelectValue placeholder="Expense Category" /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-xl text-sm" data-testid="pos-category"><SelectValue placeholder={t('expense_category')} /></SelectTrigger>
               <SelectContent>
                 {categories.map(c => <SelectItem key={c.id || c.name} value={c.name}>{c.name}</SelectItem>)}
                 <SelectItem value="General">General</SelectItem>
@@ -245,7 +245,7 @@ export default function POSPage() {
 
         {/* Description */}
         <Input value={description} onChange={e => setDescription(e.target.value)}
-          placeholder="Description (optional)" className="h-11 rounded-xl text-sm" data-testid="pos-desc" />
+          placeholder={t('description')} className="h-11 rounded-xl text-sm" data-testid="pos-desc" />
 
         {/* Submit */}
         <Button disabled={submitting || (entryType === 'sale' ? totalSaleAmount <= 0 : !expenseAmount || parseFloat(expenseAmount) <= 0)} onClick={submit} data-testid="pos-submit"
