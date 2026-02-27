@@ -166,7 +166,7 @@ export default function DashboardPage() {
       sparkColor: '#EF4444',
     },
     {
-      title: 'Supplier Payments',
+      title: tr('supplier_payments'),
       value: `SAR ${stats?.total_supplier_payments?.toFixed(2) || '0.00'}`,
       pct: stats?.sp_pct_of_sales,
       icon: Building2,
