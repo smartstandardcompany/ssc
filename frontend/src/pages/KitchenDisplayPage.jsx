@@ -55,20 +55,35 @@ export default function KitchenDisplayPage() {
       if (!token) return;
       
       const headers = { Authorization: `Bearer ${token}` };
-      const params = new URLSearchParams();
-      params.append('status', 'preparing');
-      if (branchFilter) params.append('branch_id', branchFilter);
       
-      const { data } = await api.get(`/cashier/orders?${params.toString()}`, { headers });
+      // Fetch both preparing and ready orders
+      const preparingParams = new URLSearchParams();
+      preparingParams.append('status', 'preparing');
+      if (branchFilter) preparingParams.append('branch_id', branchFilter);
       
-      // Sort by time - oldest first
-      const sorted = data.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      const readyParams = new URLSearchParams();
+      readyParams.append('status', 'ready');
+      if (branchFilter) readyParams.append('branch_id', branchFilter);
       
-      // Play sound if new orders
-      if (sorted.length > lastOrderCount && soundEnabled && lastOrderCount > 0) {
+      const [preparingRes, readyRes] = await Promise.all([
+        api.get(`/cashier/orders?${preparingParams.toString()}`, { headers }),
+        api.get(`/cashier/orders?${readyParams.toString()}`, { headers })
+      ]);
+      
+      // Combine and sort - preparing first, then ready, oldest first
+      const allOrders = [...preparingRes.data, ...readyRes.data];
+      const sorted = allOrders.sort((a, b) => {
+        if (a.status === 'preparing' && b.status === 'ready') return -1;
+        if (a.status === 'ready' && b.status === 'preparing') return 1;
+        return new Date(a.created_at) - new Date(b.created_at);
+      });
+      
+      // Play sound if new preparing orders
+      const preparingCount = preparingRes.data.length;
+      if (preparingCount > lastOrderCount && soundEnabled && lastOrderCount > 0) {
         playNotificationSound();
       }
-      setLastOrderCount(sorted.length);
+      setLastOrderCount(preparingCount);
       setOrders(sorted);
       setLoading(false);
     } catch (err) {
