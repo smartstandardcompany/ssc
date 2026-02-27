@@ -61,6 +61,7 @@ export default function DashboardPage() {
   const [todayVsYest, setTodayVsYest] = useState(null);
   const [dailyTrend, setDailyTrend] = useState({ sales: [], expenses: [], profit: [] });
   const t = THEMES[theme] || THEMES.default;
+  const { t: tr } = useLanguage();
 
   const toggleWidget = (key) => {
     const updated = { ...widgets, [key]: !widgets[key] };
