@@ -48,6 +48,7 @@ export default function DashboardPage() {
   const [showWhatsApp, setShowWhatsApp] = useState(false);
   const [widgets, setWidgets] = useState(getWidgetPrefs());
   const [showWidgetSettings, setShowWidgetSettings] = useState(false);
+  const [todayVsYest, setTodayVsYest] = useState(null);
   const t = THEMES[theme] || THEMES.default;
 
   const toggleWidget = (key) => {
