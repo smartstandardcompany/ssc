@@ -339,6 +339,11 @@ export default function AnalyticsPage() {
                 <TabsTrigger value="revenue_trends" className="text-xs" data-testid="ai-revenue-tab">Revenue Trends</TabsTrigger>
                 <TabsTrigger value="customer_churn" className="text-xs" data-testid="ai-churn-tab">Customer Churn</TabsTrigger>
                 <TabsTrigger value="margin_optimizer" className="text-xs" data-testid="ai-margin-tab">Margin Optimizer</TabsTrigger>
+                <TabsTrigger value="cashflow_prediction" className="text-xs" data-testid="ai-cashflow-tab"><Wallet size={12} className="mr-1" />Cash Flow</TabsTrigger>
+                <TabsTrigger value="seasonal_forecast" className="text-xs" data-testid="ai-seasonal-tab"><Clock size={12} className="mr-1" />Seasonal</TabsTrigger>
+                <TabsTrigger value="employee_performance" className="text-xs" data-testid="ai-employee-tab"><UserCheck size={12} className="mr-1" />Team Score</TabsTrigger>
+                <TabsTrigger value="expense_anomalies" className="text-xs" data-testid="ai-anomalies-tab"><Bell size={12} className="mr-1" />Alerts</TabsTrigger>
+                <TabsTrigger value="supplier_optimization" className="text-xs" data-testid="ai-supplier-tab"><Truck size={12} className="mr-1" />Suppliers</TabsTrigger>
               </TabsList>
 
               {/* Expense Forecast */}
