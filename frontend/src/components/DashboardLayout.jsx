@@ -5,7 +5,8 @@ import {
   LogOut, Shield, CreditCard, FileText, Tags, UserCheck, FileWarning, Bell,
   User as UserIcon, Settings, ArrowLeftRight, FileInput, AlertTriangle,
   Handshake, HelpCircle, Building2, Package, ChefHat, CalendarClock,
-  ArrowDownUp, Activity, PackageCheck, ChevronDown, Menu, X, Zap
+  ArrowDownUp, Activity, PackageCheck, ChevronDown, Menu, X, Zap,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
