@@ -13,7 +13,9 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { BranchFilter } from '@/components/BranchFilter';
 import { useLanguage } from '@/contexts/LanguageContext';
+
 export default function CompanyLoansPage() {
+  const { t } = useLanguage();
   const [loans, setLoans] = useState([]);
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
