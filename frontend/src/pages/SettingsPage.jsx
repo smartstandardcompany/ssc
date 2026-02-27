@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Mail, MessageCircle, Bell, Send, Upload, Download, Database, Shield, Clock, Play, FileCheck } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 function BranchWaButtons() {
   const [br, setBr] = useState([]);
