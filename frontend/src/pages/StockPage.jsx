@@ -17,6 +17,7 @@ import { format } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 export default function StockPage() {
+  const { t } = useLanguage();
   const [items, setItems] = useState([]);
   const [branches, setBranches] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
