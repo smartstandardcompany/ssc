@@ -140,6 +140,8 @@ export const DashboardLayout = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [stockAlerts, setStockAlerts] = useState([]);
   const [showStockAlerts, setShowStockAlerts] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('ssc_dark_mode') === 'true');
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const isEmployee = user.role === 'employee';
