@@ -48,6 +48,36 @@ async def delete_expense(expense_id: str, current_user: User = Depends(get_curre
         raise HTTPException(status_code=404, detail="Expense not found")
     return {"message": "Expense deleted successfully"}
 
+
+@router.post("/expenses/auto-categorize")
+async def auto_categorize_expense(body: dict, current_user: User = Depends(get_current_user)):
+    """Use AI to suggest a category for an expense based on its description."""
+    import os
+    description = body.get("description", "")
+    if not description:
+        return {"category": "general", "confidence": "low"}
+    categories = await db.categories.find({}, {"_id": 0}).to_list(100)
+    cat_names = [c.get("name", "") for c in categories] if categories else []
+    default_cats = ["salary", "rent", "utilities", "food", "transport", "supplies", "maintenance", "marketing", "insurance", "tickets", "id_card", "bonus", "overtime"]
+    all_cats = list(set(cat_names + default_cats))
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
+        if not api_key:
+            return {"category": "general", "confidence": "low"}
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"cat-{uuid.uuid4()}",
+            system_message=f"You are an expense categorizer. Given an expense description, return ONLY the most appropriate category from this list: {', '.join(all_cats)}. If none match well, return 'general'. Return ONLY the category name, nothing else."
+        ).with_model("openai", "gpt-4o-mini")
+        response = await chat.send_message(UserMessage(text=f"Categorize this expense: {description}"))
+        cat = response.strip().lower().replace(" ", "_")
+        if cat in [c.lower().replace(" ", "_") for c in all_cats]:
+            return {"category": cat, "confidence": "high"}
+        return {"category": cat, "confidence": "medium"}
+    except:
+        return {"category": "general", "confidence": "low"}
+
 # Capital Expenses
 @router.get("/capital-expenses")
 async def get_capital_expenses(current_user: User = Depends(get_current_user)):
