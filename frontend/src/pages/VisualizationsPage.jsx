@@ -55,15 +55,15 @@ const GaugeChart = ({ value, max, color, label, current, target, unit }) => {
 };
 
 // Custom Funnel Component
-const FunnelChart = ({ data }) => {
+const FunnelChart = ({ data, onStageClick }) => {
   const maxVal = Math.max(...data.map(d => d.value), 1);
   return (
     <div className="space-y-2">
       {data.map((d, i) => {
         const widthPct = Math.max(20, (d.value / maxVal) * 100);
         return (
-          <div key={d.stage} className="flex items-center gap-3" data-testid={`funnel-stage-${i}`}>
-            <div className="w-32 text-right text-xs font-medium text-stone-600 shrink-0">{d.stage}</div>
+          <div key={d.stage} className="flex items-center gap-3 cursor-pointer group" data-testid={`funnel-stage-${i}`} onClick={() => onStageClick && onStageClick(d.stage, i)}>
+            <div className="w-32 text-right text-xs font-medium text-stone-600 shrink-0 group-hover:text-orange-600 transition-colors">{d.stage}</div>
             <div className="flex-1 flex items-center">
               <div
                 className="h-9 rounded-lg flex items-center justify-between px-3 text-white text-xs font-semibold transition-all duration-500"
