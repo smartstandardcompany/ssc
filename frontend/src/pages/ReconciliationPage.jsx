@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { CheckCircle, AlertTriangle, XCircle, Flag, MessageSquare, ArrowDownUp, Search, Filter } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const STATUS_CONFIG = {
   matched: { label: 'Matched', icon: CheckCircle, color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
