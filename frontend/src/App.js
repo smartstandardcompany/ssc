@@ -36,6 +36,7 @@ import POSPage from "./pages/POSPage";
 import POSAnalyticsPage from "./pages/POSAnalyticsPage";
 import TransfersPage from "./pages/TransfersPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
+import VisualizationsPage from "./pages/VisualizationsPage";
 import { Toaster } from "@/components/ui/sonner";
 
 function App() {
