@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from datetime import datetime, timezone
-import uuid
+import uuid, os
 from pathlib import Path
 
 from database import db, get_current_user, ROOT_DIR
@@ -10,6 +10,59 @@ router = APIRouter()
 
 UPLOAD_DIR = ROOT_DIR / "uploads" / "invoices"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+
+@router.post("/invoices/ocr-scan")
+async def ocr_scan_invoice(body: dict, current_user: User = Depends(get_current_user)):
+    """OCR scan an invoice image and extract items/totals."""
+    image_base64 = body.get("image")
+    if not image_base64:
+        raise HTTPException(status_code=400, detail="No image provided")
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="LLM key not configured")
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"invoice-ocr-{uuid.uuid4()}",
+            system_message="""You are an invoice/receipt data extractor. Extract all items from the invoice image.
+Return ONLY valid JSON with this structure:
+{
+  "customer_name": "customer name if visible",
+  "invoice_number": "number if visible",
+  "date": "date if visible (YYYY-MM-DD)",
+  "items": [
+    {"description": "item name", "quantity": 1, "unit_price": 0.00}
+  ],
+  "subtotal": 0.00,
+  "discount": 0.00,
+  "vat": 0.00,
+  "total": 0.00,
+  "payment_mode": "cash or bank or credit",
+  "notes": "any additional notes"
+}
+Extract every line item. For Arabic text, translate item names to English. If quantity or price is unclear, make best estimate. Return ONLY the JSON, no markdown."""
+        ).with_model("openai", "gpt-4o")
+        image_content = ImageContent(image_base64=image_base64)
+        user_message = UserMessage(
+            text="Extract all items, quantities, prices and totals from this invoice/receipt. Return as JSON.",
+            file_contents=[image_content]
+        )
+        response = await chat.send_message(user_message)
+        import json as json_module
+        cleaned = response.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            cleaned = cleaned.strip()
+        result = json_module.loads(cleaned)
+        return result
+    except Exception as e:
+        if "JSONDecodeError" in type(e).__name__:
+            raise HTTPException(status_code=422, detail="Could not parse invoice data from image")
+        raise HTTPException(status_code=500, detail=f"OCR failed: {str(e)[:100]}")
 
 @router.get("/invoices")
 async def get_invoices(current_user: User = Depends(get_current_user)):
