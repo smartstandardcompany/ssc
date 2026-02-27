@@ -60,6 +60,22 @@ export default function ReportsPage() {
   const loadCashierPerf = async () => {
     try { const { data } = await api.get('/reports/cashier-performance'); setCashierPerf(data); } catch { toast.error('Failed'); }
   };
+  const loadEodSummary = async (date, branch) => {
+    setEodLoading(true);
+    try {
+      const params = new URLSearchParams({ date: date || eodDate });
+      if (branch) params.append('branch_id', branch);
+      const { data } = await api.get(`/reports/eod-summary?${params}`);
+      setEodSummary(data);
+    } catch { toast.error('Failed to load EOD summary'); }
+    finally { setEodLoading(false); }
+  };
+  const loadPartnerPnl = async () => {
+    setPartnerPnlLoading(true);
+    try { const { data } = await api.get('/reports/partner-pnl'); setPartnerPnl(data); }
+    catch { toast.error('Failed to load partner P&L'); }
+    finally { setPartnerPnlLoading(false); }
+  };
 
   const filterByDate = (data) => data.filter(item => {
     const d = new Date(item.date);
