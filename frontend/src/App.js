@@ -129,7 +129,7 @@ function App() {
           <Route path="/visualizations" element={isAuthenticated ? <VisualizationsPage /> : <Navigate to="/login" />} />
           <Route path="/cashier" element={<CashierLoginPage />} />
           <Route path="/cashier/pos" element={<CashierPOSPage />} />
-          <Route path="/kitchen" element={<KitchenDisplayPage />} />
+          <Route path="/kds" element={<KitchenDisplayPage />} />
         </Routes>
       </BrowserRouter>
       <Toaster position="top-right" richColors />
