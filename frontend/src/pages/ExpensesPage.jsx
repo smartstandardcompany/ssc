@@ -200,7 +200,24 @@ export default function ExpensesPage() {
                     </div>
                     <div>
                       <Label>Description</Label>
-                      <Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="What was this for?" className="h-10" />
+                      <div className="relative">
+                        <Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="What was this for?" className="h-10 pr-16"
+                          onBlur={async () => {
+                            if (formData.description && formData.description.length > 3 && !formData.category) {
+                              try {
+                                const { data } = await api.post('/expenses/auto-categorize', { description: formData.description });
+                                if (data.category && data.category !== 'general') {
+                                  const matched = mainCats.find(c => c.toLowerCase() === data.category.toLowerCase());
+                                  if (matched) { setFormData(f => ({ ...f, category: matched })); toast.info(`AI suggested: ${matched}`); }
+                                }
+                              } catch {}
+                            }
+                          }}
+                        />
+                        {!formData.category && formData.description?.length > 3 && (
+                          <span className="absolute right-2 top-2.5 text-[9px] text-purple-500 bg-purple-50 px-1.5 py-0.5 rounded" data-testid="ai-cat-hint">AI auto-cat</span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-end">
                       <Button type="submit" className="rounded-xl w-full h-10" data-testid="add-expense-btn"><Plus size={16} className="mr-2" />Add Expense</Button>
