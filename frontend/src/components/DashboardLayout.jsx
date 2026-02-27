@@ -382,7 +382,7 @@ export const DashboardLayout = ({ children }) => {
                     ))}
                   </div>
                   <Link to="/stock" className="block text-center text-xs text-red-600 hover:text-red-800 font-medium mt-2 py-1">
-                    Go to Inventory →
+                    {t('go_to_inventory')} →
                   </Link>
                 </div>
               )}
