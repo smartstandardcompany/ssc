@@ -126,6 +126,8 @@ function App() {
           <Route path="/pos-analytics" element={isAuthenticated ? <POSAnalyticsPage /> : <Navigate to="/login" />} />
           <Route path="/transfers" element={isAuthenticated ? <TransfersPage /> : <Navigate to="/login" />} />
           <Route path="/visualizations" element={isAuthenticated ? <VisualizationsPage /> : <Navigate to="/login" />} />
+          <Route path="/cashier" element={<CashierLoginPage />} />
+          <Route path="/cashier/pos" element={<CashierPOSPage />} />
         </Routes>
       </BrowserRouter>
       <Toaster position="top-right" richColors />
