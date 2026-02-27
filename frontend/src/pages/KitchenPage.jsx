@@ -10,8 +10,10 @@ import { Minus, Plus, ChefHat, Send, Package } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function KitchenPage() {
+  const { t } = useLanguage();
   const [branches, setBranches] = useState([]);
   const [balance, setBalance] = useState([]);
   const [usage, setUsage] = useState([]);
