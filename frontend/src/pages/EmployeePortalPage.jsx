@@ -14,8 +14,10 @@ import { CheckCircle, Clock, XCircle, Calendar, DollarSign, FileText, Send, LogI
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function EmployeePortalPage() {
+  const { t } = useLanguage();
   const [profile, setProfile] = useState(null);
   const [payments, setPayments] = useState([]);
   const [leaves, setLeaves] = useState([]);
