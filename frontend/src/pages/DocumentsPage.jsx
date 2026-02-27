@@ -12,6 +12,7 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { BranchFilter } from '@/components/BranchFilter';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const DEFAULT_DOC_TYPES = [
   { value: 'license', label: 'License' },
