@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Clock, ChevronLeft, ChevronRight, UserCheck, AlertTriangle, Sparkles, Loader2 } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const COLORS = ['#F5841F', '#3B82F6', '#22C55E', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F59E0B'];
