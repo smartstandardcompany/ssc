@@ -284,9 +284,20 @@ export const DashboardLayout = ({ children }) => {
           <button onClick={() => setDarkMode(!darkMode)} data-testid="dark-mode-toggle" className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border border-stone-200 dark:border-stone-600 text-stone-500 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 text-xs transition-colors">
             {darkMode ? <Sun size={12} /> : <Moon size={12} />}{darkMode ? t('light') : t('dark')}
           </button>
-          <button onClick={() => { const idx = LANGUAGES.findIndex(l => l.code === lang); setLang(LANGUAGES[(idx + 1) % LANGUAGES.length].code); }} data-testid="language-toggle" className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border border-stone-200 dark:border-stone-600 text-stone-500 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 text-xs transition-colors font-semibold">
-            {LANGUAGES.find(l => l.code !== lang)?.flag || 'EN'}
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button data-testid="language-dropdown" className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border border-stone-200 dark:border-stone-600 text-stone-500 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 text-xs transition-colors font-semibold">
+                <Globe size={12} />{LANGUAGES.find(l => l.code === lang)?.flag || 'EN'}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-36">
+              {LANGUAGES.map((l) => (
+                <DropdownMenuItem key={l.code} onClick={() => setLang(l.code)} className={`cursor-pointer ${lang === l.code ? 'bg-orange-50 text-orange-600' : ''}`}>
+                  <span className="font-bold mr-2">{l.flag}</span>{l.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <button onClick={() => setShowShortcuts(true)} data-testid="shortcuts-btn" className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border border-stone-200 dark:border-stone-600 text-stone-500 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 text-xs transition-colors">
             <Keyboard size={12} />{t('shortcuts')}
           </button>
