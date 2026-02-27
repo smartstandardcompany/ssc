@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   BarChart3, Grid3X3, GitBranch, Gauge, Radar, Droplets,
-  Network, LayoutGrid, Calendar, Download, TrendingUp, TrendingDown
+  Network, LayoutGrid, Calendar, Download, TrendingUp, TrendingDown, ExternalLink
 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   RadarChart, Radar as RechartsRadar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, Treemap, Tooltip, Legend, BarChart, Bar, XAxis, YAxis,
