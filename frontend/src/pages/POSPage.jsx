@@ -120,22 +120,22 @@ export default function POSPage() {
       <div className="max-w-lg mx-auto space-y-4 pb-8" data-testid="pos-page">
         {/* Header */}
         <div className="text-center pt-2">
-          <h1 className="text-xl font-bold font-outfit" data-testid="pos-title">Quick Entry</h1>
-          <p className="text-xs text-muted-foreground">Fast sale & expense recording</p>
+          <h1 className="text-xl font-bold font-outfit" data-testid="pos-title">{t('pos_title')}</h1>
+          <p className="text-xs text-muted-foreground">{t('nav_sales')} & {t('expenses_title')}</p>
         </div>
 
         {/* Today Stats */}
         <div className="grid grid-cols-3 gap-2">
           <Card className="border-emerald-100 bg-emerald-50/50"><CardContent className="p-3 text-center">
-            <p className="text-[10px] text-emerald-600 font-medium">Sales</p>
+            <p className="text-[10px] text-emerald-600 font-medium">{t('nav_sales')}</p>
             <p className="text-sm font-bold font-outfit text-emerald-700" data-testid="pos-stat-sales">SAR {todayStats.sales.toLocaleString()}</p>
           </CardContent></Card>
           <Card className="border-red-100 bg-red-50/50"><CardContent className="p-3 text-center">
-            <p className="text-[10px] text-red-600 font-medium">Expenses</p>
+            <p className="text-[10px] text-red-600 font-medium">{t('expenses_title')}</p>
             <p className="text-sm font-bold font-outfit text-red-700" data-testid="pos-stat-expenses">SAR {todayStats.expenses.toLocaleString()}</p>
           </CardContent></Card>
           <Card className="border-blue-100 bg-blue-50/50"><CardContent className="p-3 text-center">
-            <p className="text-[10px] text-blue-600 font-medium">Net</p>
+            <p className="text-[10px] text-blue-600 font-medium">{t('net_profit')}</p>
             <p className="text-sm font-bold font-outfit text-blue-700">SAR {(todayStats.sales - todayStats.expenses).toLocaleString()}</p>
           </CardContent></Card>
         </div>
