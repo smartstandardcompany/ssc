@@ -74,11 +74,17 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - `/api/reports/analytics-pdf` - PDF export
 - `/api/reports/eod-summary?date=YYYY-MM-DD` - End-of-Day summary report
 - `/api/reports/partner-pnl` - Partner Profit & Loss report
+- `/api/reports/expense-forecast` - Predicted expenses by category
+- `/api/reports/stock-reorder` - Stock reorder predictions
+- `/api/reports/revenue-trends` - Weekly/monthly revenue trends with growth rates
+- `/api/reports/customer-churn` - Customer churn risk analysis
+- `/api/reports/margin-optimizer` - Item margin analysis & recommendations
 - `/api/stock/alerts` - Low stock alerts (items below min_stock_level)
 - `/api/expenses/auto-categorize` - AI expense categorization
 - `/api/invoices/ocr-scan` - Invoice OCR
 - `/api/dashboard/today-vs-yesterday` - Daily comparison
 - `/api/whatsapp/send-to` - Send reports via WhatsApp (6 report types)
+- `/api/scheduler/config` - Scheduled job configs (incl. eod_summary auto-send)
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
