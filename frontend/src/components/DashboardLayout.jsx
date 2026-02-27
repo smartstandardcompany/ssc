@@ -344,7 +344,7 @@ export const DashboardLayout = ({ children }) => {
       </aside>
 
       {/* Sidebar - mobile */}
-      <aside className={`lg:hidden fixed top-0 left-0 z-50 w-72 h-full bg-white border-r border-stone-100 flex flex-col transform transition-transform duration-200 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`lg:hidden fixed top-0 ${isRTL ? 'right-0' : 'left-0'} z-50 w-72 h-full bg-white ${isRTL ? 'border-l' : 'border-r'} border-stone-100 flex flex-col transform transition-transform duration-200 dark:bg-stone-900 dark:border-stone-700 ${mobileOpen ? 'translate-x-0' : isRTL ? 'translate-x-full' : '-translate-x-full'}`}>
         {sidebarContent}
       </aside>
 
