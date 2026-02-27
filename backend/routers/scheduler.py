@@ -302,6 +302,8 @@ async def get_scheduler_config(current_user: User = Depends(get_current_user)):
         new_defaults.append({"job_type": "weekly_digest", "label": "Weekly Digest", "enabled": False, "hour": 9, "minute": 0, "day_of_week": "sun", "channels": ["email"]})
     if "monthly_digest" not in existing_types:
         new_defaults.append({"job_type": "monthly_digest", "label": "Monthly Digest", "enabled": False, "hour": 9, "minute": 0, "day": 1, "channels": ["email"]})
+    if "eod_summary" not in existing_types:
+        new_defaults.append({"job_type": "eod_summary", "label": "EOD Summary (Auto)", "enabled": False, "hour": 22, "minute": 0, "channels": ["whatsapp", "email"]})
     for d in new_defaults:
         await db.scheduler_config.insert_one(d)
     if new_defaults:
