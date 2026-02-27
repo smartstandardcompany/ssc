@@ -337,7 +337,7 @@ export const DashboardLayout = ({ children }) => {
         {sidebarContent}
       </aside>
 
-      <main className="flex-1 lg:ml-60 bg-gradient-to-br from-[#FDFBF7] to-[#FFF8F0]">
+      <main className="flex-1 lg:ml-60 bg-gradient-to-br from-[#FDFBF7] to-[#FFF8F0] dark:from-stone-900 dark:to-stone-800 pb-16 lg:pb-0">
         <div className="pt-14 lg:pt-0">
           {/* Stock Alerts Banner */}
           {stockAlerts.length > 0 && (
