@@ -13,8 +13,10 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
 import { BranchFilter } from '@/components/BranchFilter';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function CreditReportPage() {
+  const { t } = useLanguage();
   const [reportData, setReportData] = useState(null);
   const [branches, setBranches] = useState([]);
   const [branchFilter, setBranchFilter] = useState([]);
