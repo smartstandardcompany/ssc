@@ -9,10 +9,12 @@ import { ExportButtons } from '@/components/ExportButtons';
 import { BranchFilter } from '@/components/BranchFilter';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const COLORS = ['#7C3AED', '#0EA5E9', '#22C55E', '#F59E0B', '#EF4444', '#EC4899', '#8B5CF6', '#06B6D4'];
 
 export default function SupplierReportPage() {
+  const { t } = useLanguage();
   const [reportData, setReportData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState('all');
