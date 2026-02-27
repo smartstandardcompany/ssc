@@ -19,7 +19,7 @@ def get_auth_token():
         "password": "Aa147258369Ssc@"
     })
     assert response.status_code == 200, f"Login failed: {response.text}"
-    return response.json().get("token")
+    return response.json().get("access_token")
 
 
 # Get token once at module level
