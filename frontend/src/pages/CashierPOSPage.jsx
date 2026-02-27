@@ -10,9 +10,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { 
-  Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, Banknote, Smartphone,
+  Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, Banknote,
   Users, Printer, ChefHat, X, Check, Clock, Coffee, UtensilsCrossed, Cake,
-  Pizza, Salad, Grid, Star, LogOut, Receipt, Percent, DollarSign, User
+  Pizza, Salad, Grid, Star, LogOut, Receipt, Percent, DollarSign, User, Building2
 } from 'lucide-react';
 import api from '@/lib/api';
 
