@@ -9,6 +9,7 @@ from routers import (
     auth,
     bank_statements,
     branches,
+    cashier_pos,
     customers,
     dashboard,
     documents,
