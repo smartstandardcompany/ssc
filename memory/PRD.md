@@ -168,3 +168,5 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - Implement full drag-and-drop dashboard widget rearrangement (react-grid-layout installed)
 - Translate remaining hardcoded text (expense category buttons, some chart labels)
 - Further UX refinements based on user feedback
+- Add more menu item images for POS
+- Cashier shift management (start/end shift with cash count)
