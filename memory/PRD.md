@@ -99,6 +99,27 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - Employee: ahmed@test.com / emp@123
 
 ## Recently Completed (Dec 2025)
+
+- **Restaurant POS Cashier Interface (Foodics-Style):**
+  - Dedicated `/cashier` login and `/cashier/pos` interface
+  - Separate cashier authentication (role-based: admin, cashier, manager)
+  - Menu grid with 7 categories (All, Popular, Main, Appetizers, Beverages, Desserts, Sides)
+  - 26 sample menu items with Arabic names and pricing
+  - **Item modifiers**: Size (Regular/Large +SAR), Extras (multiple selection with pricing)
+  - Shopping cart with quantity controls, subtotal, VAT (15%), total
+  - **4 payment methods**: Cash, Card, Online, Credit
+  - Credit payment requires customer selection from dropdown
+  - Order completion with order number, Print, and Send to Kitchen buttons
+  - Today's sales and orders count in header
+
+- **Scheduled AI Reports (WhatsApp & Email):**
+  - Weekly Cash Flow Alert - 7-day forecast, low cash warnings, weekly patterns
+  - Weekly Employee Performance - Top performers ranking, team totals
+  - Daily Expense Anomaly Alert - Unusual spending detection (2σ threshold)
+  - Weekly Supplier Payment Reminder - Priority payments, cash impact analysis
+  - Schedule via `/api/scheduler/ai-reports` with cron configuration
+  - Manual trigger for testing via `/api/scheduler/ai-reports/{type}/trigger`
+
 - **5 NEW AI Predictive Analytics Features:**
   1. **Cash Flow Prediction**: 14-day forecast based on 90-day historical patterns, low cash alerts, weekly pattern insights, risk level assessment
   2. **Seasonal Sales Forecasting**: Day-of-week analysis, best/worst days identification, weekend vs weekday comparison, next 7-day predictions
