@@ -70,11 +70,13 @@ export default function CashierPOSPage() {
   // Fetch data
   const fetchData = useCallback(async () => {
     try {
+      const token = localStorage.getItem('cashier_token');
+      const headers = { Authorization: `Bearer ${token}` };
       const [catRes, menuRes, custRes, statsRes] = await Promise.all([
-        api.get('/cashier/categories'),
-        api.get('/cashier/menu'),
-        api.get('/cashier/customers'),
-        api.get('/cashier/stats'),
+        api.get('/cashier/categories', { headers }),
+        api.get('/cashier/menu', { headers }),
+        api.get('/cashier/customers', { headers }),
+        api.get('/cashier/stats', { headers }),
       ]);
       setCategories(catRes.data);
       setMenuItems(menuRes.data);
