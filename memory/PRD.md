@@ -145,6 +145,5 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 
 ## Backlog
 - Implement full drag-and-drop dashboard widget rearrangement (react-grid-layout installed)
-- Translate remaining hardcoded text (expense category buttons, chart labels)
-- Additional AI features (predictive analytics enhancements)
+- Translate remaining hardcoded text (expense category buttons, some chart labels)
 - Further UX refinements based on user feedback
