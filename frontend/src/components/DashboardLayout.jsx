@@ -278,6 +278,14 @@ export const DashboardLayout = ({ children }) => {
           <div className="p-4 lg:p-8">{children}</div>
         </div>
       </main>
+
+      {/* Floating Quick Entry Button */}
+      {location.pathname !== '/pos' && (
+        <Link to="/pos" data-testid="floating-quick-entry"
+          className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-gradient-to-br from-orange-500 to-amber-500 rounded-full shadow-lg shadow-orange-500/30 flex items-center justify-center text-white hover:scale-110 transition-transform duration-200 lg:bottom-8 lg:right-8">
+          <Zap size={22} strokeWidth={2.5} />
+        </Link>
+      )}
     </div>
   );
 };
