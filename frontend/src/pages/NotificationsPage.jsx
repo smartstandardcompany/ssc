@@ -18,6 +18,7 @@ const NOTIF_ICONS = {
 };
 
 export default function NotificationsPage() {
+  const { t } = useLanguage();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
