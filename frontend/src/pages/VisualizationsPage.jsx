@@ -370,7 +370,8 @@ export default function VisualizationsPage() {
                     <h3 className="text-sm font-semibold">Sales Pipeline Funnel</h3>
                     {funnelData ? (
                       <>
-                        <FunnelChart data={funnelData.funnel} />
+                        <FunnelChart data={funnelData.funnel} onStageClick={drillFunnel} />
+                        <p className="text-[10px] text-muted-foreground text-center">{tr('viz_click_drill')}</p>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
                           <div className="bg-blue-50 rounded-xl p-3 text-center">
                             <p className="text-xs text-blue-600">Total Customers</p>
