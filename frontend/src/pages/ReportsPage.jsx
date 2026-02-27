@@ -185,14 +185,18 @@ export default function ReportsPage() {
           if (v === 'daily' && dailySummary.length === 0) loadDailySummary();
           if (v === 'customers' && topCustomers.length === 0) loadTopCustomers();
           if (v === 'cashier' && cashierPerf.length === 0) loadCashierPerf();
+          if (v === 'eod' && !eodSummary) loadEodSummary(eodDate, eodBranch);
+          if (v === 'partner_pnl' && !partnerPnl) loadPartnerPnl();
         }}>
           <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
             <TabsTrigger value="daily" className="text-xs sm:text-sm" data-testid="daily-tab">Daily</TabsTrigger>
+            <TabsTrigger value="eod" className="text-xs sm:text-sm" data-testid="eod-tab">EOD Summary</TabsTrigger>
             <TabsTrigger value="branch_report" className="text-xs sm:text-sm">Branch</TabsTrigger>
             <TabsTrigger value="expense_report" className="text-xs sm:text-sm">Expense</TabsTrigger>
             <TabsTrigger value="customers" className="text-xs sm:text-sm" data-testid="customers-tab">Customers</TabsTrigger>
             <TabsTrigger value="cashier" className="text-xs sm:text-sm" data-testid="cashier-tab">Cashier</TabsTrigger>
+            <TabsTrigger value="partner_pnl" className="text-xs sm:text-sm" data-testid="partner-pnl-tab">Partner P&L</TabsTrigger>
             <TabsTrigger value="period" className="text-xs sm:text-sm">Period</TabsTrigger>
             <TabsTrigger value="branch" className="text-xs sm:text-sm">Compare</TabsTrigger>
             <TabsTrigger value="trend" className="text-xs sm:text-sm">Trends</TabsTrigger>
