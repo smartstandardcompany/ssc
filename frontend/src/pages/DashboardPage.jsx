@@ -146,7 +146,9 @@ export default function DashboardPage() {
       icon: DollarSign,
       color: 'text-success',
       bgColor: 'bg-success/10',
-      testId: 'total-sales-card'
+      testId: 'total-sales-card',
+      sparkline: dailyTrend.sales,
+      sparkColor: '#22C55E',
     },
     {
       title: 'Total Expenses',
@@ -157,7 +159,9 @@ export default function DashboardPage() {
       icon: TrendingDown,
       color: 'text-error',
       bgColor: 'bg-error/10',
-      testId: 'total-expenses-card'
+      testId: 'total-expenses-card',
+      sparkline: dailyTrend.expenses,
+      sparkColor: '#EF4444',
     },
     {
       title: 'Supplier Payments',
@@ -166,7 +170,7 @@ export default function DashboardPage() {
       icon: Building2,
       color: 'text-info',
       bgColor: 'bg-info/10',
-      testId: 'supplier-payments-card'
+      testId: 'supplier-payments-card',
     },
     {
       title: 'Net Profit',
@@ -176,7 +180,9 @@ export default function DashboardPage() {
       icon: TrendingUp,
       color: stats?.net_profit >= 0 ? 'text-success' : 'text-error',
       bgColor: stats?.net_profit >= 0 ? 'bg-success/10' : 'bg-error/10',
-      testId: 'net-profit-card'
+      testId: 'net-profit-card',
+      sparkline: dailyTrend.profit,
+      sparkColor: '#F5841F',
     },
     {
       title: 'Pending Credits',
