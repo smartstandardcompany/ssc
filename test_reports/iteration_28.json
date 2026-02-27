@@ -1,0 +1,100 @@
+{
+  "summary": "Iteration 28: Advanced Data Visualization Options - All 10 features tested successfully. Backend: 36/36 tests passed. Frontend: All 8 visualization tabs working correctly, Export as PNG functional.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Gauges Tab", "issues": ["Gauges show 0% for Sales Target when no targets configured for current month - working as expected"]}
+    ]
+  },
+
+  "passed_tests": [
+    "Backend: GET /api/reports/heatmap-data returns 200 with array of daily data",
+    "Backend: Heatmap data has date, sales, expenses, profit, count fields",
+    "Backend: GET /api/reports/sales-funnel returns 200 with funnel array and summary",
+    "Backend: Funnel has 5 stages: Total Customers, Customers with Sales, Total Transactions, Fully Paid Sales, Credit Collected",
+    "Backend: Funnel summary has total_customers, active_customers, conversion_rate, collection_rate",
+    "Backend: GET /api/reports/expense-treemap returns 200 with tree array, total, period_months",
+    "Backend: Treemap months filter works for 1, 3, 6, 12 months",
+    "Backend: GET /api/reports/kpi-gauges returns 200 with 4 gauges and month",
+    "Backend: Gauges names: Sales Target, Profit Margin, Collection Rate, Customer Retention",
+    "Backend: Each gauge has name, value, max, current, target, unit, color",
+    "Backend: GET /api/reports/branch-radar returns 200 with branches, radar, metrics",
+    "Backend: Radar metrics: Sales, Transactions, Customers, Margin, Efficiency",
+    "Backend: Branch data has branch_id, name, sales, expenses, transactions, customers, margin",
+    "Backend: GET /api/reports/cashflow-waterfall returns 200 with waterfall array, net, month",
+    "Backend: Waterfall steps have name, value, type (income/expense/total), start, end",
+    "Backend: GET /api/reports/money-flow returns 200 with links, total_revenue, total_expenses, total_supplier, profit, month",
+    "Backend: Money flow links have source, target, value",
+    "Backend: GET /api/reports/time-series-compare returns 200 with periods array",
+    "Backend: Time series default returns 3 periods",
+    "Backend: Time series periods param works for 2, 4, 6 periods",
+    "Backend: Each period has month, total, daily array",
+    "Backend: Daily data has day and sales fields",
+    "Frontend: Visualizations nav link appears in sidebar under Reports section",
+    "Frontend: /visualizations page loads with all 8 tabs visible",
+    "Frontend: Heatmap tab shows Activity Heatmap with 12 months calendar view",
+    "Frontend: Heatmap has metric dropdown (Sales/Expenses/Profit)",
+    "Frontend: Funnel tab shows 5 pipeline stages with summary cards",
+    "Frontend: Funnel displays Total Customers (5), Active Customers, Conversion Rate, Collection Rate",
+    "Frontend: Treemap tab shows Expense Breakdown with categories and month filter",
+    "Frontend: Treemap shows Total: SAR 193,281, 8 categories",
+    "Frontend: Gauges tab shows 4 KPI indicators: Sales Target, Profit Margin, Collection Rate, Customer Retention",
+    "Frontend: Radar tab shows Branch Comparison spider chart with 6 branches",
+    "Frontend: Radar shows branch details: Sales, Expenses, Txns, Customers, Margin %",
+    "Frontend: Waterfall tab shows Cash Flow steps with income/expense/total types",
+    "Frontend: Waterfall displays Net Balance badge (SAR -178,087)",
+    "Frontend: Money Flow tab shows grouped flow links from sources to destinations",
+    "Frontend: Money Flow displays Revenue, Expenses, Profit badges",
+    "Frontend: Compare tab shows Multi-Period Sales Comparison line chart",
+    "Frontend: Compare has period selector (2, 3, 4, 6 months)",
+    "Frontend: Export as PNG button works - html2canvas captures chart area"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_iteration28_visualizations.py",
+    "/app/test_reports/pytest/pytest_results_iter28.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "Heatmap: Uses /api/reports/heatmap-data to get last 365 days of sales/expenses. Custom HeatmapCalendar component renders week-based grid with color intensity based on metric value",
+    "Funnel: Shows sales pipeline conversion from Total Customers → Customers with Sales → Transactions → Paid → Collected. Uses custom FunnelChart with proportional bar widths",
+    "Treemap: Uses Recharts Treemap with custom TreemapContent for colored category boxes. Shows hierarchical expense breakdown with month filter (1/3/6/12 months)",
+    "Gauges: Custom GaugeChart SVG component renders half-circle arc with value/max percentage. 4 KPIs: Sales Target (vs targets), Profit Margin, Collection Rate, Customer Retention",
+    "Radar: Uses Recharts RadarChart with branch comparison across 5 metrics (Sales, Transactions, Customers, Margin, Efficiency). Values normalized to 0-100 scale",
+    "Waterfall: Custom WaterfallChart shows running balance with income (green) and expense (red) steps. Shows Cash/Bank/Online Sales, Credits Collected vs Salaries, Rent, Utilities, Suppliers",
+    "Money Flow: Custom FlowChart groups links by source with colored bars. Shows revenue flow from branches → payment modes and expenses → categories",
+    "Compare: Uses Recharts LineChart with multiple Line components for period overlay. Daily sales comparison across 2-6 months with period selector",
+    "Export: Uses html2canvas to capture chartRef div as PNG image with scale:2 for quality. Downloads as ssc_chart_{tab}_{date}.png"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_iteration28_visualizations.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (36/36 tests passed)",
+    "frontend": "100% (All 18 UI verifications passed)"
+  },
+
+  "test_credentials": {
+    "admin": {"email": "ss@ssc.com", "password": "Aa147258369Ssc@"}
+  },
+
+  "seed_data_creation": "No seed data created. Visualizations use existing database data.",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Iteration 28 complete. All 10 Advanced Visualization features tested and working: (1) Heatmap Calendar - 365-day activity heatmap with Sales/Expenses/Profit metric selector, (2) Funnel Chart - 5-stage sales pipeline with conversion/collection rates, (3) Treemap - hierarchical expense breakdown with 1/3/6/12 month filter, (4) KPI Gauges - 4 gauge indicators for Sales Target, Profit Margin, Collection Rate, Customer Retention, (5) Branch Radar - spider chart comparing 5 metrics across branches, (6) Cash Flow Waterfall - running balance showing income vs expense steps, (7) Money Flow - Sankey-style flow from sources to destinations, (8) Time Series Compare - multi-period daily sales overlay chart, (9) Export as PNG - html2canvas capture, (10) Visualizations nav link in sidebar under Reports. All backend APIs at /api/reports/{heatmap-data, sales-funnel, expense-treemap, kpi-gauges, branch-radar, cashflow-waterfall, money-flow, time-series-compare} return proper data structures.",
+
+  "mocked_apis_note": "No mocked APIs. All visualization data is calculated from real MongoDB collections (sales, expenses, customers, branches, supplier_payments, salary_payments, targets)."
+}
