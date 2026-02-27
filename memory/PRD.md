@@ -63,6 +63,10 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - Responsive headings and layouts
 - Currency consistency (SAR everywhere)
 - **Real-time Stock Alerts** - Banner at top of dashboard when items drop below minimum stock level
+- **Dashboard Sparklines** - Mini SVG charts on stat cards showing 7-day trends
+- **Dark Mode** - Toggle in sidebar footer and mobile header (class-based Tailwind)
+- **Keyboard Shortcuts** - D=Dashboard, N/P=POS, S=Sales, E=Expenses, I=Inventory, R=Reports, A=Analytics, ?=Help
+- **Mobile Bottom Tab Bar** - 5-item quick nav (Home, Sales, Expenses, Stock, Reports)
 
 ## Key API Endpoints
 - `/api/targets` + `/api/targets/progress` - Sales target CRUD & progress
