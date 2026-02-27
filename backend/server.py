@@ -27,6 +27,7 @@ from routers import (
     suppliers,
     transfers,
     whatsapp,
+    targets,
 )
 
 app = FastAPI()
