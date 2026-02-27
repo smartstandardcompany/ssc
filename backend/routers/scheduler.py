@@ -339,3 +339,373 @@ async def trigger_scheduler_job(job_type: str, current_user: User = Depends(get_
 async def get_scheduler_logs(current_user: User = Depends(get_current_user)):
     logs = await db.scheduler_logs.find({}, {"_id": 0}).sort("triggered_at", -1).to_list(50)
     return logs
+
+
+
+# =====================================================
+# AI PREDICTIVE ANALYTICS SCHEDULED REPORTS
+# =====================================================
+
+async def _build_cashflow_alert():
+    """Build weekly cash flow alert report."""
+    from datetime import timedelta
+    now = datetime.now(timezone.utc)
+    
+    # Get historical data (last 90 days)
+    start_date = (now - timedelta(days=90)).isoformat()[:10]
+    sales = await db.sales.find({"date": {"$gte": start_date}}, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find({"date": {"$gte": start_date}}, {"_id": 0}).to_list(10000)
+    
+    # Calculate daily averages
+    daily_income = {}
+    daily_expense = {}
+    day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    
+    for s in sales:
+        try:
+            d = datetime.fromisoformat(s["date"][:10])
+            dow = d.weekday()
+            cash_amt = sum(p["amount"] for p in s.get("payment_details", []) if p.get("mode") == "cash")
+            daily_income[dow] = daily_income.get(dow, []) + [cash_amt]
+        except: pass
+    
+    for e in expenses:
+        try:
+            d = datetime.fromisoformat(e["date"][:10])
+            dow = d.weekday()
+            if e.get("payment_mode") == "cash":
+                daily_expense[dow] = daily_expense.get(dow, []) + [e["amount"]]
+        except: pass
+    
+    avg_income = {i: sum(daily_income.get(i, [0])) / max(len(daily_income.get(i, [1])), 1) for i in range(7)}
+    avg_expense = {i: sum(daily_expense.get(i, [0])) / max(len(daily_expense.get(i, [1])), 1) for i in range(7)}
+    
+    # Get current cash
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    current_cash = sum(b.get("cash_balance", 0) for b in branches)
+    
+    # Predict next 7 days
+    predictions = []
+    running_balance = current_cash
+    alerts = []
+    
+    for i in range(7):
+        future_date = now + timedelta(days=i + 1)
+        dow = future_date.weekday()
+        net_change = avg_income.get(dow, 0) - avg_expense.get(dow, 0)
+        running_balance += net_change
+        predictions.append(f"  {day_names[dow]} ({future_date.strftime('%d/%m')}): SAR {running_balance:,.0f}")
+        
+        if running_balance < current_cash * 0.3:
+            alerts.append(f"⚠️ {day_names[dow]} ({future_date.strftime('%d/%m')}): Low cash predicted - SAR {running_balance:,.0f}")
+    
+    best_day = day_names[max(avg_income, key=avg_income.get)]
+    worst_day = day_names[min(avg_income, key=avg_income.get)]
+    
+    lines = [
+        "*SSC Track - Weekly Cash Flow Alert*",
+        f"Generated: {now.strftime('%d %b %Y')}",
+        "",
+        f"*Current Cash Balance:* SAR {current_cash:,.2f}",
+        "",
+        "*7-Day Cash Forecast:*",
+    ] + predictions + [
+        "",
+        "*Weekly Patterns:*",
+        f"  Best Day: {best_day}",
+        f"  Slowest Day: {worst_day}",
+    ]
+    
+    if alerts:
+        lines += ["", "*⚠️ ALERTS:*"] + alerts
+    
+    return "\n".join(lines)
+
+
+async def _build_employee_performance_report():
+    """Build weekly employee performance summary."""
+    now = datetime.now(timezone.utc)
+    start_date = (now - timedelta(days=7)).isoformat()[:10]
+    
+    employees = await db.employees.find({"status": "active"}, {"_id": 0}).to_list(500)
+    sales = await db.sales.find({"date": {"$gte": start_date}}, {"_id": 0}).to_list(20000)
+    
+    # Calculate performance
+    performance = []
+    for emp in employees:
+        emp_sales = [s for s in sales if s.get("created_by") == emp.get("user_id") or s.get("employee_id") == emp["id"]]
+        total_sales = sum(s.get("final_amount", s["amount"]) for s in emp_sales)
+        
+        if total_sales > 0:
+            performance.append({
+                "name": emp["name"],
+                "sales": total_sales,
+                "count": len(emp_sales)
+            })
+    
+    performance.sort(key=lambda x: x["sales"], reverse=True)
+    
+    lines = [
+        "*SSC Track - Weekly Employee Performance*",
+        f"Week: {start_date} to {now.strftime('%Y-%m-%d')}",
+        "",
+        "*🏆 Top Performers:*",
+    ]
+    
+    for i, emp in enumerate(performance[:5], 1):
+        medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"#{i}"
+        lines.append(f"  {medal} {emp['name']}: SAR {emp['sales']:,.0f} ({emp['count']} sales)")
+    
+    if len(performance) > 5:
+        lines += [
+            "",
+            "*Other Team Members:*",
+        ]
+        for emp in performance[5:10]:
+            lines.append(f"  • {emp['name']}: SAR {emp['sales']:,.0f}")
+    
+    total_team_sales = sum(p["sales"] for p in performance)
+    lines += [
+        "",
+        f"*Team Total:* SAR {total_team_sales:,.2f}",
+        f"*Active Employees:* {len(performance)}",
+    ]
+    
+    return "\n".join(lines)
+
+
+async def _build_expense_anomaly_alert():
+    """Build daily expense anomaly alert."""
+    now = datetime.now(timezone.utc)
+    
+    # Get 6 months of data for baseline
+    start_date = (now - timedelta(days=180)).isoformat()[:10]
+    recent_date = (now - timedelta(days=1)).isoformat()[:10]
+    
+    expenses = await db.expenses.find({"date": {"$gte": start_date}}, {"_id": 0}).to_list(20000)
+    
+    # Calculate category averages
+    category_data = {}
+    for e in expenses:
+        cat = e.get("category", "general")
+        if cat not in category_data:
+            category_data[cat] = []
+        category_data[cat].append(e["amount"])
+    
+    # Find anomalies in recent expenses
+    anomalies = []
+    recent_expenses = [e for e in expenses if e.get("date", "") >= recent_date]
+    
+    for e in recent_expenses:
+        cat = e.get("category", "general")
+        if cat in category_data and len(category_data[cat]) > 5:
+            avg = sum(category_data[cat]) / len(category_data[cat])
+            std = (sum((x - avg) ** 2 for x in category_data[cat]) / len(category_data[cat])) ** 0.5
+            threshold = avg + (2 * std)
+            
+            if e["amount"] > threshold:
+                pct = ((e["amount"] - avg) / avg) * 100
+                anomalies.append({
+                    "category": cat.replace("_", " ").title(),
+                    "amount": e["amount"],
+                    "avg": avg,
+                    "pct": pct,
+                    "desc": e.get("description", "-")[:30]
+                })
+    
+    lines = [
+        "*SSC Track - Daily Expense Alert*",
+        f"Date: {now.strftime('%d %b %Y')}",
+        "",
+    ]
+    
+    if anomalies:
+        lines.append(f"*⚠️ {len(anomalies)} Unusual Expenses Detected:*")
+        for a in anomalies[:5]:
+            lines.append(f"  • {a['category']}: SAR {a['amount']:,.0f} (+{a['pct']:.0f}% above avg)")
+            lines.append(f"    Note: {a['desc']}")
+    else:
+        lines.append("✅ No unusual spending patterns detected.")
+    
+    # Overall spending trend
+    last_week = sum(e["amount"] for e in expenses if e.get("date", "") >= (now - timedelta(days=7)).isoformat()[:10])
+    prev_week = sum(e["amount"] for e in expenses if (now - timedelta(days=14)).isoformat()[:10] <= e.get("date", "") < (now - timedelta(days=7)).isoformat()[:10])
+    
+    if prev_week > 0:
+        change = ((last_week - prev_week) / prev_week) * 100
+        trend = "📈 UP" if change > 0 else "📉 DOWN"
+        lines += [
+            "",
+            "*Weekly Spending Trend:*",
+            f"  Last 7 days: SAR {last_week:,.0f}",
+            f"  Previous week: SAR {prev_week:,.0f}",
+            f"  Change: {trend} {abs(change):.0f}%"
+        ]
+    
+    return "\n".join(lines)
+
+
+async def _build_supplier_payment_reminder():
+    """Build weekly supplier payment reminder."""
+    now = datetime.now(timezone.utc)
+    
+    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(500)
+    payments = await db.supplier_payments.find({}, {"_id": 0}).to_list(20000)
+    
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    total_cash = sum(b.get("cash_balance", 0) for b in branches)
+    
+    urgent = []
+    upcoming = []
+    
+    for sup in suppliers:
+        credit = sup.get("current_credit", 0)
+        limit = sup.get("credit_limit", 0)
+        
+        if credit > 0:
+            utilization = (credit / limit * 100) if limit > 0 else 100
+            
+            sup_payments = [p for p in payments if p.get("supplier_id") == sup["id"]]
+            last_payment = max([p.get("date", "") for p in sup_payments], default="")
+            
+            if utilization > 80:
+                urgent.append({
+                    "name": sup["name"],
+                    "balance": credit,
+                    "util": utilization,
+                    "last": last_payment[:10] if last_payment else "Never"
+                })
+            elif credit > 0:
+                upcoming.append({
+                    "name": sup["name"],
+                    "balance": credit,
+                    "util": utilization
+                })
+    
+    urgent.sort(key=lambda x: x["util"], reverse=True)
+    
+    lines = [
+        "*SSC Track - Supplier Payment Reminder*",
+        f"Week of {now.strftime('%d %b %Y')}",
+        "",
+        f"*Available Cash:* SAR {total_cash:,.2f}",
+        "",
+    ]
+    
+    if urgent:
+        lines.append(f"*🔴 URGENT ({len(urgent)} suppliers):*")
+        for s in urgent[:5]:
+            lines.append(f"  • {s['name']}: SAR {s['balance']:,.0f} ({s['util']:.0f}% used)")
+            lines.append(f"    Last payment: {s['last']}")
+    else:
+        lines.append("✅ No urgent payments required.")
+    
+    if upcoming:
+        lines += [
+            "",
+            f"*🟡 UPCOMING ({len(upcoming)} suppliers):*",
+        ]
+        for s in upcoming[:5]:
+            lines.append(f"  • {s['name']}: SAR {s['balance']:,.0f}")
+    
+    total_pending = sum(s.get("current_credit", 0) for s in suppliers)
+    lines += [
+        "",
+        f"*Total Pending:* SAR {total_pending:,.2f}",
+    ]
+    
+    return "\n".join(lines)
+
+
+# Register new AI report types
+AI_REPORT_BUILDERS = {
+    "cashflow_alert": _build_cashflow_alert,
+    "employee_performance": _build_employee_performance_report,
+    "expense_anomaly": _build_expense_anomaly_alert,
+    "supplier_reminder": _build_supplier_payment_reminder,
+}
+
+async def run_ai_report(report_type: str):
+    """Run an AI report and send via WhatsApp and Email."""
+    if report_type not in AI_REPORT_BUILDERS:
+        return
+    
+    try:
+        report = await AI_REPORT_BUILDERS[report_type]()
+        await _send_wa(report)
+        await _send_email(f"SSC Track - {report_type.replace('_', ' ').title()}", report.replace("*", ""))
+        
+        # Log execution
+        log = {
+            "id": str(uuid.uuid4()),
+            "job_type": f"ai_{report_type}",
+            "triggered_at": datetime.now(timezone.utc).isoformat(),
+            "status": "success"
+        }
+        await db.scheduler_logs.insert_one(log)
+    except Exception as e:
+        log = {
+            "id": str(uuid.uuid4()),
+            "job_type": f"ai_{report_type}",
+            "triggered_at": datetime.now(timezone.utc).isoformat(),
+            "status": "error",
+            "error": str(e)
+        }
+        await db.scheduler_logs.insert_one(log)
+
+
+@router.post("/scheduler/ai-reports")
+async def create_ai_report_schedule(body: dict, current_user: User = Depends(get_current_user)):
+    """Create a scheduled AI report."""
+    report_type = body.get("report_type")
+    if report_type not in AI_REPORT_BUILDERS:
+        raise HTTPException(status_code=400, detail=f"Invalid report type. Valid: {list(AI_REPORT_BUILDERS.keys())}")
+    
+    job_type = f"ai_{report_type}"
+    existing = await db.scheduler_config.find_one({"job_type": job_type})
+    
+    config = {
+        "job_type": job_type,
+        "schedule_type": body.get("schedule_type", "weekly"),  # daily, weekly
+        "day_of_week": body.get("day_of_week", "mon"),
+        "hour": int(body.get("hour", 8)),
+        "minute": int(body.get("minute", 0)),
+        "channels": body.get("channels", ["whatsapp", "email"]),
+        "enabled": body.get("enabled", True),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    if existing:
+        await db.scheduler_config.update_one({"job_type": job_type}, {"$set": config})
+    else:
+        config["created_at"] = datetime.now(timezone.utc).isoformat()
+        await db.scheduler_config.insert_one(config)
+    
+    await _async_sync_scheduler()
+    return {k: v for k, v in config.items() if k != '_id'}
+
+
+@router.get("/scheduler/ai-reports")
+async def get_ai_report_schedules(current_user: User = Depends(get_current_user)):
+    """Get all AI report schedules."""
+    schedules = await db.scheduler_config.find({"job_type": {"$regex": "^ai_"}}, {"_id": 0}).to_list(20)
+    return {
+        "schedules": schedules,
+        "available_reports": [
+            {"type": "cashflow_alert", "name": "Cash Flow Alert", "description": "Weekly cash flow prediction and alerts"},
+            {"type": "employee_performance", "name": "Employee Performance", "description": "Weekly team performance summary"},
+            {"type": "expense_anomaly", "name": "Expense Anomaly Alert", "description": "Daily unusual spending detection"},
+            {"type": "supplier_reminder", "name": "Supplier Payment Reminder", "description": "Weekly supplier payment priorities"},
+        ]
+    }
+
+
+@router.post("/scheduler/ai-reports/{report_type}/trigger")
+async def trigger_ai_report(report_type: str, current_user: User = Depends(get_current_user)):
+    """Manually trigger an AI report for testing."""
+    if report_type not in AI_REPORT_BUILDERS:
+        raise HTTPException(status_code=400, detail=f"Invalid report type")
+    
+    report = await AI_REPORT_BUILDERS[report_type]()
+    await run_ai_report(report_type)
+    return {"message": f"Report '{report_type}' triggered", "preview": report}
