@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Plus, Trash2, DollarSign, X } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
 import { DateFilter } from '@/components/DateFilter';
