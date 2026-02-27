@@ -326,7 +326,7 @@ export default function VisualizationsPage() {
             <p className="text-sm text-muted-foreground">{tr('viz_subtitle')}</p>
           </div>
           <Button variant="outline" size="sm" className="rounded-xl" onClick={exportChart} data-testid="export-chart-btn">
-            <Download size={14} className="mr-1" />Export as PNG
+            <Download size={14} className="mr-1" />{tr('viz_export_png')}
           </Button>
         </div>
 
