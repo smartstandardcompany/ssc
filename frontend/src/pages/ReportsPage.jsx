@@ -335,6 +335,252 @@ export default function ReportsPage() {
             </Card>
           </TabsContent>
 
+          {/* EOD SUMMARY */}
+          <TabsContent value="eod" className="space-y-4" data-testid="eod-summary-content">
+            <Card className="border-stone-100">
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <CardTitle className="font-outfit text-base flex items-center gap-2"><CalendarDays size={16} />End-of-Day Summary</CardTitle>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Input type="date" value={eodDate} onChange={e => setEodDate(e.target.value)} className="h-9 w-40" data-testid="eod-date-input" />
+                    <Select value={eodBranch || "all"} onValueChange={v => setEodBranch(v === "all" ? "" : v)}>
+                      <SelectTrigger className="h-9 w-40"><SelectValue placeholder="All Branches" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Branches</SelectItem>
+                        {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm" className="rounded-xl" onClick={() => loadEodSummary(eodDate, eodBranch)} data-testid="eod-load-btn">
+                      {eodLoading ? 'Loading...' : 'Generate'}
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {!eodSummary ? (
+                  <p className="text-center text-muted-foreground py-8">Select a date and click "Generate" to view the End-of-Day summary.</p>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Header */}
+                    <div className="text-center pb-4 border-b">
+                      <h2 className="text-lg font-bold font-outfit" data-testid="eod-title">EOD Report — {eodSummary.date}</h2>
+                      <p className="text-sm text-muted-foreground">{eodSummary.branch_name}</p>
+                    </div>
+                    {/* KPI Cards */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="bg-emerald-50 rounded-xl p-3 text-center" data-testid="eod-total-sales">
+                        <p className="text-xs text-emerald-600 font-medium">Total Sales</p>
+                        <p className="text-lg font-bold text-emerald-700">{fmt(eodSummary.sales.total)}</p>
+                        <p className="text-[10px] text-emerald-500">{eodSummary.sales.transaction_count} transactions</p>
+                      </div>
+                      <div className="bg-red-50 rounded-xl p-3 text-center" data-testid="eod-total-expenses">
+                        <p className="text-xs text-red-600 font-medium">Total Expenses</p>
+                        <p className="text-lg font-bold text-red-700">{fmt(eodSummary.expenses.total)}</p>
+                        <p className="text-[10px] text-red-500">{eodSummary.expenses.count} items</p>
+                      </div>
+                      <div className="bg-amber-50 rounded-xl p-3 text-center" data-testid="eod-supplier-payments">
+                        <p className="text-xs text-amber-600 font-medium">Supplier Payments</p>
+                        <p className="text-lg font-bold text-amber-700">{fmt(eodSummary.supplier_payments.total)}</p>
+                        <p className="text-[10px] text-amber-500">{eodSummary.supplier_payments.count} payments</p>
+                      </div>
+                      <div className={`rounded-xl p-3 text-center ${eodSummary.summary.net_profit >= 0 ? 'bg-blue-50' : 'bg-red-50'}`} data-testid="eod-net-profit">
+                        <p className={`text-xs font-medium ${eodSummary.summary.net_profit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>Net Profit</p>
+                        <p className={`text-lg font-bold ${eodSummary.summary.net_profit >= 0 ? 'text-blue-700' : 'text-red-700'}`}>{fmt(eodSummary.summary.net_profit)}</p>
+                      </div>
+                    </div>
+                    {/* Sales Breakdown */}
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="bg-white border rounded-xl p-4">
+                        <h3 className="text-sm font-semibold mb-3 flex items-center gap-1.5"><TrendingUp size={14} className="text-emerald-500" />Sales Breakdown</h3>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between"><span className="text-stone-500">Cash</span><span className="font-medium">{fmt(eodSummary.sales.cash)}</span></div>
+                          <div className="flex justify-between"><span className="text-stone-500">Bank</span><span className="font-medium">{fmt(eodSummary.sales.bank)}</span></div>
+                          <div className="flex justify-between"><span className="text-stone-500">Online</span><span className="font-medium">{fmt(eodSummary.sales.online)}</span></div>
+                          <div className="flex justify-between"><span className="text-stone-500">Credit Given</span><span className="font-medium text-amber-600">{fmt(eodSummary.sales.credit_given)}</span></div>
+                          <div className="flex justify-between"><span className="text-stone-500">Credit Received</span><span className="font-medium text-emerald-600">{fmt(eodSummary.sales.credit_received)}</span></div>
+                        </div>
+                      </div>
+                      <div className="bg-white border rounded-xl p-4">
+                        <h3 className="text-sm font-semibold mb-3 flex items-center gap-1.5"><TrendingDown size={14} className="text-red-500" />Cash Flow Summary</h3>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between"><span className="text-stone-500">Cash In Hand</span><span className="font-bold text-emerald-600">{fmt(eodSummary.summary.cash_in_hand)}</span></div>
+                          <div className="flex justify-between"><span className="text-stone-500">Bank Net</span><span className="font-medium">{fmt(eodSummary.summary.bank_total)}</span></div>
+                          <div className="flex justify-between border-t pt-2 mt-2"><span className="text-stone-500">Expenses (Cash)</span><span className="font-medium text-red-600">{fmt(eodSummary.expenses.cash)}</span></div>
+                          <div className="flex justify-between"><span className="text-stone-500">Expenses (Bank)</span><span className="font-medium text-red-600">{fmt(eodSummary.expenses.bank)}</span></div>
+                          <div className="flex justify-between"><span className="text-stone-500">Supplier (Cash)</span><span className="font-medium text-amber-600">{fmt(eodSummary.supplier_payments.cash)}</span></div>
+                          <div className="flex justify-between"><span className="text-stone-500">Supplier (Bank)</span><span className="font-medium text-amber-600">{fmt(eodSummary.supplier_payments.bank)}</span></div>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Expense Categories */}
+                    {eodSummary.expenses.by_category.length > 0 && (
+                      <div className="bg-white border rounded-xl p-4">
+                        <h3 className="text-sm font-semibold mb-3">Expenses by Category</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                          {eodSummary.expenses.by_category.map((c, i) => (
+                            <div key={c.category} className="flex items-center justify-between bg-stone-50 rounded-lg px-3 py-2">
+                              <span className="text-xs text-stone-600 truncate">{c.category}</span>
+                              <span className="text-xs font-semibold text-red-600 ml-2">{fmt(c.amount)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Branch Breakdown */}
+                    {eodSummary.branch_breakdown.length > 0 && (
+                      <div className="bg-white border rounded-xl p-4">
+                        <h3 className="text-sm font-semibold mb-3">Branch Breakdown</h3>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead><tr className="border-b text-xs text-muted-foreground">
+                              <th className="text-left p-2">Branch</th><th className="text-right p-2">Sales</th><th className="text-right p-2">Expenses</th><th className="text-right p-2">Supplier</th><th className="text-right p-2">Net</th>
+                            </tr></thead>
+                            <tbody>
+                              {eodSummary.branch_breakdown.map(b => (
+                                <tr key={b.branch_id} className="border-b hover:bg-stone-50">
+                                  <td className="p-2 font-medium">{b.branch_name}</td>
+                                  <td className="p-2 text-right text-emerald-600">{fmt(b.sales)}</td>
+                                  <td className="p-2 text-right text-red-600">{fmt(b.expenses)}</td>
+                                  <td className="p-2 text-right text-amber-600">{fmt(b.supplier_payments)}</td>
+                                  <td className={`p-2 text-right font-bold ${b.net >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{fmt(b.net)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                    {/* Print Button */}
+                    <div className="flex justify-center">
+                      <Button variant="outline" className="rounded-xl" onClick={() => window.print()} data-testid="eod-print-btn">
+                        <FileText size={14} className="mr-2" />Print Report
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* PARTNER P&L */}
+          <TabsContent value="partner_pnl" className="space-y-4" data-testid="partner-pnl-content">
+            <Card className="border-stone-100">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="font-outfit text-base flex items-center gap-2"><FileSpreadsheet size={16} />Partner Profit & Loss</CardTitle>
+                  <Button size="sm" variant="outline" className="rounded-xl" onClick={loadPartnerPnl} data-testid="partner-pnl-refresh">Refresh</Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {partnerPnlLoading ? (
+                  <p className="text-center text-muted-foreground py-8">Loading partner P&L...</p>
+                ) : !partnerPnl ? (
+                  <p className="text-center text-muted-foreground py-8">Loading...</p>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Company Summary */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3" data-testid="company-pnl-summary">
+                      <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-emerald-600 font-medium">Total Revenue</p>
+                        <p className="text-lg font-bold text-emerald-700">{fmt(partnerPnl.company_summary.total_revenue)}</p>
+                      </div>
+                      <div className="bg-red-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-red-600 font-medium">Total Expenses</p>
+                        <p className="text-lg font-bold text-red-700">{fmt(partnerPnl.company_summary.total_expenses)}</p>
+                      </div>
+                      <div className="bg-amber-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-amber-600 font-medium">Supplier Payments</p>
+                        <p className="text-lg font-bold text-amber-700">{fmt(partnerPnl.company_summary.total_supplier_payments)}</p>
+                      </div>
+                      <div className={`rounded-xl p-3 text-center ${partnerPnl.company_summary.net_profit >= 0 ? 'bg-blue-50' : 'bg-red-50'}`}>
+                        <p className={`text-xs font-medium ${partnerPnl.company_summary.net_profit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>Company Net Profit</p>
+                        <p className={`text-lg font-bold ${partnerPnl.company_summary.net_profit >= 0 ? 'text-blue-700' : 'text-red-700'}`}>{fmt(partnerPnl.company_summary.net_profit)}</p>
+                      </div>
+                    </div>
+
+                    {partnerPnl.partners.length === 0 ? (
+                      <p className="text-center text-muted-foreground py-8">No partners found. Add partners in the Partners page to see P&L.</p>
+                    ) : (
+                      <>
+                        {/* Partner Cards */}
+                        <div className="grid md:grid-cols-2 gap-4">
+                          {partnerPnl.partners.map(p => (
+                            <div key={p.partner_id} className="bg-white border rounded-xl p-4" data-testid={`partner-pnl-${p.partner_id}`}>
+                              <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-sm font-bold">{p.name}</h3>
+                                <Badge className="text-[10px]">{p.share_percentage}% Share</Badge>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                                <div className="bg-emerald-50 rounded-lg p-2">
+                                  <p className="text-emerald-600">Total Invested</p>
+                                  <p className="font-bold text-emerald-700">{fmt(p.total_invested)}</p>
+                                </div>
+                                <div className="bg-red-50 rounded-lg p-2">
+                                  <p className="text-red-600">Total Withdrawn</p>
+                                  <p className="font-bold text-red-700">{fmt(p.total_withdrawn)}</p>
+                                </div>
+                                <div className="bg-blue-50 rounded-lg p-2">
+                                  <p className="text-blue-600">Current Balance</p>
+                                  <p className="font-bold text-blue-700">{fmt(p.current_balance)}</p>
+                                </div>
+                                <div className="bg-amber-50 rounded-lg p-2">
+                                  <p className="text-amber-600">Profit Share Entitled</p>
+                                  <p className="font-bold text-amber-700">{fmt(p.profit_share_entitled)}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between text-xs text-stone-500 border-t pt-2">
+                                <span>Salary Paid: {fmt(p.salary_paid)}</span>
+                                <span>ROI: <span className={p.roi_pct >= 0 ? 'text-emerald-600' : 'text-red-600'}>{p.roi_pct}%</span></span>
+                              </div>
+                              {/* Monthly Chart */}
+                              {p.monthly && p.monthly.some(m => m.invested > 0 || m.withdrawn > 0) && (
+                                <div className="mt-3">
+                                  <ResponsiveContainer width="100%" height={120}>
+                                    <BarChart data={p.monthly}>
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis dataKey="month" tick={{ fontSize: 9 }} />
+                                      <YAxis tick={{ fontSize: 9 }} />
+                                      <Tooltip formatter={(v) => fmt(v)} />
+                                      <Bar dataKey="invested" name="Invested" fill="#22C55E" />
+                                      <Bar dataKey="withdrawn" name="Withdrawn" fill="#EF4444" />
+                                    </BarChart>
+                                  </ResponsiveContainer>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        {/* Summary Table */}
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm" data-testid="partner-pnl-table">
+                            <thead><tr className="border-b text-xs text-muted-foreground">
+                              <th className="text-left p-2">Partner</th><th className="text-right p-2">Share %</th><th className="text-right p-2">Invested</th><th className="text-right p-2">Withdrawn</th><th className="text-right p-2">Balance</th><th className="text-right p-2">Profit Share</th><th className="text-right p-2">ROI</th>
+                            </tr></thead>
+                            <tbody>
+                              {partnerPnl.partners.map(p => (
+                                <tr key={p.partner_id} className="border-b hover:bg-stone-50">
+                                  <td className="p-2 font-medium">{p.name}</td>
+                                  <td className="p-2 text-right">{p.share_percentage}%</td>
+                                  <td className="p-2 text-right text-emerald-600">{fmt(p.total_invested)}</td>
+                                  <td className="p-2 text-right text-red-600">{fmt(p.total_withdrawn)}</td>
+                                  <td className={`p-2 text-right font-bold ${p.current_balance >= 0 ? 'text-blue-600' : 'text-red-600'}`}>{fmt(p.current_balance)}</td>
+                                  <td className={`p-2 text-right font-bold ${p.profit_share_entitled >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{fmt(p.profit_share_entitled)}</td>
+                                  <td className={`p-2 text-right ${p.roi_pct >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{p.roi_pct}%</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+
+
           {/* TOP CUSTOMERS - NEW */}
           <TabsContent value="customers" className="space-y-4" data-testid="top-customers-content">
             <Card className="border-stone-100">
