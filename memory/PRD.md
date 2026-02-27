@@ -122,5 +122,6 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - **WhatsApp Report Integration** - EOD Summary and Partner P&L added as report types
 
 ## Backlog
+- Custom drag-and-drop dashboard widget builder
+- Multi-language support (Arabic/English)
 - Further UX refinements based on user feedback
-- Advanced data visualization options
