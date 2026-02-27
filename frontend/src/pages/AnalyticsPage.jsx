@@ -31,6 +31,12 @@ export default function AnalyticsPage() {
   const [targetForm, setTargetForm] = useState({ branch_id: '', target_amount: '' });
   const [targetMonth, setTargetMonth] = useState(new Date().toISOString().slice(0, 7));
   const [exporting, setExporting] = useState(false);
+  const [expenseForecast, setExpenseForecast] = useState(null);
+  const [stockReorder, setStockReorder] = useState(null);
+  const [revenueTrends, setRevenueTrends] = useState(null);
+  const [customerChurn, setCustomerChurn] = useState(null);
+  const [marginOptimizer, setMarginOptimizer] = useState(null);
+  const [aiTab, setAiTab] = useState('expense_forecast');
 
   useEffect(() => { fetchAll(); }, []);
 
