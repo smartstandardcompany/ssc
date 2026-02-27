@@ -290,7 +290,7 @@ export const DashboardLayout = ({ children }) => {
         </div>
         <Button variant="outline" size="sm" onClick={handleLogout} data-testid="logout-button"
           className="w-full rounded-lg border-stone-200 text-stone-500 hover:text-orange-600 hover:border-orange-200 hover:bg-orange-50 text-xs h-8 dark:border-stone-600 dark:text-stone-300">
-          <LogOut size={14} className="mr-1.5" />Logout
+          <LogOut size={14} className="mr-1.5" />{t('logout')}
         </Button>
       </div>
     </>
