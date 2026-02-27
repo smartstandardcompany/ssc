@@ -22,6 +22,7 @@ const FINE_TYPES = ['government', 'traffic', 'labor', 'municipality', 'other'];
 const DEDUCTION_TYPES = ['fine', 'late', 'absence', 'misbehavior', 'damage', 'other'];
 
 export default function FinesPage() {
+  const { t } = useLanguage();
   const [fines, setFines] = useState([]);
   const [deductions, setDeductions] = useState([]);
   const [branches, setBranches] = useState([]);
