@@ -175,6 +175,30 @@ export const DashboardLayout = ({ children }) => {
     return () => clearInterval(interval);
   }, []); // eslint-disable-line
 
+  // Dark mode effect
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode);
+    localStorage.setItem('ssc_dark_mode', darkMode);
+  }, [darkMode]);
+
+  // Keyboard shortcuts
+  const handleKeyDown = useCallback((e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const shortcuts = {
+      'd': '/', 'n': '/pos', 'p': '/pos', 's': '/sales', 'e': '/expenses',
+      'i': '/stock', 'r': '/reports', 'a': '/analytics', '?': 'shortcuts',
+    };
+    const target = shortcuts[e.key.toLowerCase()];
+    if (target === 'shortcuts') { e.preventDefault(); setShowShortcuts(s => !s); }
+    else if (target) { e.preventDefault(); navigate(target); }
+  }, [navigate]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
