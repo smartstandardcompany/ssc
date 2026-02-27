@@ -217,7 +217,7 @@ export default function CashierPOSPage() {
         notes
       };
 
-      const { data } = await api.post('/cashier/orders', orderData);
+      const { data } = await api.post('/cashier/orders', orderData, { headers });
       setLastOrder(data);
       toast.success(`Order #${data.order_number} created!`);
       
