@@ -17,6 +17,15 @@ import { DateFilter } from '@/components/DateFilter';
 import { WhatsAppSendDialog } from '@/components/WhatsAppSendDialog';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
+const Sparkline = ({ data = [], color = '#22C55E', width = 60, height = 24 }) => {
+  if (!data || data.length < 2) return null;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const points = data.map((v, i) => `${(i / (data.length - 1)) * width},${height - ((v - min) / range) * height}`).join(' ');
+  return <svg width={width} height={height} className="opacity-60"><polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+};
+
 const THEMES = {
   default: { bg: 'from-[#FDFBF7] to-[#FFF8F0]', card: 'border-stone-100', accent: 'text-primary' },
   dark: { bg: 'from-stone-900 to-stone-800', card: 'border-stone-700 bg-stone-800/50 text-white', accent: 'text-orange-400' },
