@@ -226,12 +226,12 @@ export default function InvoicesPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center flex-wrap gap-3">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
           <div>
-            <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="invoices-title">Invoices</h1>
-            <p className="text-muted-foreground">Create invoices with items - auto-added as sales</p>
+            <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-1" data-testid="invoices-title">Invoices</h1>
+            <p className="text-sm text-muted-foreground">Create invoices with items - auto-added as sales</p>
           </div>
-          <div className="flex gap-3 items-center flex-wrap">
+          <div className="flex gap-2 items-center flex-wrap">
             <BranchFilter onChange={setBranchFilter} />
             <DateFilter onFilterChange={setDateFilter} />
             <Button onClick={() => setShowForm(!showForm)} className="rounded-full" size="sm" data-testid="create-invoice-btn"><Plus size={16} className="mr-1" />New Invoice</Button>
