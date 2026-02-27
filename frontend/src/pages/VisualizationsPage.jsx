@@ -322,8 +322,8 @@ export default function VisualizationsPage() {
       <div className="space-y-6" data-testid="visualizations-page">
         <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
           <div>
-            <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-1" data-testid="viz-title">Visualizations</h1>
-            <p className="text-sm text-muted-foreground">Advanced charts and data exploration</p>
+            <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-1" data-testid="viz-title">{tr('viz_title')}</h1>
+            <p className="text-sm text-muted-foreground">{tr('viz_subtitle')}</p>
           </div>
           <Button variant="outline" size="sm" className="rounded-xl" onClick={exportChart} data-testid="export-chart-btn">
             <Download size={14} className="mr-1" />Export as PNG
