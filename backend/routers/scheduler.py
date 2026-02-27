@@ -159,6 +159,55 @@ async def _build_period_digest(days: int):
     return "\n".join(lines)
 
 
+async def _build_eod_report():
+    """Build comprehensive End-of-Day report for auto-send."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    day_start = f"{today}T00:00:00"
+    day_end = f"{today}T23:59:59"
+    sales = await db.sales.find({"date": {"$gte": day_start, "$lte": day_end}}, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find({"date": {"$gte": day_start, "$lte": day_end}}, {"_id": 0}).to_list(10000)
+    sp = await db.supplier_payments.find({"date": {"$gte": day_start, "$lte": day_end}, "supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    ts = sum(s.get("final_amount", s["amount"] - s.get("discount", 0)) for s in sales)
+    te = sum(e["amount"] for e in expenses)
+    tsp = sum(p["amount"] for p in sp)
+    s_cash = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "cash")
+    s_bank = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "bank")
+    e_cash = sum(e["amount"] for e in expenses if e.get("payment_mode") == "cash")
+    e_bank = sum(e["amount"] for e in expenses if e.get("payment_mode") == "bank")
+    sp_cash = sum(p["amount"] for p in sp if p.get("payment_mode") == "cash")
+    lines = [
+        f"*SSC Track - EOD Summary*",
+        f"{datetime.now().strftime('%d %b %Y')}",
+        f"",
+        f"*Sales:* SAR {ts:,.2f} ({len(sales)} txn)",
+        f"  Cash: SAR {s_cash:,.2f} | Bank: SAR {s_bank:,.2f}",
+        f"*Expenses:* SAR {te:,.2f} ({len(expenses)} items)",
+        f"*Supplier:* SAR {tsp:,.2f}",
+        f"",
+        f"*Net Profit:* SAR {(ts - te - tsp):,.2f}",
+        f"*Cash in Hand:* SAR {(s_cash - e_cash - sp_cash):,.2f}",
+    ]
+    if branches:
+        lines.append("")
+        lines.append("*Branch Summary:*")
+        for b in branches:
+            bs = sum(s.get("final_amount", s["amount"]) for s in sales if s.get("branch_id") == b["id"])
+            be = sum(e["amount"] for e in expenses if e.get("branch_id") == b["id"])
+            if bs > 0 or be > 0:
+                lines.append(f"  {b['name']}: Sales SAR {bs:,.0f} | Exp SAR {be:,.0f}")
+    # Top expense categories
+    cats = {}
+    for e in expenses:
+        cats[e.get("category", "Other")] = cats.get(e.get("category", "Other"), 0) + e["amount"]
+    if cats:
+        lines.append("")
+        lines.append("*Expenses by Category:*")
+        for cat, amt in sorted(cats.items(), key=lambda x: -x[1])[:5]:
+            lines.append(f"  {cat.replace('_', ' ').title()}: SAR {amt:,.0f}")
+    return "\n".join(lines)
+
+
 async def run_scheduled_job(job_type: str):
     """Execute a scheduled notification job."""
     log_entry = {"job_type": job_type, "triggered_at": datetime.now(timezone.utc).isoformat(), "status": "running"}
