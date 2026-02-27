@@ -359,7 +359,8 @@ export default function VisualizationsPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    {heatmapData ? <HeatmapCalendar data={heatmapData} metric={heatmapMetric} /> : <p className="text-center text-muted-foreground py-8">Loading...</p>}
+                    {heatmapData ? <HeatmapCalendar data={heatmapData} metric={heatmapMetric} onDayClick={drillHeatmap} /> : <p className="text-center text-muted-foreground py-8">{tr('loading')}</p>}
+                    <p className="text-[10px] text-muted-foreground text-center mt-1">{tr('viz_click_drill')}</p>
                   </div>
                 </TabsContent>
 
