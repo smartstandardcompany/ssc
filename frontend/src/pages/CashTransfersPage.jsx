@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { BranchFilter } from '@/components/BranchFilter';
 import { DateFilter } from '@/components/DateFilter';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function CashTransfersPage() {
   const [transfers, setTransfers] = useState([]);
