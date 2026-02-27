@@ -91,11 +91,17 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - Employee: ahmed@test.com / emp@123
 
 ## Recently Completed (Feb 2026)
-- **Real-time Stock Alerts** - Polling-based alerts in DashboardLayout with expandable banner
-- **End-of-Day (EOD) Summary Report** - New tab in Reports page with date/branch filter, KPI cards, breakdowns, print
-- **Partner Profit & Loss (P&L)** - New tab in Reports page showing company summary and per-partner breakdown with monthly charts
-- **WhatsApp Report Integration** - Added EOD Summary and Partner P&L as report types in WhatsApp send dialog
+- **Scheduled EOD Auto-Send** - New `eod_summary` scheduler job, configurable time/channels in Settings
+- **Predictive Analytics Hub** - 5 new AI modules: Expense Forecast, Stock Reorder, Revenue Trends, Customer Churn, Margin Optimizer
+- **Dashboard Sparklines** - Mini SVG trend charts on Total Sales, Expenses, Net Profit stat cards
+- **Dark Mode** - Full dark mode support with toggle in sidebar & mobile header
+- **Keyboard Shortcuts** - 8 navigation shortcuts + modal help
+- **Mobile Bottom Tab Bar** - 5-item quick access nav for mobile users
+- **Real-time Stock Alerts** - Polling-based alerts with expandable banner
+- **End-of-Day (EOD) Summary Report** - New tab in Reports with date/branch filter
+- **Partner Profit & Loss (P&L)** - New tab in Reports with partner breakdown
+- **WhatsApp Report Integration** - EOD Summary and Partner P&L added as report types
 
 ## Backlog
-- Additional AI features (predictive analytics enhancements)
 - Further UX refinements based on user feedback
+- Advanced data visualization options
