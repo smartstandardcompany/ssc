@@ -11,6 +11,7 @@ import { Plus, Trash2, X, FileText, DollarSign, Printer, Image, Upload } from 'l
 import { QRCodeSVG } from 'qrcode.react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
 import { BranchFilter } from '@/components/BranchFilter';
 import { DateFilter } from '@/components/DateFilter';
