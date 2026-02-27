@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function POSPage() {
+  const { t } = useLanguage();
   const [branches, setBranches] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [branch, setBranch] = useState('');
