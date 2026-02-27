@@ -425,7 +425,7 @@ export const DashboardLayout = ({ children }) => {
             <div className="space-y-2 text-sm">
               {[
                 ['D', 'Dashboard'], ['N / P', 'POS / Quick Entry'], ['S', 'Sales'],
-                ['E', 'Expenses'], ['I', 'Inventory'], ['R', 'Reports'], ['A', 'Analytics'], ['?', 'Show Shortcuts'],
+                ['E', 'Expenses'], ['I', 'Inventory'], ['R', 'Reports'], ['A', 'Analytics'], ['V', 'Visualizations'], ['?', 'Show Shortcuts'],
               ].map(([key, desc]) => (
                 <div key={key} className="flex items-center justify-between py-1.5 border-b border-stone-100 dark:border-stone-700 last:border-0">
                   <span className="text-stone-600 dark:text-stone-300">{desc}</span>
