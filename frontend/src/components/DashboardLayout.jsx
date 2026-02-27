@@ -265,6 +265,14 @@ export const DashboardLayout = ({ children }) => {
           <span className="text-base font-bold font-outfit bg-gradient-to-r from-orange-600 to-amber-500 bg-clip-text text-transparent">SSC Track</span>
         </div>
         <div className="flex items-center gap-2">
+          {stockAlerts.length > 0 && (
+            <div className="relative">
+              <button onClick={() => setShowStockAlerts(!showStockAlerts)} data-testid="stock-alerts-btn-mobile" className="relative p-1">
+                <AlertCircle size={18} className="text-red-500" />
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center">{stockAlerts.length}</span>
+              </button>
+            </div>
+          )}
           {unreadCount > 0 && (
             <Link to="/notifications" className="relative">
               <Bell size={18} className="text-stone-500" />
