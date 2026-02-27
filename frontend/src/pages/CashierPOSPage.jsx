@@ -198,6 +198,8 @@ export default function CashierPOSPage() {
     }
 
     try {
+      const token = localStorage.getItem('cashier_token');
+      const headers = { Authorization: `Bearer ${token}` };
       const orderData = {
         branch_id: user.branch_id || 'default',
         customer_id: selectedCustomer?.id || null,
