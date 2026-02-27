@@ -122,5 +122,6 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 
 ## Backlog
 - Custom drag-and-drop dashboard widget builder
-- Multi-language support (Arabic/English)
+- Translate remaining pages (Sales, Expenses, Employees, Stock, etc.) to Arabic
+- Additional language support (Urdu, Hindi)
 - Further UX refinements based on user feedback
