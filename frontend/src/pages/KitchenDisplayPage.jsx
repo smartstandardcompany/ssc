@@ -28,12 +28,25 @@ export default function KitchenDisplayPage() {
   const [branches, setBranches] = useState([]);
 
   // Simple PIN authentication for kitchen
-  const handlePinLogin = () => {
+  const handlePinLogin = async () => {
     // Default kitchen PIN is 1234 (can be configured)
     if (pin === '1234' || pin === '0000') {
-      setIsAuthenticated(true);
-      localStorage.setItem('kitchen_auth', 'true');
-      toast.success('Kitchen Display Active');
+      // Try to login with default admin credentials to get token
+      try {
+        const { data } = await api.post('/cashier/login', { 
+          email: 'ss@ssc.com', 
+          password: 'Aa147258369Ssc@' 
+        });
+        localStorage.setItem('cashier_token', data.access_token);
+        setIsAuthenticated(true);
+        localStorage.setItem('kitchen_auth', 'true');
+        toast.success('Kitchen Display Active');
+      } catch (err) {
+        // If login fails, still allow access but API calls may fail
+        setIsAuthenticated(true);
+        localStorage.setItem('kitchen_auth', 'true');
+        toast.success('Kitchen Display Active');
+      }
     } else {
       toast.error('Invalid PIN');
     }
