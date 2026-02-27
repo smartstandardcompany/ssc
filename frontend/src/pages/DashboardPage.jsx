@@ -228,8 +228,8 @@ export default function DashboardPage() {
       <div className={`space-y-8 min-h-screen p-1 rounded-2xl ${theme === 'dark' ? 'bg-gradient-to-br ' + t.bg + ' text-white' : ''}`}>
         <div className="flex justify-between items-start flex-wrap gap-3">
           <div>
-            <h1 className={`text-2xl sm:text-4xl font-bold font-outfit mb-1 ${t.accent}`} data-testid="dashboard-title">Dashboard</h1>
-            <p className={theme === 'dark' ? 'text-stone-400' : 'text-muted-foreground'}>Smart Standard Company - Business Overview</p>
+            <h1 className={`text-2xl sm:text-4xl font-bold font-outfit mb-1 ${t.accent}`} data-testid="dashboard-title">{tr('dash_title')}</h1>
+            <p className={theme === 'dark' ? 'text-stone-400' : 'text-muted-foreground'}>{tr('dash_subtitle')}</p>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
             <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowWhatsApp(true)} data-testid="dashboard-whatsapp-btn">
