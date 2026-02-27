@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
 import { BranchFilter } from '@/components/BranchFilter';
 
