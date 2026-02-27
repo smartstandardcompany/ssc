@@ -12,7 +12,7 @@ import { Upload, Trash2, Eye, AlertTriangle, Save } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import api from '@/lib/api';
 import { toast } from 'sonner';
-
+import { useLanguage } from '@/contexts/LanguageContext';
 const COLORS = ['#F5841F', '#22C55E', '#0EA5E9', '#EF4444', '#F59E0B', '#8B5CF6', '#EC4899'];
 const CAT_LABELS = { pos_sales: 'POS Sales', pos_fees: 'POS Fees', bank_fees: 'Bank Fees', vat_fees: 'VAT on Fees', internal_transfer: 'Internal Transfers', incoming_transfer: 'Incoming Transfers', outgoing_transfer: 'Outgoing Transfers', sadad_payment: 'SADAD Bills', sadad_refund: 'SADAD Refund', iqama_renewal: 'Iqama Renewal', salary: 'Salary', vat: 'VAT', other: 'Other' };
 
