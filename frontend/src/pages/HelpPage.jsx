@@ -129,6 +129,7 @@ const sections = [
 ];
 
 export default function HelpPage() {
+  const { t } = useLanguage();
   return (
     <DashboardLayout>
       <div className="space-y-6">
