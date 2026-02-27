@@ -474,7 +474,7 @@ export default function VisualizationsPage() {
                         </ResponsiveContainer>
                         <div className="space-y-2">
                           {radarData.branches.map((b, i) => (
-                            <div key={b.branch_id} className="p-3 bg-stone-50 rounded-xl" data-testid={`radar-branch-${b.branch_id}`}>
+                            <div key={b.branch_id} className="p-3 bg-stone-50 rounded-xl cursor-pointer hover:bg-stone-100 transition-colors" data-testid={`radar-branch-${b.branch_id}`} onClick={() => drillRadar(b.branch_id)}>
                               <div className="flex items-center gap-2 mb-2">
                                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
                                 <span className="text-sm font-semibold">{b.name}</span>
