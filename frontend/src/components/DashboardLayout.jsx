@@ -302,6 +302,47 @@ export const DashboardLayout = ({ children }) => {
 
       <main className="flex-1 lg:ml-60 bg-gradient-to-br from-[#FDFBF7] to-[#FFF8F0]">
         <div className="pt-14 lg:pt-0">
+          {/* Stock Alerts Banner */}
+          {stockAlerts.length > 0 && (
+            <div className="bg-red-50 border-b border-red-100 px-4 lg:px-8 py-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <AlertCircle size={16} className="text-red-500 shrink-0" />
+                  <span className="text-sm text-red-700 font-medium truncate" data-testid="stock-alerts-banner">
+                    {stockAlerts.length} item{stockAlerts.length > 1 ? 's' : ''} below minimum stock level
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowStockAlerts(!showStockAlerts)}
+                  data-testid="stock-alerts-toggle"
+                  className="text-xs text-red-600 hover:text-red-800 font-medium whitespace-nowrap ml-2"
+                >
+                  {showStockAlerts ? 'Hide' : 'View Details'}
+                </button>
+              </div>
+              {showStockAlerts && (
+                <div className="mt-2 max-h-48 overflow-y-auto" data-testid="stock-alerts-list">
+                  <div className="grid gap-1">
+                    {stockAlerts.map((a) => (
+                      <div key={a.item_id} className="flex items-center justify-between text-xs bg-white rounded-lg px-3 py-1.5 border border-red-100" data-testid={`stock-alert-${a.item_id}`}>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-medium text-stone-800 truncate">{a.item_name}</span>
+                          {a.category && <span className="text-stone-400">({a.category})</span>}
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className="text-red-600 font-semibold">{a.current_balance} {a.unit}</span>
+                          <span className="text-stone-400">min: {a.min_level}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <Link to="/stock" className="block text-center text-xs text-red-600 hover:text-red-800 font-medium mt-2 py-1">
+                    Go to Inventory →
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
           <div className="p-4 lg:p-8">{children}</div>
         </div>
       </main>
