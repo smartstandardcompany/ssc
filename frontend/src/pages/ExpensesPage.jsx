@@ -123,20 +123,20 @@ export default function ExpensesPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
           <div>
-            <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-1">Expenses</h1>
-            <p className="text-sm text-muted-foreground">Track and manage all business expenses</p>
+            <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-1">{t('expenses_title')}</h1>
+            <p className="text-sm text-muted-foreground">{t('expenses_subtitle')}</p>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
             <BranchFilter onChange={setBranchFilter} />
             <DateFilter onFilterChange={setDateFilter} />
             <ExportButtons dataType="expenses" />
             <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowWhatsApp(true)} data-testid="expenses-whatsapp-btn"><MessageCircle size={14} className="mr-1" />WhatsApp</Button>
-            {isAdmin && <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowCatManager(true)}><Settings2 size={14} className="mr-1" />Categories</Button>}
+            {isAdmin && <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowCatManager(true)}><Settings2 size={14} className="mr-1" />{t('category')}</Button>}
           </div>
         </div>
 
         <Tabs defaultValue="add">
-          <TabsList><TabsTrigger value="add">Add Expense</TabsTrigger><TabsTrigger value="list">All Expenses ({filtered.length})</TabsTrigger><TabsTrigger value="recurring">Recurring & Planned</TabsTrigger></TabsList>
+          <TabsList><TabsTrigger value="add">{t('add_expense')}</TabsTrigger><TabsTrigger value="list">{t('all_expenses')} ({filtered.length})</TabsTrigger><TabsTrigger value="recurring">Recurring</TabsTrigger></TabsList>
 
           {/* ADD EXPENSE - Simplified */}
           <TabsContent value="add">
