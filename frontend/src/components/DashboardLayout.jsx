@@ -354,7 +354,7 @@ export const DashboardLayout = ({ children }) => {
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   <AlertCircle size={16} className="text-red-500 shrink-0" />
                   <span className="text-sm text-red-700 font-medium truncate" data-testid="stock-alerts-banner">
-                    {stockAlerts.length} item{stockAlerts.length > 1 ? 's' : ''} below minimum stock level
+                    {stockAlerts.length} {t('stock_alert_title')}
                   </span>
                 </div>
                 <button
