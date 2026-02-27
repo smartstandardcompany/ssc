@@ -279,10 +279,13 @@ export const DashboardLayout = ({ children }) => {
         </div>
         <div className="flex gap-1.5 mb-1.5">
           <button onClick={() => setDarkMode(!darkMode)} data-testid="dark-mode-toggle" className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border border-stone-200 dark:border-stone-600 text-stone-500 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 text-xs transition-colors">
-            {darkMode ? <Sun size={12} /> : <Moon size={12} />}{darkMode ? 'Light' : 'Dark'}
+            {darkMode ? <Sun size={12} /> : <Moon size={12} />}{darkMode ? t('light') : t('dark')}
+          </button>
+          <button onClick={toggleLang} data-testid="language-toggle" className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border border-stone-200 dark:border-stone-600 text-stone-500 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 text-xs transition-colors font-semibold">
+            {lang === 'en' ? 'عربي' : 'EN'}
           </button>
           <button onClick={() => setShowShortcuts(true)} data-testid="shortcuts-btn" className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border border-stone-200 dark:border-stone-600 text-stone-500 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 text-xs transition-colors">
-            <Keyboard size={12} />Shortcuts
+            <Keyboard size={12} />{t('shortcuts')}
           </button>
         </div>
         <Button variant="outline" size="sm" onClick={handleLogout} data-testid="logout-button"
