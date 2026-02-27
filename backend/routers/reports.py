@@ -605,3 +605,219 @@ async def get_partner_pnl(current_user: User = Depends(get_current_user)):
             "total_partner_shares": round(total_share_pct, 1),
         }
     }
+
+
+@router.get("/reports/expense-forecast")
+async def get_expense_forecast(current_user: User = Depends(get_current_user)):
+    """Predict next month's expenses by category using 3-month moving average."""
+    now = datetime.now(timezone.utc)
+    months_data = []
+    for i in range(6, 0, -1):
+        m_start = (now.replace(day=1) - timedelta(days=i * 30)).replace(day=1)
+        m_end = (m_start + timedelta(days=32)).replace(day=1)
+        m_label = m_start.strftime("%b %Y")
+        expenses = await db.expenses.find({"date": {"$gte": m_start.isoformat()[:10], "$lt": m_end.isoformat()[:10]}}, {"_id": 0}).to_list(10000)
+        by_cat = {}
+        for e in expenses:
+            cat = e.get("category", "other")
+            by_cat[cat] = by_cat.get(cat, 0) + e["amount"]
+        months_data.append({"month": m_label, "total": round(sum(by_cat.values()), 2), "categories": by_cat})
+    all_cats = set()
+    for m in months_data:
+        all_cats.update(m["categories"].keys())
+    forecasts = []
+    for cat in sorted(all_cats):
+        vals = [m["categories"].get(cat, 0) for m in months_data]
+        recent = vals[-3:] if len(vals) >= 3 else vals
+        avg = sum(recent) / len(recent) if recent else 0
+        trend = 0
+        if len(vals) >= 2:
+            diffs = [vals[i] - vals[i-1] for i in range(1, len(vals))]
+            trend = sum(diffs[-3:]) / len(diffs[-3:]) if diffs else 0
+        predicted = max(0, avg + trend * 0.5)
+        forecasts.append({"category": cat.replace("_", " ").title(), "predicted": round(predicted, 2), "avg_3m": round(avg, 2), "trend": "up" if trend > 0 else "down" if trend < 0 else "stable", "history": [{"month": m["month"], "amount": m["categories"].get(cat, 0)} for m in months_data]})
+    forecasts.sort(key=lambda x: -x["predicted"])
+    total_forecast = sum(f["predicted"] for f in forecasts)
+    return {"next_month": (now.replace(day=1) + timedelta(days=32)).replace(day=1).strftime("%b %Y"), "total_predicted": round(total_forecast, 2), "categories": forecasts, "history": [{"month": m["month"], "total": m["total"]} for m in months_data]}
+
+
+@router.get("/reports/stock-reorder")
+async def get_stock_reorder(current_user: User = Depends(get_current_user)):
+    """Predict when items will run out and suggest reorder dates/quantities."""
+    items = await db.items.find({}, {"_id": 0}).to_list(1000)
+    entries = await db.stock_entries.find({}, {"_id": 0}).to_list(10000)
+    usage_records = await db.stock_usage.find({}, {"_id": 0}).to_list(10000)
+    stock_in = {}
+    for e in entries:
+        stock_in[e["item_id"]] = stock_in.get(e["item_id"], 0) + e["quantity"]
+    stock_out = {}
+    usage_dates = {}
+    for u in usage_records:
+        stock_out[u["item_id"]] = stock_out.get(u["item_id"], 0) + u["quantity"]
+        if u["item_id"] not in usage_dates:
+            usage_dates[u["item_id"]] = []
+        usage_dates[u["item_id"]].append({"date": u.get("date", ""), "qty": u["quantity"]})
+    now = datetime.now(timezone.utc)
+    predictions = []
+    for item in items:
+        iid = item["id"]
+        balance = stock_in.get(iid, 0) - stock_out.get(iid, 0)
+        min_lvl = item.get("min_stock_level", 0)
+        total_used = stock_out.get(iid, 0)
+        dates = usage_dates.get(iid, [])
+        if total_used <= 0 or not dates:
+            continue
+        sorted_dates = sorted(dates, key=lambda x: x["date"])
+        if len(sorted_dates) >= 2:
+            try:
+                first = datetime.fromisoformat(sorted_dates[0]["date"][:10])
+                last = datetime.fromisoformat(sorted_dates[-1]["date"][:10])
+                days_span = max((last - first).days, 1)
+                daily_usage = total_used / days_span
+            except Exception:
+                daily_usage = 0
+        else:
+            daily_usage = total_used / 30
+        if daily_usage <= 0:
+            continue
+        days_left = balance / daily_usage if daily_usage > 0 else 999
+        reorder_point = min_lvl if min_lvl > 0 else daily_usage * 7
+        days_to_reorder = max(0, (balance - reorder_point) / daily_usage) if daily_usage > 0 else 999
+        reorder_date = (now + timedelta(days=days_to_reorder)).strftime("%Y-%m-%d")
+        suggested_qty = max(daily_usage * 30, min_lvl * 2) - balance
+        urgency = "critical" if days_left <= 3 else "soon" if days_left <= 7 else "normal" if days_left <= 14 else "safe"
+        predictions.append({
+            "item_id": iid, "item_name": item["name"], "unit": item.get("unit", "piece"),
+            "category": item.get("category", ""), "current_balance": round(balance, 2),
+            "daily_usage": round(daily_usage, 2), "days_left": round(days_left, 1),
+            "reorder_date": reorder_date, "suggested_reorder_qty": round(max(suggested_qty, 0), 1),
+            "urgency": urgency, "min_stock_level": min_lvl,
+        })
+    predictions.sort(key=lambda x: x["days_left"])
+    return {"predictions": predictions, "total_items": len(items), "items_needing_reorder": len([p for p in predictions if p["urgency"] in ["critical", "soon"]])}
+
+
+@router.get("/reports/revenue-trends")
+async def get_revenue_trends(current_user: User = Depends(get_current_user)):
+    """Weekly/monthly revenue trend with growth rate predictions."""
+    now = datetime.now(timezone.utc)
+    weekly_data = []
+    for i in range(12, 0, -1):
+        w_end = now - timedelta(days=(i-1)*7)
+        w_start = w_end - timedelta(days=7)
+        sales = await db.sales.find({"date": {"$gte": w_start.isoformat()[:10], "$lt": w_end.isoformat()[:10]}}, {"_id": 0}).to_list(10000)
+        expenses = await db.expenses.find({"date": {"$gte": w_start.isoformat()[:10], "$lt": w_end.isoformat()[:10]}}, {"_id": 0}).to_list(10000)
+        ts = sum(s.get("final_amount", s["amount"] - s.get("discount", 0)) for s in sales)
+        te = sum(e["amount"] for e in expenses)
+        weekly_data.append({"week": w_start.strftime("%d %b"), "sales": round(ts, 2), "expenses": round(te, 2), "profit": round(ts - te, 2), "txn_count": len(sales)})
+    monthly_data = []
+    for i in range(6, 0, -1):
+        m_start = (now.replace(day=1) - timedelta(days=i * 30)).replace(day=1)
+        m_end = (m_start + timedelta(days=32)).replace(day=1)
+        sales = await db.sales.find({"date": {"$gte": m_start.isoformat()[:10], "$lt": m_end.isoformat()[:10]}}, {"_id": 0}).to_list(10000)
+        expenses = await db.expenses.find({"date": {"$gte": m_start.isoformat()[:10], "$lt": m_end.isoformat()[:10]}}, {"_id": 0}).to_list(10000)
+        ts = sum(s.get("final_amount", s["amount"] - s.get("discount", 0)) for s in sales)
+        te = sum(e["amount"] for e in expenses)
+        monthly_data.append({"month": m_start.strftime("%b %Y"), "sales": round(ts, 2), "expenses": round(te, 2), "profit": round(ts - te, 2), "txn_count": len(sales)})
+    # Calculate growth rates
+    growth_weekly = []
+    for i in range(1, len(weekly_data)):
+        prev_s = weekly_data[i-1]["sales"]
+        curr_s = weekly_data[i]["sales"]
+        g = ((curr_s - prev_s) / prev_s * 100) if prev_s > 0 else 0
+        growth_weekly.append(round(g, 1))
+    growth_monthly = []
+    for i in range(1, len(monthly_data)):
+        prev_s = monthly_data[i-1]["sales"]
+        curr_s = monthly_data[i]["sales"]
+        g = ((curr_s - prev_s) / prev_s * 100) if prev_s > 0 else 0
+        growth_monthly.append(round(g, 1))
+    avg_weekly_growth = round(sum(growth_weekly) / len(growth_weekly), 1) if growth_weekly else 0
+    avg_monthly_growth = round(sum(growth_monthly) / len(growth_monthly), 1) if growth_monthly else 0
+    last_week_sales = weekly_data[-1]["sales"] if weekly_data else 0
+    predicted_next_week = round(last_week_sales * (1 + avg_weekly_growth / 100), 2) if last_week_sales else 0
+    return {"weekly": weekly_data, "monthly": monthly_data, "growth": {"weekly_rates": growth_weekly, "monthly_rates": growth_monthly, "avg_weekly": avg_weekly_growth, "avg_monthly": avg_monthly_growth, "predicted_next_week": predicted_next_week}}
+
+
+@router.get("/reports/customer-churn")
+async def get_customer_churn(current_user: User = Depends(get_current_user)):
+    """Identify customers who haven't purchased recently (churn risk)."""
+    customers = await db.customers.find({}, {"_id": 0}).to_list(10000)
+    sales = await db.sales.find({"customer_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(50000)
+    now = datetime.now(timezone.utc)
+    customer_map = {c["id"]: c for c in customers}
+    last_purchase = {}
+    purchase_count = {}
+    total_spent = {}
+    for s in sales:
+        cid = s.get("customer_id")
+        if not cid or cid not in customer_map:
+            continue
+        sdate = s.get("date", "")
+        if cid not in last_purchase or sdate > last_purchase[cid]:
+            last_purchase[cid] = sdate
+        purchase_count[cid] = purchase_count.get(cid, 0) + 1
+        total_spent[cid] = total_spent.get(cid, 0) + s.get("final_amount", s["amount"] - s.get("discount", 0))
+    result = []
+    for cid, cust in customer_map.items():
+        lp = last_purchase.get(cid)
+        if not lp:
+            days_inactive = 999
+        else:
+            try:
+                days_inactive = (now - datetime.fromisoformat(lp[:10] if "T" not in lp[:10] else lp[:19]).replace(tzinfo=timezone.utc)).days
+            except Exception:
+                days_inactive = 999
+        if days_inactive < 0:
+            days_inactive = 0
+        risk = "lost" if days_inactive > 90 else "high" if days_inactive > 60 else "medium" if days_inactive > 30 else "low"
+        result.append({
+            "customer_id": cid, "name": cust.get("name", "Unknown"), "phone": cust.get("phone", ""),
+            "last_purchase_date": lp or "Never", "days_inactive": days_inactive,
+            "purchase_count": purchase_count.get(cid, 0), "total_spent": round(total_spent.get(cid, 0), 2),
+            "risk_level": risk,
+        })
+    result.sort(key=lambda x: -x["days_inactive"])
+    return {"customers": result, "summary": {"total": len(result), "lost": len([r for r in result if r["risk_level"] == "lost"]), "high_risk": len([r for r in result if r["risk_level"] == "high"]), "medium_risk": len([r for r in result if r["risk_level"] == "medium"]), "active": len([r for r in result if r["risk_level"] == "low"])}}
+
+
+@router.get("/reports/margin-optimizer")
+async def get_margin_optimizer(current_user: User = Depends(get_current_user)):
+    """Suggest items to promote based on profit margin vs volume analysis."""
+    items = await db.items.find({}, {"_id": 0}).to_list(1000)
+    sales = await db.sales.find({}, {"_id": 0}).to_list(50000)
+    item_map = {i["id"]: i for i in items}
+    item_sales = {}
+    for s in sales:
+        for si in s.get("items", []):
+            iid = si.get("item_id")
+            if not iid:
+                continue
+            if iid not in item_sales:
+                item_sales[iid] = {"qty": 0, "revenue": 0}
+            item_sales[iid]["qty"] += si.get("quantity", 1)
+            item_sales[iid]["revenue"] += si.get("total", si.get("quantity", 1) * si.get("price", 0))
+    result = []
+    for iid, data in item_sales.items():
+        item = item_map.get(iid)
+        if not item:
+            continue
+        cost = item.get("cost_price", item.get("unit_price", 0) * 0.6)
+        sell = item.get("unit_price", 0)
+        margin_pct = ((sell - cost) / sell * 100) if sell > 0 else 0
+        revenue = data["revenue"]
+        qty = data["qty"]
+        profit = revenue - (cost * qty)
+        avg_qty_per_day = qty / 30 if qty > 0 else 0
+        score = (margin_pct * 0.4) + (qty * 0.3) + (profit / 100 * 0.3) if profit > 0 else margin_pct * 0.2
+        recommendation = "star" if margin_pct >= 40 and qty >= 10 else "promote" if margin_pct >= 30 else "review" if margin_pct < 15 else "maintain"
+        result.append({
+            "item_id": iid, "item_name": item["name"], "category": item.get("category", ""),
+            "unit_price": round(sell, 2), "cost_price": round(cost, 2),
+            "margin_pct": round(margin_pct, 1), "total_qty_sold": qty,
+            "total_revenue": round(revenue, 2), "total_profit": round(profit, 2),
+            "daily_avg_sold": round(avg_qty_per_day, 1), "score": round(score, 1),
+            "recommendation": recommendation,
+        })
+    result.sort(key=lambda x: -x["score"])
+    return {"items": result[:50], "total_analyzed": len(result), "stars": len([r for r in result if r["recommendation"] == "star"]), "to_promote": len([r for r in result if r["recommendation"] == "promote"]), "to_review": len([r for r in result if r["recommendation"] == "review"])}
