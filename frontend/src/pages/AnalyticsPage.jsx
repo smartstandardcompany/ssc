@@ -574,6 +574,308 @@ export default function AnalyticsPage() {
                   </div>
                 ) : <p className="text-center text-muted-foreground py-8">Loading margin analysis...</p>}
               </TabsContent>
+
+              {/* Cash Flow Prediction */}
+              <TabsContent value="cashflow_prediction">
+                {cashflowPrediction ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-emerald-600">Current Cash</p>
+                        <p className="text-lg font-bold font-outfit text-emerald-700" data-testid="current-cash">{fmt(cashflowPrediction.current_cash_balance)}</p>
+                      </div>
+                      <div className="bg-blue-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-blue-600">Avg Daily Income</p>
+                        <p className="text-lg font-bold font-outfit text-blue-700">{fmt(cashflowPrediction.weekly_patterns?.avg_daily_income)}</p>
+                      </div>
+                      <div className="bg-red-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-red-600">Avg Daily Expense</p>
+                        <p className="text-lg font-bold font-outfit text-red-700">{fmt(cashflowPrediction.weekly_patterns?.avg_daily_expense)}</p>
+                      </div>
+                      <div className={`rounded-xl p-3 text-center ${cashflowPrediction.risk_level === 'high' ? 'bg-red-100' : cashflowPrediction.risk_level === 'medium' ? 'bg-amber-100' : 'bg-emerald-100'}`}>
+                        <p className="text-xs text-stone-600">Risk Level</p>
+                        <p className={`text-lg font-bold font-outfit capitalize ${cashflowPrediction.risk_level === 'high' ? 'text-red-700' : cashflowPrediction.risk_level === 'medium' ? 'text-amber-700' : 'text-emerald-700'}`} data-testid="cashflow-risk">{cashflowPrediction.risk_level}</p>
+                      </div>
+                    </div>
+                    {cashflowPrediction.low_cash_alerts?.length > 0 && (
+                      <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                        <p className="text-sm font-semibold text-red-700 mb-2 flex items-center gap-2"><AlertTriangle size={16} />Low Cash Alerts</p>
+                        <div className="space-y-1">
+                          {cashflowPrediction.low_cash_alerts.map((alert, i) => (
+                            <div key={i} className="flex justify-between text-xs text-red-600">
+                              <span>{alert.date}</span>
+                              <span>Predicted: {fmt(alert.predicted_balance)} (Shortfall: {fmt(alert.shortfall)})</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div className="bg-stone-50 rounded-xl p-3">
+                      <p className="text-sm font-semibold mb-2">Weekly Pattern Insights</p>
+                      <div className="grid grid-cols-3 gap-4 text-xs">
+                        <div><span className="text-stone-500">Best Day:</span> <span className="font-bold text-emerald-600">{cashflowPrediction.weekly_patterns?.best_day}</span></div>
+                        <div><span className="text-stone-500">Slowest Day:</span> <span className="font-bold text-red-600">{cashflowPrediction.weekly_patterns?.worst_day}</span></div>
+                        <div><span className="text-stone-500">Highest Expense:</span> <span className="font-bold text-orange-600">{cashflowPrediction.weekly_patterns?.highest_expense_day}</span></div>
+                      </div>
+                    </div>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <AreaChart data={cashflowPrediction.predictions}>
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                        <XAxis dataKey="date" tick={{ fontSize: 9 }} tickFormatter={(v) => v.slice(5)} />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <Tooltip formatter={(v) => fmt(v)} />
+                        <Area type="monotone" dataKey="predicted_balance" name="Balance" stroke="#22C55E" fill="#22C55E" fillOpacity={0.15} strokeWidth={2} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : <p className="text-center text-muted-foreground py-8">Loading cash flow prediction...</p>}
+              </TabsContent>
+
+              {/* Seasonal Forecast */}
+              <TabsContent value="seasonal_forecast">
+                {seasonalForecast ? (
+                  <div className="space-y-4">
+                    <div className="bg-purple-50 rounded-xl p-3">
+                      <p className="text-sm font-semibold text-purple-700 mb-2">AI Insights</p>
+                      <div className="space-y-1">
+                        {seasonalForecast.insights?.map((insight, i) => (
+                          <p key={i} className="text-xs text-purple-600 flex items-center gap-2"><Zap size={12} />{insight}</p>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-emerald-50 rounded-xl p-3">
+                        <p className="text-xs text-emerald-600 mb-2 font-semibold">Best Days</p>
+                        {seasonalForecast.best_days?.map((d, i) => (
+                          <div key={i} className="flex justify-between text-xs mb-1">
+                            <span className="font-medium">{d.day}</span>
+                            <span className="text-emerald-700 font-bold">{fmt(d.avg_sales)}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="bg-red-50 rounded-xl p-3">
+                        <p className="text-xs text-red-600 mb-2 font-semibold">Slowest Days</p>
+                        {seasonalForecast.worst_days?.slice(-3).reverse().map((d, i) => (
+                          <div key={i} className="flex justify-between text-xs mb-1">
+                            <span className="font-medium">{d.day}</span>
+                            <span className="text-red-700 font-bold">{fmt(d.avg_sales)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold mb-2">Day of Week Performance</p>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <BarChart data={seasonalForecast.day_of_week_analysis}>
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                          <XAxis dataKey="day" tick={{ fontSize: 9 }} />
+                          <YAxis tick={{ fontSize: 10 }} />
+                          <Tooltip formatter={(v) => fmt(v)} />
+                          <Bar dataKey="avg_sales" name="Avg Sales" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold mb-2">Next 7 Days Forecast</p>
+                      <div className="grid grid-cols-7 gap-2">
+                        {seasonalForecast.next_week_forecast?.map((d, i) => (
+                          <div key={i} className="bg-white border rounded-lg p-2 text-center">
+                            <p className="text-[10px] text-stone-500">{d.day?.slice(0, 3)}</p>
+                            <p className="text-xs font-bold text-purple-600">{fmt(d.predicted_sales)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : <p className="text-center text-muted-foreground py-8">Loading seasonal forecast...</p>}
+              </TabsContent>
+
+              {/* Employee Performance */}
+              <TabsContent value="employee_performance">
+                {employeePerformance ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="bg-blue-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-blue-600">Team Size</p>
+                        <p className="text-lg font-bold font-outfit text-blue-700">{employeePerformance.team_stats?.total_employees}</p>
+                      </div>
+                      <div className="bg-purple-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-purple-600">Avg Score</p>
+                        <p className="text-lg font-bold font-outfit text-purple-700">{employeePerformance.team_stats?.avg_score}</p>
+                      </div>
+                      <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-emerald-600">Top Performers</p>
+                        <p className="text-lg font-bold font-outfit text-emerald-700" data-testid="top-performers-count">{employeePerformance.team_stats?.top_performers_count}</p>
+                      </div>
+                      <div className="bg-red-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-red-600">Need Support</p>
+                        <p className="text-lg font-bold font-outfit text-red-700">{employeePerformance.team_stats?.needs_improvement_count}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold mb-2">Team Performance Ranking</p>
+                      <div className="space-y-2 max-h-80 overflow-y-auto">
+                        {employeePerformance.employees?.map((emp, i) => (
+                          <div key={emp.employee_id} className={`flex items-center justify-between p-3 rounded-xl border ${emp.tier_color === 'emerald' ? 'bg-emerald-50 border-emerald-200' : emp.tier_color === 'blue' ? 'bg-blue-50 border-blue-200' : emp.tier_color === 'amber' ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`} data-testid={`employee-${emp.employee_id}`}>
+                            <div className="flex items-center gap-3">
+                              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold ${emp.tier_color === 'emerald' ? 'bg-emerald-500' : emp.tier_color === 'blue' ? 'bg-blue-500' : emp.tier_color === 'amber' ? 'bg-amber-500' : 'bg-red-500'}`}>#{i + 1}</span>
+                              <div>
+                                <p className="text-sm font-medium">{emp.name}</p>
+                                <p className="text-[10px] text-stone-500">{emp.branch} • {emp.role}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4 text-xs">
+                              <div className="text-right">
+                                <p className="text-stone-500">Sales</p>
+                                <p className="font-bold">{fmt(emp.metrics?.total_sales)}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-stone-500">Score</p>
+                                <p className="font-bold text-lg">{emp.scores?.overall}</p>
+                              </div>
+                              <Badge className={`text-[9px] ${emp.tier_color === 'emerald' ? 'bg-emerald-500' : emp.tier_color === 'blue' ? 'bg-blue-500' : emp.tier_color === 'amber' ? 'bg-amber-500' : 'bg-red-500'}`}>{emp.tier}</Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : <p className="text-center text-muted-foreground py-8">Loading employee performance...</p>}
+              </TabsContent>
+
+              {/* Expense Anomalies */}
+              <TabsContent value="expense_anomalies">
+                {expenseAnomalies ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="bg-stone-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-stone-600">Last Month</p>
+                        <p className="text-lg font-bold font-outfit">{fmt(expenseAnomalies.spending_trend?.last_month)}</p>
+                      </div>
+                      <div className="bg-stone-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-stone-600">Prev Month</p>
+                        <p className="text-lg font-bold font-outfit">{fmt(expenseAnomalies.spending_trend?.previous_month)}</p>
+                      </div>
+                      <div className={`rounded-xl p-3 text-center ${expenseAnomalies.spending_trend?.change_percent > 0 ? 'bg-red-50' : 'bg-emerald-50'}`}>
+                        <p className="text-xs text-stone-600">Change</p>
+                        <p className={`text-lg font-bold font-outfit ${expenseAnomalies.spending_trend?.change_percent > 0 ? 'text-red-600' : 'text-emerald-600'}`} data-testid="spending-change">{expenseAnomalies.spending_trend?.change_percent > 0 ? '+' : ''}{expenseAnomalies.spending_trend?.change_percent}%</p>
+                      </div>
+                      <div className="bg-amber-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-amber-600">Anomalies</p>
+                        <p className="text-lg font-bold font-outfit text-amber-700">{expenseAnomalies.anomalies?.length || 0}</p>
+                      </div>
+                    </div>
+                    {expenseAnomalies.alerts?.length > 0 && (
+                      <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                        <p className="text-sm font-semibold text-red-700 mb-2 flex items-center gap-2"><Bell size={16} />Alerts</p>
+                        {expenseAnomalies.alerts.map((alert, i) => (
+                          <p key={i} className={`text-xs mb-1 ${alert.severity === 'high' ? 'text-red-600' : 'text-amber-600'}`}>{alert.message}</p>
+                        ))}
+                      </div>
+                    )}
+                    {expenseAnomalies.anomalies?.length > 0 && (
+                      <div>
+                        <p className="text-sm font-semibold mb-2">Unusual Expenses Detected</p>
+                        <div className="space-y-2">
+                          {expenseAnomalies.anomalies.map((a, i) => (
+                            <div key={i} className={`flex items-center justify-between p-3 rounded-xl border ${a.severity === 'high' ? 'bg-red-50 border-red-200' : a.severity === 'medium' ? 'bg-amber-50 border-amber-200' : 'bg-white'}`}>
+                              <div>
+                                <p className="text-sm font-medium">{a.category}</p>
+                                <p className="text-[10px] text-stone-500">{a.date} • {a.description}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-bold text-red-600">{fmt(a.amount)}</p>
+                                <p className="text-[10px] text-stone-500">+{a.deviation_percent}% above avg</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm font-semibold mb-2">Category Spending Analysis</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {expenseAnomalies.category_analysis?.slice(0, 9).map(c => (
+                          <div key={c.category} className="flex items-center justify-between p-2.5 bg-white rounded-lg border text-xs">
+                            <div>
+                              <span className="font-medium">{c.category}</span>
+                              <span className={`ml-2 text-[9px] px-1.5 py-0.5 rounded ${c.trend === 'increasing' ? 'bg-red-100 text-red-600' : c.trend === 'decreasing' ? 'bg-emerald-100 text-emerald-600' : 'bg-stone-100 text-stone-600'}`}>{c.trend}</span>
+                            </div>
+                            <span className="font-bold">{fmt(c.monthly_total)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : <p className="text-center text-muted-foreground py-8">Loading expense analysis...</p>}
+              </TabsContent>
+
+              {/* Supplier Optimization */}
+              <TabsContent value="supplier_optimization">
+                {supplierOptimization ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="bg-stone-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-stone-600">Suppliers</p>
+                        <p className="text-lg font-bold font-outfit">{supplierOptimization.summary?.total_suppliers}</p>
+                      </div>
+                      <div className="bg-red-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-red-600">Total Pending</p>
+                        <p className="text-lg font-bold font-outfit text-red-700" data-testid="total-pending">{fmt(supplierOptimization.summary?.total_pending_amount)}</p>
+                      </div>
+                      <div className="bg-amber-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-amber-600">Critical</p>
+                        <p className="text-lg font-bold font-outfit text-amber-700">{supplierOptimization.summary?.critical_count}</p>
+                      </div>
+                      <div className={`rounded-xl p-3 text-center ${supplierOptimization.cash_impact?.can_afford_all ? 'bg-emerald-50' : 'bg-red-50'}`}>
+                        <p className="text-xs text-stone-600">After Payments</p>
+                        <p className={`text-lg font-bold font-outfit ${supplierOptimization.cash_impact?.can_afford_all ? 'text-emerald-700' : 'text-red-700'}`}>{fmt(supplierOptimization.cash_impact?.cash_after_payments)}</p>
+                      </div>
+                    </div>
+                    {supplierOptimization.urgent_payments?.length > 0 && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                        <p className="text-sm font-semibold text-amber-700 mb-2 flex items-center gap-2"><AlertTriangle size={16} />Urgent Payments</p>
+                        <div className="space-y-2">
+                          {supplierOptimization.urgent_payments.map((s, i) => (
+                            <div key={i} className="flex items-center justify-between text-xs bg-white p-2 rounded-lg">
+                              <div>
+                                <span className="font-medium">{s.name}</span>
+                                <Badge className={`ml-2 text-[9px] ${s.priority === 'critical' ? 'bg-red-500' : 'bg-amber-500'}`}>{s.priority}</Badge>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold text-red-600">{fmt(s.current_balance)}</p>
+                                <p className="text-stone-500">Pay: {fmt(s.recommended_payment)}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm font-semibold mb-2">Recommended Payment Schedule</p>
+                      {supplierOptimization.recommended_schedule?.length > 0 ? (
+                        <div className="space-y-2">
+                          {supplierOptimization.recommended_schedule.map((s, i) => (
+                            <div key={i} className="flex items-center justify-between p-3 rounded-xl border bg-white">
+                              <div className="flex items-center gap-3">
+                                <span className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">{i + 1}</span>
+                                <div>
+                                  <p className="text-sm font-medium">{s.supplier}</p>
+                                  <p className="text-[10px] text-stone-500">Due: {s.date}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-bold text-blue-600">{fmt(s.amount)}</p>
+                                <Badge className={`text-[9px] ${s.priority === 'critical' ? 'bg-red-500' : s.priority === 'high' ? 'bg-amber-500' : 'bg-stone-400'}`}>{s.priority}</Badge>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : <p className="text-center text-muted-foreground py-4">No pending payments to schedule</p>}
+                    </div>
+                  </div>
+                ) : <p className="text-center text-muted-foreground py-8">Loading supplier optimization...</p>}
+              </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
