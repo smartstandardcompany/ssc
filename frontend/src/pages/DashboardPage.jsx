@@ -142,7 +142,7 @@ export default function DashboardPage() {
 
   const statCards = [
     {
-      title: 'Total Sales',
+      title: tr('total_sales'),
       value: `SAR ${stats?.total_sales?.toFixed(2) || '0.00'}`,
       prev: stats?.prev_sales,
       icon: DollarSign,
