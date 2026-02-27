@@ -1,81 +1,73 @@
 # SSC Track - Product Requirements Document
 
 ## Original Problem Statement
-A data entry application to track sales, expenses, and supplier payments, evolved into a comprehensive business management ERP system named "SSC Track" for Smart Standard Company.
-
-## Core Requirements
-- **Financial Management:** Sales (Bank/Cash/Online/Credit), Expenses, Supplier Payments, Customer Credit, ZATCA-compliant Invoicing, Item-level P&L
-- **HR Management:** Employee database, Job Title permissions, salary/bonus/overtime, leave, loans, offboarding, Self-Service Portal
-- **Staff Management:** Manual & AI-driven Shift Scheduling
-- **Stock Management:** Inventory tracking, stock-in/out, multi-branch transfers
-- **Asset & Liability:** Documents with expiry alerts, fines, loans, partner investments
-- **Cash Flow:** Branch-to-branch transfers, central balance
-- **Bank Reconciliation:** Statement analyzer, side-by-side reconciliation
-- **Reporting:** Multi-tab reports, real-time POS analytics, advanced analytics dashboard, daily/weekly/monthly digests
-- **Administration:** Role-based access, Email/WhatsApp notifications, scheduled reports, company branding, data import/backup
-- **UI/UX:** Mobile-optimized POS, grouped collapsible sidebar, responsive mobile views, dashboard widget customization
-- **AI Features:** OCR invoice scanning, AI shift scheduling
+A comprehensive business management ERP system named "SSC Track" for Smart Standard Company, evolved from a simple sales/expenses tracker.
 
 ## Tech Stack
-- **Backend:** FastAPI, Pydantic, Motor (async MongoDB), JWT auth, APScheduler
+- **Backend:** FastAPI, Motor (async MongoDB), JWT auth, APScheduler, reportlab (PDF)
 - **Frontend:** React, TailwindCSS, Shadcn UI, Recharts, react-to-print
 - **Database:** MongoDB
-- **Integrations:** Twilio (WhatsApp), emergentintegrations (Gemini/GPT-4o OCR), qrcode (ZATCA)
+- **AI:** emergentintegrations (GPT-4o OCR, GPT-4o-mini categorization & forecasting)
+- **Other:** Twilio (WhatsApp), qrcode (ZATCA)
 
 ## Architecture
 ```
-/app/backend/ - FastAPI with modular routers (auth, sales, expenses, invoices, employees, stock, reports, dashboard, scheduler, transfers, etc.)
-/app/frontend/ - React SPA with Shadcn UI (35+ pages)
+/app/backend/ - FastAPI with 20+ modular routers
+/app/frontend/ - React SPA with 36+ pages
 ```
 
-## What's Been Implemented (Complete)
+## Features Implemented
 
-### Core CRUD
-- Sales, Expenses, Customers, Suppliers, Employees, Branches
-
-### Financial Features
+### Core
+- Full CRUD: Sales, Expenses, Customers, Suppliers, Employees, Branches
 - Multi-payment POS (Cash/Bank/Online/Credit simultaneously)
 - ZATCA-compliant invoicing with VAT toggle
-- Invoice Image Upload (attach, view, replace, delete + print preview)
-- **OCR Auto-Fill for Invoices** - AI-powered scan using GPT-4o extracts items/prices from invoice images
-- Supplier Payments, Cash Transfers, Customer Credit Management
+- Invoice Image Upload + OCR Auto-Fill (GPT-4o)
+- Role-based access with Job Title permissions
 
-### Analytics & Reporting
-- **Analytics Dashboard** (/analytics) - Today vs Yesterday, Key Metrics, Profit Margin Trend, Cumulative Revenue, Payment Distribution, Top Customers/Cashiers, Branch Performance
-- **Dashboard Quick Stats Comparison** - Today vs Yesterday % change on stat cards
-- Daily Sales Summary, Top Customers, Cashier Performance reports
-- Period comparison, Branch comparison, Trends, Item P&L
+### Analytics & AI
+- **Analytics Dashboard** with Today vs Yesterday comparison
+- **Sales Target Tracker** - Monthly targets per branch with progress bars
+- **AI Sales Forecast** - 7-day predictions using GPT-4o-mini
+- **AI Auto-Categorization** - Expenses auto-categorized on description input
+- **Export Analytics as PDF** - Downloadable PDF report
+- Daily Summary, Top Customers, Cashier Performance reports
+- Dashboard Quick Stats with % change badges
+- Dashboard widget customization (show/hide sections)
 
 ### HR & People
+- Employee management with auto user creation
+- AI Shift Scheduling, Leave, Loan tracking
 - Employee offboarding (resignation/termination)
-- AI Shift Scheduling, Leave management, Loan tracking
 
 ### Stock & Operations
 - Multi-branch inventory transfers
-- Bank Reconciliation UI
+- Bank Reconciliation
 - Live POS Analytics dashboard
 
 ### Administration
-- Dashboard widget customization (show/hide sections, persisted in localStorage)
-- Weekly/Monthly email digest scheduler jobs
-- Role-based access with Job Title permissions
+- Scheduled notifications (daily/weekly/monthly digest)
 - Data import/export, database backup
+- Company branding, Email/WhatsApp notifications
 
 ### UI/UX
-- Grouped collapsible sidebar (Operations, Finance, People, Stock, Reports, Assets, Admin)
-- Mobile card views for Expenses, Employees, Stock tables
-- Responsive headings and layouts across all pages
+- Grouped collapsible sidebar (7 sections)
+- **Floating Quick Entry button** - instant POS access from any page
+- Mobile card views for all data tables
+- Responsive headings and layouts
 - Currency consistency (SAR everywhere)
 
 ## Key API Endpoints
-- `/api/dashboard/today-vs-yesterday` - Today vs yesterday comparison
-- `/api/invoices/ocr-scan` - AI OCR invoice scanning
-- `/api/reports/daily-summary` | `/api/reports/top-customers` | `/api/reports/cashier-performance`
-- `/api/scheduler/config` - Scheduled job configuration (daily/weekly/monthly)
+- `/api/targets` + `/api/targets/progress` - Sales target CRUD & progress
+- `/api/reports/sales-forecast` - AI sales prediction
+- `/api/reports/analytics-pdf` - PDF export
+- `/api/expenses/auto-categorize` - AI expense categorization
+- `/api/invoices/ocr-scan` - Invoice OCR
+- `/api/dashboard/today-vs-yesterday` - Daily comparison
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
 - Employee: ahmed@test.com / emp@123
 
-## Backlog / Future
+## Backlog
 - Further user-requested enhancements
