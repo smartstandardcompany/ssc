@@ -154,14 +154,14 @@ export default function StockPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-start flex-wrap gap-3">
           <div>
-            <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-1" data-testid="stock-title">Stock Management</h1>
-            <p className="text-sm text-muted-foreground">Track inventory, stock in/out, and item usage</p>
+            <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-1" data-testid="stock-title">{t('stock_title')}</h1>
+            <p className="text-sm text-muted-foreground">{t('stock_subtitle')}</p>
           </div>
           <div className="flex gap-2 flex-wrap">
             <Select value={branchFilter || "all"} onValueChange={(v) => setBranchFilter(v === "all" ? "" : v)}>
-              <SelectTrigger className="w-40" data-testid="stock-branch-filter"><SelectValue placeholder="All Branches" /></SelectTrigger>
+              <SelectTrigger className="w-40" data-testid="stock-branch-filter"><SelectValue placeholder={t('all_branches')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Branches</SelectItem>
+                <SelectItem value="all">{t('all_branches')}</SelectItem>
                 {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -169,13 +169,13 @@ export default function StockPage() {
               <MessageCircle size={14} className="mr-1" />WhatsApp
             </Button>
             <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowScanDialog(true)} data-testid="scan-invoice-btn">
-              <Camera size={14} className="mr-1" />Scan Invoice
+              <Camera size={14} className="mr-1" />{t('scan_invoice')}
             </Button>
             <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowStockIn(true)} data-testid="stock-in-btn">
-              <TrendingUp size={14} className="mr-1" />Stock In
+              <TrendingUp size={14} className="mr-1" />{t('stock_in')}
             </Button>
             <Button size="sm" className="rounded-xl" onClick={() => setShowAddItem(true)} data-testid="add-item-btn">
-              <Plus size={14} className="mr-1" />New Item
+              <Plus size={14} className="mr-1" />{t('add_item')}
             </Button>
           </div>
         </div>
@@ -184,19 +184,19 @@ export default function StockPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="border-stone-100">
             <CardContent className="pt-4 pb-3">
-              <p className="text-xs text-muted-foreground">Total Items</p>
+              <p className="text-xs text-muted-foreground">{t('items')}</p>
               <p className="text-2xl font-bold font-outfit" data-testid="total-items">{balance.length}</p>
             </CardContent>
           </Card>
           <Card className="border-stone-100">
             <CardContent className="pt-4 pb-3">
-              <p className="text-xs text-muted-foreground">Stock Value</p>
+              <p className="text-xs text-muted-foreground">{t('stock_value')}</p>
               <p className="text-2xl font-bold font-outfit text-primary">SAR {totalValue.toFixed(2)}</p>
             </CardContent>
           </Card>
           <Card className="border-stone-100">
             <CardContent className="pt-4 pb-3">
-              <p className="text-xs text-muted-foreground">Low Stock</p>
+              <p className="text-xs text-muted-foreground">{t('min_stock')}</p>
               <p className="text-2xl font-bold font-outfit text-error" data-testid="low-stock-count">{lowStockCount}</p>
             </CardContent>
           </Card>
