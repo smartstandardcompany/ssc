@@ -821,3 +821,281 @@ async def get_margin_optimizer(current_user: User = Depends(get_current_user)):
         })
     result.sort(key=lambda x: -x["score"])
     return {"items": result[:50], "total_analyzed": len(result), "stars": len([r for r in result if r["recommendation"] == "star"]), "to_promote": len([r for r in result if r["recommendation"] == "promote"]), "to_review": len([r for r in result if r["recommendation"] == "review"])}
+
+
+
+@router.get("/reports/heatmap-data")
+async def get_heatmap_data(current_user: User = Depends(get_current_user)):
+    """Daily sales/expense totals for past 365 days for calendar heatmap."""
+    now = datetime.now(timezone.utc)
+    start = now - timedelta(days=365)
+    sales = await db.sales.find({"date": {"$gte": start.isoformat()[:10]}}, {"_id": 0}).to_list(50000)
+    expenses = await db.expenses.find({"date": {"$gte": start.isoformat()[:10]}}, {"_id": 0}).to_list(50000)
+    day_map = {}
+    for s in sales:
+        d = s.get("date", "")[:10]
+        if d not in day_map:
+            day_map[d] = {"date": d, "sales": 0, "expenses": 0, "count": 0}
+        day_map[d]["sales"] += s.get("final_amount", s["amount"] - s.get("discount", 0))
+        day_map[d]["count"] += 1
+    for e in expenses:
+        d = e.get("date", "")[:10]
+        if d not in day_map:
+            day_map[d] = {"date": d, "sales": 0, "expenses": 0, "count": 0}
+        day_map[d]["expenses"] += e["amount"]
+    result = sorted(day_map.values(), key=lambda x: x["date"])
+    for r in result:
+        r["sales"] = round(r["sales"], 2)
+        r["expenses"] = round(r["expenses"], 2)
+        r["profit"] = round(r["sales"] - r["expenses"], 2)
+    return result
+
+
+@router.get("/reports/sales-funnel")
+async def get_sales_funnel(current_user: User = Depends(get_current_user)):
+    """Sales pipeline funnel: total customers → active customers → sales → paid → fully collected."""
+    customers = await db.customers.find({}, {"_id": 0}).to_list(10000)
+    sales = await db.sales.find({}, {"_id": 0}).to_list(50000)
+    invoices = await db.invoices.find({}, {"_id": 0}).to_list(50000)
+    total_customers = len(customers)
+    customer_with_sales = len(set(s.get("customer_id") for s in sales if s.get("customer_id")))
+    total_sales_count = len(sales)
+    total_sales_amount = sum(s.get("final_amount", s["amount"] - s.get("discount", 0)) for s in sales)
+    paid_sales = [s for s in sales if s.get("credit_amount", 0) <= 0]
+    credit_sales = [s for s in sales if s.get("credit_amount", 0) > 0]
+    fully_paid = len(paid_sales)
+    credit_collected = len([s for s in credit_sales if s.get("credit_received", 0) >= s.get("credit_amount", 0)])
+    total_invoiced = sum(i.get("total_amount", 0) for i in invoices)
+    return {
+        "funnel": [
+            {"stage": "Total Customers", "value": total_customers, "amount": 0},
+            {"stage": "Customers with Sales", "value": customer_with_sales, "amount": 0},
+            {"stage": "Total Transactions", "value": total_sales_count, "amount": round(total_sales_amount, 2)},
+            {"stage": "Fully Paid Sales", "value": fully_paid, "amount": round(sum(s.get("final_amount", s["amount"]) for s in paid_sales), 2)},
+            {"stage": "Credit Collected", "value": credit_collected + fully_paid, "amount": round(sum(s.get("final_amount", s["amount"]) for s in paid_sales) + sum(s.get("credit_received", 0) for s in credit_sales), 2)},
+        ],
+        "summary": {"total_customers": total_customers, "active_customers": customer_with_sales, "conversion_rate": round(customer_with_sales / total_customers * 100, 1) if total_customers > 0 else 0, "collection_rate": round((fully_paid + credit_collected) / total_sales_count * 100, 1) if total_sales_count > 0 else 0}
+    }
+
+
+@router.get("/reports/expense-treemap")
+async def get_expense_treemap(months: int = 3, current_user: User = Depends(get_current_user)):
+    """Hierarchical expense breakdown for treemap visualization."""
+    start = (datetime.now(timezone.utc) - timedelta(days=months * 30)).isoformat()[:10]
+    expenses = await db.expenses.find({"date": {"$gte": start}}, {"_id": 0}).to_list(50000)
+    cat_totals = {}
+    cat_items = {}
+    for e in expenses:
+        cat = e.get("category", "other").replace("_", " ").title()
+        desc = e.get("description", "Misc")[:40]
+        cat_totals[cat] = cat_totals.get(cat, 0) + e["amount"]
+        if cat not in cat_items:
+            cat_items[cat] = {}
+        cat_items[cat][desc] = cat_items[cat].get(desc, 0) + e["amount"]
+    tree = []
+    for cat, total in sorted(cat_totals.items(), key=lambda x: -x[1]):
+        children = [{"name": k, "value": round(v, 2)} for k, v in sorted(cat_items.get(cat, {}).items(), key=lambda x: -x[1])[:8]]
+        tree.append({"name": cat, "value": round(total, 2), "children": children})
+    return {"tree": tree, "total": round(sum(cat_totals.values()), 2), "period_months": months}
+
+
+@router.get("/reports/kpi-gauges")
+async def get_kpi_gauges(current_user: User = Depends(get_current_user)):
+    """KPI progress indicators for gauge charts."""
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1).isoformat()[:10]
+    month_end = ((now.replace(day=1) + timedelta(days=32)).replace(day=1)).isoformat()[:10]
+    sales = await db.sales.find({"date": {"$gte": month_start, "$lt": month_end}}, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find({"date": {"$gte": month_start, "$lt": month_end}}, {"_id": 0}).to_list(10000)
+    customers = await db.customers.find({}, {"_id": 0}).to_list(10000)
+    total_sales = sum(s.get("final_amount", s["amount"]) for s in sales)
+    total_expenses = sum(e["amount"] for e in expenses)
+    credit_given = sum(s.get("credit_amount", 0) for s in sales)
+    credit_received = sum(s.get("credit_received", 0) for s in sales)
+    targets = await db.targets.find({"month": now.strftime("%Y-%m")}, {"_id": 0}).to_list(50)
+    target_total = sum(t.get("target_amount", 0) for t in targets)
+    collection_rate = round(credit_received / credit_given * 100, 1) if credit_given > 0 else 100
+    profit_margin = round((total_sales - total_expenses) / total_sales * 100, 1) if total_sales > 0 else 0
+    target_pct = round(total_sales / target_total * 100, 1) if target_total > 0 else 0
+    # Customer retention: customers with >1 purchase this month
+    cust_sales = {}
+    for s in sales:
+        cid = s.get("customer_id")
+        if cid:
+            cust_sales[cid] = cust_sales.get(cid, 0) + 1
+    repeat_customers = len([c for c in cust_sales.values() if c > 1])
+    retention_rate = round(repeat_customers / len(cust_sales) * 100, 1) if cust_sales else 0
+    return {"gauges": [
+        {"name": "Sales Target", "value": target_pct, "max": 100, "current": round(total_sales, 2), "target": round(target_total, 2), "unit": "%", "color": "#22C55E"},
+        {"name": "Profit Margin", "value": profit_margin, "max": 100, "current": round(total_sales - total_expenses, 2), "target": round(total_sales, 2), "unit": "%", "color": "#F5841F"},
+        {"name": "Collection Rate", "value": collection_rate, "max": 100, "current": round(credit_received, 2), "target": round(credit_given, 2), "unit": "%", "color": "#0EA5E9"},
+        {"name": "Customer Retention", "value": retention_rate, "max": 100, "current": repeat_customers, "target": len(cust_sales), "unit": "%", "color": "#8B5CF6"},
+    ], "month": now.strftime("%b %Y")}
+
+
+@router.get("/reports/branch-radar")
+async def get_branch_radar(current_user: User = Depends(get_current_user)):
+    """Multi-metric branch comparison for radar chart."""
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    now = datetime.now(timezone.utc)
+    m_start = now.replace(day=1).isoformat()[:10]
+    m_end = ((now.replace(day=1) + timedelta(days=32)).replace(day=1)).isoformat()[:10]
+    sales = await db.sales.find({"date": {"$gte": m_start, "$lt": m_end}}, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find({"date": {"$gte": m_start, "$lt": m_end}}, {"_id": 0}).to_list(10000)
+    customers = await db.customers.find({}, {"_id": 0}).to_list(10000)
+    if not branches:
+        return {"branches": [], "metrics": []}
+    max_sales = 1
+    max_exp = 1
+    max_txn = 1
+    max_cust = 1
+    branch_data = []
+    for b in branches:
+        bid = b["id"]
+        bs = [s for s in sales if s.get("branch_id") == bid]
+        be = [e for e in expenses if e.get("branch_id") == bid]
+        bc = len(set(s.get("customer_id") for s in bs if s.get("customer_id")))
+        total_s = sum(s.get("final_amount", s["amount"]) for s in bs)
+        total_e = sum(e["amount"] for e in be)
+        margin = round((total_s - total_e) / total_s * 100, 1) if total_s > 0 else 0
+        max_sales = max(max_sales, total_s)
+        max_exp = max(max_exp, total_e)
+        max_txn = max(max_txn, len(bs))
+        max_cust = max(max_cust, bc)
+        branch_data.append({"branch_id": bid, "name": b["name"], "sales": round(total_s, 2), "expenses": round(total_e, 2), "transactions": len(bs), "customers": bc, "margin": margin})
+    metrics = ["Sales", "Transactions", "Customers", "Margin", "Efficiency"]
+    radar = []
+    for m in metrics:
+        entry = {"metric": m}
+        for bd in branch_data:
+            if m == "Sales":
+                entry[bd["name"]] = round(bd["sales"] / max_sales * 100, 1) if max_sales > 0 else 0
+            elif m == "Transactions":
+                entry[bd["name"]] = round(bd["transactions"] / max_txn * 100, 1) if max_txn > 0 else 0
+            elif m == "Customers":
+                entry[bd["name"]] = round(bd["customers"] / max_cust * 100, 1) if max_cust > 0 else 0
+            elif m == "Margin":
+                entry[bd["name"]] = max(0, bd["margin"])
+            elif m == "Efficiency":
+                eff = round(bd["sales"] / max(bd["expenses"], 1) * 25, 1)
+                entry[bd["name"]] = min(100, eff)
+        radar.append(entry)
+    return {"branches": branch_data, "radar": radar, "metrics": metrics, "month": now.strftime("%b %Y")}
+
+
+@router.get("/reports/cashflow-waterfall")
+async def get_cashflow_waterfall(current_user: User = Depends(get_current_user)):
+    """Cash flow waterfall chart data."""
+    now = datetime.now(timezone.utc)
+    m_start = now.replace(day=1).isoformat()[:10]
+    m_end = ((now.replace(day=1) + timedelta(days=32)).replace(day=1)).isoformat()[:10]
+    sales = await db.sales.find({"date": {"$gte": m_start, "$lt": m_end}}, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find({"date": {"$gte": m_start, "$lt": m_end}}, {"_id": 0}).to_list(10000)
+    sp = await db.supplier_payments.find({"date": {"$gte": m_start, "$lt": m_end}, "supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
+    salary_payments = await db.salary_payments.find({"date": {"$gte": m_start, "$lt": m_end}}, {"_id": 0}).to_list(10000)
+    cash_sales = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "cash")
+    bank_sales = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "bank")
+    online_sales = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "online")
+    credit_received = sum(s.get("credit_received", 0) for s in sales)
+    rent = sum(e["amount"] for e in expenses if "rent" in e.get("category", "").lower())
+    utilities = sum(e["amount"] for e in expenses if "util" in e.get("category", "").lower() or "electric" in e.get("category", "").lower())
+    salaries = sum(p.get("amount", 0) for p in salary_payments)
+    other_exp = sum(e["amount"] for e in expenses) - rent - utilities
+    supplier_total = sum(p["amount"] for p in sp)
+    steps = [
+        {"name": "Cash Sales", "value": round(cash_sales, 2), "type": "income"},
+        {"name": "Bank Sales", "value": round(bank_sales, 2), "type": "income"},
+        {"name": "Online Sales", "value": round(online_sales, 2), "type": "income"},
+        {"name": "Credits Collected", "value": round(credit_received, 2), "type": "income"},
+        {"name": "Salaries", "value": round(-salaries, 2), "type": "expense"},
+        {"name": "Rent", "value": round(-rent, 2), "type": "expense"},
+        {"name": "Utilities", "value": round(-utilities, 2), "type": "expense"},
+        {"name": "Other Expenses", "value": round(-other_exp, 2), "type": "expense"},
+        {"name": "Supplier Payments", "value": round(-supplier_total, 2), "type": "expense"},
+    ]
+    running = 0
+    waterfall = []
+    for s in steps:
+        start_val = running
+        running += s["value"]
+        waterfall.append({**s, "start": round(start_val, 2), "end": round(running, 2)})
+    waterfall.append({"name": "Net Balance", "value": round(running, 2), "type": "total", "start": 0, "end": round(running, 2)})
+    return {"waterfall": waterfall, "net": round(running, 2), "month": now.strftime("%b %Y")}
+
+
+@router.get("/reports/money-flow")
+async def get_money_flow(current_user: User = Depends(get_current_user)):
+    """Money flow data for Sankey-style visualization."""
+    now = datetime.now(timezone.utc)
+    m_start = now.replace(day=1).isoformat()[:10]
+    m_end = ((now.replace(day=1) + timedelta(days=32)).replace(day=1)).isoformat()[:10]
+    sales = await db.sales.find({"date": {"$gte": m_start, "$lt": m_end}}, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find({"date": {"$gte": m_start, "$lt": m_end}}, {"_id": 0}).to_list(10000)
+    sp = await db.supplier_payments.find({"date": {"$gte": m_start, "$lt": m_end}, "supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branch_map = {b["id"]: b["name"] for b in branches}
+    # Sources → Revenue
+    sources = {}
+    for s in sales:
+        bn = branch_map.get(s.get("branch_id"), "Other")
+        sources[bn] = sources.get(bn, 0) + s.get("final_amount", s["amount"])
+    # Revenue → Payment modes
+    modes = {"Cash": 0, "Bank": 0, "Online": 0, "Credit": 0}
+    for s in sales:
+        for p in s.get("payment_details", []):
+            m = p.get("mode", "cash").title()
+            modes[m] = modes.get(m, 0) + p["amount"]
+        if s.get("credit_amount", 0) > 0:
+            modes["Credit"] += s["credit_amount"]
+    # Expenses by category
+    exp_cats = {}
+    for e in expenses:
+        cat = e.get("category", "other").replace("_", " ").title()
+        exp_cats[cat] = exp_cats.get(cat, 0) + e["amount"]
+    total_sp = sum(p["amount"] for p in sp)
+    total_rev = sum(sources.values())
+    total_exp = sum(exp_cats.values())
+    # Build flow links
+    links = []
+    for src, val in sources.items():
+        if val > 0:
+            links.append({"source": src, "target": "Revenue", "value": round(val, 2)})
+    for mode, val in modes.items():
+        if val > 0:
+            links.append({"source": "Revenue", "target": mode, "value": round(val, 2)})
+    if total_exp > 0:
+        links.append({"source": "Revenue", "target": "Expenses", "value": round(total_exp, 2)})
+    for cat, val in sorted(exp_cats.items(), key=lambda x: -x[1])[:6]:
+        if val > 0:
+            links.append({"source": "Expenses", "target": cat, "value": round(val, 2)})
+    if total_sp > 0:
+        links.append({"source": "Revenue", "target": "Suppliers", "value": round(total_sp, 2)})
+    profit = total_rev - total_exp - total_sp
+    if profit > 0:
+        links.append({"source": "Revenue", "target": "Profit", "value": round(profit, 2)})
+    return {"links": links, "total_revenue": round(total_rev, 2), "total_expenses": round(total_exp, 2), "total_supplier": round(total_sp, 2), "profit": round(profit, 2), "month": now.strftime("%b %Y")}
+
+
+@router.get("/reports/time-series-compare")
+async def get_time_series_compare(periods: str = "3", current_user: User = Depends(get_current_user)):
+    """Multi-period comparison data for overlay charts."""
+    num_periods = int(periods)
+    now = datetime.now(timezone.utc)
+    result = []
+    for i in range(num_periods):
+        m_start = (now.replace(day=1) - timedelta(days=i * 30)).replace(day=1)
+        m_end = (m_start + timedelta(days=32)).replace(day=1)
+        m_label = m_start.strftime("%b %Y")
+        sales = await db.sales.find({"date": {"$gte": m_start.isoformat()[:10], "$lt": m_end.isoformat()[:10]}}, {"_id": 0}).to_list(10000)
+        # Build daily data
+        daily = {}
+        for s in sales:
+            d = s.get("date", "")[:10]
+            day_num = int(d[8:10]) if len(d) >= 10 else 0
+            if day_num not in daily:
+                daily[day_num] = 0
+            daily[day_num] += s.get("final_amount", s["amount"] - s.get("discount", 0))
+        days_data = [{"day": d, "sales": round(daily.get(d, 0), 2)} for d in range(1, 32)]
+        total = sum(v for v in daily.values())
+        result.append({"month": m_label, "total": round(total, 2), "daily": days_data})
+    return {"periods": list(reversed(result))}
