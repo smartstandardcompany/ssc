@@ -62,6 +62,7 @@ for module in [
     suppliers,
     transfers,
     whatsapp,
+    targets,
 ]:
     app.include_router(module.router, prefix="/api")
 
