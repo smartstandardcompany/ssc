@@ -334,14 +334,14 @@ export default function VisualizationsPage() {
           <CardContent className="pt-6">
             <Tabs value={tab} onValueChange={loadTab}>
               <TabsList className="flex-wrap h-auto gap-1 mb-4">
-                <TabsTrigger value="heatmap" className="text-xs" data-testid="tab-heatmap"><Calendar size={12} className="mr-1" />Heatmap</TabsTrigger>
-                <TabsTrigger value="funnel" className="text-xs" data-testid="tab-funnel"><GitBranch size={12} className="mr-1" />Funnel</TabsTrigger>
-                <TabsTrigger value="treemap" className="text-xs" data-testid="tab-treemap"><Grid3X3 size={12} className="mr-1" />Treemap</TabsTrigger>
-                <TabsTrigger value="gauges" className="text-xs" data-testid="tab-gauges"><Gauge size={12} className="mr-1" />Gauges</TabsTrigger>
-                <TabsTrigger value="radar" className="text-xs" data-testid="tab-radar"><Radar size={12} className="mr-1" />Radar</TabsTrigger>
-                <TabsTrigger value="waterfall" className="text-xs" data-testid="tab-waterfall"><Droplets size={12} className="mr-1" />Waterfall</TabsTrigger>
-                <TabsTrigger value="flow" className="text-xs" data-testid="tab-flow"><Network size={12} className="mr-1" />Money Flow</TabsTrigger>
-                <TabsTrigger value="timeseries" className="text-xs" data-testid="tab-timeseries"><TrendingUp size={12} className="mr-1" />Compare</TabsTrigger>
+                <TabsTrigger value="heatmap" className="text-xs" data-testid="tab-heatmap"><Calendar size={12} className="mr-1" />{tr('viz_heatmap')}</TabsTrigger>
+                <TabsTrigger value="funnel" className="text-xs" data-testid="tab-funnel"><GitBranch size={12} className="mr-1" />{tr('viz_funnel')}</TabsTrigger>
+                <TabsTrigger value="treemap" className="text-xs" data-testid="tab-treemap"><Grid3X3 size={12} className="mr-1" />{tr('viz_treemap')}</TabsTrigger>
+                <TabsTrigger value="gauges" className="text-xs" data-testid="tab-gauges"><Gauge size={12} className="mr-1" />{tr('viz_gauges')}</TabsTrigger>
+                <TabsTrigger value="radar" className="text-xs" data-testid="tab-radar"><Radar size={12} className="mr-1" />{tr('viz_radar')}</TabsTrigger>
+                <TabsTrigger value="waterfall" className="text-xs" data-testid="tab-waterfall"><Droplets size={12} className="mr-1" />{tr('viz_waterfall')}</TabsTrigger>
+                <TabsTrigger value="flow" className="text-xs" data-testid="tab-flow"><Network size={12} className="mr-1" />{tr('viz_money_flow')}</TabsTrigger>
+                <TabsTrigger value="timeseries" className="text-xs" data-testid="tab-timeseries"><TrendingUp size={12} className="mr-1" />{tr('viz_compare')}</TabsTrigger>
               </TabsList>
 
               <div ref={chartRef}>
