@@ -144,17 +144,17 @@ export default function POSPage() {
         <div className="flex rounded-xl border overflow-hidden">
           <button onClick={() => setEntryType('sale')} data-testid="pos-sale-btn"
             className={`flex-1 py-3 text-sm font-medium transition-all flex items-center justify-center gap-2 ${entryType === 'sale' ? 'bg-emerald-500 text-white' : 'bg-white text-stone-500'}`}>
-            <ShoppingCart size={16} />Sale
+            <ShoppingCart size={16} />{t('nav_sales')}
           </button>
           <button onClick={() => setEntryType('expense')} data-testid="pos-expense-btn"
             className={`flex-1 py-3 text-sm font-medium transition-all flex items-center justify-center gap-2 ${entryType === 'expense' ? 'bg-red-500 text-white' : 'bg-white text-stone-500'}`}>
-            <Receipt size={16} />Expense
+            <Receipt size={16} />{t('expenses_title')}
           </button>
         </div>
 
         {/* Branch */}
         <Select value={branch} onValueChange={setBranch}>
-          <SelectTrigger className="h-12 rounded-xl text-sm" data-testid="pos-branch"><SelectValue placeholder="Select Branch" /></SelectTrigger>
+          <SelectTrigger className="h-12 rounded-xl text-sm" data-testid="pos-branch"><SelectValue placeholder={t('branch')} /></SelectTrigger>
           <SelectContent>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
         </Select>
 
