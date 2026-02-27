@@ -6,10 +6,13 @@ import {
   User as UserIcon, Settings, ArrowLeftRight, FileInput, AlertTriangle,
   Handshake, HelpCircle, Building2, Package, ChefHat, CalendarClock,
   ArrowDownUp, Activity, PackageCheck, ChevronDown, Menu, X, Zap,
-  AlertCircle, Moon, Sun, Keyboard
+  AlertCircle, Moon, Sun, Keyboard, Globe
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import { useLanguage } from '@/contexts/LanguageContext';
