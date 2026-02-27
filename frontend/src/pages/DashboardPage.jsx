@@ -263,8 +263,13 @@ export default function DashboardPage() {
                   <div className={`${card.bgColor} p-2 rounded-lg`}><Icon className={`h-5 w-5 ${card.color}`} strokeWidth={2} /></div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl sm:text-3xl font-bold font-outfit" data-testid={`${card.testId}-value`}>{card.value}</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl sm:text-3xl font-bold font-outfit" data-testid={`${card.testId}-value`}>{card.value}</span>
+                    </div>
+                    {card.sparkline && card.sparkline.length > 1 && (
+                      <Sparkline data={card.sparkline} color={card.sparkColor} />
+                    )}
                   </div>
                   <div className="flex items-center mt-1 flex-wrap gap-1">
                     {card.prev !== undefined && <ChangeIndicator current={rawVal} previous={card.prev} invert={card.invert} />}
