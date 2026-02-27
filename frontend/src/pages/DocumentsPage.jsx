@@ -26,6 +26,7 @@ const DEFAULT_DOC_TYPES = [
 ];
 
 export default function DocumentsPage() {
+  const { t } = useLanguage();
   const [documents, setDocuments] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [customDocTypes, setCustomDocTypes] = useState([]);
