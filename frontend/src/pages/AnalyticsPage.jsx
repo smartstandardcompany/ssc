@@ -85,6 +85,25 @@ export default function AnalyticsPage() {
     finally { setExporting(false); }
   };
 
+  const loadAiSection = async (section) => {
+    setAiTab(section);
+    try {
+      if (section === 'expense_forecast' && !expenseForecast) {
+        const { data } = await api.get('/reports/expense-forecast'); setExpenseForecast(data);
+      } else if (section === 'stock_reorder' && !stockReorder) {
+        const { data } = await api.get('/reports/stock-reorder'); setStockReorder(data);
+      } else if (section === 'revenue_trends' && !revenueTrends) {
+        const { data } = await api.get('/reports/revenue-trends'); setRevenueTrends(data);
+      } else if (section === 'customer_churn' && !customerChurn) {
+        const { data } = await api.get('/reports/customer-churn'); setCustomerChurn(data);
+      } else if (section === 'margin_optimizer' && !marginOptimizer) {
+        const { data } = await api.get('/reports/margin-optimizer'); setMarginOptimizer(data);
+      }
+    } catch { toast.error('Failed to load analytics'); }
+  };
+
+  useEffect(() => { loadAiSection('expense_forecast'); }, []);
+
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-64"><div className="animate-pulse text-muted-foreground">Loading analytics...</div></div></DashboardLayout>;
 
   const tvy = todayVsYest || { today: {}, yesterday: {}, change: {} };
