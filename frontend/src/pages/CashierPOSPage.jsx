@@ -271,23 +271,26 @@ export default function CashierPOSPage() {
             </div>
             <div>
               <h1 className="font-bold text-lg font-outfit" data-testid="pos-title">Restaurant POS</h1>
-              <p className="text-xs text-muted-foreground">{user.branch_name || 'Main Branch'}</p>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Building2 size={12} />
+                <span className="font-medium text-orange-600">{user.branch_name || 'Main Branch'}</span>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
             {stats && (
               <div className="flex gap-4 text-xs">
-                <div className="text-center">
-                  <p className="text-muted-foreground">Today Sales</p>
-                  <p className="font-bold text-emerald-600" data-testid="today-sales">SAR {stats.today?.total_sales?.toLocaleString()}</p>
+                <div className="text-center px-3 py-1 bg-emerald-50 rounded-lg">
+                  <p className="text-emerald-600 font-medium">Today Sales</p>
+                  <p className="font-bold text-emerald-700" data-testid="today-sales">SAR {stats.today?.total_sales?.toLocaleString()}</p>
                 </div>
-                <div className="text-center">
-                  <p className="text-muted-foreground">Orders</p>
-                  <p className="font-bold">{stats.today?.total_orders}</p>
+                <div className="text-center px-3 py-1 bg-blue-50 rounded-lg">
+                  <p className="text-blue-600 font-medium">Orders</p>
+                  <p className="font-bold text-blue-700">{stats.today?.total_orders}</p>
                 </div>
               </div>
             )}
-            <Badge variant="outline" className="text-xs">{user.name}</Badge>
+            <Badge variant="outline" className="text-xs px-3 py-1">{user.name}</Badge>
             <Button size="sm" variant="ghost" onClick={handleLogout} data-testid="logout-btn">
               <LogOut size={16} />
             </Button>
