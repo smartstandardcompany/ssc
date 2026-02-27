@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { translations } from '@/lib/i18n';
+import { translations, LANGUAGES } from '@/lib/i18n';
 
 const LanguageContext = createContext();
 
@@ -8,16 +8,16 @@ export function LanguageProvider({ children }) {
 
   useEffect(() => {
     localStorage.setItem('ssc_lang', lang);
-    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    const langConfig = LANGUAGES.find(l => l.code === lang);
+    document.documentElement.dir = langConfig?.rtl ? 'rtl' : 'ltr';
     document.documentElement.lang = lang;
   }, [lang]);
 
   const t = (key) => translations[lang]?.[key] || translations.en?.[key] || key;
-  const isRTL = lang === 'ar';
-  const toggleLang = () => setLang(l => l === 'en' ? 'ar' : 'en');
+  const isRTL = LANGUAGES.find(l => l.code === lang)?.rtl || false;
 
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t, isRTL, toggleLang }}>
+    <LanguageContext.Provider value={{ lang, setLang, t, isRTL }}>
       {children}
     </LanguageContext.Provider>
   );
