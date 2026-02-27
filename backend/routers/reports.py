@@ -287,3 +287,158 @@ async def get_cashier_performance(current_user: User = Depends(get_current_user)
     result.sort(key=lambda x: -x["total_sales"])
     return result
 
+
+@router.get("/reports/analytics-pdf")
+async def export_analytics_pdf(current_user: User = Depends(get_current_user)):
+    """Generate a PDF report of analytics data."""
+    from fastapi.responses import StreamingResponse
+    from io import BytesIO
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import inch
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.lib import colors
+    except ImportError:
+        raise HTTPException(status_code=500, detail="reportlab not installed")
+
+    sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+
+    total_sales = sum(s.get("final_amount", s["amount"] - s.get("discount", 0)) for s in sales)
+    total_expenses = sum(e["amount"] for e in expenses)
+    net_profit = total_sales - total_expenses
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=0.5*inch, bottomMargin=0.5*inch)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    elements.append(Paragraph("SSC Track - Analytics Report", styles['Title']))
+    elements.append(Paragraph(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}", styles['Normal']))
+    elements.append(Spacer(1, 20))
+
+    # Summary
+    elements.append(Paragraph("Financial Summary", styles['Heading2']))
+    summary_data = [
+        ["Metric", "Amount (SAR)"],
+        ["Total Sales", f"{total_sales:,.2f}"],
+        ["Total Expenses", f"{total_expenses:,.2f}"],
+        ["Net Profit", f"{net_profit:,.2f}"],
+        ["Transactions", str(len(sales))],
+    ]
+    t = Table(summary_data, colWidths=[3*inch, 3*inch])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F5841F')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+    ]))
+    elements.append(t)
+    elements.append(Spacer(1, 20))
+
+    # Branch breakdown
+    elements.append(Paragraph("Branch Performance", styles['Heading2']))
+    branch_data = [["Branch", "Sales", "Expenses", "Net"]]
+    for b in branches:
+        bs = sum(s.get("final_amount", s["amount"]) for s in sales if s.get("branch_id") == b["id"])
+        be = sum(e["amount"] for e in expenses if e.get("branch_id") == b["id"])
+        branch_data.append([b["name"], f"{bs:,.2f}", f"{be:,.2f}", f"{bs-be:,.2f}"])
+    t2 = Table(branch_data, colWidths=[2*inch, 1.5*inch, 1.5*inch, 1.5*inch])
+    t2.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#22C55E')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+    ]))
+    elements.append(t2)
+    elements.append(Spacer(1, 20))
+
+    # Top expense categories
+    cats = {}
+    for e in expenses:
+        cats[e.get("category", "Other")] = cats.get(e.get("category", "Other"), 0) + e["amount"]
+    if cats:
+        elements.append(Paragraph("Expense Categories", styles['Heading2']))
+        cat_data = [["Category", "Amount"]]
+        for cat, amt in sorted(cats.items(), key=lambda x: -x[1]):
+            cat_data.append([cat.replace("_", " ").title(), f"{amt:,.2f}"])
+        t3 = Table(cat_data, colWidths=[3*inch, 3*inch])
+        t3.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#EF4444')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ]))
+        elements.append(t3)
+
+    doc.build(elements)
+    buffer.seek(0)
+    return StreamingResponse(buffer, media_type="application/pdf",
+                           headers={"Content-Disposition": "attachment; filename=ssc_analytics_report.pdf"})
+
+
+@router.get("/reports/sales-forecast")
+async def get_sales_forecast(current_user: User = Depends(get_current_user)):
+    """AI-powered sales forecast for next 7 days based on historical patterns."""
+    import os
+    sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+    if len(sales) < 5:
+        return {"forecast": [], "message": "Need more historical data for forecasting"}
+
+    # Build daily summary for last 30 days
+    from datetime import timedelta
+    now = datetime.now(timezone.utc)
+    daily = {}
+    for s in sales:
+        day = s["date"][:10]
+        daily[day] = daily.get(day, 0) + s.get("final_amount", s["amount"] - s.get("discount", 0))
+
+    history = []
+    for i in range(30, -1, -1):
+        d = (now - timedelta(days=i)).strftime("%Y-%m-%d")
+        history.append({"date": d, "sales": round(daily.get(d, 0), 2)})
+
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
+        if not api_key:
+            return _simple_forecast(history, now)
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"forecast-{now.isoformat()}",
+            system_message="""You are a sales forecasting AI. Given historical daily sales data, predict the next 7 days. 
+Return ONLY valid JSON array: [{"date": "YYYY-MM-DD", "predicted_sales": number, "confidence": "high"|"medium"|"low"}]
+Consider: day-of-week patterns, trends, seasonality. Return ONLY the JSON array."""
+        ).with_model("openai", "gpt-4o-mini")
+
+        import json as json_module
+        history_str = json_module.dumps(history[-14:])
+        response = await chat.send_message(UserMessage(text=f"Here is the last 14 days of sales data. Predict next 7 days:\n{history_str}"))
+        cleaned = response.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            cleaned = cleaned.strip()
+        forecast = json_module.loads(cleaned)
+        return {"forecast": forecast, "history": history[-14:], "method": "ai"}
+    except:
+        return _simple_forecast(history, now)
+
+
+def _simple_forecast(history, now):
+    """Simple moving average forecast as fallback."""
+    from datetime import timedelta
+    recent = [h["sales"] for h in history[-7:] if h["sales"] > 0]
+    avg = sum(recent) / len(recent) if recent else 0
+    forecast = []
+    for i in range(1, 8):
+        d = (now + timedelta(days=i)).strftime("%Y-%m-%d")
+        forecast.append({"date": d, "predicted_sales": round(avg, 2), "confidence": "low"})
+    return {"forecast": forecast, "history": history[-14:], "method": "moving_average"}
+
