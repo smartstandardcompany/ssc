@@ -36,6 +36,7 @@ function getWeekDates(weekStart) {
 }
 
 export default function SchedulePage() {
+  const { t } = useLanguage();
   const [branches, setBranches] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [shifts, setShifts] = useState([]);
