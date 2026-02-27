@@ -19,6 +19,7 @@ import { BranchFilter } from '@/components/BranchFilter';
 import { DateFilter } from '@/components/DateFilter';
 
 export default function ExpensesPage() {
+  const { t } = useLanguage();
   const [expenses, setExpenses] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [branches, setBranches] = useState([]);
