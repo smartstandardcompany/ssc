@@ -288,6 +288,7 @@ async def get_scheduler_config(current_user: User = Depends(get_current_user)):
             {"job_type": "daily_sales", "label": "Daily Sales Summary", "enabled": False, "hour": 21, "minute": 0, "channels": ["whatsapp"]},
             {"job_type": "low_stock", "label": "Low Stock Alert", "enabled": False, "hour": 8, "minute": 0, "channels": ["whatsapp"]},
             {"job_type": "expense_summary", "label": "Expense Summary", "enabled": False, "hour": 21, "minute": 30, "channels": ["whatsapp"]},
+            {"job_type": "eod_summary", "label": "EOD Summary (Auto)", "enabled": False, "hour": 22, "minute": 0, "channels": ["whatsapp", "email"]},
             {"job_type": "weekly_digest", "label": "Weekly Digest", "enabled": False, "hour": 9, "minute": 0, "day_of_week": "sun", "channels": ["email"]},
             {"job_type": "monthly_digest", "label": "Monthly Digest", "enabled": False, "hour": 9, "minute": 0, "day": 1, "channels": ["email"]},
         ]
