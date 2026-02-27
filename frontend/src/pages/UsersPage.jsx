@@ -11,8 +11,10 @@ import { Plus, Edit, Trash2, Shield, User as UserIcon } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { BranchFilter } from '@/components/BranchFilter';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function UsersPage() {
+  const { t } = useLanguage();
   const [users, setUsers] = useState([]);
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
