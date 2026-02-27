@@ -362,7 +362,7 @@ export const DashboardLayout = ({ children }) => {
                   data-testid="stock-alerts-toggle"
                   className="text-xs text-red-600 hover:text-red-800 font-medium whitespace-nowrap ml-2"
                 >
-                  {showStockAlerts ? 'Hide' : 'View Details'}
+                  {showStockAlerts ? t('stock_alert_hide') : t('stock_alert_view')}
                 </button>
               </div>
               {showStockAlerts && (
