@@ -81,7 +81,7 @@ const FunnelChart = ({ data }) => {
 };
 
 // Custom Heatmap Calendar
-const HeatmapCalendar = ({ data, metric = 'sales' }) => {
+const HeatmapCalendar = ({ data, metric = 'sales', onDayClick }) => {
   const [hoveredDay, setHoveredDay] = useState(null);
   const dataMap = {};
   data.forEach(d => { dataMap[d.date] = d; });
