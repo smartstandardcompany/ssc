@@ -106,6 +106,16 @@ export default function AnalyticsPage() {
         const { data } = await api.get('/reports/customer-churn'); setCustomerChurn(data);
       } else if (section === 'margin_optimizer' && !marginOptimizer) {
         const { data } = await api.get('/reports/margin-optimizer'); setMarginOptimizer(data);
+      } else if (section === 'cashflow_prediction' && !cashflowPrediction) {
+        const { data } = await api.get('/reports/cashflow-prediction'); setCashflowPrediction(data);
+      } else if (section === 'seasonal_forecast' && !seasonalForecast) {
+        const { data } = await api.get('/reports/seasonal-forecast'); setSeasonalForecast(data);
+      } else if (section === 'employee_performance' && !employeePerformance) {
+        const { data } = await api.get('/reports/employee-performance'); setEmployeePerformance(data);
+      } else if (section === 'expense_anomalies' && !expenseAnomalies) {
+        const { data } = await api.get('/reports/expense-anomalies'); setExpenseAnomalies(data);
+      } else if (section === 'supplier_optimization' && !supplierOptimization) {
+        const { data } = await api.get('/reports/supplier-optimization'); setSupplierOptimization(data);
       }
     } catch { toast.error('Failed to load analytics'); }
   };
