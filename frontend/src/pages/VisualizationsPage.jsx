@@ -302,6 +302,21 @@ export default function VisualizationsPage() {
     } catch { toast.error('Export failed'); }
   };
 
+  // Drill-down handlers
+  const drillHeatmap = (date) => navigate(`/reports?tab=eod&date=${date}`);
+  const drillFunnel = (stage, idx) => {
+    if (idx <= 1) navigate('/customers');
+    else if (idx === 2) navigate('/sales');
+    else navigate('/sales?filter=credit');
+  };
+  const drillTreemap = (category) => navigate(`/expenses?category=${encodeURIComponent(category)}`);
+  const drillWaterfall = (step) => {
+    if (step.type === 'income') navigate('/sales');
+    else if (step.type === 'expense') navigate('/expenses');
+  };
+  const drillRadar = (branchId) => navigate(`/?branch=${branchId}`);
+  const drillChurn = (customerId) => navigate(`/customers?id=${customerId}`);
+
   return (
     <DashboardLayout>
       <div className="space-y-6" data-testid="visualizations-page">
