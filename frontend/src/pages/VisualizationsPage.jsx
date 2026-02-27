@@ -419,10 +419,11 @@ export default function VisualizationsPage() {
                           <Badge variant="outline" className="text-xs">{treemapData.tree.length} categories</Badge>
                         </div>
                         <ResponsiveContainer width="100%" height={350}>
-                          <Treemap data={treemapData.tree} dataKey="value" nameKey="name" content={<TreemapContent />}>
+                          <Treemap data={treemapData.tree} dataKey="value" nameKey="name" content={<TreemapContent />} onClick={(node) => node && node.name && drillTreemap(node.name)}>
                             <Tooltip formatter={(v) => fmt(v)} />
                           </Treemap>
                         </ResponsiveContainer>
+                        <p className="text-[10px] text-muted-foreground text-center">{tr('viz_click_drill')}</p>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
                           {treemapData.tree.slice(0, 8).map((t, i) => (
                             <div key={t.name} className="flex items-center gap-2 text-xs p-2 bg-stone-50 rounded-lg">
