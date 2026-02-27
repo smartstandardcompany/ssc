@@ -85,7 +85,7 @@ const NAV_GROUPS = [
   },
 ];
 
-function NavGroup({ group, userRole, userPerms, currentPath, onNavigate }) {
+function NavGroup({ group, userRole, userPerms, currentPath, onNavigate, t }) {
   const filteredItems = group.items.filter(item => {
     if (userRole === 'admin') return true;
     if (item.roles && !item.roles.includes(userRole || 'operator')) return false;
