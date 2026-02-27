@@ -145,7 +145,7 @@ export const DashboardLayout = ({ children }) => {
   const [showStockAlerts, setShowStockAlerts] = useState(false);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('ssc_dark_mode') === 'true');
   const [showShortcuts, setShowShortcuts] = useState(false);
-  const { t, lang, toggleLang, isRTL } = useLanguage();
+  const { t, lang, setLang, isRTL } = useLanguage();
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const isEmployee = user.role === 'employee';
