@@ -77,6 +77,8 @@ export default function DashboardPage() {
   const [showWidgetSettings, setShowWidgetSettings] = useState(false);
   const [todayVsYest, setTodayVsYest] = useState(null);
   const [dailyTrend, setDailyTrend] = useState({ sales: [], expenses: [], profit: [] });
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [layout, setLayout] = useState(getLayoutPrefs());
   const t = THEMES[theme] || THEMES.default;
   const { t: tr } = useLanguage();
 
@@ -84,6 +86,17 @@ export default function DashboardPage() {
     const updated = { ...widgets, [key]: !widgets[key] };
     setWidgets(updated);
     saveWidgetPrefs(updated);
+  };
+
+  const handleLayoutChange = useCallback((newLayout) => {
+    setLayout(newLayout);
+    saveLayoutPrefs(newLayout);
+  }, []);
+
+  const resetLayout = () => {
+    setLayout(DEFAULT_LAYOUT);
+    saveLayoutPrefs(DEFAULT_LAYOUT);
+    toast.success(tr('reset_layout') || 'Layout reset');
   };
 
   const changeTheme = (newTheme) => { setTheme(newTheme); localStorage.setItem('dashboard_theme', newTheme); };
