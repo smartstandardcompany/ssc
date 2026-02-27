@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, ArrowRight, Check, X, PackageCheck, Trash2, ArrowLeftRight, Clock } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const STATUS_STYLES = {
   pending: 'bg-amber-100 text-amber-700 border-amber-200',
