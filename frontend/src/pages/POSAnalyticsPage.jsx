@@ -5,10 +5,12 @@ import { Badge } from '@/components/ui/badge';
 import { TrendingUp, DollarSign, ShoppingCart, Users, Clock, Trophy, BarChart3, RefreshCw } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import api from '@/lib/api';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const PIE_COLORS = ['#22c55e', '#3b82f6', '#8b5cf6', '#f59e0b'];
 
 export default function POSAnalyticsPage() {
+  const { t } = useLanguage();
   const [data, setData] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
   const intervalRef = useRef(null);
