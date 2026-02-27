@@ -34,6 +34,12 @@ export default function ReportsPage() {
   const [topCustomers, setTopCustomers] = useState([]);
   const [cashierPerf, setCashierPerf] = useState([]);
   const [filters, setFilters] = useState({ startDate: '', endDate: '', type: 'all' });
+  const [eodSummary, setEodSummary] = useState(null);
+  const [eodDate, setEodDate] = useState(new Date().toISOString().split('T')[0]);
+  const [eodBranch, setEodBranch] = useState('');
+  const [eodLoading, setEodLoading] = useState(false);
+  const [partnerPnl, setPartnerPnl] = useState(null);
+  const [partnerPnlLoading, setPartnerPnlLoading] = useState(false);
 
   useEffect(() => { fetchData(); }, []);
 
