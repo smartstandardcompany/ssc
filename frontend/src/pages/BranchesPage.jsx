@@ -9,8 +9,10 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, Eye, ShoppingCart, Receipt, Truck, AlertTriangle } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function BranchesPage() {
+  const { t } = useLanguage();
   const [branches, setBranches] = useState([]);
   const [summaries, setSummaries] = useState({});
   const [loading, setLoading] = useState(true);
