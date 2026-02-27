@@ -38,6 +38,7 @@ import TransfersPage from "./pages/TransfersPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import VisualizationsPage from "./pages/VisualizationsPage";
 import { Toaster } from "@/components/ui/sonner";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
