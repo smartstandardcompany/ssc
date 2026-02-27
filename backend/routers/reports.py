@@ -1099,3 +1099,669 @@ async def get_time_series_compare(periods: str = "3", current_user: User = Depen
         total = sum(v for v in daily.values())
         result.append({"month": m_label, "total": round(total, 2), "daily": days_data})
     return {"periods": list(reversed(result))}
+
+
+
+# =====================================================
+# NEW AI PREDICTIVE ANALYTICS ENHANCEMENTS
+# =====================================================
+
+@router.get("/reports/cashflow-prediction")
+async def get_cashflow_prediction(days: int = 14, current_user: User = Depends(get_current_user)):
+    """
+    AI Cash Flow Prediction - Predict daily/weekly cash balance based on historical patterns.
+    Alerts when cash might run low.
+    """
+    now = datetime.now(timezone.utc)
+    
+    # Get historical data (last 90 days)
+    start_date = (now - timedelta(days=90)).isoformat()[:10]
+    sales = await db.sales.find({"date": {"$gte": start_date}}, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find({"date": {"$gte": start_date}}, {"_id": 0}).to_list(10000)
+    supplier_payments = await db.supplier_payments.find({"date": {"$gte": start_date}}, {"_id": 0}).to_list(10000)
+    
+    # Calculate daily patterns by day of week
+    daily_income = {i: [] for i in range(7)}  # 0=Monday to 6=Sunday
+    daily_expense = {i: [] for i in range(7)}
+    
+    for s in sales:
+        try:
+            d = datetime.fromisoformat(s["date"][:10])
+            dow = d.weekday()
+            cash_amt = sum(p["amount"] for p in s.get("payment_details", []) if p.get("mode") == "cash")
+            daily_income[dow].append(cash_amt)
+        except:
+            pass
+    
+    for e in expenses:
+        try:
+            d = datetime.fromisoformat(e["date"][:10])
+            dow = d.weekday()
+            if e.get("payment_mode") == "cash":
+                daily_expense[dow].append(e["amount"])
+        except:
+            pass
+    
+    for sp in supplier_payments:
+        try:
+            d = datetime.fromisoformat(sp["date"][:10])
+            dow = d.weekday()
+            if sp.get("payment_mode") == "cash":
+                daily_expense[dow].append(sp["amount"])
+        except:
+            pass
+    
+    # Calculate averages per day of week
+    avg_income = {i: sum(daily_income[i]) / max(len(daily_income[i]), 1) for i in range(7)}
+    avg_expense = {i: sum(daily_expense[i]) / max(len(daily_expense[i]), 1) for i in range(7)}
+    
+    # Get current cash balance from branches
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    current_cash = sum(b.get("cash_balance", 0) for b in branches)
+    
+    # Predict future days
+    predictions = []
+    running_balance = current_cash
+    low_cash_alerts = []
+    min_threshold = current_cash * 0.2  # Alert if drops below 20% of current
+    
+    day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    
+    for i in range(days):
+        future_date = now + timedelta(days=i + 1)
+        dow = future_date.weekday()
+        
+        predicted_income = avg_income[dow]
+        predicted_expense = avg_expense[dow]
+        net_change = predicted_income - predicted_expense
+        running_balance += net_change
+        
+        prediction = {
+            "date": future_date.strftime("%Y-%m-%d"),
+            "day_name": day_names[dow],
+            "predicted_income": round(predicted_income, 2),
+            "predicted_expense": round(predicted_expense, 2),
+            "net_change": round(net_change, 2),
+            "predicted_balance": round(running_balance, 2),
+            "is_weekend": dow >= 5
+        }
+        predictions.append(prediction)
+        
+        if running_balance < min_threshold and running_balance < current_cash * 0.5:
+            low_cash_alerts.append({
+                "date": prediction["date"],
+                "predicted_balance": prediction["predicted_balance"],
+                "shortfall": round(min_threshold - running_balance, 2)
+            })
+    
+    # Weekly summary
+    weekly_summary = {
+        "avg_daily_income": round(sum(avg_income.values()) / 7, 2),
+        "avg_daily_expense": round(sum(avg_expense.values()) / 7, 2),
+        "best_day": day_names[max(avg_income, key=avg_income.get)],
+        "worst_day": day_names[min(avg_income, key=avg_income.get)],
+        "highest_expense_day": day_names[max(avg_expense, key=avg_expense.get)]
+    }
+    
+    return {
+        "current_cash_balance": round(current_cash, 2),
+        "predictions": predictions,
+        "low_cash_alerts": low_cash_alerts,
+        "weekly_patterns": weekly_summary,
+        "risk_level": "high" if len(low_cash_alerts) > 3 else "medium" if len(low_cash_alerts) > 0 else "low"
+    }
+
+
+@router.get("/reports/seasonal-forecast")
+async def get_seasonal_forecast(current_user: User = Depends(get_current_user)):
+    """
+    AI Seasonal Sales Forecasting - Identify seasonal patterns and predict best/worst days.
+    """
+    now = datetime.now(timezone.utc)
+    
+    # Get 12 months of historical data
+    start_date = (now - timedelta(days=365)).isoformat()[:10]
+    sales = await db.sales.find({"date": {"$gte": start_date}}, {"_id": 0}).to_list(50000)
+    
+    # Analyze by day of week
+    dow_sales = {i: [] for i in range(7)}
+    day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    
+    # Analyze by month
+    monthly_sales = {i: [] for i in range(1, 13)}
+    month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    
+    # Analyze by week of month
+    week_sales = {i: [] for i in range(1, 6)}  # Weeks 1-5
+    
+    for s in sales:
+        try:
+            d = datetime.fromisoformat(s["date"][:10])
+            amount = s.get("final_amount", s["amount"] - s.get("discount", 0))
+            
+            # Day of week
+            dow_sales[d.weekday()].append(amount)
+            
+            # Month
+            monthly_sales[d.month].append(amount)
+            
+            # Week of month
+            week_num = min((d.day - 1) // 7 + 1, 5)
+            week_sales[week_num].append(amount)
+        except:
+            pass
+    
+    # Calculate statistics
+    dow_analysis = []
+    for i in range(7):
+        if dow_sales[i]:
+            avg = sum(dow_sales[i]) / len(dow_sales[i])
+            total = sum(dow_sales[i])
+            count = len(dow_sales[i])
+            dow_analysis.append({
+                "day": day_names[i],
+                "day_num": i,
+                "avg_sales": round(avg, 2),
+                "total_sales": round(total, 2),
+                "transaction_count": count,
+                "is_weekend": i >= 5
+            })
+    
+    # Sort to find best/worst days
+    sorted_days = sorted(dow_analysis, key=lambda x: x["avg_sales"], reverse=True)
+    
+    monthly_analysis = []
+    for i in range(1, 13):
+        if monthly_sales[i]:
+            avg = sum(monthly_sales[i]) / len(monthly_sales[i])
+            total = sum(monthly_sales[i])
+            monthly_analysis.append({
+                "month": month_names[i-1],
+                "month_num": i,
+                "avg_sales": round(avg, 2),
+                "total_sales": round(total, 2),
+                "transaction_count": len(monthly_sales[i])
+            })
+    
+    sorted_months = sorted(monthly_analysis, key=lambda x: x["total_sales"], reverse=True)
+    
+    week_analysis = []
+    for i in range(1, 6):
+        if week_sales[i]:
+            avg = sum(week_sales[i]) / len(week_sales[i])
+            week_analysis.append({
+                "week": f"Week {i}",
+                "week_num": i,
+                "avg_sales": round(avg, 2),
+                "transaction_count": len(week_sales[i])
+            })
+    
+    # Generate insights
+    insights = []
+    if sorted_days:
+        best_day = sorted_days[0]
+        worst_day = sorted_days[-1]
+        diff_pct = ((best_day["avg_sales"] - worst_day["avg_sales"]) / max(worst_day["avg_sales"], 1)) * 100
+        insights.append(f"{best_day['day']} is your best day ({diff_pct:.0f}% higher than {worst_day['day']})")
+    
+    if sorted_months and len(sorted_months) >= 2:
+        insights.append(f"{sorted_months[0]['month']} is your peak sales month")
+        insights.append(f"{sorted_months[-1]['month']} typically has lowest sales")
+    
+    # Weekend vs Weekday comparison
+    weekend_avg = sum(d["avg_sales"] for d in dow_analysis if d["is_weekend"]) / max(len([d for d in dow_analysis if d["is_weekend"]]), 1)
+    weekday_avg = sum(d["avg_sales"] for d in dow_analysis if not d["is_weekend"]) / max(len([d for d in dow_analysis if not d["is_weekend"]]), 1)
+    
+    if weekend_avg > weekday_avg:
+        diff = ((weekend_avg - weekday_avg) / max(weekday_avg, 1)) * 100
+        insights.append(f"Weekends average {diff:.0f}% more sales than weekdays")
+    else:
+        diff = ((weekday_avg - weekend_avg) / max(weekend_avg, 1)) * 100
+        insights.append(f"Weekdays average {diff:.0f}% more sales than weekends")
+    
+    # Predict next 7 days
+    next_week_predictions = []
+    for i in range(7):
+        future_date = now + timedelta(days=i + 1)
+        dow = future_date.weekday()
+        dow_data = next((d for d in dow_analysis if d["day_num"] == dow), None)
+        if dow_data:
+            next_week_predictions.append({
+                "date": future_date.strftime("%Y-%m-%d"),
+                "day": day_names[dow],
+                "predicted_sales": dow_data["avg_sales"],
+                "confidence": "high" if dow_data["transaction_count"] > 10 else "medium"
+            })
+    
+    return {
+        "day_of_week_analysis": dow_analysis,
+        "monthly_analysis": monthly_analysis,
+        "week_of_month_analysis": week_analysis,
+        "best_days": sorted_days[:3] if len(sorted_days) >= 3 else sorted_days,
+        "worst_days": sorted_days[-3:] if len(sorted_days) >= 3 else sorted_days,
+        "best_months": sorted_months[:3] if len(sorted_months) >= 3 else sorted_months,
+        "weekend_vs_weekday": {
+            "weekend_avg": round(weekend_avg, 2),
+            "weekday_avg": round(weekday_avg, 2),
+            "better": "weekend" if weekend_avg > weekday_avg else "weekday"
+        },
+        "insights": insights,
+        "next_week_forecast": next_week_predictions
+    }
+
+
+@router.get("/reports/employee-performance")
+async def get_employee_performance(current_user: User = Depends(get_current_user)):
+    """
+    AI Employee Performance Scoring - Combines sales, attendance patterns, and activity metrics.
+    """
+    now = datetime.now(timezone.utc)
+    
+    # Get employees
+    employees = await db.employees.find({"status": "active"}, {"_id": 0}).to_list(500)
+    
+    # Get sales data (last 90 days)
+    start_date = (now - timedelta(days=90)).isoformat()[:10]
+    sales = await db.sales.find({"date": {"$gte": start_date}}, {"_id": 0}).to_list(20000)
+    
+    # Get shifts for attendance
+    shifts = await db.shifts.find({"date": {"$gte": start_date}}, {"_id": 0}).to_list(10000)
+    
+    # Get branches for context
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branch_map = {b["id"]: b["name"] for b in branches}
+    
+    # Calculate performance for each employee
+    performance_data = []
+    
+    for emp in employees:
+        emp_id = emp["id"]
+        emp_name = emp["name"]
+        emp_branch = emp.get("branch_id", "")
+        
+        # Sales metrics
+        emp_sales = [s for s in sales if s.get("created_by") == emp_id or s.get("employee_id") == emp_id]
+        total_sales = sum(s.get("final_amount", s["amount"] - s.get("discount", 0)) for s in emp_sales)
+        sales_count = len(emp_sales)
+        avg_sale_value = total_sales / max(sales_count, 1)
+        
+        # Attendance/Shift metrics
+        emp_shifts = [sh for sh in shifts if sh.get("employee_id") == emp_id]
+        total_shifts = len(emp_shifts)
+        completed_shifts = len([sh for sh in emp_shifts if sh.get("status") == "completed"])
+        attendance_rate = (completed_shifts / max(total_shifts, 1)) * 100
+        
+        # Calculate scores (0-100 scale)
+        # Sales score based on relative performance
+        sales_score = min(100, (total_sales / 50000) * 100) if total_sales > 0 else 0
+        
+        # Consistency score (based on sales count)
+        consistency_score = min(100, (sales_count / 100) * 100) if sales_count > 0 else 0
+        
+        # Attendance score
+        attendance_score = attendance_rate
+        
+        # Average sale value score
+        value_score = min(100, (avg_sale_value / 500) * 100) if avg_sale_value > 0 else 0
+        
+        # Overall score (weighted average)
+        overall_score = (
+            sales_score * 0.35 +
+            consistency_score * 0.25 +
+            attendance_score * 0.25 +
+            value_score * 0.15
+        )
+        
+        # Determine tier
+        if overall_score >= 80:
+            tier = "Top Performer"
+            tier_color = "emerald"
+        elif overall_score >= 60:
+            tier = "Good"
+            tier_color = "blue"
+        elif overall_score >= 40:
+            tier = "Average"
+            tier_color = "amber"
+        else:
+            tier = "Needs Improvement"
+            tier_color = "red"
+        
+        # Generate recommendations
+        recommendations = []
+        if sales_score < 40:
+            recommendations.append("Focus on increasing sales volume")
+        if consistency_score < 40:
+            recommendations.append("Work on daily sales consistency")
+        if attendance_score < 80:
+            recommendations.append("Improve shift attendance")
+        if value_score < 40:
+            recommendations.append("Try upselling for higher transaction values")
+        
+        performance_data.append({
+            "employee_id": emp_id,
+            "name": emp_name,
+            "branch": branch_map.get(emp_branch, "-"),
+            "role": emp.get("job_title", emp.get("role", "-")),
+            "metrics": {
+                "total_sales": round(total_sales, 2),
+                "sales_count": sales_count,
+                "avg_sale_value": round(avg_sale_value, 2),
+                "shifts_worked": completed_shifts,
+                "attendance_rate": round(attendance_rate, 1)
+            },
+            "scores": {
+                "sales": round(sales_score, 1),
+                "consistency": round(consistency_score, 1),
+                "attendance": round(attendance_score, 1),
+                "value": round(value_score, 1),
+                "overall": round(overall_score, 1)
+            },
+            "tier": tier,
+            "tier_color": tier_color,
+            "recommendations": recommendations
+        })
+    
+    # Sort by overall score
+    performance_data.sort(key=lambda x: x["scores"]["overall"], reverse=True)
+    
+    # Calculate team statistics
+    all_scores = [p["scores"]["overall"] for p in performance_data]
+    top_performers = [p for p in performance_data if p["tier"] == "Top Performer"]
+    
+    return {
+        "employees": performance_data,
+        "team_stats": {
+            "total_employees": len(performance_data),
+            "avg_score": round(sum(all_scores) / max(len(all_scores), 1), 1),
+            "top_performers_count": len(top_performers),
+            "needs_improvement_count": len([p for p in performance_data if p["tier"] == "Needs Improvement"])
+        },
+        "top_3": performance_data[:3] if len(performance_data) >= 3 else performance_data,
+        "period": "Last 90 days"
+    }
+
+
+@router.get("/reports/expense-anomalies")
+async def get_expense_anomalies(current_user: User = Depends(get_current_user)):
+    """
+    AI Smart Expense Alerts - Detect unusual spending patterns.
+    """
+    now = datetime.now(timezone.utc)
+    
+    # Get 6 months of expense data
+    start_date = (now - timedelta(days=180)).isoformat()[:10]
+    expenses = await db.expenses.find({"date": {"$gte": start_date}}, {"_id": 0}).to_list(20000)
+    
+    # Group by category
+    category_data = {}
+    for e in expenses:
+        cat = e.get("category", "general")
+        if cat not in category_data:
+            category_data[cat] = {"amounts": [], "dates": []}
+        category_data[cat]["amounts"].append(e["amount"])
+        category_data[cat]["dates"].append(e.get("date", ""))
+    
+    # Calculate statistics per category
+    anomalies = []
+    category_analysis = []
+    
+    for cat, data in category_data.items():
+        amounts = data["amounts"]
+        if len(amounts) < 3:
+            continue
+        
+        avg = sum(amounts) / len(amounts)
+        # Calculate standard deviation
+        variance = sum((x - avg) ** 2 for x in amounts) / len(amounts)
+        std_dev = variance ** 0.5
+        
+        # Recent expenses (last 30 days)
+        recent_date = (now - timedelta(days=30)).isoformat()[:10]
+        recent_expenses = [e for e in expenses if e.get("category") == cat and e.get("date", "") >= recent_date]
+        recent_total = sum(e["amount"] for e in recent_expenses)
+        recent_avg = recent_total / max(len(recent_expenses), 1)
+        
+        # Monthly average for comparison
+        monthly_avg = avg * (len(amounts) / 6)  # Approximate monthly avg
+        
+        # Detect anomalies
+        threshold = avg + (2 * std_dev)  # 2 standard deviations
+        
+        for e in recent_expenses:
+            if e["amount"] > threshold:
+                deviation_pct = ((e["amount"] - avg) / max(avg, 1)) * 100
+                anomalies.append({
+                    "category": cat.replace("_", " ").title(),
+                    "amount": e["amount"],
+                    "date": e.get("date", ""),
+                    "description": e.get("description", "-"),
+                    "expected_avg": round(avg, 2),
+                    "deviation_percent": round(deviation_pct, 1),
+                    "severity": "high" if deviation_pct > 200 else "medium" if deviation_pct > 100 else "low"
+                })
+        
+        # Category spending trend
+        trend = "increasing" if recent_avg > avg * 1.2 else "decreasing" if recent_avg < avg * 0.8 else "stable"
+        
+        category_analysis.append({
+            "category": cat.replace("_", " ").title(),
+            "avg_transaction": round(avg, 2),
+            "std_deviation": round(std_dev, 2),
+            "threshold": round(threshold, 2),
+            "recent_avg": round(recent_avg, 2),
+            "transaction_count": len(amounts),
+            "recent_count": len(recent_expenses),
+            "trend": trend,
+            "monthly_total": round(recent_total, 2)
+        })
+    
+    # Sort anomalies by severity and amount
+    severity_order = {"high": 0, "medium": 1, "low": 2}
+    anomalies.sort(key=lambda x: (severity_order[x["severity"]], -x["amount"]))
+    
+    # Overall spending trend
+    last_month_total = sum(e["amount"] for e in expenses if e.get("date", "") >= (now - timedelta(days=30)).isoformat()[:10])
+    prev_month_total = sum(e["amount"] for e in expenses if (now - timedelta(days=60)).isoformat()[:10] <= e.get("date", "") < (now - timedelta(days=30)).isoformat()[:10])
+    
+    spending_change = ((last_month_total - prev_month_total) / max(prev_month_total, 1)) * 100
+    
+    # Generate alerts
+    alerts = []
+    if spending_change > 30:
+        alerts.append({
+            "type": "spending_spike",
+            "message": f"Overall spending increased {spending_change:.0f}% compared to last month",
+            "severity": "high" if spending_change > 50 else "medium"
+        })
+    
+    high_anomalies = [a for a in anomalies if a["severity"] == "high"]
+    if high_anomalies:
+        alerts.append({
+            "type": "unusual_expenses",
+            "message": f"{len(high_anomalies)} unusually high expenses detected this month",
+            "severity": "high"
+        })
+    
+    return {
+        "anomalies": anomalies[:10],  # Top 10 anomalies
+        "category_analysis": sorted(category_analysis, key=lambda x: -x["monthly_total"]),
+        "alerts": alerts,
+        "spending_trend": {
+            "last_month": round(last_month_total, 2),
+            "previous_month": round(prev_month_total, 2),
+            "change_percent": round(spending_change, 1),
+            "direction": "up" if spending_change > 0 else "down"
+        },
+        "period": "Last 30 days analysis (6-month baseline)"
+    }
+
+
+@router.get("/reports/supplier-optimization")
+async def get_supplier_optimization(current_user: User = Depends(get_current_user)):
+    """
+    AI Supplier Payment Optimization - Recommend optimal payment timing and predict cash impact.
+    """
+    now = datetime.now(timezone.utc)
+    
+    # Get suppliers
+    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(500)
+    
+    # Get payment history
+    all_payments = await db.supplier_payments.find({}, {"_id": 0}).to_list(20000)
+    
+    # Get expenses linked to suppliers
+    expenses = await db.expenses.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
+    
+    # Get current cash balance
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    total_cash = sum(b.get("cash_balance", 0) for b in branches)
+    total_bank = sum(b.get("bank_balance", 0) for b in branches)
+    
+    supplier_analysis = []
+    total_pending = 0
+    urgent_payments = []
+    
+    for supplier in suppliers:
+        sup_id = supplier["id"]
+        sup_name = supplier["name"]
+        
+        # Get payment history
+        sup_payments = [p for p in all_payments if p.get("supplier_id") == sup_id]
+        sup_expenses = [e for e in expenses if e.get("supplier_id") == sup_id]
+        
+        # Current balance
+        current_credit = supplier.get("current_credit", 0)
+        credit_limit = supplier.get("credit_limit", 0)
+        
+        # Calculate payment patterns
+        payment_amounts = [p["amount"] for p in sup_payments]
+        avg_payment = sum(payment_amounts) / max(len(payment_amounts), 1) if payment_amounts else 0
+        
+        # Calculate payment frequency
+        payment_dates = sorted([p.get("date", "") for p in sup_payments if p.get("date")])
+        if len(payment_dates) >= 2:
+            try:
+                date_diffs = []
+                for i in range(1, len(payment_dates)):
+                    d1 = datetime.fromisoformat(payment_dates[i-1][:10])
+                    d2 = datetime.fromisoformat(payment_dates[i][:10])
+                    date_diffs.append((d2 - d1).days)
+                avg_days_between = sum(date_diffs) / len(date_diffs) if date_diffs else 30
+            except:
+                avg_days_between = 30
+        else:
+            avg_days_between = 30
+        
+        # Last payment date
+        last_payment_date = payment_dates[-1] if payment_dates else None
+        
+        # Calculate urgency
+        days_since_payment = 0
+        if last_payment_date:
+            try:
+                last_date = datetime.fromisoformat(last_payment_date[:10])
+                days_since_payment = (now - last_date.replace(tzinfo=timezone.utc)).days
+            except:
+                pass
+        
+        # Determine priority
+        credit_utilization = (current_credit / max(credit_limit, 1)) * 100 if credit_limit > 0 else 0
+        
+        if credit_utilization > 90:
+            priority = "critical"
+            priority_reason = "Near credit limit"
+        elif credit_utilization > 70:
+            priority = "high"
+            priority_reason = "High credit utilization"
+        elif days_since_payment > avg_days_between * 1.5:
+            priority = "medium"
+            priority_reason = "Overdue for payment"
+        else:
+            priority = "low"
+            priority_reason = "On schedule"
+        
+        # Recommended payment
+        if current_credit > 0:
+            if priority == "critical":
+                recommended_payment = current_credit * 0.5  # Pay 50%
+            elif priority == "high":
+                recommended_payment = current_credit * 0.3  # Pay 30%
+            else:
+                recommended_payment = min(current_credit, avg_payment) if avg_payment > 0 else current_credit * 0.25
+        else:
+            recommended_payment = 0
+        
+        # Next suggested payment date
+        if last_payment_date:
+            try:
+                next_date = datetime.fromisoformat(last_payment_date[:10]) + timedelta(days=int(avg_days_between))
+                suggested_date = max(next_date, now).strftime("%Y-%m-%d")
+            except:
+                suggested_date = now.strftime("%Y-%m-%d")
+        else:
+            suggested_date = now.strftime("%Y-%m-%d")
+        
+        total_pending += current_credit
+        
+        analysis = {
+            "supplier_id": sup_id,
+            "name": sup_name,
+            "category": supplier.get("category", "-"),
+            "current_balance": round(current_credit, 2),
+            "credit_limit": round(credit_limit, 2),
+            "credit_utilization": round(credit_utilization, 1),
+            "avg_payment": round(avg_payment, 2),
+            "payment_frequency_days": round(avg_days_between, 0),
+            "days_since_last_payment": days_since_payment,
+            "priority": priority,
+            "priority_reason": priority_reason,
+            "recommended_payment": round(recommended_payment, 2),
+            "suggested_payment_date": suggested_date
+        }
+        
+        supplier_analysis.append(analysis)
+        
+        if priority in ["critical", "high"] and current_credit > 0:
+            urgent_payments.append(analysis)
+    
+    # Sort by priority
+    priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+    supplier_analysis.sort(key=lambda x: (priority_order[x["priority"]], -x["current_balance"]))
+    urgent_payments.sort(key=lambda x: (priority_order[x["priority"]], -x["current_balance"]))
+    
+    # Cash impact analysis
+    total_recommended = sum(s["recommended_payment"] for s in supplier_analysis)
+    cash_after_payments = total_cash - total_recommended
+    
+    # Payment schedule recommendation
+    schedule = []
+    remaining_cash = total_cash
+    
+    for sup in supplier_analysis[:10]:  # Top 10 by priority
+        if sup["recommended_payment"] > 0 and remaining_cash > sup["recommended_payment"]:
+            schedule.append({
+                "supplier": sup["name"],
+                "amount": sup["recommended_payment"],
+                "date": sup["suggested_payment_date"],
+                "priority": sup["priority"]
+            })
+            remaining_cash -= sup["recommended_payment"]
+    
+    return {
+        "suppliers": supplier_analysis,
+        "urgent_payments": urgent_payments[:5],
+        "summary": {
+            "total_suppliers": len(suppliers),
+            "total_pending_amount": round(total_pending, 2),
+            "critical_count": len([s for s in supplier_analysis if s["priority"] == "critical"]),
+            "high_priority_count": len([s for s in supplier_analysis if s["priority"] == "high"])
+        },
+        "cash_impact": {
+            "current_cash": round(total_cash, 2),
+            "current_bank": round(total_bank, 2),
+            "total_recommended_payments": round(total_recommended, 2),
+            "cash_after_payments": round(cash_after_payments, 2),
+            "can_afford_all": cash_after_payments > 0
+        },
+        "recommended_schedule": schedule
+    }
