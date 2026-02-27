@@ -241,7 +241,9 @@ export default function CashierPOSPage() {
   const sendToKitchen = async () => {
     if (!lastOrder) return;
     try {
-      await api.post(`/cashier/orders/${lastOrder.id}/send-kitchen`);
+      const token = localStorage.getItem('cashier_token');
+      const headers = { Authorization: `Bearer ${token}` };
+      await api.post(`/cashier/orders/${lastOrder.id}/send-kitchen`, {}, { headers });
       toast.success('Order sent to kitchen!');
     } catch (err) {
       toast.error('Failed to send to kitchen');
