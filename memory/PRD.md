@@ -99,23 +99,22 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - Employee: ahmed@test.com / emp@123
 
 ## Recently Completed (Feb 2026)
-- **Advanced Data Visualizations (10 features):**
-  1. Interactive Heatmap Calendar (365-day, 3 metrics)
-  2. Sales Pipeline Funnel Chart (5 stages + conversion rates)
-  3. Expense Treemap (hierarchical, 1/3/6/12 month filter)
-  4. KPI Gauge Charts (Sales Target, Profit Margin, Collection Rate, Customer Retention)
-  5. Branch Comparison Radar Chart (5 metrics normalized to 0-100)
-  6. Cash Flow Waterfall Chart (income/expense steps → net balance)
-  7. Money Flow Sankey Diagram (sources → revenue → destinations)
-  8. Time-Series Multi-Period Comparison (2-6 months overlay)
-  9. Export Charts as PNG (html2canvas)
-  10. New Visualizations page with 8 tabs + sidebar nav
-- **Scheduled EOD Auto-Send** - `eod_summary` scheduler job
-- **Predictive Analytics Hub** - 5 AI modules
-- **Dashboard Sparklines** - Mini SVG trend charts
-- **Dark Mode** - Full support with toggle
-- **Keyboard Shortcuts** - 9 navigation shortcuts (incl. V=Visualizations)
-- **Mobile Bottom Tab Bar** - 5-item quick nav
+- **Multi-Language Support (Arabic/English):**
+  - LanguageContext with useLanguage hook and localStorage persistence
+  - Full Arabic translation (150+ strings: nav, dashboard, reports, analytics, visualizations)
+  - RTL layout auto-applied when Arabic selected (sidebar right, text alignment flipped)
+  - Language toggle in sidebar footer + mobile header ("عربي" / "EN")
+  - Dashboard stat cards, page titles, and nav labels all translated
+- **Interactive Drill-Down on Visualizations:**
+  - Heatmap day click → EOD Summary pre-filled with date
+  - Funnel stage click → Customers or Sales page
+  - Treemap category click → Expenses filtered by category
+  - Waterfall step click → Sales (income) or Expenses (expense)
+  - Radar branch click → Dashboard filtered by branch
+  - "Click to drill down" hint text on all interactive charts
+- **Advanced Data Visualizations (10 features)** — Heatmap, Funnel, Treemap, Gauges, Radar, Waterfall, Money Flow, Time-Series, Export PNG
+- **Predictive Analytics Hub** — 5 AI modules
+- **Scheduled EOD Auto-Send, Dark Mode, Keyboard Shortcuts, Mobile Bottom Nav, Sparklines**
 - **Real-time Stock Alerts** - Polling-based alerts with expandable banner
 - **End-of-Day (EOD) Summary Report** - New tab in Reports with date/branch filter
 - **Partner Profit & Loss (P&L)** - New tab in Reports with partner breakdown
