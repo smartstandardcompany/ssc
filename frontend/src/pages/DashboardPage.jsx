@@ -83,6 +83,8 @@ export default function DashboardPage() {
       setPendingSalaries(pendRes.data);
       const brRes = await api.get('/branches');
       setBranches(brRes.data);
+      // Fetch today vs yesterday
+      try { const tvyRes = await api.get('/dashboard/today-vs-yesterday'); setTodayVsYest(tvyRes.data); } catch {}
     } catch (error) {
       toast.error('Failed to fetch dashboard stats');
     } finally {
