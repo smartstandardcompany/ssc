@@ -188,7 +188,7 @@ export const DashboardLayout = ({ children }) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const shortcuts = {
       'd': '/', 'n': '/pos', 'p': '/pos', 's': '/sales', 'e': '/expenses',
-      'i': '/stock', 'r': '/reports', 'a': '/analytics', '?': 'shortcuts',
+      'i': '/stock', 'r': '/reports', 'a': '/analytics', 'v': '/visualizations', '?': 'shortcuts',
     };
     const target = shortcuts[e.key.toLowerCase()];
     if (target === 'shortcuts') { e.preventDefault(); setShowShortcuts(s => !s); }
