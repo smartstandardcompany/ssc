@@ -260,6 +260,7 @@ export const DashboardLayout = ({ children }) => {
               userPerms={userPerms}
               currentPath={location.pathname}
               onNavigate={() => setMobileOpen(false)}
+              t={t}
             />
           ))
         )}
