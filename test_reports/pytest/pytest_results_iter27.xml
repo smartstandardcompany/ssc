@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="16" skipped="0" tests="20" time="2.546" timestamp="2026-02-27T01:39:16.662821+00:00" hostname="agent-env-a55846b6-ae03-4a97-ac33-6becfe8b1d26"><testcase classname="backend.tests.test_iteration27_predictive_analytics.TestExpenseForecast" name="test_expense_forecast_returns_200" time="0.844"><failure message="AssertionError: Expected 200, got 401: {&quot;detail&quot;:&quot;Invalid authentication credentials&quot;}&#10;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">backend/tests/test_iteration27_predictive_analytics.py:47: in test_expense_forecast_returns_200
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+E   AssertionError: Expected 200, got 401: {"detail":"Invalid authentication credentials"}
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration27_predictive_analytics.TestExpenseForecast" name="test_expense_forecast_structure" time="0.098"><failure message="AssertionError: Missing next_month field&#10;assert 'next_month' in {'detail': 'Invalid authentication credentials'}">backend/tests/test_iteration27_predictive_analytics.py:54: in test_expense_forecast_structure
+    assert "next_month" in data, "Missing next_month field"
+E   AssertionError: Missing next_month field
+E   assert 'next_month' in {'detail': 'Invalid authentication credentials'}</failure></testcase><testcase classname="backend.tests.test_iteration27_predictive_analytics.TestExpenseForecast" name="test_expense_forecast_categories_structure" time="0.077" /><testcase classname="backend.tests.test_iteration27_predictive_analytics.TestStockReorder" name="test_stock_reorder_returns_200" time="0.086"><failure message="AssertionError: Expected 200, got 401: {&quot;detail&quot;:&quot;Invalid authentication credentials&quot;}&#10;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">backend/tests/test_iteration27_predictive_analytics.py:81: in test_stock_reorder_returns_200
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+E   AssertionError: Expected 200, got 401: {"detail":"Invalid authentication credentials"}
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration27_predictive_analytics.TestStockReorder" name="test_stock_reorder_structure" time="0.074"><failure message="AssertionError: Missing predictions field&#10;assert 'predictions' in {'detail': 'Invalid authentication credentials'}">backend/tests/test_iteration27_predictive_analytics.py:87: in test_stock_reorder_structure
+    assert "predictions" in data, "Missing predictions field"
+E   AssertionError: Missing predictions field
+E   assert 'predictions' in {'detail': 'Invalid authentication credentials'}</failure></testcase><testcase classname="backend.tests.test_iteration27_predictive_analytics.TestStockReorder" name="test_stock_reorder_predictions_structure" time="0.069" /><testcase classname="backend.tests.test_iteration27_predictive_analytics.TestRevenueTrends" name="test_revenue_trends_returns_200" time="0.073"><failure message="AssertionError: Expected 200, got 401: {&quot;detail&quot;:&quot;Invalid authentication credentials&quot;}&#10;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">backend/tests/test_iteration27_predictive_analytics.py:112: in test_revenue_trends_returns_200
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+E   AssertionError: Expected 200, got 401: {"detail":"Invalid authentication credentials"}
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration27_predictive_analytics.TestRevenueTrends" name="test_revenue_trends_structure" time="0.087"><failure message="AssertionError: Missing weekly field&#10;assert 'weekly' in {'detail': 'Invalid authentication credentials'}">backend/tests/test_iteration27_predictive_analytics.py:118: in test_revenue_trends_structure
+    assert "weekly" in data, "Missing weekly field"
+E   AssertionError: Missing weekly field
+E   assert 'weekly' in {'detail': 'Invalid authentication credentials'}</failure></testcase><testcase classname="backend.tests.test_iteration27_predictive_analytics.TestRevenueTrends" name="test_revenue_trends_growth_structure" time="0.095"><failure message="AssertionError: Growth missing weekly_rates&#10;assert 'weekly_rates' in {}">backend/tests/test_iteration27_predictive_analytics.py:127: in test_revenue_trends_growth_structure
+    assert "weekly_rates" in growth, "Growth missing weekly_rates"
+E   AssertionError: Growth missing weekly_rates
+E   assert 'weekly_rates' in {}</failure></testcase><testcase classname="backend.tests.test_iteration27_predictive_analytics.TestCustomerChurn" name="test_customer_churn_returns_200" time="0.076"><failure message="AssertionError: Expected 200, got 401: {&quot;detail&quot;:&quot;Invalid authentication credentials&quot;}&#10;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">backend/tests/test_iteration27_predictive_analytics.py:140: in test_customer_churn_returns_200
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+E   AssertionError: Expected 200, got 401: {"detail":"Invalid authentication credentials"}
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration27_predictive_analytics.TestCustomerChurn" name="test_customer_churn_structure" time="0.075"><failure message="AssertionError: Missing customers field&#10;assert 'customers' in {'detail': 'Invalid authentication credentials'}">backend/tests/test_iteration27_predictive_analytics.py:146: in test_customer_churn_structure
+    assert "customers" in data, "Missing customers field"
+E   AssertionError: Missing customers field
+E   assert 'customers' in {'detail': 'Invalid authentication credentials'}</failure></testcase><testcase classname="backend.tests.test_iteration27_predictive_analytics.TestCustomerChurn" name="test_customer_churn_summary_structure" time="0.074"><failure message="AssertionError: Summary missing total&#10;assert 'total' in {}">backend/tests/test_iteration27_predictive_analytics.py:154: in test_customer_churn_summary_structure
+    assert "total" in summary, "Summary missing total"
+E   AssertionError: Summary missing total
+E   assert 'total' in {}</failure></testcase><testcase classname="backend.tests.test_iteration27_predictive_analytics.TestCustomerChurn" name="test_customer_churn_customer_structure" time="0.078" /><testcase classname="backend.tests.test_iteration27_predictive_analytics.TestMarginOptimizer" name="test_margin_optimizer_returns_200" time="0.077"><failure message="AssertionError: Expected 200, got 401: {&quot;detail&quot;:&quot;Invalid authentication credentials&quot;}&#10;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">backend/tests/test_iteration27_predictive_analytics.py:181: in test_margin_optimizer_returns_200
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+E   AssertionError: Expected 200, got 401: {"detail":"Invalid authentication credentials"}
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration27_predictive_analytics.TestMarginOptimizer" name="test_margin_optimizer_structure" time="0.074"><failure message="AssertionError: Missing items field&#10;assert 'items' in {'detail': 'Invalid authentication credentials'}">backend/tests/test_iteration27_predictive_analytics.py:187: in test_margin_optimizer_structure
+    assert "items" in data, "Missing items field"
+E   AssertionError: Missing items field
+E   assert 'items' in {'detail': 'Invalid authentication credentials'}</failure></testcase><testcase classname="backend.tests.test_iteration27_predictive_analytics.TestMarginOptimizer" name="test_margin_optimizer_items_structure" time="0.082" /><testcase classname="backend.tests.test_iteration27_predictive_analytics.TestSchedulerEodSummary" name="test_scheduler_config_returns_200" time="0.089"><failure message="AssertionError: Expected 200, got 401: {&quot;detail&quot;:&quot;Invalid authentication credentials&quot;}&#10;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">backend/tests/test_iteration27_predictive_analytics.py:214: in test_scheduler_config_returns_200
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+E   AssertionError: Expected 200, got 401: {"detail":"Invalid authentication credentials"}
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration27_predictive_analytics.TestSchedulerEodSummary" name="test_scheduler_has_eod_summary_job" time="0.074"><failure message="TypeError: string indices must be integers, not 'str'">backend/tests/test_iteration27_predictive_analytics.py:220: in test_scheduler_has_eod_summary_job
+    job_types = [cfg["job_type"] for cfg in data]
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/tests/test_iteration27_predictive_analytics.py:220: in &lt;listcomp&gt;
+    job_types = [cfg["job_type"] for cfg in data]
+                 ^^^^^^^^^^^^^^^
+E   TypeError: string indices must be integers, not 'str'</failure></testcase><testcase classname="backend.tests.test_iteration27_predictive_analytics.TestSchedulerEodSummary" name="test_scheduler_eod_can_be_enabled" time="0.078"><failure message="AssertionError: Failed to enable eod_summary: {&quot;detail&quot;:&quot;Invalid authentication credentials&quot;}&#10;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">backend/tests/test_iteration27_predictive_analytics.py:233: in test_scheduler_eod_can_be_enabled
+    assert response.status_code == 200, f"Failed to enable eod_summary: {response.text}"
+E   AssertionError: Failed to enable eod_summary: {"detail":"Invalid authentication credentials"}
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration27_predictive_analytics.TestSchedulerEodSummary" name="test_scheduler_eod_can_update_time" time="0.089"><failure message="AssertionError: Failed to update eod_summary time: {&quot;detail&quot;:&quot;Invalid authentication credentials&quot;}&#10;assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">backend/tests/test_iteration27_predictive_analytics.py:246: in test_scheduler_eod_can_update_time
+    assert response.status_code == 200, f"Failed to update eod_summary time: {response.text}"
+E   AssertionError: Failed to update eod_summary time: {"detail":"Invalid authentication credentials"}
+E   assert 401 == 200
+E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase></testsuite></testsuites>
