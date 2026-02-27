@@ -226,6 +226,10 @@ export default function DashboardPage() {
           {statCards.map((card) => {
             const Icon = card.icon;
             const rawVal = parseFloat(card.value.replace('$', '').replace(',', '')) || 0;
+            // Today vs yesterday comparison
+            const tvyKey = card.title === 'Total Sales' ? 'sales' : card.title === 'Total Expenses' ? 'expenses' : card.title === 'Net Profit' ? 'profit' : null;
+            const tvyChange = todayVsYest && tvyKey ? todayVsYest.change[tvyKey] : null;
+            const tvyToday = todayVsYest && tvyKey ? todayVsYest.today[tvyKey] : null;
             return (
               <Card key={card.title} className="stat-card border-border" data-testid={card.testId}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -234,12 +238,20 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold font-outfit" data-testid={`${card.testId}-value`}>{card.value}</span>
+                    <span className="text-2xl sm:text-3xl font-bold font-outfit" data-testid={`${card.testId}-value`}>{card.value}</span>
                   </div>
-                  <div className="flex items-center mt-1 flex-wrap">
+                  <div className="flex items-center mt-1 flex-wrap gap-1">
                     {card.prev !== undefined && <ChangeIndicator current={rawVal} previous={card.prev} invert={card.invert} />}
                     {card.pct !== undefined && card.pct > 0 && <PctBadge value={card.pct} />}
                   </div>
+                  {tvyChange !== null && (
+                    <div className="mt-2 pt-2 border-t border-stone-100 flex items-center justify-between" data-testid={`tvy-${tvyKey}`}>
+                      <span className="text-[10px] text-muted-foreground">Today: SAR {tvyToday?.toLocaleString()}</span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${tvyChange > 0 && !card.invert ? 'bg-emerald-100 text-emerald-700' : tvyChange < 0 && !card.invert ? 'bg-red-100 text-red-700' : tvyChange > 0 && card.invert ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                        {tvyChange > 0 ? '+' : ''}{tvyChange}% vs yesterday
+                      </span>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );
