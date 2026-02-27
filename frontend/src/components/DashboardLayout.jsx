@@ -387,9 +387,53 @@ export const DashboardLayout = ({ children }) => {
       {/* Floating Quick Entry Button */}
       {location.pathname !== '/pos' && (
         <Link to="/pos" data-testid="floating-quick-entry"
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-gradient-to-br from-orange-500 to-amber-500 rounded-full shadow-lg shadow-orange-500/30 flex items-center justify-center text-white hover:scale-110 transition-transform duration-200 lg:bottom-8 lg:right-8">
+          className="fixed bottom-20 right-6 z-50 w-14 h-14 bg-gradient-to-br from-orange-500 to-amber-500 rounded-full shadow-lg shadow-orange-500/30 flex items-center justify-center text-white hover:scale-110 transition-transform duration-200 lg:bottom-8 lg:right-8">
           <Zap size={22} strokeWidth={2.5} />
         </Link>
+      )}
+
+      {/* Mobile Bottom Tab Bar */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-stone-900 border-t border-stone-100 dark:border-stone-700 flex items-center justify-around px-1 py-1.5 safe-area-bottom" data-testid="mobile-bottom-nav">
+        {[
+          { path: '/', icon: LayoutDashboard, label: 'Home' },
+          { path: '/sales', icon: ShoppingCart, label: 'Sales' },
+          { path: '/expenses', icon: Receipt, label: 'Expenses' },
+          { path: '/stock', icon: Package, label: 'Stock' },
+          { path: '/reports', icon: BarChart3, label: 'Reports' },
+        ].map(item => {
+          const Icon = item.icon;
+          const isActive = location.pathname === item.path;
+          return (
+            <Link key={item.path} to={item.path} data-testid={`bottom-nav-${item.label.toLowerCase()}`}
+              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors ${isActive ? 'text-orange-600' : 'text-stone-400'}`}>
+              <Icon size={18} strokeWidth={isActive ? 2.5 : 1.5} />
+              <span className="text-[9px] font-medium">{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* Keyboard Shortcuts Modal */}
+      {showShortcuts && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={() => setShowShortcuts(false)}>
+          <div className="bg-white dark:bg-stone-800 rounded-2xl shadow-2xl max-w-sm w-full mx-4 p-5" onClick={e => e.stopPropagation()} data-testid="shortcuts-modal">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold font-outfit dark:text-white">Keyboard Shortcuts</h3>
+              <button onClick={() => setShowShortcuts(false)} className="text-stone-400 hover:text-stone-600"><X size={18} /></button>
+            </div>
+            <div className="space-y-2 text-sm">
+              {[
+                ['D', 'Dashboard'], ['N / P', 'POS / Quick Entry'], ['S', 'Sales'],
+                ['E', 'Expenses'], ['I', 'Inventory'], ['R', 'Reports'], ['A', 'Analytics'], ['?', 'Show Shortcuts'],
+              ].map(([key, desc]) => (
+                <div key={key} className="flex items-center justify-between py-1.5 border-b border-stone-100 dark:border-stone-700 last:border-0">
+                  <span className="text-stone-600 dark:text-stone-300">{desc}</span>
+                  <kbd className="bg-stone-100 dark:bg-stone-700 text-stone-600 dark:text-stone-300 px-2 py-0.5 rounded text-xs font-mono font-bold">{key}</kbd>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
