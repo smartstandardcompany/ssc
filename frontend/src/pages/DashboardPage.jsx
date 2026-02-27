@@ -95,6 +95,16 @@ export default function DashboardPage() {
       setBranches(brRes.data);
       // Fetch today vs yesterday
       try { const tvyRes = await api.get('/dashboard/today-vs-yesterday'); setTodayVsYest(tvyRes.data); } catch {}
+      // Fetch daily trend for sparklines
+      try {
+        const dsRes = await api.get('/reports/daily-summary');
+        const days = (dsRes.data || []).slice(0, 7).reverse();
+        setDailyTrend({
+          sales: days.map(d => d.sales || 0),
+          expenses: days.map(d => d.expenses || 0),
+          profit: days.map(d => (d.sales || 0) - (d.expenses || 0)),
+        });
+      } catch {}
     } catch (error) {
       toast.error('Failed to fetch dashboard stats');
     } finally {
