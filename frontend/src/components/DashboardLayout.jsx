@@ -138,6 +138,8 @@ export const DashboardLayout = ({ children }) => {
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [stockAlerts, setStockAlerts] = useState([]);
+  const [showStockAlerts, setShowStockAlerts] = useState(false);
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const isEmployee = user.role === 'employee';
@@ -154,6 +156,22 @@ export const DashboardLayout = ({ children }) => {
     const interval = setInterval(fetchNotifs, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (isEmployee) return;
+    const fetchAlerts = async () => {
+      try {
+        const res = await api.get('/stock/alerts');
+        setStockAlerts(res.data || []);
+        if (res.data?.length > 0 && stockAlerts.length === 0) {
+          toast.warning(`${res.data.length} item(s) below minimum stock level`, { duration: 5000 });
+        }
+      } catch {}
+    };
+    fetchAlerts();
+    const interval = setInterval(fetchAlerts, 60000);
+    return () => clearInterval(interval);
+  }, []); // eslint-disable-line
 
   useEffect(() => {
     setMobileOpen(false);
