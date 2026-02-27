@@ -1,0 +1,92 @@
+{
+  "summary": "Iteration 27: Predictive Analytics & UX Enhancements - All features tested and working. Backend: 20/20 tests passed. Frontend: All new features verified - Predictive Analytics Hub (5 tabs), Dashboard sparklines, Dark mode toggle, Keyboard shortcuts modal, Mobile bottom tab bar, EOD Summary scheduler config.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Console warnings", "issues": ["React hydration warnings about span inside tbody/select - cosmetic only, doesn't affect functionality"]}
+    ]
+  },
+
+  "passed_tests": [
+    "Backend: GET /api/reports/expense-forecast returns 200 with next_month, total_predicted, categories, history",
+    "Backend: Expense forecast categories have category, predicted, avg_3m, trend (up/down/stable)",
+    "Backend: GET /api/reports/stock-reorder returns 200 with predictions, total_items, items_needing_reorder",
+    "Backend: Stock reorder predictions have item_id, item_name, unit, current_balance, daily_usage, days_left, reorder_date, suggested_reorder_qty, urgency (critical/soon/normal/safe)",
+    "Backend: GET /api/reports/revenue-trends returns 200 with weekly, monthly, growth",
+    "Backend: Revenue trends growth has weekly_rates, monthly_rates, avg_weekly, avg_monthly, predicted_next_week",
+    "Backend: GET /api/reports/customer-churn returns 200 with customers, summary",
+    "Backend: Customer churn summary has total, lost, high_risk, medium_risk, active",
+    "Backend: Customer churn customer structure has customer_id, name, last_purchase_date, days_inactive, purchase_count, total_spent, risk_level (lost/high/medium/low)",
+    "Backend: GET /api/reports/margin-optimizer returns 200 with items, total_analyzed, stars, to_promote, to_review",
+    "Backend: Margin optimizer items have item_id, item_name, unit_price, cost_price, margin_pct, total_qty_sold, total_revenue, total_profit, recommendation (star/promote/review/maintain)",
+    "Backend: GET /api/scheduler/config returns 200 with list of job configs",
+    "Backend: Scheduler config includes 'eod_summary' job type with label, enabled, hour, channels",
+    "Backend: PUT /api/scheduler/config/eod_summary can enable/disable the job",
+    "Backend: PUT /api/scheduler/config/eod_summary can update time (hour, minute)",
+    "Frontend: Dashboard shows sparkline mini-charts on stat cards (7 sparklines found)",
+    "Frontend: Total Sales card has sparkline mini-chart showing 7-day trend",
+    "Frontend: Dark mode toggle button in sidebar footer - toggles 'dark' class on html element",
+    "Frontend: Keyboard Shortcuts button opens modal showing D/N/P/S/E/I/R/A/? shortcuts",
+    "Frontend: Analytics page has Predictive Analytics Hub card",
+    "Frontend: Predictive Analytics Hub has all 5 tabs: Expense Forecast, Stock Reorder, Revenue Trends, Customer Churn, Margin Optimizer",
+    "Frontend: Expense Forecast tab shows predicted total (SAR 25)",
+    "Frontend: Stock Reorder tab loads with items needing reorder section",
+    "Frontend: Revenue Trends tab shows avg weekly growth (-9.1%)",
+    "Frontend: Customer Churn tab shows summary cards (Active, Medium Risk, High Risk, Lost)",
+    "Frontend: Margin Optimizer tab shows Items Analyzed, Star Items, To Promote, Needs Review counts",
+    "Frontend: Mobile bottom tab bar (viewport < 1024px) shows 5 nav items: Home, Sales, Expenses, Stock, Reports",
+    "Frontend: Mobile bottom nav navigation works - Sales, Expenses, Home buttons navigate correctly",
+    "Frontend: Mobile dark mode toggle in header works",
+    "Frontend: Settings > Scheduler tab shows 'EOD Summary (Auto)' job with WA and Email channels",
+    "Frontend: EOD Summary scheduler shows time (10:00 PM) and Test button"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_iteration27_predictive_analytics.py",
+    "/app/test_reports/pytest/pytest_results_iter27.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "Expense Forecast: Uses 3-month moving average to predict next month's expenses by category. Shows trend direction (up/down/stable) based on last 3 months",
+    "Stock Reorder: Calculates daily usage from stock_usage records, predicts days_left and reorder_date. Urgency levels: critical (<=3 days), soon (<=7 days), normal (<=14 days), safe (>14 days)",
+    "Revenue Trends: Shows 12 weeks of weekly data and 6 months of monthly data. Calculates growth rates and predicts next week sales",
+    "Customer Churn: Risk levels based on days_inactive: lost (>90), high (>60), medium (>30), low (<=30)",
+    "Margin Optimizer: Calculates margin_pct from (sell-cost)/sell. Recommendations: star (>=40% margin + qty>=10), promote (>=30%), review (<15%), maintain (others)",
+    "EOD Summary scheduler job sends comprehensive end-of-day report via WhatsApp and Email at configurable time (default 10:00 PM)",
+    "Sparklines in DashboardPage use SVG polyline to render 7-day trends for sales, expenses, profit",
+    "Dark mode uses Tailwind class-based approach - toggles 'dark' class on html element, CSS overrides in App.css",
+    "Keyboard shortcuts only work when not focused on input fields. Shortcuts: D=Dashboard, N/P=POS, S=Sales, E=Expenses, I=Inventory, R=Reports, A=Analytics, ?=Show shortcuts",
+    "Mobile bottom nav uses lg:hidden class (shows below 1024px viewport width)"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_iteration27_predictive_analytics.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (20/20 tests passed)",
+    "frontend": "100% (All 17 UI verifications passed)"
+  },
+
+  "test_credentials": {
+    "admin": {"email": "ss@ssc.com", "password": "Aa147258369Ssc@"}
+  },
+
+  "seed_data_creation": "No seed data created. Predictive analytics work with existing database data.",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Iteration 27 complete. All P0/P1/P2 features tested and working: 1) P0 EOD Auto-Send - /api/scheduler/config has eod_summary job type, configurable via PUT /api/scheduler/config/eod_summary, visible in Settings > Scheduler tab. 2) P1 Predictive Analytics - 5 new endpoints: expense-forecast, stock-reorder, revenue-trends, customer-churn, margin-optimizer. All return proper data structures. 3) P2 UX: Dashboard sparklines (SVG polylines), Dark mode toggle (toggles 'dark' class on html), Keyboard shortcuts modal (? key or button), Mobile bottom nav (5 items, shows on lg:hidden). All features fully functional.",
+
+  "mocked_apis_note": "No mocked APIs. All predictive analytics are calculated from real MongoDB data."
+}
