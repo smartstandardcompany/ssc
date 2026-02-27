@@ -494,43 +494,34 @@ export default function CashierPOSPage() {
               </div>
             </div>
 
-            {/* Payment Buttons */}
-            <div className="grid grid-cols-4 gap-2">
+            {/* Payment Buttons - 3 Options: Cash, Bank, Credit */}
+            <div className="grid grid-cols-3 gap-2">
               <Button 
                 variant={paymentMethod === 'cash' ? 'default' : 'outline'}
-                className={`h-12 flex-col gap-1 ${paymentMethod === 'cash' ? 'bg-emerald-500 hover:bg-emerald-600' : ''}`}
+                className={`h-14 flex-col gap-1 ${paymentMethod === 'cash' ? 'bg-emerald-500 hover:bg-emerald-600' : ''}`}
                 onClick={() => { setPaymentMethod('cash'); setShowPayment(true); }}
                 data-testid="pay-cash"
               >
-                <Banknote size={18} />
-                <span className="text-[10px]">Cash</span>
+                <Banknote size={22} />
+                <span className="text-xs font-medium">Cash</span>
               </Button>
               <Button 
-                variant={paymentMethod === 'card' ? 'default' : 'outline'}
-                className={`h-12 flex-col gap-1 ${paymentMethod === 'card' ? 'bg-blue-500 hover:bg-blue-600' : ''}`}
-                onClick={() => { setPaymentMethod('card'); setShowPayment(true); }}
-                data-testid="pay-card"
+                variant={paymentMethod === 'bank' ? 'default' : 'outline'}
+                className={`h-14 flex-col gap-1 ${paymentMethod === 'bank' ? 'bg-blue-500 hover:bg-blue-600' : ''}`}
+                onClick={() => { setPaymentMethod('bank'); setShowPayment(true); }}
+                data-testid="pay-bank"
               >
-                <CreditCard size={18} />
-                <span className="text-[10px]">Card</span>
-              </Button>
-              <Button 
-                variant={paymentMethod === 'online' ? 'default' : 'outline'}
-                className={`h-12 flex-col gap-1 ${paymentMethod === 'online' ? 'bg-purple-500 hover:bg-purple-600' : ''}`}
-                onClick={() => { setPaymentMethod('online'); setShowPayment(true); }}
-                data-testid="pay-online"
-              >
-                <Smartphone size={18} />
-                <span className="text-[10px]">Online</span>
+                <CreditCard size={22} />
+                <span className="text-xs font-medium">Bank</span>
               </Button>
               <Button 
                 variant={paymentMethod === 'credit' ? 'default' : 'outline'}
-                className={`h-12 flex-col gap-1 ${paymentMethod === 'credit' ? 'bg-amber-500 hover:bg-amber-600' : ''}`}
+                className={`h-14 flex-col gap-1 ${paymentMethod === 'credit' ? 'bg-amber-500 hover:bg-amber-600' : ''}`}
                 onClick={() => { setPaymentMethod('credit'); setShowCustomerSelect(true); }}
                 data-testid="pay-credit"
               >
-                <Users size={18} />
-                <span className="text-[10px]">Credit</span>
+                <Users size={22} />
+                <span className="text-xs font-medium">Credit</span>
               </Button>
             </div>
 
