@@ -22,6 +22,7 @@ const STATUS_STYLES = {
 };
 
 export default function TransfersPage() {
+  const { t } = useLanguage();
   const [transfers, setTransfers] = useState([]);
   const [branches, setBranches] = useState([]);
   const [items, setItems] = useState([]);
