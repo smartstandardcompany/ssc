@@ -289,7 +289,7 @@ export const DashboardLayout = ({ children }) => {
   );
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className={`flex min-h-screen bg-background ${darkMode ? 'dark' : ''}`}>
       {/* Mobile header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-stone-100 px-4 py-2.5 flex items-center justify-between">
         <div className="flex items-center gap-2">
