@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, DollarSign, AlertTriangle, Eye, Calendar, FileText, Briefcase, UserX, Calculator } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
 import { BranchFilter } from '@/components/BranchFilter';
