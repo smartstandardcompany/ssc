@@ -10,9 +10,11 @@ import { toast } from 'sonner';
 
 const REPORT_TYPES = {
   daily_sales: 'Daily Sales Summary',
+  eod_summary: 'End-of-Day Summary',
   expense_summary: 'Expense Summary',
   low_stock: 'Low Stock Alert',
   branch_report: 'Branch Report',
+  partner_pnl: 'Partner P&L',
 };
 
 export function WhatsAppSendDialog({ open, onClose, defaultType = 'daily_sales', branches = [], branchId = '' }) {
