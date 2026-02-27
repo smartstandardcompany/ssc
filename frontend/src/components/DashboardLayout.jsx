@@ -1,12 +1,12 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   LayoutDashboard, ShoppingCart, Store, Users, Truck, Receipt, BarChart3,
   LogOut, Shield, CreditCard, FileText, Tags, UserCheck, FileWarning, Bell,
   User as UserIcon, Settings, ArrowLeftRight, FileInput, AlertTriangle,
   Handshake, HelpCircle, Building2, Package, ChefHat, CalendarClock,
   ArrowDownUp, Activity, PackageCheck, ChevronDown, Menu, X, Zap,
-  AlertCircle
+  AlertCircle, Moon, Sun, Keyboard
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
