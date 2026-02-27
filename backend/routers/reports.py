@@ -442,3 +442,166 @@ def _simple_forecast(history, now):
         forecast.append({"date": d, "predicted_sales": round(avg, 2), "confidence": "low"})
     return {"forecast": forecast, "history": history[-14:], "method": "moving_average"}
 
+
+
+@router.get("/reports/eod-summary")
+async def get_eod_summary(date: str, branch_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    """End-of-Day summary for a specific date: sales, expenses, supplier payments, cash flow."""
+    from datetime import timedelta
+    day_start = f"{date}T00:00:00"
+    day_end = f"{date}T23:59:59"
+    s_query = {"date": {"$gte": day_start, "$lte": day_end}}
+    e_query = {"date": {"$gte": day_start, "$lte": day_end}}
+    sp_query = {"date": {"$gte": day_start, "$lte": day_end}, "supplier_id": {"$exists": True, "$ne": None}}
+    if branch_id:
+        s_query["branch_id"] = branch_id
+        e_query["branch_id"] = branch_id
+        sp_query["branch_id"] = branch_id
+
+    sales = await db.sales.find(s_query, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find(e_query, {"_id": 0}).to_list(10000)
+    supplier_payments = await db.supplier_payments.find(sp_query, {"_id": 0}).to_list(10000)
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branch_map = {b["id"]: b["name"] for b in branches}
+
+    # Sales breakdown
+    total_sales = sum(s.get("final_amount", s["amount"] - s.get("discount", 0)) for s in sales)
+    sales_cash = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "cash")
+    sales_bank = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "bank")
+    sales_online = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "online")
+    sales_credit = sum(s.get("credit_amount", 0) for s in sales)
+    credit_received = sum(s.get("credit_received", 0) for s in sales)
+
+    # Expenses breakdown
+    total_expenses = sum(e["amount"] for e in expenses)
+    exp_by_category = {}
+    for e in expenses:
+        cat = e.get("category", "Other")
+        exp_by_category[cat] = exp_by_category.get(cat, 0) + e["amount"]
+    exp_cash = sum(e["amount"] for e in expenses if e.get("payment_mode") == "cash")
+    exp_bank = sum(e["amount"] for e in expenses if e.get("payment_mode") == "bank")
+
+    # Supplier payments
+    total_sp = sum(p["amount"] for p in supplier_payments)
+    sp_cash = sum(p["amount"] for p in supplier_payments if p.get("payment_mode") == "cash")
+    sp_bank = sum(p["amount"] for p in supplier_payments if p.get("payment_mode") == "bank")
+
+    # Branch breakdown
+    branch_summary = []
+    branch_ids = set(s.get("branch_id") for s in sales if s.get("branch_id"))
+    branch_ids |= set(e.get("branch_id") for e in expenses if e.get("branch_id"))
+    for bid in branch_ids:
+        bs = sum(s.get("final_amount", s["amount"]) for s in sales if s.get("branch_id") == bid)
+        be = sum(e["amount"] for e in expenses if e.get("branch_id") == bid)
+        bsp = sum(p["amount"] for p in supplier_payments if p.get("branch_id") == bid)
+        branch_summary.append({
+            "branch_id": bid,
+            "branch_name": branch_map.get(bid, "Unknown"),
+            "sales": round(bs, 2),
+            "expenses": round(be, 2),
+            "supplier_payments": round(bsp, 2),
+            "net": round(bs - be - bsp, 2),
+        })
+
+    net_profit = total_sales - total_expenses - total_sp
+    cash_in_hand = sales_cash - exp_cash - sp_cash
+
+    return {
+        "date": date,
+        "branch_id": branch_id,
+        "branch_name": branch_map.get(branch_id, "All Branches") if branch_id else "All Branches",
+        "sales": {
+            "total": round(total_sales, 2),
+            "cash": round(sales_cash, 2),
+            "bank": round(sales_bank, 2),
+            "online": round(sales_online, 2),
+            "credit_given": round(sales_credit, 2),
+            "credit_received": round(credit_received, 2),
+            "transaction_count": len(sales),
+        },
+        "expenses": {
+            "total": round(total_expenses, 2),
+            "cash": round(exp_cash, 2),
+            "bank": round(exp_bank, 2),
+            "by_category": [{"category": k.replace("_", " ").title(), "amount": round(v, 2)} for k, v in sorted(exp_by_category.items(), key=lambda x: -x[1])],
+            "count": len(expenses),
+        },
+        "supplier_payments": {
+            "total": round(total_sp, 2),
+            "cash": round(sp_cash, 2),
+            "bank": round(sp_bank, 2),
+            "count": len(supplier_payments),
+        },
+        "summary": {
+            "net_profit": round(net_profit, 2),
+            "cash_in_hand": round(cash_in_hand, 2),
+            "bank_total": round(sales_bank - exp_bank - sp_bank, 2),
+        },
+        "branch_breakdown": branch_summary,
+    }
+
+
+@router.get("/reports/partner-pnl")
+async def get_partner_pnl(current_user: User = Depends(get_current_user)):
+    """Partner P&L: calculate profit/loss per partner based on investments, withdrawals, and share."""
+    partners = await db.partners.find({}, {"_id": 0}).to_list(100)
+    transactions = await db.partner_transactions.find({}, {"_id": 0}).to_list(10000)
+    sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
+    supplier_payments = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
+
+    total_revenue = sum(s.get("final_amount", s["amount"] - s.get("discount", 0)) for s in sales)
+    total_expenses = sum(e["amount"] for e in expenses)
+    total_sp = sum(p["amount"] for p in supplier_payments)
+    company_net_profit = total_revenue - total_expenses - total_sp
+
+    result = []
+    total_share_pct = sum(p.get("share_percentage", 0) for p in partners)
+
+    for partner in partners:
+        pid = partner["id"]
+        pt = [t for t in transactions if t.get("partner_id") == pid]
+        invested = sum(t["amount"] for t in pt if t.get("transaction_type") == "investment")
+        withdrawn = sum(t["amount"] for t in pt if t.get("transaction_type") in ["withdrawal", "profit_share", "expense"])
+        salary_paid = sum(t["amount"] for t in pt if "salary" in t.get("description", "").lower() or "Salary" in t.get("description", ""))
+
+        share_pct = partner.get("share_percentage", 0)
+        profit_share_amount = (company_net_profit * share_pct / 100) if share_pct > 0 else 0
+        net_balance = invested - withdrawn
+        roi = ((profit_share_amount / invested) * 100) if invested > 0 else 0
+
+        # Monthly breakdown for last 6 months
+        from datetime import timedelta
+        now = datetime.now(timezone.utc)
+        monthly = []
+        for i in range(5, -1, -1):
+            m_start = (now.replace(day=1) - timedelta(days=i*30)).replace(day=1)
+            m_end = (m_start + timedelta(days=32)).replace(day=1)
+            m_label = m_start.strftime("%b %Y")
+            m_invested = sum(t["amount"] for t in pt if t.get("transaction_type") == "investment" and m_start.isoformat() <= t.get("date", "") < m_end.isoformat())
+            m_withdrawn = sum(t["amount"] for t in pt if t.get("transaction_type") in ["withdrawal", "profit_share", "expense"] and m_start.isoformat() <= t.get("date", "") < m_end.isoformat())
+            monthly.append({"month": m_label, "invested": round(m_invested, 2), "withdrawn": round(m_withdrawn, 2), "net": round(m_invested - m_withdrawn, 2)})
+
+        result.append({
+            "partner_id": pid,
+            "name": partner["name"],
+            "share_percentage": share_pct,
+            "total_invested": round(invested, 2),
+            "total_withdrawn": round(withdrawn, 2),
+            "salary_paid": round(salary_paid, 2),
+            "current_balance": round(net_balance, 2),
+            "profit_share_entitled": round(profit_share_amount, 2),
+            "roi_pct": round(roi, 1),
+            "monthly": monthly,
+        })
+
+    return {
+        "partners": result,
+        "company_summary": {
+            "total_revenue": round(total_revenue, 2),
+            "total_expenses": round(total_expenses, 2),
+            "total_supplier_payments": round(total_sp, 2),
+            "net_profit": round(company_net_profit, 2),
+            "total_partner_shares": round(total_share_pct, 1),
+        }
+    }
