@@ -307,6 +307,9 @@ export const DashboardLayout = ({ children }) => {
           <span className="text-base font-bold font-outfit bg-gradient-to-r from-orange-600 to-amber-500 bg-clip-text text-transparent">SSC Track</span>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={toggleLang} data-testid="language-toggle-mobile" className="p-1 text-stone-500 hover:text-stone-700 dark:text-stone-300 text-xs font-bold">
+            {lang === 'en' ? 'عربي' : 'EN'}
+          </button>
           <button onClick={() => setDarkMode(!darkMode)} data-testid="dark-mode-toggle-mobile" className="p-1 text-stone-500 hover:text-stone-700 dark:text-stone-300">
             {darkMode ? <Sun size={16} /> : <Moon size={16} />}
           </button>
