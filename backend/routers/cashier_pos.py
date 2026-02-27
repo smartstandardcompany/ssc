@@ -599,3 +599,91 @@ async def get_pos_stats(branch_id: Optional[str] = None, current_user: User = De
         "top_items": top_items,
         "pending_orders": len([o for o in orders if o.get("status") in ["pending", "preparing"]])
     }
+
+
+
+# =====================================================
+# SEED SAMPLE MENU DATA
+# =====================================================
+
+@router.post("/cashier/seed-menu")
+async def seed_menu_data(current_user: User = Depends(get_current_user)):
+    """Seed sample menu items for testing"""
+    
+    # Check if menu already has items
+    existing = await db.menu_items.count_documents({})
+    if existing > 0:
+        return {"message": f"Menu already has {existing} items", "seeded": False}
+    
+    # Sample menu items
+    sample_items = [
+        # Main Dishes
+        {"name": "Chicken Shawarma", "name_ar": "شاورما دجاج", "category": "main", "price": 25, "cost_price": 12, "preparation_time": 10, "tags": ["popular"], "modifiers": [
+            {"name": "Size", "required": True, "multiple": False, "options": [{"name": "Regular", "price": 0}, {"name": "Large", "price": 8}]},
+            {"name": "Extras", "required": False, "multiple": True, "options": [{"name": "Extra Garlic", "price": 2}, {"name": "Cheese", "price": 4}, {"name": "Pickles", "price": 1}]}
+        ]},
+        {"name": "Beef Shawarma", "name_ar": "شاورما لحم", "category": "main", "price": 30, "cost_price": 16, "preparation_time": 10, "tags": ["popular"], "modifiers": [
+            {"name": "Size", "required": True, "multiple": False, "options": [{"name": "Regular", "price": 0}, {"name": "Large", "price": 10}]},
+        ]},
+        {"name": "Mixed Grill", "name_ar": "مشويات مشكلة", "category": "main", "price": 65, "cost_price": 35, "preparation_time": 25, "tags": [], "modifiers": [
+            {"name": "Spice Level", "required": False, "multiple": False, "options": [{"name": "Mild", "price": 0}, {"name": "Medium", "price": 0}, {"name": "Hot", "price": 0}]}
+        ]},
+        {"name": "Grilled Chicken", "name_ar": "دجاج مشوي", "category": "main", "price": 45, "cost_price": 22, "preparation_time": 20, "tags": [], "modifiers": []},
+        {"name": "Lamb Kebab", "name_ar": "كباب لحم", "category": "main", "price": 55, "cost_price": 30, "preparation_time": 20, "tags": ["popular"], "modifiers": []},
+        {"name": "Fish & Chips", "name_ar": "سمك وبطاطس", "category": "main", "price": 48, "cost_price": 25, "preparation_time": 15, "tags": [], "modifiers": []},
+        {"name": "Chicken Biryani", "name_ar": "برياني دجاج", "category": "main", "price": 38, "cost_price": 18, "preparation_time": 20, "tags": ["popular"], "modifiers": [
+            {"name": "Portion", "required": True, "multiple": False, "options": [{"name": "Single", "price": 0}, {"name": "Family", "price": 40}]}
+        ]},
+        
+        # Appetizers
+        {"name": "Hummus", "name_ar": "حمص", "category": "appetizer", "price": 15, "cost_price": 5, "preparation_time": 5, "tags": ["popular"], "modifiers": []},
+        {"name": "Falafel", "name_ar": "فلافل", "category": "appetizer", "price": 18, "cost_price": 6, "preparation_time": 8, "tags": [], "modifiers": []},
+        {"name": "Fattoush Salad", "name_ar": "سلطة فتوش", "category": "appetizer", "price": 16, "cost_price": 5, "preparation_time": 5, "tags": [], "modifiers": []},
+        {"name": "Mutabbal", "name_ar": "متبل", "category": "appetizer", "price": 14, "cost_price": 4, "preparation_time": 5, "tags": [], "modifiers": []},
+        {"name": "French Fries", "name_ar": "بطاطس مقلية", "category": "appetizer", "price": 12, "cost_price": 4, "preparation_time": 8, "tags": ["popular"], "modifiers": [
+            {"name": "Size", "required": False, "multiple": False, "options": [{"name": "Regular", "price": 0}, {"name": "Large", "price": 5}]}
+        ]},
+        
+        # Beverages
+        {"name": "Fresh Orange Juice", "name_ar": "عصير برتقال", "category": "beverage", "price": 12, "cost_price": 4, "preparation_time": 3, "tags": [], "modifiers": []},
+        {"name": "Lemon Mint", "name_ar": "ليمون بالنعناع", "category": "beverage", "price": 10, "cost_price": 3, "preparation_time": 3, "tags": ["popular"], "modifiers": []},
+        {"name": "Arabic Coffee", "name_ar": "قهوة عربية", "category": "beverage", "price": 8, "cost_price": 2, "preparation_time": 5, "tags": [], "modifiers": []},
+        {"name": "Turkish Coffee", "name_ar": "قهوة تركية", "category": "beverage", "price": 10, "cost_price": 3, "preparation_time": 5, "tags": [], "modifiers": [
+            {"name": "Sugar", "required": False, "multiple": False, "options": [{"name": "No Sugar", "price": 0}, {"name": "Medium", "price": 0}, {"name": "Sweet", "price": 0}]}
+        ]},
+        {"name": "Soft Drink", "name_ar": "مشروب غازي", "category": "beverage", "price": 6, "cost_price": 2, "preparation_time": 1, "tags": [], "modifiers": []},
+        {"name": "Water", "name_ar": "ماء", "category": "beverage", "price": 4, "cost_price": 1, "preparation_time": 1, "tags": [], "modifiers": []},
+        
+        # Desserts
+        {"name": "Kunafa", "name_ar": "كنافة", "category": "dessert", "price": 20, "cost_price": 8, "preparation_time": 5, "tags": ["popular"], "modifiers": []},
+        {"name": "Baklava", "name_ar": "بقلاوة", "category": "dessert", "price": 15, "cost_price": 6, "preparation_time": 2, "tags": [], "modifiers": []},
+        {"name": "Um Ali", "name_ar": "أم علي", "category": "dessert", "price": 18, "cost_price": 7, "preparation_time": 10, "tags": [], "modifiers": []},
+        {"name": "Ice Cream", "name_ar": "آيس كريم", "category": "dessert", "price": 12, "cost_price": 4, "preparation_time": 2, "tags": [], "modifiers": [
+            {"name": "Flavor", "required": True, "multiple": False, "options": [{"name": "Vanilla", "price": 0}, {"name": "Chocolate", "price": 0}, {"name": "Strawberry", "price": 0}, {"name": "Pistachio", "price": 3}]}
+        ]},
+        
+        # Sides
+        {"name": "Rice", "name_ar": "أرز", "category": "sides", "price": 8, "cost_price": 2, "preparation_time": 5, "tags": [], "modifiers": []},
+        {"name": "Bread Basket", "name_ar": "سلة خبز", "category": "sides", "price": 6, "cost_price": 2, "preparation_time": 2, "tags": [], "modifiers": []},
+        {"name": "Garlic Sauce", "name_ar": "ثومية", "category": "sides", "price": 4, "cost_price": 1, "preparation_time": 1, "tags": [], "modifiers": []},
+        {"name": "Tahini", "name_ar": "طحينة", "category": "sides", "price": 4, "cost_price": 1, "preparation_time": 1, "tags": [], "modifiers": []},
+    ]
+    
+    # Insert all items
+    for i, item_data in enumerate(sample_items):
+        item = MenuItem(
+            name=item_data["name"],
+            name_ar=item_data.get("name_ar"),
+            category=item_data.get("category", "main"),
+            price=item_data["price"],
+            cost_price=item_data.get("cost_price", 0),
+            preparation_time=item_data.get("preparation_time", 10),
+            tags=item_data.get("tags", []),
+            modifiers=item_data.get("modifiers", []),
+            display_order=i
+        )
+        item_dict = item.model_dump()
+        item_dict["created_at"] = item_dict["created_at"].isoformat()
+        await db.menu_items.insert_one(item_dict)
+    
+    return {"message": f"Seeded {len(sample_items)} menu items", "seeded": True}
