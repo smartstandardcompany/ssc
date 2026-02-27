@@ -86,3 +86,24 @@ table {
 .safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
+
+
+/* RTL support */
+[dir="rtl"] .border-l-\[3px\] {
+  border-left: none !important;
+  border-right: 3px solid;
+}
+[dir="rtl"] .ml-\[3px\] {
+  margin-left: 0 !important;
+  margin-right: 3px;
+}
+[dir="rtl"] .mr-1,
+[dir="rtl"] .mr-1\.5,
+[dir="rtl"] .mr-2 {
+  margin-right: 0 !important;
+}
+[dir="rtl"] .mr-1 { margin-left: 0.25rem; }
+[dir="rtl"] .mr-1\.5 { margin-left: 0.375rem; }
+[dir="rtl"] .mr-2 { margin-left: 0.5rem; }
+[dir="rtl"] .text-left { text-align: right !important; }
+[dir="rtl"] .text-right { text-align: left !important; }
