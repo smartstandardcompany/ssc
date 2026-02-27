@@ -233,7 +233,7 @@ export default function ExpensesPage() {
           {/* ALL EXPENSES */}
           <TabsContent value="list">
             <Card className="border-stone-100">
-              <CardHeader><CardTitle className="font-outfit text-base flex justify-between">All Expenses <span className="text-error">Total: SAR {totalExp.toFixed(2)}</span></CardTitle></CardHeader>
+              <CardHeader><CardTitle className="font-outfit text-base flex justify-between">{t('all_expenses')} <span className="text-error">{t('total_label')}: SAR {totalExp.toFixed(2)}</span></CardTitle></CardHeader>
               <CardContent>
                 {/* Mobile card view */}
                 <div className="sm:hidden space-y-2">
@@ -246,7 +246,7 @@ export default function ExpensesPage() {
                         </div>
                         <span className="text-base font-bold text-red-600">SAR {e.amount.toFixed(2)}</span>
                       </div>
-                      <p className="text-xs text-stone-600">{e.description || 'No description'}</p>
+                      <p className="text-xs text-stone-600">{e.description || t('no_data')}</p>
                       <div className="flex justify-between items-center text-[10px] text-muted-foreground">
                         <span>{format(new Date(e.date), 'MMM dd, yyyy')}</span>
                         <div className="flex items-center gap-2">
@@ -257,12 +257,12 @@ export default function ExpensesPage() {
                       </div>
                     </div>
                   ))}
-                  {filtered.length === 0 && <p className="text-center text-muted-foreground py-8">No expenses</p>}
+                  {filtered.length === 0 && <p className="text-center text-muted-foreground py-8">{t('no_data')}</p>}
                 </div>
                 {/* Desktop table */}
                 <div className="hidden sm:block overflow-x-auto">
                 <table className="w-full"><thead><tr className="border-b">
-                  <th className="text-left p-3 text-sm font-medium">Date</th><th className="text-left p-3 text-sm font-medium">Category</th><th className="text-left p-3 text-sm font-medium">Description</th><th className="text-left p-3 text-sm font-medium">Paid From</th><th className="text-left p-3 text-sm font-medium">Expense For</th><th className="text-right p-3 text-sm font-medium">Amount</th><th className="text-left p-3 text-sm font-medium">Mode</th><th className="text-right p-3 text-sm font-medium">Actions</th>
+                  <th className="text-left p-3 text-sm font-medium">{t('date')}</th><th className="text-left p-3 text-sm font-medium">{t('category')}</th><th className="text-left p-3 text-sm font-medium">{t('description')}</th><th className="text-left p-3 text-sm font-medium">{t('branch')}</th><th className="text-left p-3 text-sm font-medium">For</th><th className="text-right p-3 text-sm font-medium">{t('amount')}</th><th className="text-left p-3 text-sm font-medium">{t('payment_mode')}</th><th className="text-right p-3 text-sm font-medium">{t('actions')}</th>
                 </tr></thead><tbody>
                   {filtered.map(e => (
                     <tr key={e.id} className="border-b hover:bg-stone-50" data-testid={`expense-row-${e.id}`}>
