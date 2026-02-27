@@ -55,3 +55,34 @@ table {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(245, 132, 31, 0.2); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(245, 132, 31, 0.4); }
+
+
+/* Dark mode overrides */
+.dark {
+  color-scheme: dark;
+}
+.dark .bg-white { background-color: #1c1917 !important; }
+.dark .bg-background { background-color: #0c0a09 !important; }
+.dark .border-stone-100 { border-color: #44403c !important; }
+.dark .text-stone-800,
+.dark .text-stone-700,
+.dark .text-stone-600 { color: #d6d3d1 !important; }
+.dark .text-stone-500 { color: #a8a29e !important; }
+.dark .text-muted-foreground { color: #78716c !important; }
+.dark .bg-stone-50,
+.dark .bg-stone-100 { background-color: #292524 !important; }
+.dark .hover\:bg-stone-50:hover { background-color: #292524 !important; }
+.dark table { color: #d6d3d1; }
+.dark th { color: #a8a29e !important; }
+.dark td { border-color: #44403c !important; }
+.dark .border-b { border-color: #44403c !important; }
+.dark [class*="CardContent"],
+.dark [class*="CardHeader"] { background-color: transparent; }
+.dark input,
+.dark select,
+.dark textarea { background-color: #292524 !important; color: #d6d3d1 !important; border-color: #44403c !important; }
+
+/* Safe area for mobile bottom nav */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
