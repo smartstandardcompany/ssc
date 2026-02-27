@@ -10,31 +10,29 @@ import requests
 import os
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
-AUTH_TOKEN = None
 
 
-@pytest.fixture(scope="module")
-def auth_token():
+def get_auth_token():
     """Login as admin and get auth token."""
-    global AUTH_TOKEN
-    if AUTH_TOKEN:
-        return AUTH_TOKEN
     response = requests.post(f"{BASE_URL}/api/auth/login", json={
         "email": "ss@ssc.com",
         "password": "Aa147258369Ssc@"
     })
     assert response.status_code == 200, f"Login failed: {response.text}"
-    AUTH_TOKEN = response.json().get("token")
-    return AUTH_TOKEN
+    return response.json().get("token")
+
+
+# Get token once at module level
+TOKEN = get_auth_token()
 
 
 @pytest.fixture
-def api_client(auth_token):
+def api_client():
     """Session with auth header."""
     session = requests.Session()
     session.headers.update({
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {auth_token}"
+        "Authorization": f"Bearer {TOKEN}"
     })
     return session
 
@@ -217,6 +215,7 @@ class TestSchedulerEodSummary:
     def test_scheduler_has_eod_summary_job(self, api_client):
         response = api_client.get(f"{BASE_URL}/api/scheduler/config")
         data = response.json()
+        assert isinstance(data, list), f"Expected list, got {type(data)}"
         job_types = [cfg["job_type"] for cfg in data]
         assert "eod_summary" in job_types, "Missing eod_summary job type in scheduler config"
         eod_job = next((cfg for cfg in data if cfg["job_type"] == "eod_summary"), None)
