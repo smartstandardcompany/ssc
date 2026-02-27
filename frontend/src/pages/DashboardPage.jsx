@@ -175,7 +175,7 @@ export default function DashboardPage() {
       testId: 'supplier-payments-card',
     },
     {
-      title: 'Net Profit',
+      title: tr('net_profit'),
       value: `SAR ${stats?.net_profit?.toFixed(2) || '0.00'}`,
       prev: stats?.prev_net,
       pct: stats?.profit_pct_of_sales,
