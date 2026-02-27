@@ -171,7 +171,7 @@ const HeatmapCalendar = ({ data, metric = 'sales', onDayClick }) => {
 };
 
 // Custom Waterfall Chart
-const WaterfallChart = ({ data }) => {
+const WaterfallChart = ({ data, onStepClick }) => {
   if (!data || data.length === 0) return null;
   const maxVal = Math.max(...data.map(d => Math.max(Math.abs(d.start), Math.abs(d.end))), 1);
   return (
@@ -181,8 +181,8 @@ const WaterfallChart = ({ data }) => {
         const isTotal = d.type === 'total';
         const barWidth = Math.abs(d.value) / maxVal * 60;
         return (
-          <div key={d.name} className="flex items-center gap-2" data-testid={`waterfall-${i}`}>
-            <div className="w-28 text-right text-xs font-medium text-stone-600 shrink-0 truncate">{d.name}</div>
+          <div key={d.name} className="flex items-center gap-2 cursor-pointer group" data-testid={`waterfall-${i}`} onClick={() => onStepClick && onStepClick(d)}>
+            <div className="w-28 text-right text-xs font-medium text-stone-600 shrink-0 truncate group-hover:text-orange-600 transition-colors">{d.name}</div>
             <div className="flex-1 relative h-7">
               <div
                 className={`absolute h-full rounded-md flex items-center px-2 text-xs font-semibold text-white transition-all ${isTotal ? 'bg-stone-700' : isIncome ? 'bg-emerald-500' : 'bg-red-500'}`}
