@@ -142,6 +142,7 @@ const HeatmapCalendar = ({ data, metric = 'sales', onDayClick }) => {
                     style={{ backgroundColor: getColor(val) }}
                     onMouseEnter={() => setHoveredDay({ date: key, ...d })}
                     onMouseLeave={() => setHoveredDay(null)}
+                    onClick={() => onDayClick && onDayClick(key)}
                     data-testid={`heatmap-${key}`}
                   />
                 );
