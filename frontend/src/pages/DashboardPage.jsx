@@ -265,8 +265,16 @@ export default function DashboardPage() {
             <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowWhatsApp(true)} data-testid="dashboard-whatsapp-btn">
               <MessageCircle size={14} className="mr-1" />WhatsApp
             </Button>
+            <Button size="sm" variant={isEditMode ? 'default' : 'outline'} className={`rounded-xl ${isEditMode ? 'bg-orange-500 hover:bg-orange-600' : ''}`} onClick={() => setIsEditMode(!isEditMode)} data-testid="edit-layout-btn">
+              {isEditMode ? <><Lock size={14} className="mr-1" />{tr('reset_layout')}</> : <><Unlock size={14} className="mr-1" />{tr('customize_widgets')}</>}
+            </Button>
+            {isEditMode && (
+              <Button size="sm" variant="outline" className="rounded-xl" onClick={resetLayout} data-testid="reset-layout-btn">
+                {tr('reset_layout')}
+              </Button>
+            )}
             <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowWidgetSettings(true)} data-testid="customize-dashboard-btn">
-              <Settings2 size={14} className="mr-1" />Customize
+              <Settings2 size={14} className="mr-1" />{tr('customize_widgets')}
             </Button>
             {Object.keys(THEMES).map(th => (
               <button key={th} onClick={() => changeTheme(th)} className={`px-3 py-1 rounded-lg text-xs font-medium border transition-all capitalize ${theme === th ? 'bg-primary text-white border-primary' : 'bg-white border-stone-200 hover:border-primary'}`}>{th}</button>
