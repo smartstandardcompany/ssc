@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { DollarSign, ShoppingCart, Receipt, CreditCard, Banknote, Smartphone, CheckCircle, Users } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function POSPage() {
   const [branches, setBranches] = useState([]);
