@@ -74,6 +74,7 @@ function App() {
   }
 
   return (
+    <LanguageProvider>
     <div className="App">
       {showInstall && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-primary text-primary-foreground p-3 flex items-center justify-center gap-4 shadow-lg" data-testid="install-banner">
