@@ -6,8 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import api from '@/lib/api';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function LoginPage({ setIsAuthenticated }) {
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
