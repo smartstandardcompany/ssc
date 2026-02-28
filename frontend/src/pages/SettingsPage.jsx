@@ -168,6 +168,20 @@ export default function SettingsPage() {
     } catch { toast.error('Failed to delete DVR'); }
   };
 
+  const saveMonitoringConfig = async () => {
+    try {
+      await api.post('/cctv/monitoring/config', monitoringConfig);
+      toast.success('Monitoring configuration saved');
+    } catch (e) { toast.error(e.response?.data?.detail || 'Failed to save'); }
+  };
+
+  const runMonitoringNow = async () => {
+    try {
+      const res = await api.post('/cctv/monitoring/run');
+      toast.success(res.data.message || 'Monitoring task queued');
+    } catch (e) { toast.error(e.response?.data?.detail || 'Failed to run'); }
+  };
+
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-64">Loading...</div></DashboardLayout>;
 
   return (
