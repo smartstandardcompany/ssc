@@ -23,6 +23,7 @@ export default function EmployeePortalPage() {
   const [leaves, setLeaves] = useState([]);
   const [requests, setRequests] = useState([]);
   const [attendance, setAttendance] = useState([]);
+  const [myLoans, setMyLoans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showLeaveForm, setShowLeaveForm] = useState(false);
   const [showRequestForm, setShowRequestForm] = useState(false);
@@ -37,8 +38,8 @@ export default function EmployeePortalPage() {
     try {
       const profRes = await api.get('/my/employee-profile');
       setProfile(profRes.data);
-      const [payRes, leaveRes, reqRes, attRes] = await Promise.all([api.get('/my/payments'), api.get('/my/leaves'), api.get('/my/requests'), api.get('/my/attendance')]);
-      setPayments(payRes.data); setLeaves(leaveRes.data); setRequests(reqRes.data); setAttendance(attRes.data);
+      const [payRes, leaveRes, reqRes, attRes, loanRes] = await Promise.all([api.get('/my/payments'), api.get('/my/leaves'), api.get('/my/requests'), api.get('/my/attendance'), api.get('/my/loans').catch(() => ({ data: [] }))]);
+      setPayments(payRes.data); setLeaves(leaveRes.data); setRequests(reqRes.data); setAttendance(attRes.data); setMyLoans(loanRes.data);
       const today = new Date().toISOString().split('T')[0];
       setTodayAttendance(attRes.data.find(a => a.date === today) || null);
     } catch (err) {
