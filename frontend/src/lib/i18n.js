@@ -420,6 +420,15 @@ const translations = {
     transactions: 'لین دین', items: 'آئٹمز', payments: 'ادائیگیاں',
     overview: 'جائزہ', period: 'مدت', compare: 'موازنہ', trends: 'رجحانات',
     item_pnl: 'آئٹم منافع',
+    // Common UI
+    loading: 'لوڈ ہو رہا ہے...', no_data: 'کوئی ڈیٹا نہیں', error_occurred: 'خرابی ہوئی',
+    try_again: 'دوبارہ کوشش کریں', confirm: 'تصدیق', cancel: 'منسوخ', save: 'محفوظ کریں', delete: 'حذف کریں',
+    edit: 'ترمیم', view: 'دیکھیں', add: 'شامل کریں', back: 'واپس', next: 'اگلا', previous: 'پچھلا',
+    search: 'تلاش', filter: 'فلٹر', sort: 'ترتیب', export: 'برآمد', import: 'درآمد',
+    refresh: 'تازہ کریں', reset: 'ری سیٹ', apply: 'لاگو کریں', clear: 'صاف کریں',
+    // Status messages
+    success: 'کامیابی', failed: 'ناکام', pending: 'زیر التواء', completed: 'مکمل',
+    in_progress: 'جاری', cancelled: 'منسوخ',
     // Shift Report
     shift_report_title: 'روزانہ شفٹ رپورٹ', shift_report_subtitle: 'کیشیئر شفٹس، فروخت کی تفصیل اور نقد تصفیہ',
     daily_report: 'روزانہ رپورٹ', date_range: 'تاریخ کی حد', total_shifts: 'کل شفٹس',
