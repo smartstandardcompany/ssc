@@ -295,6 +295,16 @@ export default function CashierPOSPage() {
                 </div>
               </div>
             )}
+            <Button 
+              size="sm" 
+              variant={currentShift ? 'default' : 'outline'}
+              className={`h-9 ${currentShift ? 'bg-emerald-500 hover:bg-emerald-600' : ''}`}
+              onClick={() => setShowShiftModal(true)}
+              data-testid="shift-btn"
+            >
+              <PlayCircle size={16} className="mr-1" />
+              {currentShift ? 'Shift Active' : 'Start Shift'}
+            </Button>
             <Badge variant="outline" className="text-xs px-3 py-1">{user.name}</Badge>
             <Button size="sm" variant="ghost" onClick={handleLogout} data-testid="logout-btn">
               <LogOut size={16} />
