@@ -28,6 +28,16 @@ export default function CashierLoginPage() {
     setLoading(true);
     try {
       const { data } = await api.post('/cashier/login', { pin });
+      const posRole = data.user?.pos_role || 'both';
+      
+      // Check if user has cashier access
+      if (posRole === 'waiter') {
+        toast.error('This PIN is for waiter access only. Please use Waiter Mode.');
+        setPin('');
+        setLoading(false);
+        return;
+      }
+      
       localStorage.setItem('cashier_token', data.access_token);
       localStorage.setItem('cashier_user', JSON.stringify(data.user));
       toast.success(`Welcome, ${data.user.name}!`);
