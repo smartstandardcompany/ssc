@@ -115,6 +115,43 @@ const translations = {
     transactions: 'transactions', items: 'items', payments: 'payments',
     overview: 'Overview', period: 'Period', compare: 'Compare', trends: 'Trends',
     item_pnl: 'Item P&L',
+    // Shift Report
+    shift_report_title: 'Daily Shift Report', shift_report_subtitle: 'Cashier shifts, sales breakdown, and cash reconciliation',
+    daily_report: 'Daily Report', date_range: 'Date Range', total_shifts: 'Total Shifts',
+    opening_cash: 'Opening Cash', closing_cash: 'Closing Cash', expected_cash: 'Expected Cash',
+    cash_difference: 'Cash Difference', shortage: 'Shortage', overage: 'Overage', balanced: 'Balanced',
+    payment_breakdown: 'Payment Method Breakdown', sales_by_branch: 'Sales by Branch',
+    shift_details: 'Shift Details', top_selling_items: 'Top Selling Items',
+    daily_trend: 'Daily Sales Trend', daily_breakdown: 'Daily Breakdown',
+    avg_sales_day: 'Avg Sales/Day', duration: 'Duration', cashier: 'Cashier',
+    // Bulk Salary
+    bulk_salary_title: 'Bulk Salary Payment', bulk_payment_info: 'Pay salaries to all eligible employees at once. This will create salary payments and corresponding expense records automatically.',
+    preview_select: 'Preview & Select Employees', to_pay: 'To Pay', already_paid: 'Already Paid',
+    total_amount: 'Total Amount', employees_to_pay: 'Employees to Pay', select_all: 'Select All',
+    pay_employees: 'Pay Employees', payment_completed: 'Payment Completed', by_branch: 'By Branch',
+    skipped_failed: 'Skipped / Failed', monthly_salary_payment: 'Monthly salary payment',
+    // Expense Categories
+    cat_salary: 'Salary', cat_rent: 'Rent', cat_utilities: 'Utilities', cat_vehicle: 'Vehicle',
+    cat_maintenance: 'Maintenance', cat_supplier: 'Supplier', cat_tickets: 'Tickets', 
+    cat_id_card: 'ID Card', cat_other: 'Other',
+    cat_basic_salary: 'Basic Salary', cat_overtime: 'Overtime', cat_bonus: 'Bonus',
+    cat_office_rent: 'Office Rent', cat_warehouse_rent: 'Warehouse Rent', cat_shop_rent: 'Shop Rent',
+    cat_electricity: 'Electricity', cat_water: 'Water', cat_internet: 'Internet', cat_phone: 'Phone',
+    cat_fuel: 'Fuel', cat_insurance: 'Insurance', cat_office_maintenance: 'Office Maintenance',
+    cat_equipment_repair: 'Equipment Repair',
+    // Widget names
+    widget_stats: 'Main Statistics', widget_charts: 'Quick Charts', widget_cash_bank: 'Cash & Bank',
+    widget_payment_mode: 'Payment Modes', widget_spending: 'Spending Details', 
+    widget_dues: 'Dues & Alerts', widget_branch_dues: 'Branch Dues', widget_vat: 'VAT Summary',
+    widget_desc_stats: 'Sales, expenses, profit overview', widget_desc_charts: 'Expense distribution & comparison',
+    widget_desc_cash: 'Cash and bank balances', widget_desc_payment: 'Cash, bank, credit breakdown',
+    widget_desc_spending: 'Expense categories & spending', widget_desc_dues: 'Supplier dues, fines, alerts',
+    widget_desc_branch: 'Inter-branch balances', widget_desc_vat: 'VAT calculations',
+    show_all: 'Show All', minimize: 'Minimize', done: 'Done',
+    // Menu Items
+    menu_items: 'Menu Items', nav_menu_items: 'Menu Items',
+    // Order Status
+    order_status: 'Order Status', preparing: 'Preparing', ready_pickup: 'Ready for Pickup',
     // Other pages
     documents_title: 'Documents', fines_title: 'Fines & Penalties',
     company_loans_title: 'Company Loans', users_title: 'Users',
