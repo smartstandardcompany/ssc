@@ -47,6 +47,7 @@ import CCTVPage from "./pages/CCTVPage";
 import PartnerPLReportPage from "./pages/PartnerPLReportPage";
 import TableManagementPage from "./pages/TableManagementPage";
 import WaiterPage from "./pages/WaiterPage";
+import LoanManagementPage from "./pages/LoanManagementPage";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 
