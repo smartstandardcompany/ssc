@@ -22,6 +22,7 @@ from routers import (
     exports,
     invoices,
     job_titles,
+    loans,
     partners,
     reports,
     sales,
