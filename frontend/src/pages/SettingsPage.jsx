@@ -819,6 +819,117 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
 
+              {/* Scheduled AI Monitoring */}
+              <Card className="border-border">
+                <CardHeader>
+                  <CardTitle className="font-outfit flex items-center gap-2">
+                    <Clock size={18} />
+                    Scheduled AI Monitoring
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">Configure automatic AI monitoring that runs at regular intervals. Requires camera frames to be uploaded or direct camera access.</p>
+
+                  <div className="flex items-center justify-between p-4 bg-stone-50 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-primary/10 rounded-lg"><Clock size={18} className="text-primary" /></div>
+                      <div>
+                        <p className="text-sm font-medium">Enable Scheduled Monitoring</p>
+                        <p className="text-xs text-muted-foreground">Automatically analyze camera feeds at set intervals</p>
+                      </div>
+                    </div>
+                    <Switch 
+                      checked={monitoringConfig.enabled} 
+                      onCheckedChange={(v) => setMonitoringConfig({ ...monitoringConfig, enabled: v })}
+                      data-testid="monitoring-enabled"
+                    />
+                  </div>
+
+                  {monitoringConfig.enabled && (
+                    <div className="space-y-4 p-4 border rounded-xl bg-white">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-xs">Monitoring Interval</Label>
+                          <Select value={String(monitoringConfig.interval_minutes)} onValueChange={(v) => setMonitoringConfig({ ...monitoringConfig, interval_minutes: parseInt(v) })}>
+                            <SelectTrigger data-testid="monitoring-interval">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1">Every 1 minute</SelectItem>
+                              <SelectItem value="5">Every 5 minutes</SelectItem>
+                              <SelectItem value="15">Every 15 minutes</SelectItem>
+                              <SelectItem value="30">Every 30 minutes</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-xs mb-2 block">Features to Enable</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {['people_counting', 'motion_detection', 'object_detection'].map(feature => (
+                            <button
+                              key={feature}
+                              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                                monitoringConfig.features.includes(feature)
+                                  ? 'bg-primary text-white'
+                                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                              }`}
+                              onClick={() => {
+                                const features = monitoringConfig.features.includes(feature)
+                                  ? monitoringConfig.features.filter(f => f !== feature)
+                                  : [...monitoringConfig.features, feature];
+                                setMonitoringConfig({ ...monitoringConfig, features });
+                              }}
+                            >
+                              {feature.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-xs mb-2 block">Alert Notification Channels</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            { id: 'in_app', label: 'In-App', icon: Bell },
+                            { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
+                            { id: 'email', label: 'Email', icon: Mail }
+                          ].map(channel => (
+                            <button
+                              key={channel.id}
+                              className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1 transition-colors ${
+                                monitoringConfig.notification_channels.includes(channel.id)
+                                  ? 'bg-primary text-white'
+                                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                              }`}
+                              onClick={() => {
+                                const channels = monitoringConfig.notification_channels.includes(channel.id)
+                                  ? monitoringConfig.notification_channels.filter(c => c !== channel.id)
+                                  : [...monitoringConfig.notification_channels, channel.id];
+                                setMonitoringConfig({ ...monitoringConfig, notification_channels: channels });
+                              }}
+                            >
+                              <channel.icon size={12} />
+                              {channel.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button onClick={saveMonitoringConfig} className="rounded-full">
+                          Save Monitoring Config
+                        </Button>
+                        <Button variant="outline" onClick={runMonitoringNow} className="rounded-full">
+                          <Play size={14} className="mr-1" /> Run Now
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               {/* Help Card */}
               <Card className="border-primary/30 bg-primary/5">
                 <CardContent className="pt-4">
