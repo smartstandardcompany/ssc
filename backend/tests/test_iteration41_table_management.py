@@ -292,14 +292,15 @@ class TestTableStatus:
     
     def test_mark_table_available(self, api_client, admin_token):
         """POST /api/tables/{id}/mark-available should mark table as available"""
+        uid = unique_id()
         # Create a test table
-        table_data = {"table_number": "TEST_AVAILABLE", "section": "Main Hall", "capacity": 4}
+        table_data = {"table_number": f"TEST_AVL{uid}", "section": "Main Hall", "capacity": 4}
         create_response = api_client.post(
             f"{BASE_URL}/api/tables",
             headers={"Authorization": f"Bearer {admin_token}"},
             json=table_data
         )
-        assert create_response.status_code == 200
+        assert create_response.status_code == 200, f"Failed to create table: {create_response.text}"
         table_id = create_response.json()["id"]
         
         # Set to cleaning first
