@@ -74,6 +74,7 @@ const NAV_GROUPS = [
     label: 'Assets',
     items: [
       { path: '/branches', icon: Store, label: 'Branches', perm: 'branches', roles: ['admin', 'manager'] },
+      { path: '/cctv', icon: Camera, label: 'CCTV Security', perm: 'branches', roles: ['admin', 'manager'] },
       { path: '/documents', icon: FileWarning, label: 'Documents', perm: 'documents', roles: ['admin', 'manager'] },
       { path: '/fines', icon: AlertTriangle, label: 'Fines & Penalties', perm: 'fines', roles: ['admin', 'manager'] },
       { path: '/partners', icon: Handshake, label: 'Partners', perm: 'partners', roles: ['admin'] },
