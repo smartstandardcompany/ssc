@@ -795,6 +795,164 @@ async def delete_menu_item_image(item_id: str, current_user: User = Depends(get_
 # SEED SAMPLE MENU DATA
 # =====================================================
 
+# =====================================================
+# DAILY SHIFT REPORTS
+# =====================================================
+
+@router.get("/cashier/shift-report")
+async def get_daily_shift_report(
+    date: Optional[str] = None,
+    branch_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get daily shift report with all cashier shifts for a given date"""
+    if not date:
+        date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    # Query for shifts that started on the given date
+    query = {
+        "started_at": {"$gte": f"{date}T00:00:00", "$lt": f"{date}T23:59:59"}
+    }
+    if branch_id:
+        query["branch_id"] = branch_id
+    
+    shifts = await db.cashier_shifts.find(query, {"_id": 0}).to_list(500)
+    
+    # Get branch names
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branch_map = {b["id"]: b["name"] for b in branches}
+    
+    # Aggregate data
+    total_opening_cash = 0
+    total_closing_cash = 0
+    total_expected_cash = 0
+    total_sales = 0
+    total_orders = 0
+    total_cash_difference = 0
+    payment_totals = {"cash": 0, "card": 0, "online": 0, "credit": 0}
+    
+    shift_details = []
+    for shift in shifts:
+        shift["branch_name"] = branch_map.get(shift.get("branch_id"), "Unknown")
+        total_opening_cash += shift.get("opening_cash", 0)
+        total_closing_cash += shift.get("closing_cash", 0) or 0
+        total_expected_cash += shift.get("expected_cash", 0) or 0
+        total_sales += shift.get("total_sales", 0)
+        total_orders += shift.get("total_orders", 0)
+        total_cash_difference += shift.get("cash_difference", 0) or 0
+        
+        breakdown = shift.get("payment_breakdown", {})
+        for method in payment_totals:
+            payment_totals[method] += breakdown.get(method, 0)
+        
+        # Calculate shift duration
+        if shift.get("started_at") and shift.get("ended_at"):
+            start = datetime.fromisoformat(shift["started_at"].replace("Z", "+00:00"))
+            end = datetime.fromisoformat(shift["ended_at"].replace("Z", "+00:00"))
+            duration_hours = (end - start).total_seconds() / 3600
+            shift["duration_hours"] = round(duration_hours, 2)
+        else:
+            shift["duration_hours"] = None
+        
+        shift_details.append(shift)
+    
+    # Get top selling items for the day
+    orders_query = {"created_at": {"$gte": f"{date}T00:00:00", "$lt": f"{date}T23:59:59"}}
+    if branch_id:
+        orders_query["branch_id"] = branch_id
+    
+    orders = await db.pos_orders.find(orders_query, {"_id": 0}).to_list(1000)
+    item_sales = {}
+    for order in orders:
+        for item in order.get("items", []):
+            item_id = item.get("item_id")
+            if item_id not in item_sales:
+                item_sales[item_id] = {"name": item.get("name"), "quantity": 0, "revenue": 0}
+            item_sales[item_id]["quantity"] += item.get("quantity", 1)
+            item_sales[item_id]["revenue"] += item.get("subtotal", 0)
+    
+    top_items = sorted(item_sales.values(), key=lambda x: x["revenue"], reverse=True)[:10]
+    
+    # Calculate by branch
+    branch_summary = {}
+    for shift in shifts:
+        bid = shift.get("branch_id")
+        bname = branch_map.get(bid, "Unknown")
+        if bname not in branch_summary:
+            branch_summary[bname] = {"shifts": 0, "sales": 0, "orders": 0, "cash_difference": 0}
+        branch_summary[bname]["shifts"] += 1
+        branch_summary[bname]["sales"] += shift.get("total_sales", 0)
+        branch_summary[bname]["orders"] += shift.get("total_orders", 0)
+        branch_summary[bname]["cash_difference"] += shift.get("cash_difference", 0) or 0
+    
+    return {
+        "date": date,
+        "summary": {
+            "total_shifts": len(shifts),
+            "open_shifts": len([s for s in shifts if s.get("status") == "open"]),
+            "closed_shifts": len([s for s in shifts if s.get("status") == "closed"]),
+            "total_opening_cash": round(total_opening_cash, 2),
+            "total_closing_cash": round(total_closing_cash, 2),
+            "total_expected_cash": round(total_expected_cash, 2),
+            "total_cash_difference": round(total_cash_difference, 2),
+            "total_sales": round(total_sales, 2),
+            "total_orders": total_orders,
+            "payment_breakdown": {k: round(v, 2) for k, v in payment_totals.items()}
+        },
+        "branch_summary": branch_summary,
+        "shifts": shift_details,
+        "top_items": top_items
+    }
+
+
+@router.get("/cashier/shift-report/range")
+async def get_shift_report_range(
+    start_date: str,
+    end_date: str,
+    branch_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get shift report for a date range"""
+    query = {
+        "started_at": {"$gte": f"{start_date}T00:00:00", "$lt": f"{end_date}T23:59:59"}
+    }
+    if branch_id:
+        query["branch_id"] = branch_id
+    
+    shifts = await db.cashier_shifts.find(query, {"_id": 0}).to_list(5000)
+    
+    # Group by date
+    daily_data = {}
+    for shift in shifts:
+        date = shift.get("started_at", "")[:10]
+        if date not in daily_data:
+            daily_data[date] = {"shifts": 0, "sales": 0, "orders": 0, "cash_difference": 0}
+        daily_data[date]["shifts"] += 1
+        daily_data[date]["sales"] += shift.get("total_sales", 0)
+        daily_data[date]["orders"] += shift.get("total_orders", 0)
+        daily_data[date]["cash_difference"] += shift.get("cash_difference", 0) or 0
+    
+    # Calculate totals
+    total_sales = sum(d["sales"] for d in daily_data.values())
+    total_orders = sum(d["orders"] for d in daily_data.values())
+    total_shifts = sum(d["shifts"] for d in daily_data.values())
+    total_cash_diff = sum(d["cash_difference"] for d in daily_data.values())
+    
+    return {
+        "start_date": start_date,
+        "end_date": end_date,
+        "summary": {
+            "total_days": len(daily_data),
+            "total_shifts": total_shifts,
+            "total_sales": round(total_sales, 2),
+            "total_orders": total_orders,
+            "total_cash_difference": round(total_cash_diff, 2),
+            "avg_sales_per_day": round(total_sales / max(len(daily_data), 1), 2)
+        },
+        "daily_breakdown": [{"date": k, **v} for k, v in sorted(daily_data.items())]
+    }
+
+
 @router.post("/cashier/seed-menu")
 async def seed_menu_data(current_user: User = Depends(get_current_user)):
     """Seed sample menu items for testing"""
