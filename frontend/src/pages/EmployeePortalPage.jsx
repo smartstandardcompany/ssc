@@ -187,6 +187,51 @@ export default function EmployeePortalPage() {
             </CardContent></Card>
           </TabsContent>
 
+          <TabsContent value="loans">
+            <Card className="border-stone-100">
+              <CardHeader><CardTitle className="font-outfit text-base">My Loans</CardTitle></CardHeader>
+              <CardContent>
+                {myLoans.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">No loans</p>
+                ) : (
+                  <div className="space-y-3">
+                    {myLoans.map(loan => {
+                      const progress = loan.amount > 0 ? ((loan.amount - (loan.remaining_balance || 0)) / loan.amount) * 100 : 0;
+                      return (
+                        <div key={loan.id} className="p-4 border rounded-xl" data-testid={`my-loan-${loan.id}`}>
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <Badge variant="secondary" className="capitalize">{loan.loan_type.replace('_', ' ')}</Badge>
+                              {getStatusBadge(loan.status)}
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold font-outfit">SAR {loan.amount.toLocaleString()}</p>
+                              {loan.status === 'active' && (
+                                <p className="text-xs text-muted-foreground">Remaining: SAR {(loan.remaining_balance || 0).toLocaleString()}</p>
+                              )}
+                            </div>
+                          </div>
+                          {loan.status === 'active' && (
+                            <div className="mt-3">
+                              <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                                <span>{loan.paid_installments || 0}/{loan.total_installments || '?'} paid</span>
+                                <span>SAR {(loan.monthly_installment || 0).toLocaleString()}/month</span>
+                              </div>
+                              <div className="h-2 bg-stone-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${progress}%` }} />
+                              </div>
+                            </div>
+                          )}
+                          {loan.reason && <p className="text-xs text-muted-foreground mt-2">Reason: {loan.reason}</p>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="letters">
             <Card className="border-stone-100"><CardHeader><CardTitle className="font-outfit text-base">Download Letters</CardTitle></CardHeader><CardContent>
               <p className="text-sm text-muted-foreground mb-4">Generate official letters with your details pre-filled.</p>
