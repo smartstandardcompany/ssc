@@ -17,9 +17,11 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { DateFilter } from '@/components/DateFilter';
 import { WhatsAppSendDialog } from '@/components/WhatsAppSendDialog';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import GridLayout from 'react-grid-layout';
+import GridLayout, { WidthProvider } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
+
+const ResponsiveGridLayout = WidthProvider(GridLayout);
 
 const Sparkline = ({ data = [], color = '#22C55E', width = 60, height = 24 }) => {
   if (!data || data.length < 2) return null;
