@@ -319,10 +319,13 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
    - "Edit Layout" mode for drag-and-drop (foundation in place)
 
 ## Backlog
-- Translate remaining hardcoded text (expense category buttons, some chart labels)
-- Further UX refinements based on user feedback
-- Add more menu item images via the new upload feature
-- Additional AI-powered features (based on user feedback)
+- **P1:** AI People Counting with automatic interval-based processing (scheduled frame capture)
+- **P1:** Motion Detection Alerts with WhatsApp/Email notifications
+- **P2:** Partner P&L Report
+- **P2:** Mobile bottom tab bar customization
+- **P3:** ZATCA Phase 2 Compliance
+- **P3:** Translate remaining hardcoded text
+- **P3:** Further UX refinements based on user feedback
 
 ## File Structure Updates
 - `/app/frontend/src/pages/ShiftReportPage.jsx` - NEW (Feb 28)
