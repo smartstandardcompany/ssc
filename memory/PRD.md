@@ -92,6 +92,11 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - `/api/reports/analytics-pdf` - PDF export
 - `/api/reports/eod-summary?date=YYYY-MM-DD` - End-of-Day summary report
 - `/api/reports/partner-pnl` - Partner Profit & Loss report
+- `/api/cashier/shift-report?date=YYYY-MM-DD&branch_id=X` - Daily shift report
+- `/api/cashier/shift-report/range?start_date=X&end_date=Y` - Shift report range
+- `/api/salary-payments/bulk-preview?period=X` - Preview bulk salary payment
+- `/api/salary-payments/bulk` - Execute bulk salary payment
+- `/api/dashboard/layout` - Save/load user dashboard preferences
 - `/api/cashier/login` - PIN-based cashier login
 - `/api/cashier/shift/start` - Start cashier shift with opening cash
 - `/api/cashier/shift/current` - Get current shift with totals
