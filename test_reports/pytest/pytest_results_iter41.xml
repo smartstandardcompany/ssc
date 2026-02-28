@@ -1,79 +1,28 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="10" skipped="0" tests="19" time="8.666" timestamp="2026-02-28T22:10:55.936728+00:00" hostname="agent-env-7083286e-9e22-469e-aa79-c22d20942f88"><testcase classname="backend.tests.test_iteration41_table_management.TestTableSections" name="test_get_sections_returns_200" time="1.366" /><testcase classname="backend.tests.test_iteration41_table_management.TestTableSections" name="test_get_sections_returns_list" time="0.375" /><testcase classname="backend.tests.test_iteration41_table_management.TestTableSections" name="test_create_section" time="0.253"><failure message="assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_iteration41_table_management.py:97: in test_create_section
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="9" skipped="0" tests="19" time="9.424" timestamp="2026-02-28T22:12:26.211302+00:00" hostname="agent-env-7083286e-9e22-469e-aa79-c22d20942f88"><testcase classname="backend.tests.test_iteration41_table_management.TestTableSections" name="test_get_sections_returns_200" time="1.454" /><testcase classname="backend.tests.test_iteration41_table_management.TestTableSections" name="test_get_sections_returns_list" time="0.397" /><testcase classname="backend.tests.test_iteration41_table_management.TestTableSections" name="test_create_section" time="0.776" /><testcase classname="backend.tests.test_iteration41_table_management.TestTablesCRUD" name="test_get_tables_returns_200" time="0.381" /><testcase classname="backend.tests.test_iteration41_table_management.TestTablesCRUD" name="test_get_tables_returns_list" time="0.381" /><testcase classname="backend.tests.test_iteration41_table_management.TestTablesCRUD" name="test_get_tables_stats" time="0.393" /><testcase classname="backend.tests.test_iteration41_table_management.TestTablesCRUD" name="test_create_table" time="0.386"><failure message="assert 400 == 200&#10; +  where 400 = &lt;Response [400]&gt;.status_code">backend/tests/test_iteration41_table_management.py:172: in test_create_table
     assert response.status_code == 200
-E   assert 500 == 200
-E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration41_table_management.TestTablesCRUD" name="test_get_tables_returns_200" time="0.488" /><testcase classname="backend.tests.test_iteration41_table_management.TestTablesCRUD" name="test_get_tables_returns_list" time="0.363" /><testcase classname="backend.tests.test_iteration41_table_management.TestTablesCRUD" name="test_get_tables_stats" time="0.374" /><testcase classname="backend.tests.test_iteration41_table_management.TestTablesCRUD" name="test_create_table" time="0.264"><failure message="assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_iteration41_table_management.py:172: in test_create_table
-    assert response.status_code == 200
-E   assert 500 == 200
-E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration41_table_management.TestTablesCRUD" name="test_update_table" time="0.374"><failure message="assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_iteration41_table_management.py:205: in test_update_table
+E   assert 400 == 200
+E    +  where 400 = &lt;Response [400]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration41_table_management.TestTablesCRUD" name="test_update_table" time="0.381"><failure message="assert 400 == 200&#10; +  where 400 = &lt;Response [400]&gt;.status_code">backend/tests/test_iteration41_table_management.py:205: in test_update_table
     assert create_response.status_code == 200
-E   assert 500 == 200
-E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration41_table_management.TestTablesCRUD" name="test_create_duplicate_table_fails" time="0.856" /><testcase classname="backend.tests.test_iteration41_table_management.TestTableStatus" name="test_update_table_status" time="0.272"><failure message="assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_iteration41_table_management.py:266: in test_update_table_status
+E   assert 400 == 200
+E    +  where 400 = &lt;Response [400]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration41_table_management.TestTablesCRUD" name="test_create_duplicate_table_fails" time="0.769" /><testcase classname="backend.tests.test_iteration41_table_management.TestTableStatus" name="test_update_table_status" time="0.507"><failure message="assert 400 == 200&#10; +  where 400 = &lt;Response [400]&gt;.status_code">backend/tests/test_iteration41_table_management.py:266: in test_update_table_status
     assert create_response.status_code == 200
-E   assert 500 == 200
-E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration41_table_management.TestTableStatus" name="test_mark_table_available" time="0.384"><failure message="assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_iteration41_table_management.py:294: in test_mark_table_available
+E   assert 400 == 200
+E    +  where 400 = &lt;Response [400]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration41_table_management.TestTableStatus" name="test_mark_table_available" time="0.373"><failure message="assert 400 == 200&#10; +  where 400 = &lt;Response [400]&gt;.status_code">backend/tests/test_iteration41_table_management.py:294: in test_mark_table_available
     assert create_response.status_code == 200
-E   assert 500 == 200
-E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration41_table_management.TestWaiterLogin" name="test_waiter_login_with_pin_1234" time="0.484" /><testcase classname="backend.tests.test_iteration41_table_management.TestWaiterLogin" name="test_waiter_login_invalid_pin" time="0.355" /><testcase classname="backend.tests.test_iteration41_table_management.TestOrderFlow" name="test_start_order_for_table" time="0.262"><failure message="assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_iteration41_table_management.py:370: in test_start_order_for_table
+E   assert 400 == 200
+E    +  where 400 = &lt;Response [400]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration41_table_management.TestWaiterLogin" name="test_waiter_login_with_pin_1234" time="0.391" /><testcase classname="backend.tests.test_iteration41_table_management.TestWaiterLogin" name="test_waiter_login_invalid_pin" time="0.383" /><testcase classname="backend.tests.test_iteration41_table_management.TestOrderFlow" name="test_start_order_for_table" time="0.396"><failure message="assert 400 == 200&#10; +  where 400 = &lt;Response [400]&gt;.status_code">backend/tests/test_iteration41_table_management.py:370: in test_start_order_for_table
     assert create_response.status_code == 200
-E   assert 500 == 200
-E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration41_table_management.TestOrderFlow" name="test_add_items_to_order" time="0.363"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
-    return complexjson.loads(self.text, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/__init__.py:346: in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:337: in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-
-During handling of the above exception, another exception occurred:
-backend/tests/test_iteration41_table_management.py:419: in test_add_items_to_order
+E   assert 400 == 200
+E    +  where 400 = &lt;Response [400]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_iteration41_table_management.TestOrderFlow" name="test_add_items_to_order" time="0.373"><failure message="KeyError: 'id'">backend/tests/test_iteration41_table_management.py:419: in test_add_items_to_order
     table_id = create_response.json()["id"]
-               ^^^^^^^^^^^^^^^^^^^^^^
-/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
-    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
-E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_iteration41_table_management.TestOrderFlow" name="test_close_order" time="0.378"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
-    return complexjson.loads(self.text, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/__init__.py:346: in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:337: in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-
-During handling of the above exception, another exception occurred:
-backend/tests/test_iteration41_table_management.py:470: in test_close_order
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'id'</failure></testcase><testcase classname="backend.tests.test_iteration41_table_management.TestOrderFlow" name="test_close_order" time="0.373"><failure message="KeyError: 'id'">backend/tests/test_iteration41_table_management.py:470: in test_close_order
     table_id = create_response.json()["id"]
-               ^^^^^^^^^^^^^^^^^^^^^^
-/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
-    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
-E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_iteration41_table_management.TestOrderFlow" name="test_add_items_without_order_fails" time="0.382"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
-    return complexjson.loads(self.text, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/__init__.py:346: in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:337: in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-
-During handling of the above exception, another exception occurred:
-backend/tests/test_iteration41_table_management.py:524: in test_add_items_without_order_fails
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'id'</failure></testcase><testcase classname="backend.tests.test_iteration41_table_management.TestOrderFlow" name="test_add_items_without_order_fails" time="0.387"><failure message="KeyError: 'id'">backend/tests/test_iteration41_table_management.py:524: in test_add_items_without_order_fails
     table_id = create_response.json()["id"]
-               ^^^^^^^^^^^^^^^^^^^^^^
-/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
-    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
-E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_iteration41_table_management.TestWaiterEndpoints" name="test_get_waiters" time="0.487" /><testcase classname="backend.tests.test_iteration41_table_management.TestWaiterEndpoints" name="test_waiter_login_endpoint" time="0.373"><failure message="assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">backend/tests/test_iteration41_table_management.py:566: in test_waiter_login_endpoint
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'id'</failure></testcase><testcase classname="backend.tests.test_iteration41_table_management.TestWaiterEndpoints" name="test_get_waiters" time="0.391" /><testcase classname="backend.tests.test_iteration41_table_management.TestWaiterEndpoints" name="test_waiter_login_endpoint" time="0.389"><failure message="assert 401 == 200&#10; +  where 401 = &lt;Response [401]&gt;.status_code">backend/tests/test_iteration41_table_management.py:566: in test_waiter_login_endpoint
     assert response.status_code == 200
 E   assert 401 == 200
 E    +  where 401 = &lt;Response [401]&gt;.status_code</failure></testcase></testsuite></testsuites>
