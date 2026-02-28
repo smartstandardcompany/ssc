@@ -30,6 +30,7 @@ export default function CCTVPage() {
   const [analytics, setAnalytics] = useState(null);
   const [peopleCount, setPeopleCount] = useState(null);
   const [hikStatus, setHikStatus] = useState(null);
+  const [employees, setEmployees] = useState([]);
   const [selectedBranch, setSelectedBranch] = useState('');
   const [gridSize, setGridSize] = useState(4); // 2x2, 3x3, 4x4
   const [loading, setLoading] = useState(true);
@@ -49,13 +50,14 @@ export default function CCTVPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [branchRes, dvrRes, camRes, alertRes, analyticsRes, countRes] = await Promise.all([
+      const [branchRes, dvrRes, camRes, alertRes, analyticsRes, countRes, empRes] = await Promise.all([
         api.get('/branches'),
         api.get('/cctv/dvrs'),
         api.get('/cctv/cameras'),
         api.get('/cctv/alerts?limit=20'),
         api.get('/cctv/analytics'),
-        api.get('/cctv/people-count')
+        api.get('/cctv/people-count'),
+        api.get('/employees')
       ]);
       setBranches(branchRes.data);
       setDvrs(dvrRes.data);
@@ -63,6 +65,7 @@ export default function CCTVPage() {
       setAlerts(alertRes.data);
       setAnalytics(analyticsRes.data);
       setPeopleCount(countRes.data);
+      setEmployees(empRes.data || []);
     } catch (err) {
       console.error('Failed to fetch CCTV data', err);
     } finally {
