@@ -708,6 +708,28 @@ const translations = {
     supplier_report_title: 'आपूर्तिकर्ता रिपोर्ट', category_report_title: 'श्रेणी रिपोर्ट',
     kitchen_title: 'रसोई डिस्प्ले', notifications_title: 'सूचनाएँ',
     help_title: 'सहायता', portal_title: 'कर्मचारी पोर्टल',
+    // CCTV
+    cctv_title: 'CCTV सुरक्षा', cctv_subtitle: 'AI संचालित वीडियो निगरानी',
+    live_view: 'लाइव व्यू', face_recognition: 'चेहरे की पहचान', object_detection: 'वस्तु पहचान',
+    people_count: 'लोगों की गिनती', motion_analysis: 'गति विश्लेषण', alerts: 'अलर्ट',
+    devices: 'डिवाइस', register_face: 'चेहरा पंजीकृत करें', registered_faces: 'पंजीकृत चेहरे',
+    // Scheduled Monitoring
+    scheduled_monitoring: 'शेड्यूल्ड AI मॉनिटरिंग', monitoring_interval: 'मॉनिटरिंग अंतराल',
+    enable_monitoring: 'शेड्यूल्ड मॉनिटरिंग सक्षम करें', run_now: 'अभी चलाएं',
+    notification_channels: 'सूचना चैनल', in_app: 'ऐप में', whatsapp: 'व्हाट्सऐप',
+    // Partner P&L
+    partner_pl_title: 'पार्टनर P&L रिपोर्ट', partner_pl_subtitle: 'स्वामित्व के अनुसार लाभ-हानि',
+    company_summary: 'कंपनी सारांश', partner_breakdown: 'पार्टनर विवरण',
+    expense_categories: 'खर्च श्रेणियाँ', payment_modes: 'भुगतान मोड',
+    revenue: 'राजस्व', gross_profit: 'सकल लाभ', operating_expenses: 'परिचालन खर्च',
+    profit_share: 'लाभ हिस्सा', ownership_percentage: 'स्वामित्व %', investments: 'निवेश',
+    withdrawals: 'निकासी', current_balance: 'वर्तमान शेष', available_withdrawal: 'निकासी के लिए उपलब्ध',
+    // ZATCA Phase 2
+    zatca_phase2: 'ZATCA फेज 2', zatca_compliance: 'ZATCA अनुपालन',
+    generate_xml: 'XML चालान बनाएं', submit_zatca: 'ZATCA को भेजें',
+    // Mobile Navigation
+    customize_nav: 'बॉटम नेविगेशन कस्टमाइज़ करें', reset_default: 'डिफ़ॉल्ट पर रीसेट',
+    select_items: '5 आइटम तक चुनें', more: 'और',
   },
 };
 
