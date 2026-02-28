@@ -535,6 +535,28 @@ const translations = {
     supplier_report_title: 'سپلائر رپورٹ', category_report_title: 'کیٹگری رپورٹ',
     kitchen_title: 'کچن ڈسپلے', notifications_title: 'نوٹیفکیشنز',
     help_title: 'مدد', portal_title: 'ملازم پورٹل',
+    // CCTV
+    cctv_title: 'CCTV سیکیورٹی', cctv_subtitle: 'AI کے ساتھ ویڈیو نگرانی',
+    live_view: 'لائیو ویو', face_recognition: 'چہرے کی شناخت', object_detection: 'آبجیکٹ ڈٹیکشن',
+    people_count: 'لوگوں کی گنتی', motion_analysis: 'حرکت کا تجزیہ', alerts: 'الرٹس',
+    devices: 'ڈیوائسز', register_face: 'چہرہ رجسٹر کریں', registered_faces: 'رجسٹرڈ چہرے',
+    // Scheduled Monitoring
+    scheduled_monitoring: 'شیڈولڈ AI مانیٹرنگ', monitoring_interval: 'مانیٹرنگ وقفہ',
+    enable_monitoring: 'شیڈولڈ مانیٹرنگ فعال کریں', run_now: 'ابھی چلائیں',
+    notification_channels: 'نوٹیفکیشن چینلز', in_app: 'ایپ میں', whatsapp: 'واٹس ایپ',
+    // Partner P&L
+    partner_pl_title: 'پارٹنر P&L رپورٹ', partner_pl_subtitle: 'ملکیت کے حساب سے نفع نقصان',
+    company_summary: 'کمپنی کا خلاصہ', partner_breakdown: 'پارٹنر تفصیل',
+    expense_categories: 'اخراجات کی اقسام', payment_modes: 'ادائیگی کے طریقے',
+    revenue: 'آمدنی', gross_profit: 'مجموعی منافع', operating_expenses: 'آپریٹنگ اخراجات',
+    profit_share: 'منافع کا حصہ', ownership_percentage: 'ملکیت %', investments: 'سرمایہ کاری',
+    withdrawals: 'نکالی گئی رقم', current_balance: 'موجودہ بیلنس', available_withdrawal: 'نکالنے کے لیے دستیاب',
+    // ZATCA Phase 2
+    zatca_phase2: 'زاتکا فیز 2', zatca_compliance: 'زاتکا مطابقت',
+    generate_xml: 'XML انوائس بنائیں', submit_zatca: 'زاتکا کو بھیجیں',
+    // Mobile Navigation
+    customize_nav: 'نیچے نیویگیشن کسٹمائز کریں', reset_default: 'ڈیفالٹ پر ری سیٹ',
+    select_items: '5 آئٹمز تک منتخب کریں', more: 'مزید',
   },
   hi: {
     nav_operations: 'संचालन', nav_finance: 'वित्त', nav_people: 'लोग',
