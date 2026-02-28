@@ -3,8 +3,10 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 import os
 import logging
+import uuid
+from datetime import datetime, timezone
 
-from database import client
+from database import client, db
 
 from routers import (
     auth,
