@@ -190,6 +190,24 @@ export default function SettingsPage() {
     } catch (e) { toast.error(e.response?.data?.detail || 'Failed to run'); }
   };
 
+  const saveZatcaSettings = async () => {
+    try {
+      await api.post('/settings/zatca', zatcaSettings);
+      toast.success('ZATCA settings saved successfully');
+    } catch (e) { toast.error(e.response?.data?.detail || 'Failed to save ZATCA settings'); }
+  };
+
+  const testZatcaConnection = async () => {
+    try {
+      const res = await api.post('/settings/zatca/test');
+      if (res.data.success) {
+        toast.success(res.data.message || 'ZATCA connection successful');
+      } else {
+        toast.error(res.data.message || 'ZATCA connection failed');
+      }
+    } catch (e) { toast.error(e.response?.data?.detail || 'Failed to test connection'); }
+  };
+
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-64">Loading...</div></DashboardLayout>;
 
   return (
