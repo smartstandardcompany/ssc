@@ -245,6 +245,8 @@ class Employee(BaseModel):
     notes: Optional[str] = None
     active: bool = True
     status: str = "active"
+    pos_role: Optional[str] = None  # "cashier", "waiter", "both", or None
+    cashier_pin: Optional[str] = None
     resignation_date: Optional[str] = None
     last_working_day: Optional[str] = None
     notice_period_days: int = 30
