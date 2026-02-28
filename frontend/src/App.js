@@ -44,6 +44,7 @@ import OrderStatusPage from "./pages/OrderStatusPage";
 import MenuItemsPage from "./pages/MenuItemsPage";
 import ShiftReportPage from "./pages/ShiftReportPage";
 import CCTVPage from "./pages/CCTVPage";
+import PartnerPLReportPage from "./pages/PartnerPLReportPage";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 
