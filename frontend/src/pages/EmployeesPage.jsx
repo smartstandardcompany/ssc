@@ -181,7 +181,7 @@ export default function EmployeesPage() {
     }
   };
 
-  const resetForm = () => { setFormData({ name: '', document_id: '', phone: '', email: '', position: '', job_title_id: '', branch_id: '', salary: '', pay_frequency: 'monthly', join_date: '', document_expiry: '', annual_leave_entitled: 30, sick_leave_entitled: 15, notes: '' }); setEditingEmp(null); };
+  const resetForm = () => { setFormData({ name: '', document_id: '', phone: '', email: '', position: '', job_title_id: '', branch_id: '', salary: '', pay_frequency: 'monthly', join_date: '', document_expiry: '', annual_leave_entitled: 30, sick_leave_entitled: 15, pos_role: '', notes: '' }); setEditingEmp(null); };
 
   const isExpiryNear = (d) => d && Math.floor((new Date(d) - new Date()) / 86400000) <= 30;
   const getEmpTotalPaid = (id) => salaryPayments.filter(p => p.employee_id === id).reduce((s, p) => s + p.amount, 0);
