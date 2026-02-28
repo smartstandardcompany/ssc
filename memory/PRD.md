@@ -18,6 +18,29 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 
 ## Recent Updates (Feb 28, 2026)
 
+### CCTV Security Module (NEW)
+- **Full Hikvision Integration** with Hik-Connect cloud support
+- **Live Camera Grid View**: 2x2, 3x3, 4x4 layouts with branch filtering
+- **DVR/NVR Management**: Add, configure, delete DVRs per branch
+- **People Counting Analytics**: Daily/hourly visitor tracking with charts
+- **Motion Alerts**: Alert management with acknowledge functionality
+- **Analytics Dashboard**: Daily traffic trends, hourly distribution, peak hours
+- **Face Recognition** (placeholder for future AI integration)
+- **Recording Playback** support for local DVRs via RTSP
+
+**Backend APIs:**
+- `/api/cctv/hik-connect/auth` - Hik-Connect authentication
+- `/api/cctv/dvrs` - DVR CRUD operations
+- `/api/cctv/cameras` - Camera management
+- `/api/cctv/stream/{camera_id}` - Get stream URL
+- `/api/cctv/snapshot/{camera_id}` - Get camera snapshot
+- `/api/cctv/people-count` - People counting data
+- `/api/cctv/alerts` - Motion alerts
+- `/api/cctv/analytics` - CCTV analytics
+
+**Frontend:**
+- `/cctv` - CCTV Security page with Live View, Analytics, Alerts, Devices tabs
+
 ### Translation & UX Improvements
 - **Full i18n Translation Coverage** for:
   - Shift Report page (all labels, card titles, table headers)
