@@ -49,6 +49,7 @@ for module in [
     bank_statements,
     branches,
     cashier_pos,
+    cctv,
     customers,
     dashboard,
     documents,
