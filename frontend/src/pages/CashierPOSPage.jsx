@@ -56,6 +56,8 @@ export default function CashierPOSPage() {
   const [tableNumber, setTableNumber] = useState('');
   const [notes, setNotes] = useState('');
   const [splitPayments, setSplitPayments] = useState([]);
+  const [showShiftModal, setShowShiftModal] = useState(false);
+  const [currentShift, setCurrentShift] = useState(null);
 
   // Check auth
   useEffect(() => {
