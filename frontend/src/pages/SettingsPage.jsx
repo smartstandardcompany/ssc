@@ -36,6 +36,17 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [schedulerJobs, setSchedulerJobs] = useState([]);
   const [schedulerLogs, setSchedulerLogs] = useState([]);
+  const [cctvSettings, setCctvSettings] = useState({
+    hik_email: '', hik_password: '', hik_status: null,
+    people_counting_enabled: true, motion_alerts_enabled: true,
+    alert_sensitivity: 'medium', counting_interval: 5
+  });
+  const [branches, setBranches] = useState([]);
+  const [dvrs, setDvrs] = useState([]);
+  const [newDVR, setNewDVR] = useState({
+    branch_id: '', name: '', ip_address: '', port: 8000,
+    username: 'admin', password: '', device_serial: '', is_cloud: true, channels: 4
+  });
 
   useEffect(() => { fetchSettings(); }, []);
 
