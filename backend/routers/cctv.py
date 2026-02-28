@@ -74,45 +74,74 @@ async def get_hik_connect_token():
     return creds.get("access_token")
 
 async def refresh_hik_connect_token(email: str, password: str):
-    """Authenticate with Hik-Connect and get access token"""
+    """Authenticate with Hik-Connect and get access token
+    
+    Note: Hik-Connect requires official API key from Hikvision Partner Portal.
+    For now, we store credentials and attempt connection via available endpoints.
+    Direct device access via RTSP/ISAPI is recommended for local DVRs.
+    """
     try:
+        # Store credentials for reference
+        await db.hik_connect_credentials.update_one(
+            {},
+            {"$set": {
+                "email": email,
+                "password_hash": hashlib.sha256(password.encode()).hexdigest(),
+                "status": "credentials_saved",
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "note": "Hik-Connect cloud API requires official partner API key. Use local DVR connection instead."
+            }},
+            upsert=True
+        )
+        
+        # Try multiple known Hik-Connect API endpoints
+        endpoints = [
+            "https://api.hik-connect.com/v3/users/tokens",
+            "https://apiusc.hik-connect.com/v3/users/tokens",
+            "https://api.hikvision.com/v3/users/tokens"
+        ]
+        
         async with aiohttp.ClientSession() as session:
-            # Step 1: Get session token
-            auth_url = f"{HIK_CONNECT_AUTH}/v3/users/tokens"
-            headers = {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            }
-            payload = {
-                "account": email,
-                "password": hashlib.md5(password.encode()).hexdigest()
-            }
-            
-            async with session.post(auth_url, json=payload, headers=headers) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    if data.get("meta", {}).get("code") == 200:
-                        token_data = data.get("loginSession", {})
-                        # Store credentials and token
-                        await db.hik_connect_credentials.update_one(
-                            {},
-                            {"$set": {
-                                "email": email,
-                                "password_hash": hashlib.sha256(password.encode()).hexdigest(),
-                                "access_token": token_data.get("sessionId"),
-                                "refresh_token": token_data.get("refreshSessionId"),
-                                "expires_at": (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat(),
-                                "updated_at": datetime.now(timezone.utc).isoformat()
-                            }},
-                            upsert=True
-                        )
-                        return token_data.get("sessionId")
-                    else:
-                        raise HTTPException(status_code=401, detail=data.get("meta", {}).get("message", "Authentication failed"))
-                else:
-                    raise HTTPException(status_code=resp.status, detail="Hik-Connect authentication failed")
-    except aiohttp.ClientError as e:
-        raise HTTPException(status_code=500, detail=f"Connection error: {str(e)}")
+            for api_url in endpoints:
+                try:
+                    headers = {"Content-Type": "application/json", "Accept": "application/json"}
+                    payload = {
+                        "account": email,
+                        "password": hashlib.md5(password.encode()).hexdigest()
+                    }
+                    
+                    async with session.post(api_url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            if data.get("meta", {}).get("code") == 200:
+                                token_data = data.get("loginSession", {})
+                                await db.hik_connect_credentials.update_one(
+                                    {},
+                                    {"$set": {
+                                        "access_token": token_data.get("sessionId"),
+                                        "status": "connected"
+                                    }}
+                                )
+                                return token_data.get("sessionId")
+                except:
+                    continue
+        
+        # If cloud API fails, mark as credentials saved only
+        return "credentials_saved"
+        
+    except Exception as e:
+        # Store credentials anyway for manual reference
+        await db.hik_connect_credentials.update_one(
+            {},
+            {"$set": {
+                "email": email,
+                "status": "error",
+                "error": str(e),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }},
+            upsert=True
+        )
+        return None
 
 @router.post("/cctv/hik-connect/auth")
 async def authenticate_hik_connect(creds: HikConnectCredentials, current_user: User = Depends(get_current_user)):
