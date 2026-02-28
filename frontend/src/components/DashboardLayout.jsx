@@ -152,6 +152,17 @@ export const DashboardLayout = ({ children }) => {
   const [showStockAlerts, setShowStockAlerts] = useState(false);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('ssc_dark_mode') === 'true');
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [bottomNavItems, setBottomNavItems] = useState(() => {
+    const saved = localStorage.getItem('ssc_bottom_nav');
+    return saved ? JSON.parse(saved) : [
+      { path: '/', icon: 'LayoutDashboard', label: 'Home', enabled: true },
+      { path: '/sales', icon: 'ShoppingCart', label: 'Sales', enabled: true },
+      { path: '/expenses', icon: 'Receipt', label: 'Expenses', enabled: true },
+      { path: '/stock', icon: 'Package', label: 'Stock', enabled: true },
+      { path: '/reports', icon: 'BarChart3', label: 'Reports', enabled: true },
+    ];
+  });
+  const [showNavCustomize, setShowNavCustomize] = useState(false);
   const { t, lang, setLang, isRTL } = useLanguage();
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
