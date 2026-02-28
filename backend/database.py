@@ -49,7 +49,22 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             raise HTTPException(status_code=401, detail="Invalid authentication credentials")
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+    
+    # First check users collection
     user = await db.users.find_one({"id": user_id}, {"_id": 0})
     if user is None:
-        raise HTTPException(status_code=401, detail="User not found")
+        # For cashier PIN login - check employees collection and create virtual user
+        employee = await db.employees.find_one({"id": user_id}, {"_id": 0})
+        if employee:
+            user = {
+                "id": employee["id"],
+                "email": employee.get("email", ""),
+                "name": employee.get("name", ""),
+                "role": "cashier",
+                "branch_id": employee.get("branch_id"),
+                "permissions": ["cashier", "pos", "sales"],
+                "created_at": employee.get("created_at", datetime.now(timezone.utc).isoformat())
+            }
+        else:
+            raise HTTPException(status_code=401, detail="User not found")
     return User(**user)
