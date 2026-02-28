@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
 from datetime import datetime, timezone, timedelta
+import os
 
 from database import db, get_current_user
 from models import User, Partner, PartnerCreate, PartnerTransaction, PartnerTransactionCreate, CompanyLoan, CompanyLoanPayment, Fine, FineCreate, Expense, Notification
