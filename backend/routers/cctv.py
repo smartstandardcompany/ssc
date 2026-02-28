@@ -660,7 +660,7 @@ async def detect_motion(body: dict, current_user: User = Depends(get_current_use
             with open(snapshot_path, "wb") as f:
                 f.write(base64.b64decode(frame_data))
             snapshot_url = f"/uploads/{snapshot_filename}"
-        except:
+        except Exception:
             pass
     
     # Create alert
