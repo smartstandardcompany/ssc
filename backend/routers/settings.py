@@ -265,3 +265,145 @@ async def download_import_template(data_type: str, current_user: User = Depends(
     buffer.seek(0)
     return StreamingResponse(buffer, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                              headers={"Content-Disposition": f"attachment; filename={data_type}_import_template.xlsx"})
+
+
+
+# ZATCA Phase 2 Settings
+@router.get("/settings/zatca")
+async def get_zatca_settings(current_user: User = Depends(get_current_user)):
+    """Get ZATCA Phase 2 configuration"""
+    settings = await db.zatca_settings.find_one({}, {"_id": 0})
+    if settings:
+        # Mask sensitive fields
+        if settings.get("csid_secret"):
+            settings["csid_secret"] = "••••••••"
+        if settings.get("production_secret"):
+            settings["production_secret"] = "••••••••"
+        if settings.get("private_key"):
+            settings["private_key"] = "••••••••"
+    return settings or {
+        "enabled": False,
+        "environment": "sandbox",
+        "otp": "",
+        "csid": "",
+        "csid_secret": "",
+        "production_csid": "",
+        "production_secret": "",
+        "certificate": "",
+        "private_key": "",
+        "auto_submit": False,
+        "invoice_counter": 1
+    }
+
+
+@router.post("/settings/zatca")
+async def save_zatca_settings(body: dict, current_user: User = Depends(get_current_user)):
+    """Save ZATCA Phase 2 configuration"""
+    existing = await db.zatca_settings.find_one({})
+    
+    data = {
+        "enabled": body.get("enabled", False),
+        "environment": body.get("environment", "sandbox"),
+        "otp": body.get("otp", ""),
+        "csid": body.get("csid", ""),
+        "production_csid": body.get("production_csid", ""),
+        "certificate": body.get("certificate", ""),
+        "auto_submit": body.get("auto_submit", False),
+        "invoice_counter": int(body.get("invoice_counter", 1) or 1),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_by": current_user.id
+    }
+    
+    # Only update secrets if they're not masked
+    if body.get("csid_secret") and body.get("csid_secret") != "••••••••":
+        data["csid_secret"] = body["csid_secret"]
+    elif existing and existing.get("csid_secret"):
+        data["csid_secret"] = existing["csid_secret"]
+    
+    if body.get("production_secret") and body.get("production_secret") != "••••••••":
+        data["production_secret"] = body["production_secret"]
+    elif existing and existing.get("production_secret"):
+        data["production_secret"] = existing["production_secret"]
+    
+    if body.get("private_key") and body.get("private_key") != "••••••••":
+        data["private_key"] = body["private_key"]
+    elif existing and existing.get("private_key"):
+        data["private_key"] = existing["private_key"]
+    
+    if existing:
+        await db.zatca_settings.update_one({}, {"$set": data})
+    else:
+        await db.zatca_settings.insert_one(data)
+    
+    return {"message": "ZATCA settings saved successfully"}
+
+
+@router.post("/settings/zatca/test")
+async def test_zatca_connection(current_user: User = Depends(get_current_user)):
+    """Test ZATCA API connection with stored credentials"""
+    settings = await db.zatca_settings.find_one({}, {"_id": 0})
+    
+    if not settings:
+        return {"success": False, "message": "No ZATCA settings configured"}
+    
+    if not settings.get("enabled"):
+        return {"success": False, "message": "ZATCA integration is disabled"}
+    
+    environment = settings.get("environment", "sandbox")
+    
+    if environment == "sandbox":
+        csid = settings.get("csid", "")
+        secret = settings.get("csid_secret", "")
+    else:
+        csid = settings.get("production_csid", "")
+        secret = settings.get("production_secret", "")
+    
+    if not csid:
+        return {"success": False, "message": f"No CSID configured for {environment} environment"}
+    
+    # For now, we validate the format of credentials
+    # Actual API test would require the ZATCA SDK or direct API call
+    if len(csid) < 10:
+        return {"success": False, "message": "CSID appears to be invalid (too short)"}
+    
+    # Check if it's a valid Base64-encoded string
+    try:
+        import base64
+        base64.b64decode(csid)
+    except Exception:
+        return {"success": False, "message": "CSID is not valid Base64 encoded"}
+    
+    return {
+        "success": True,
+        "message": f"Credentials validated for {environment} environment",
+        "environment": environment,
+        "csid_configured": bool(csid),
+        "note": "Full API test requires ZATCA SDK integration. Credentials appear to be properly formatted."
+    }
+
+
+@router.get("/settings/zatca/status")
+async def get_zatca_status(current_user: User = Depends(get_current_user)):
+    """Get ZATCA integration status summary"""
+    settings = await db.zatca_settings.find_one({}, {"_id": 0})
+    company = await db.company_settings.find_one({}, {"_id": 0})
+    
+    # Count invoices with ZATCA data
+    total_invoices = await db.invoices.count_documents({})
+    zatca_invoices = await db.invoices.count_documents({"uuid": {"$exists": True, "$ne": None}})
+    submitted_invoices = await db.invoices.count_documents({"zatca_status": "submitted"})
+    
+    return {
+        "enabled": settings.get("enabled", False) if settings else False,
+        "environment": settings.get("environment", "sandbox") if settings else "sandbox",
+        "vat_enabled": company.get("vat_enabled", False) if company else False,
+        "vat_number": company.get("vat_number", "") if company else "",
+        "csid_configured": bool(settings.get("csid") or settings.get("production_csid")) if settings else False,
+        "auto_submit": settings.get("auto_submit", False) if settings else False,
+        "invoice_counter": settings.get("invoice_counter", 1) if settings else 1,
+        "statistics": {
+            "total_invoices": total_invoices,
+            "zatca_ready": zatca_invoices,
+            "submitted": submitted_invoices
+        }
+    }
