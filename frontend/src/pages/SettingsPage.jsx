@@ -8,10 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Mail, MessageCircle, Bell, Send, Upload, Download, Database, Shield, Clock, Play, FileCheck } from 'lucide-react';
+import { Mail, MessageCircle, Bell, Send, Upload, Download, Database, Shield, Clock, Play, FileCheck, Camera, Wifi, WifiOff, Video, Users, AlertTriangle } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 function BranchWaButtons() {
   const [br, setBr] = useState([]);
