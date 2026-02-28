@@ -528,13 +528,15 @@ class TestOrderFlow:
     
     def test_add_items_without_order_fails(self, api_client, admin_token):
         """POST /api/tables/{id}/add-items without active order should fail"""
+        uid = unique_id()
         # Create table but don't start order
-        table_data = {"table_number": "TEST_NO_ORDER", "section": "Main Hall", "capacity": 4}
+        table_data = {"table_number": f"TEST_NOR{uid}", "section": "Main Hall", "capacity": 4}
         create_response = api_client.post(
             f"{BASE_URL}/api/tables",
             headers={"Authorization": f"Bearer {admin_token}"},
             json=table_data
         )
+        assert create_response.status_code == 200, f"Failed to create table: {create_response.text}"
         table_id = create_response.json()["id"]
         
         # Try to add items
