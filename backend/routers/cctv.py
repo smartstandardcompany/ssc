@@ -514,6 +514,176 @@ async def get_cctv_analytics(
     }
 
 # =====================================================
+# CCTV AI SETTINGS
+# =====================================================
+
+@router.get("/cctv/settings")
+async def get_cctv_settings(current_user: User = Depends(get_current_user)):
+    """Get CCTV AI feature settings"""
+    settings = await db.cctv_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {
+            "people_counting_enabled": True,
+            "motion_alerts_enabled": True,
+            "alert_sensitivity": "medium",
+            "counting_interval": 5
+        }
+    return settings
+
+
+@router.post("/cctv/settings")
+async def save_cctv_settings(body: dict, current_user: User = Depends(get_current_user)):
+    """Save CCTV AI feature settings"""
+    settings = {
+        "people_counting_enabled": body.get("people_counting_enabled", True),
+        "motion_alerts_enabled": body.get("motion_alerts_enabled", True),
+        "alert_sensitivity": body.get("alert_sensitivity", "medium"),
+        "counting_interval": body.get("counting_interval", 5),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_by": current_user.id
+    }
+    
+    await db.cctv_settings.update_one({}, {"$set": settings}, upsert=True)
+    return {"success": True, "message": "CCTV settings saved"}
+
+
+# =====================================================
+# AI PEOPLE COUNTING PROCESSOR
+# =====================================================
+
+@router.post("/cctv/process-frame")
+async def process_camera_frame(body: dict, current_user: User = Depends(get_current_user)):
+    """Process a camera frame for people counting (receives frame from client or scheduled job)
+    
+    This endpoint can be called by:
+    1. Client-side JavaScript processing RTSP stream frames
+    2. Backend scheduled job processing snapshots
+    
+    Expected body: {
+        camera_id: str,
+        frame_data: str (base64 encoded image),
+        timestamp: str (ISO format)
+    }
+    """
+    camera_id = body.get("camera_id")
+    frame_data = body.get("frame_data")  # Base64 encoded
+    timestamp = body.get("timestamp", datetime.now(timezone.utc).isoformat())
+    
+    if not camera_id:
+        raise HTTPException(status_code=400, detail="camera_id required")
+    
+    # Check if people counting is enabled
+    settings = await db.cctv_settings.find_one({}, {"_id": 0})
+    if not settings or not settings.get("people_counting_enabled", True):
+        return {"success": False, "message": "People counting disabled"}
+    
+    # TODO: Integrate with AI model for people counting
+    # For now, this is a placeholder that can be extended with:
+    # 1. OpenCV + YOLO for local processing
+    # 2. Cloud AI service (AWS Rekognition, Google Vision, etc.)
+    # 3. Custom trained model
+    
+    # Simulate count result (placeholder)
+    import random
+    entries = random.randint(0, 3)
+    exits = random.randint(0, 2)
+    
+    # Get current total
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today_counts = await db.cctv_people_count.find({
+        "camera_id": camera_id,
+        "timestamp": {"$gte": f"{today}T00:00:00"}
+    }, {"_id": 0}).to_list(1000)
+    
+    total_entries = sum(c.get("entries", 0) for c in today_counts) + entries
+    total_exits = sum(c.get("exits", 0) for c in today_counts) + exits
+    
+    # Record the count
+    count_record = {
+        "camera_id": camera_id,
+        "timestamp": timestamp,
+        "entries": entries,
+        "exits": exits,
+        "total_inside": max(0, total_entries - total_exits),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.cctv_people_count.insert_one(count_record)
+    
+    return {
+        "success": True,
+        "entries": entries,
+        "exits": exits,
+        "total_inside": count_record["total_inside"]
+    }
+
+
+@router.post("/cctv/detect-motion")
+async def detect_motion(body: dict, current_user: User = Depends(get_current_user)):
+    """Process motion detection from camera
+    
+    Expected body: {
+        camera_id: str,
+        frame_data: str (base64 encoded image, optional),
+        motion_score: float (0-1),
+        timestamp: str (ISO format)
+    }
+    """
+    camera_id = body.get("camera_id")
+    motion_score = body.get("motion_score", 0)
+    timestamp = body.get("timestamp", datetime.now(timezone.utc).isoformat())
+    frame_data = body.get("frame_data")
+    
+    if not camera_id:
+        raise HTTPException(status_code=400, detail="camera_id required")
+    
+    # Check if motion alerts are enabled
+    settings = await db.cctv_settings.find_one({}, {"_id": 0})
+    if not settings or not settings.get("motion_alerts_enabled", True):
+        return {"success": False, "message": "Motion alerts disabled"}
+    
+    # Get sensitivity threshold
+    sensitivity = settings.get("alert_sensitivity", "medium")
+    thresholds = {"low": 0.7, "medium": 0.5, "high": 0.3}
+    threshold = thresholds.get(sensitivity, 0.5)
+    
+    if motion_score < threshold:
+        return {"success": True, "alert_created": False, "message": "Below threshold"}
+    
+    # Save snapshot if provided
+    snapshot_url = None
+    if frame_data:
+        # Save to uploads folder
+        snapshot_filename = f"motion_{camera_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.jpg"
+        snapshot_path = os.path.join(ROOT_DIR, "uploads", snapshot_filename)
+        try:
+            import base64
+            with open(snapshot_path, "wb") as f:
+                f.write(base64.b64decode(frame_data))
+            snapshot_url = f"/uploads/{snapshot_filename}"
+        except:
+            pass
+    
+    # Create alert
+    alert = {
+        "id": f"alert_{datetime.now().strftime('%Y%m%d%H%M%S%f')}",
+        "camera_id": camera_id,
+        "timestamp": timestamp,
+        "motion_score": motion_score,
+        "snapshot_url": snapshot_url,
+        "acknowledged": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.cctv_alerts.insert_one(alert)
+    
+    return {
+        "success": True,
+        "alert_created": True,
+        "alert_id": alert["id"],
+        "motion_score": motion_score
+    }
+
+
+# =====================================================
 # FACE RECOGNITION (Placeholder)
 # =====================================================
 
