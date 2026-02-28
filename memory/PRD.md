@@ -5,82 +5,63 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 
 ## Tech Stack
 - **Backend:** FastAPI, Motor (async MongoDB), JWT auth, APScheduler
-- **Frontend:** React, TailwindCSS, Shadcn UI, Recharts, react-grid-layout
+- **Frontend:** React, TailwindCSS, Shadcn UI, Recharts, react-grid-layout, date-fns
 - **Database:** MongoDB
 - **AI:** emergentintegrations (GPT-4o Vision)
-- **Other:** Twilio (WhatsApp), qrcode (ZATCA), pdfplumber/pandas (Bank statements)
+- **Other:** Twilio (WhatsApp), qrcode (ZATCA)
 
 ## Recent Updates (Feb 28, 2026)
 
-### Loan Management System (COMPLETED - Latest)
-- Full CRUD: Create, approve/reject, record installments, delete
-- Stats dashboard: Total, Active, Pending, Completed, Disbursed, Outstanding, Collected
-- Loan detail view with payment history and progress bar
-- Employee self-service: `/api/my/loans` for employees to view their own loans
-- Loan types: Personal, Salary Advance, Emergency, Housing
-- Auto-updates employee `loan_balance` on approve/installment
+### Leave Calendar View (COMPLETED - Latest)
+- Full monthly calendar with colored leave entries on date cells
+- Color-coded by leave type: Annual=green, Sick=blue, Unpaid=orange, Personal=purple, Emergency=red
+- Lighter shades for pending leaves
+- Click any date to see leave details (employee, type, status, duration, reason)
+- Month forward/back navigation
+- Legend showing all leave types
+- Stats cards: Total Requests, Pending, Approved, Rejected, Total Days Used
+- Tab switching: List View | Calendar | Requests
 
-### Separate Waiter & Cashier Portals (COMPLETED)
-- Added `pos_role` field to Employee model: "cashier", "waiter", "both", or null
-- PIN login now returns `pos_role` in response
-- Cashier login (`/cashier`) rejects waiter-only PINs
-- Waiter login (`/waiter`) rejects cashier-only PINs
-- Admin can assign POS roles via Employee edit form dropdown
+### Bank Reconciliation Improvements (COMPLETED)
+- **Diff % column**: Shows percentage difference per row, with color coding (>5% red, >1% amber)
+- **Status Pie Chart**: SVG donut chart showing matched vs issues percentage
+- **Batch Verify**: "Verify All Matched" button auto-flags all matched rows as verified
+- **CSV Export**: Export full reconciliation data including diff % and flag status
+- **Additional summary cards**: Verified count, Investigate count alongside existing totals
+- Full dark mode support on all elements
 
-### Employee Portal Enhancement (COMPLETED)
-- Added **Loans tab** to Employee Portal showing all employee's loans
-- Progress bars, installment tracking, remaining balance
-- Loan status badges (Active/Pending/Completed)
+### Dark Mode Polish (COMPLETED)
+- Added `dark:` classes to: LoanManagementPage, TableManagementPage, LeaveApprovalsPage, ReconciliationPage
+- Dark backgrounds (`dark:bg-stone-900`), dark text (`dark:text-white`), dark borders (`dark:border-stone-700`)
+- Toggle persists across all pages via localStorage
 
-### Expanded Keyboard Shortcuts (COMPLETED)
-- New shortcuts: T=Tables, L=Loans, W=Waiter, C=Cashier, K=KDS, H=Employees, O=Order Status
-- Updated shortcuts help modal with all new shortcuts
+### Previously Completed
+- Loan Management System (Full CRUD, installments, self-service)
+- Separate Waiter & Cashier Portals (pos_role field, role enforcement)
+- Table Management & Waiter Ordering System (20 tables, 5 sections)
+- KDS Table Banners, Order Status Table Info
+- AI-Powered CCTV, ZATCA Phase 2, Partner P&L, Mobile Nav Customization
+- Full Restaurant POS, KDS, Order Status, Cashier Shifts
+- Complete CRUD: Sales, Expenses, Customers, Suppliers, Employees, Branches
+- Analytics Dashboard, Predictive Analytics, AI Forecasting
+- Stock Management, Bank Reconciliation, Cash Transfers
+- Multi-language (EN, AR, UR, HI), Keyboard Shortcuts
 
-### Table Management Enhancements (COMPLETED)
-- KDS: Large orange TABLE banner for dine-in orders
-- Order Status: Table number badges with Armchair icon
-- 20 tables across 5 sections (Main Hall, VIP Room, Outdoor, Balcony, Private Dining)
-
-### Table Management & Waiter System (COMPLETED)
-- Admin table designer, Waiter Mode with PIN login, table selection, order flow
-
-## Key API Endpoints
-### Loans
-- `GET/POST /api/loans` - List/Create loans
-- `GET /api/loans/{id}` - Loan detail with installments
-- `POST /api/loans/{id}/approve` - Approve/reject (action: approve|reject)
-- `POST /api/loans/{id}/installment` - Record payment
-- `DELETE /api/loans/{id}` - Delete loan
-- `GET /api/loans/summary/stats` - Statistics
-- `GET /api/my/loans` - Employee self-service
-
-### Tables
-- `GET/POST /api/tables/sections` - Section CRUD
-- `GET/POST/PUT/DELETE /api/tables` - Table CRUD
-- `POST /api/tables/{id}/start-order` - Start order
-- `POST /api/tables/{id}/add-items` - Add items
-- `POST /api/tables/{id}/close-order` - Close/pay
-- `POST /api/tables/{id}/mark-available` - Mark available
-
-## File Structure
-- `/app/backend/routers/loans.py` - Loan management (NEW)
-- `/app/backend/routers/tables.py` - Table management
-- `/app/backend/routers/cashier_pos.py` - Updated with pos_role
-- `/app/backend/models.py` - Added Loan, LoanInstallment, pos_role
-- `/app/frontend/src/pages/LoanManagementPage.jsx` - Loan page (NEW)
-- `/app/frontend/src/pages/TableManagementPage.jsx` - Table admin
-- `/app/frontend/src/pages/WaiterPage.jsx` - Waiter mode
-- `/app/frontend/src/pages/EmployeePortalPage.jsx` - Enhanced with loans
-- `/app/frontend/src/pages/EmployeesPage.jsx` - Added pos_role field
-- `/app/frontend/src/components/DashboardLayout.jsx` - Updated shortcuts
+## Key Files
+- `/app/frontend/src/pages/LeaveApprovalsPage.jsx` - Leave calendar + list + approvals
+- `/app/frontend/src/pages/ReconciliationPage.jsx` - Enhanced bank reconciliation
+- `/app/frontend/src/pages/LoanManagementPage.jsx` - Loan management with dark mode
+- `/app/frontend/src/pages/TableManagementPage.jsx` - Table admin with dark mode
+- `/app/backend/routers/loans.py` - Loan management API
+- `/app/backend/routers/tables.py` - Table management API
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
 - Employee: ahmed@test.com / emp@123
-- Cashier/Waiter PIN: 1234
+- Cashier/Waiter/Kitchen PIN: 1234
 
 ## Backlog / Future Tasks
-- HR: Leave Calendar View (visual calendar of leaves)
-- Bank Reconciliation: Improvements to statement analyzer
-- UI/UX: Additional Dark Mode polish across newer pages
+- HR: Employee Self-Service Portal further enhancements
+- UI/UX: More dark mode refinements, mobile responsiveness improvements
 - Restaurant: Customer-facing display improvements
+- Advanced reporting: More chart types, export options
