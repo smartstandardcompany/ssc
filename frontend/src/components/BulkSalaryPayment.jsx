@@ -284,7 +284,7 @@ export function BulkSalaryPayment({ onComplete }) {
             {preview.to_pay?.length === 0 && (
               <div className="p-6 text-center bg-success/10 rounded-xl">
                 <CheckCircle size={32} className="mx-auto text-success mb-2" />
-                <p className="text-sm font-medium">All employees already paid for {formData.period}!</p>
+                <p className="text-sm font-medium">{t('already_paid')} {formData.period}!</p>
               </div>
             )}
 
@@ -292,7 +292,7 @@ export function BulkSalaryPayment({ onComplete }) {
             {preview.already_paid?.length > 0 && (
               <details className="text-xs">
                 <summary className="cursor-pointer text-muted-foreground">
-                  {preview.already_paid_count} already paid
+                  {preview.already_paid_count} {t('already_paid')}
                 </summary>
                 <div className="mt-2 p-2 bg-success/5 rounded-lg space-y-1">
                   {preview.already_paid.map((emp, i) => (
@@ -308,19 +308,19 @@ export function BulkSalaryPayment({ onComplete }) {
             {/* Payment Options */}
             <div className="grid grid-cols-2 gap-3 p-3 bg-stone-50 rounded-xl">
               <div>
-                <Label className="text-xs">Payment Mode</Label>
+                <Label className="text-xs">{t('payment_mode')}</Label>
                 <Select value={formData.payment_mode} onValueChange={(v) => setFormData(f => ({ ...f, payment_mode: v }))}>
                   <SelectTrigger className="h-9">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="bank">Bank Transfer</SelectItem>
-                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="bank">{t('bank')}</SelectItem>
+                    <SelectItem value="cash">{t('cash')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="text-xs">Payment Date</Label>
+                <Label className="text-xs">{t('payment_date')}</Label>
                 <Input 
                   type="date" 
                   value={formData.date} 
@@ -332,7 +332,7 @@ export function BulkSalaryPayment({ onComplete }) {
 
             <DialogFooter className="gap-2">
               <Button variant="outline" onClick={() => setPreview(null)} className="rounded-xl">
-                Back
+                {t('back')}
               </Button>
               <Button 
                 onClick={handleSubmit} 
@@ -341,7 +341,7 @@ export function BulkSalaryPayment({ onComplete }) {
                 data-testid="confirm-bulk-pay"
               >
                 {loading ? <Loader2 size={14} className="animate-spin mr-1" /> : <DollarSign size={14} className="mr-1" />}
-                Pay {selectAll ? preview.to_pay_count : formData.selectedEmployees.length} Employees
+                {t('pay_employees')} ({selectAll ? preview.to_pay_count : formData.selectedEmployees.length})
               </Button>
             </DialogFooter>
           </div>
@@ -353,10 +353,10 @@ export function BulkSalaryPayment({ onComplete }) {
             <div className="p-4 bg-primary/5 rounded-xl border border-primary/20">
               <div className="flex items-center gap-2 text-primary mb-2">
                 <AlertCircle size={16} />
-                <span className="text-sm font-medium">Bulk Payment</span>
+                <span className="text-sm font-medium">{t('bulk_salary_title')}</span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Pay salaries to all eligible employees at once. This will create salary payments and corresponding expense records automatically.
+                {t('bulk_payment_info')}
               </p>
             </div>
 
