@@ -42,6 +42,7 @@ import CashierLoginPage from "./pages/CashierLoginPage";
 import KitchenDisplayPage from "./pages/KitchenDisplayPage";
 import OrderStatusPage from "./pages/OrderStatusPage";
 import MenuItemsPage from "./pages/MenuItemsPage";
+import ShiftReportPage from "./pages/ShiftReportPage";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 
