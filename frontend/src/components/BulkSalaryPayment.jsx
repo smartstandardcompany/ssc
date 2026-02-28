@@ -139,14 +139,14 @@ export function BulkSalaryPayment({ onComplete }) {
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetDialog(); }}>
       <DialogTrigger asChild>
         <Button variant="outline" className="rounded-xl" data-testid="bulk-salary-btn">
-          <Users size={14} className="mr-1" /> Bulk Pay Salaries
+          <Users size={14} className="mr-1" /> {t('bulk_salary_title')}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" data-testid="bulk-salary-dialog">
         <DialogHeader>
           <DialogTitle className="font-outfit flex items-center gap-2">
             <DollarSign size={20} className="text-primary" />
-            Bulk Salary Payment
+            {t('bulk_salary_title')}
           </DialogTitle>
         </DialogHeader>
 
@@ -156,16 +156,16 @@ export function BulkSalaryPayment({ onComplete }) {
             <div className="p-4 bg-success/10 rounded-xl border border-success/30">
               <div className="flex items-center gap-2 text-success mb-2">
                 <CheckCircle size={20} />
-                <span className="font-bold">Payment Completed!</span>
+                <span className="font-bold">{t('payment_completed')}!</span>
               </div>
               <div className="grid grid-cols-2 gap-4 mt-3">
                 <div className="text-center p-3 bg-white rounded-lg">
                   <p className="text-2xl font-bold text-success">{result.summary.total_paid}</p>
-                  <p className="text-xs text-muted-foreground">Employees Paid</p>
+                  <p className="text-xs text-muted-foreground">{t('employees_to_pay')}</p>
                 </div>
                 <div className="text-center p-3 bg-white rounded-lg">
                   <p className="text-2xl font-bold text-primary">SAR {result.summary.total_amount.toFixed(2)}</p>
-                  <p className="text-xs text-muted-foreground">Total Amount</p>
+                  <p className="text-xs text-muted-foreground">{t('total_amount')}</p>
                 </div>
               </div>
             </div>
@@ -174,7 +174,7 @@ export function BulkSalaryPayment({ onComplete }) {
             {Object.keys(result.branch_totals || {}).length > 0 && (
               <Card className="border-border">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">By Branch</CardTitle>
+                  <CardTitle className="text-sm">{t('by_branch')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
