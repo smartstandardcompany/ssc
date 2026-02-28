@@ -231,13 +231,13 @@ export default function ShiftReportPage() {
                   <Card className="border-border" data-testid="total-shifts-card">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Users size={12} /> Total Shifts
+                        <Users size={12} /> {t('total_shifts')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold font-outfit text-primary">{report.summary?.total_shifts || 0}</div>
                       <div className="text-xs text-muted-foreground">
-                        {report.summary?.closed_shifts || 0} closed, {report.summary?.open_shifts || 0} open
+                        {report.summary?.closed_shifts || 0} {t('completed')}, {report.summary?.open_shifts || 0} {t('in_progress')}
                       </div>
                     </CardContent>
                   </Card>
@@ -245,19 +245,19 @@ export default function ShiftReportPage() {
                   <Card className="border-border" data-testid="total-sales-card">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-xs text-muted-foreground flex items-center gap-1">
-                        <DollarSign size={12} /> Total Sales
+                        <DollarSign size={12} /> {t('total_sales')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold font-outfit text-success">SAR {(report.summary?.total_sales || 0).toFixed(2)}</div>
-                      <div className="text-xs text-muted-foreground">{report.summary?.total_orders || 0} orders</div>
+                      <div className="text-xs text-muted-foreground">{report.summary?.total_orders || 0} {t('orders')}</div>
                     </CardContent>
                   </Card>
 
                   <Card className="border-border">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-xs text-muted-foreground flex items-center gap-1">
-                        <TrendingUp size={12} /> Opening Cash
+                        <TrendingUp size={12} /> {t('opening_cash')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -268,7 +268,7 @@ export default function ShiftReportPage() {
                   <Card className="border-border">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-xs text-muted-foreground flex items-center gap-1">
-                        <TrendingDown size={12} /> Closing Cash
+                        <TrendingDown size={12} /> {t('closing_cash')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -278,7 +278,7 @@ export default function ShiftReportPage() {
 
                   <Card className="border-border">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-xs text-muted-foreground">Expected Cash</CardTitle>
+                      <CardTitle className="text-xs text-muted-foreground">{t('expected_cash')}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold font-outfit text-info">SAR {(report.summary?.total_expected_cash || 0).toFixed(2)}</div>
@@ -288,7 +288,7 @@ export default function ShiftReportPage() {
                   <Card className={`border-border ${(report.summary?.total_cash_difference || 0) < 0 ? 'bg-error/5 border-error/30' : (report.summary?.total_cash_difference || 0) > 0 ? 'bg-success/5 border-success/30' : ''}`}>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-xs text-muted-foreground flex items-center gap-1">
-                        <ArrowUpDown size={12} /> Cash Difference
+                        <ArrowUpDown size={12} /> {t('cash_difference')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -296,7 +296,7 @@ export default function ShiftReportPage() {
                         {(report.summary?.total_cash_difference || 0) > 0 ? '+' : ''}SAR {(report.summary?.total_cash_difference || 0).toFixed(2)}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {(report.summary?.total_cash_difference || 0) < 0 ? 'Shortage' : (report.summary?.total_cash_difference || 0) > 0 ? 'Overage' : 'Balanced'}
+                        {(report.summary?.total_cash_difference || 0) < 0 ? t('shortage') : (report.summary?.total_cash_difference || 0) > 0 ? t('overage') : t('balanced')}
                       </div>
                     </CardContent>
                   </Card>
@@ -307,7 +307,7 @@ export default function ShiftReportPage() {
                   {/* Payment Breakdown */}
                   <Card className="border-border">
                     <CardHeader>
-                      <CardTitle className="font-outfit text-base">Payment Method Breakdown</CardTitle>
+                      <CardTitle className="font-outfit text-base">{t('payment_breakdown')}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       {paymentData.length > 0 ? (
@@ -328,7 +328,7 @@ export default function ShiftReportPage() {
                           </PieChart>
                         </ResponsiveContainer>
                       ) : (
-                        <div className="text-center py-8 text-muted-foreground">No payment data</div>
+                        <div className="text-center py-8 text-muted-foreground">{t('no_data')}</div>
                       )}
                       <div className="grid grid-cols-2 gap-2 mt-4">
                         {paymentData.map((d, i) => (
@@ -345,7 +345,7 @@ export default function ShiftReportPage() {
                   {/* Branch Summary */}
                   <Card className="border-border">
                     <CardHeader>
-                      <CardTitle className="font-outfit text-base">Sales by Branch</CardTitle>
+                      <CardTitle className="font-outfit text-base">{t('sales_by_branch')}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       {branchData.length > 0 ? (
