@@ -246,6 +246,18 @@ export default function EmployeesPage() {
                     <div><Label>Document Expiry</Label><Input type="date" value={formData.document_expiry} onChange={(e) => setFormData({ ...formData, document_expiry: e.target.value })} /></div>
                     <div><Label>Annual Leave (days/yr)</Label><Input type="number" value={formData.annual_leave_entitled} onChange={(e) => setFormData({ ...formData, annual_leave_entitled: e.target.value })} /></div>
                     <div><Label>Sick Leave (days/yr)</Label><Input type="number" value={formData.sick_leave_entitled} onChange={(e) => setFormData({ ...formData, sick_leave_entitled: e.target.value })} /></div>
+                    <div>
+                      <Label>POS Role</Label>
+                      <Select value={formData.pos_role || "none"} onValueChange={(v) => setFormData({ ...formData, pos_role: v === "none" ? "" : v })}>
+                        <SelectTrigger data-testid="pos-role-select"><SelectValue placeholder="No POS access" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No POS Access</SelectItem>
+                          <SelectItem value="cashier">Cashier Only</SelectItem>
+                          <SelectItem value="waiter">Waiter Only</SelectItem>
+                          <SelectItem value="both">Cashier + Waiter</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div className="flex gap-3">
                     <Button type="submit" data-testid="submit-employee" className="rounded-full">{editingEmp ? 'Update' : 'Add'} Employee</Button>
