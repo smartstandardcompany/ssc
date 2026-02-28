@@ -873,3 +873,49 @@ class MenuCategory(BaseModel):
     display_order: int = 0
     is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+
+class Loan(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    employee_id: str
+    employee_name: str
+    loan_type: str = "personal"  # personal, advance, emergency, housing
+    amount: float
+    monthly_installment: float = 0
+    total_installments: int = 0
+    paid_installments: int = 0
+    remaining_balance: float = 0
+    status: str = "pending"  # pending, approved, active, completed, rejected
+    approved_by: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    start_date: Optional[datetime] = None
+    reason: Optional[str] = None
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class LoanCreate(BaseModel):
+    employee_id: str
+    loan_type: str = "personal"
+    amount: float
+    monthly_installment: float = 0
+    total_installments: int = 0
+    start_date: Optional[datetime] = None
+    reason: Optional[str] = None
+    notes: Optional[str] = None
+
+class LoanInstallment(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    loan_id: str
+    employee_id: str
+    employee_name: str
+    amount: float
+    payment_mode: str = "deduction"
+    period: str = ""
+    remaining_balance: float = 0
+    notes: Optional[str] = None
+    date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str = ""
