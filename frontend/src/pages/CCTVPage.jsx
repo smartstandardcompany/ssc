@@ -397,6 +397,26 @@ export default function CCTVPage() {
             </Card>
           </TabsContent>
 
+          {/* Face Recognition Tab */}
+          <TabsContent value="face" className="mt-4">
+            <FaceRecognitionPanel employees={employees} branches={branches} />
+          </TabsContent>
+
+          {/* Object Detection Tab */}
+          <TabsContent value="objects" className="mt-4">
+            <ObjectDetectionPanel cameras={cameras} />
+          </TabsContent>
+
+          {/* People Counting Tab */}
+          <TabsContent value="people" className="mt-4">
+            <PeopleCountingPanel cameras={cameras} />
+          </TabsContent>
+
+          {/* Motion Analysis Tab */}
+          <TabsContent value="motion" className="mt-4">
+            <MotionAnalysisPanel cameras={cameras} />
+          </TabsContent>
+
           {/* Alerts Tab */}
           <TabsContent value="alerts" className="mt-4">
             <Card className="border-border">
