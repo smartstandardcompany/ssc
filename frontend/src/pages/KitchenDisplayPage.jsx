@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { 
   ChefHat, Clock, Check, Bell, RefreshCw, UtensilsCrossed, 
-  Users, Coffee, LogOut, Volume2, VolumeX, Timer
+  Users, Coffee, LogOut, Volume2, VolumeX, Timer, Armchair
 } from 'lucide-react';
 import api from '@/lib/api';
 
