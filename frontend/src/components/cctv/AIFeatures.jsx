@@ -527,3 +527,453 @@ export function ObjectDetectionPanel() {
     </div>
   );
 }
+
+export function PeopleCountingPanel({ cameras = [] }) {
+  const [loading, setLoading] = useState(false);
+  const [testImage, setTestImage] = useState(null);
+  const [testResult, setTestResult] = useState(null);
+  const [selectedCamera, setSelectedCamera] = useState('');
+  const [countHistory, setCountHistory] = useState([]);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    fetchCountHistory();
+  }, []);
+
+  const fetchCountHistory = async () => {
+    try {
+      const res = await api.get('/cctv/people-count');
+      setCountHistory(res.data.hourly_breakdown || []);
+    } catch {}
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setTestImage({
+        preview: event.target.result,
+        base64: event.target.result.split(',')[1]
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const runPeopleCount = async () => {
+    if (!testImage?.base64) {
+      toast.error('Please upload an image');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await api.post('/cctv/ai/count-people', {
+        camera_id: selectedCamera || 'test',
+        image_data: testImage.base64,
+        previous_count: 0
+      });
+      setTestResult(res.data);
+      if (res.data.success) {
+        toast.success(`Counted ${res.data.people_count || 0} people`);
+        fetchCountHistory();
+      } else {
+        toast.error(res.data.error || 'Counting failed');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'People counting failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* AI People Counting */}
+      <Card className="border-border">
+        <CardHeader>
+          <CardTitle className="font-outfit text-base flex items-center gap-2">
+            <Users size={18} />
+            AI People Counting
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Upload an image from your camera to count people and analyze crowd density.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label className="text-xs mb-2 block">Select Camera (optional)</Label>
+              <Select value={selectedCamera} onValueChange={setSelectedCamera}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Any camera" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Any camera</SelectItem>
+                  {cameras.map(cam => (
+                    <SelectItem key={cam.id} value={cam.id}>{cam.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              {testImage ? (
+                <div className="relative">
+                  <img src={testImage.preview} alt="Test" className="w-full h-48 object-cover rounded-xl" />
+                  <Button 
+                    size="sm" 
+                    variant="secondary" 
+                    className="absolute top-2 right-2"
+                    onClick={() => { setTestImage(null); setTestResult(null); }}
+                  >
+                    <XCircle size={14} />
+                  </Button>
+                </div>
+              ) : (
+                <div 
+                  className="border-2 border-dashed border-stone-300 rounded-xl p-8 text-center cursor-pointer hover:border-primary h-48 flex flex-col items-center justify-center"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Users size={32} className="mb-2 text-stone-400" />
+                  <p className="text-sm text-muted-foreground">Upload image</p>
+                </div>
+              )}
+              <input 
+                ref={fileInputRef}
+                type="file" 
+                accept="image/*" 
+                className="hidden" 
+                onChange={handleImageUpload}
+              />
+              <Button 
+                className="w-full mt-2 rounded-xl" 
+                onClick={runPeopleCount}
+                disabled={loading || !testImage}
+                data-testid="count-people-btn"
+              >
+                {loading ? <Loader2 size={14} className="animate-spin mr-1" /> : <Users size={14} className="mr-1" />}
+                Count People
+              </Button>
+            </div>
+
+            {/* Results */}
+            <div className="p-4 bg-stone-50 rounded-xl">
+              <h3 className="font-medium text-sm mb-3">Counting Results</h3>
+              {testResult ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-3 bg-white rounded-lg text-center">
+                      <p className="text-2xl font-bold text-primary">{testResult.people_count || 0}</p>
+                      <p className="text-xs text-muted-foreground">People Detected</p>
+                    </div>
+                    <div className="p-3 bg-white rounded-lg text-center">
+                      <Badge className={`${
+                        testResult.crowd_density === 'high' || testResult.crowd_density === 'very_high' 
+                          ? 'bg-error/20 text-error' 
+                          : testResult.crowd_density === 'medium' 
+                            ? 'bg-warning/20 text-warning' 
+                            : 'bg-success/20 text-success'
+                      }`}>
+                        {testResult.crowd_density || 'N/A'}
+                      </Badge>
+                      <p className="text-xs text-muted-foreground mt-1">Crowd Density</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="p-2 bg-success/10 rounded-lg text-center">
+                      <p className="font-bold text-success">{testResult.entries || 0}</p>
+                      <p className="text-muted-foreground">Est. Entries</p>
+                    </div>
+                    <div className="p-2 bg-error/10 rounded-lg text-center">
+                      <p className="font-bold text-error">{testResult.exits || 0}</p>
+                      <p className="text-muted-foreground">Est. Exits</p>
+                    </div>
+                  </div>
+                  {testResult.details?.notes && (
+                    <p className="text-xs text-muted-foreground">{testResult.details.notes}</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground text-center py-8">
+                  Upload an image to count people
+                </p>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Today's Traffic */}
+      <Card className="border-border">
+        <CardHeader>
+          <CardTitle className="font-outfit text-base">Today's Foot Traffic</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {countHistory.length > 0 ? (
+            <div className="space-y-2">
+              {countHistory.slice(0, 12).map((record, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2 bg-stone-50 rounded-lg text-sm">
+                  <span className="text-muted-foreground">{record.hour?.split('T')[1] || record.hour}</span>
+                  <div className="flex gap-4">
+                    <span className="text-success">+{record.entries} in</span>
+                    <span className="text-error">-{record.exits} out</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Users size={32} className="mx-auto mb-2 opacity-30" />
+              <p>No traffic data today</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export function MotionAnalysisPanel({ cameras = [] }) {
+  const [loading, setLoading] = useState(false);
+  const [testImage, setTestImage] = useState(null);
+  const [testResult, setTestResult] = useState(null);
+  const [selectedCamera, setSelectedCamera] = useState('');
+  const [alerts, setAlerts] = useState([]);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    fetchAlerts();
+  }, []);
+
+  const fetchAlerts = async () => {
+    try {
+      const res = await api.get('/cctv/alerts?limit=20');
+      setAlerts(res.data.filter(a => a.type === 'motion'));
+    } catch {}
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setTestImage({
+        preview: event.target.result,
+        base64: event.target.result.split(',')[1]
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const runMotionAnalysis = async () => {
+    if (!testImage?.base64) {
+      toast.error('Please upload an image');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await api.post('/cctv/ai/analyze-motion', {
+        camera_id: selectedCamera || 'test',
+        image_data: testImage.base64
+      });
+      setTestResult(res.data);
+      if (res.data.success) {
+        if (res.data.security_concern) {
+          toast.warning('Security concern detected!');
+        } else if (res.data.motion_detected) {
+          toast.success('Motion detected');
+        } else {
+          toast.info('No significant motion detected');
+        }
+        fetchAlerts();
+      } else {
+        toast.error(res.data.error || 'Analysis failed');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Motion analysis failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* AI Motion Analysis */}
+      <Card className="border-border">
+        <CardHeader>
+          <CardTitle className="font-outfit text-base flex items-center gap-2">
+            <AlertTriangle size={18} />
+            AI Motion & Security Analysis
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Upload a camera frame to analyze for motion, activity types, and potential security concerns.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label className="text-xs mb-2 block">Select Camera (optional)</Label>
+              <Select value={selectedCamera} onValueChange={setSelectedCamera}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Any camera" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Any camera</SelectItem>
+                  {cameras.map(cam => (
+                    <SelectItem key={cam.id} value={cam.id}>{cam.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              {testImage ? (
+                <div className="relative">
+                  <img src={testImage.preview} alt="Test" className="w-full h-48 object-cover rounded-xl" />
+                  <Button 
+                    size="sm" 
+                    variant="secondary" 
+                    className="absolute top-2 right-2"
+                    onClick={() => { setTestImage(null); setTestResult(null); }}
+                  >
+                    <XCircle size={14} />
+                  </Button>
+                </div>
+              ) : (
+                <div 
+                  className="border-2 border-dashed border-stone-300 rounded-xl p-8 text-center cursor-pointer hover:border-primary h-48 flex flex-col items-center justify-center"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <AlertTriangle size={32} className="mb-2 text-stone-400" />
+                  <p className="text-sm text-muted-foreground">Upload image</p>
+                </div>
+              )}
+              <input 
+                ref={fileInputRef}
+                type="file" 
+                accept="image/*" 
+                className="hidden" 
+                onChange={handleImageUpload}
+              />
+              <Button 
+                className="w-full mt-2 rounded-xl" 
+                onClick={runMotionAnalysis}
+                disabled={loading || !testImage}
+                data-testid="analyze-motion-btn"
+              >
+                {loading ? <Loader2 size={14} className="animate-spin mr-1" /> : <Scan size={14} className="mr-1" />}
+                Analyze Motion
+              </Button>
+            </div>
+
+            {/* Results */}
+            <div className="p-4 bg-stone-50 rounded-xl">
+              <h3 className="font-medium text-sm mb-3">Analysis Results</h3>
+              {testResult ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge className={`${
+                      testResult.alert_level === 'critical' || testResult.alert_level === 'high'
+                        ? 'bg-error/20 text-error' 
+                        : testResult.alert_level === 'medium' 
+                          ? 'bg-warning/20 text-warning' 
+                          : 'bg-success/20 text-success'
+                    }`}>
+                      {testResult.alert_level || 'none'} alert
+                    </Badge>
+                    {testResult.security_concern && (
+                      <Badge className="bg-error text-white">Security Concern!</Badge>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="p-2 bg-white rounded-lg">
+                      <p className="font-medium">Motion Score</p>
+                      <p className="text-lg font-bold">{Math.round((testResult.motion_score || 0) * 100)}%</p>
+                    </div>
+                    <div className="p-2 bg-white rounded-lg">
+                      <p className="font-medium">Activity Type</p>
+                      <p className="text-sm font-bold capitalize">{testResult.activity_type || 'none'}</p>
+                    </div>
+                  </div>
+
+                  {testResult.description && (
+                    <div className="p-2 bg-white rounded-lg">
+                      <p className="text-xs font-medium mb-1">Description:</p>
+                      <p className="text-xs text-muted-foreground">{testResult.description}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground text-center py-8">
+                  Upload an image to analyze motion
+                </p>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recent Motion Alerts */}
+      <Card className="border-border">
+        <CardHeader>
+          <CardTitle className="font-outfit text-base">Recent Motion Alerts</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {alerts.length > 0 ? (
+            <div className="space-y-2">
+              {alerts.slice(0, 10).map((alert, idx) => (
+                <div key={idx} className={`flex items-center gap-3 p-3 rounded-xl border ${
+                  alert.acknowledged ? 'bg-stone-50 border-stone-200' : 'bg-warning/5 border-warning/30'
+                }`}>
+                  <div className={`p-2 rounded-lg ${
+                    alert.alert_level === 'high' || alert.alert_level === 'critical' 
+                      ? 'bg-error/20' 
+                      : alert.alert_level === 'medium' 
+                        ? 'bg-warning/20' 
+                        : 'bg-stone-200'
+                  }`}>
+                    <AlertTriangle size={16} className={
+                      alert.alert_level === 'high' || alert.alert_level === 'critical' 
+                        ? 'text-error' 
+                        : alert.alert_level === 'medium' 
+                          ? 'text-warning' 
+                          : 'text-stone-500'
+                    } />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium capitalize">{alert.activity_type || 'Motion'}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(alert.timestamp), 'MMM dd, HH:mm:ss')}
+                      {alert.motion_score && ` • Score: ${Math.round(alert.motion_score * 100)}%`}
+                    </p>
+                  </div>
+                  {alert.snapshot_url && (
+                    <Button size="sm" variant="outline" className="rounded-lg">
+                      <Eye size={14} className="mr-1" /> View
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <AlertTriangle size={32} className="mx-auto mb-2 opacity-30" />
+              <p>No motion alerts</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
