@@ -97,6 +97,8 @@ export default function DashboardPage() {
     const updated = { ...widgets, [key]: !widgets[key] };
     setWidgets(updated);
     saveWidgetPrefs(updated);
+    // Save to backend for persistence across devices
+    api.post('/dashboard/layout', { widgets: updated }).catch(() => {});
   };
 
   const handleLayoutChange = useCallback((newLayout) => {
