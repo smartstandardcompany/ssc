@@ -315,13 +315,14 @@ export function FaceRecognitionPanel({ employees = [], branches = [] }) {
   );
 }
 
-export function ObjectDetectionPanel() {
+export function ObjectDetectionPanel({ cameras = [] }) {
   const [detections, setDetections] = useState([]);
   const [loading, setLoading] = useState(false);
   const [testImage, setTestImage] = useState(null);
   const [testResult, setTestResult] = useState(null);
   const [targetObjects, setTargetObjects] = useState('');
   const [context, setContext] = useState('retail store inventory');
+  const [selectedCamera, setSelectedCamera] = useState('');
   const fileInputRef = useRef(null);
 
   useEffect(() => {
