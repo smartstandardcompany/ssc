@@ -372,6 +372,81 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
 
+              {/* CSID Expiry Alert Banner */}
+              {zatcaStatus?.expiry_status && (
+                <Card className={`border-2 ${
+                  zatcaStatus.expiry_status.is_expired 
+                    ? 'border-red-500 bg-red-50' 
+                    : zatcaStatus.expiry_status.needs_renewal 
+                      ? 'border-amber-500 bg-amber-50' 
+                      : 'border-green-500 bg-green-50'
+                }`}>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-3 rounded-full ${
+                          zatcaStatus.expiry_status.is_expired 
+                            ? 'bg-red-100' 
+                            : zatcaStatus.expiry_status.needs_renewal 
+                              ? 'bg-amber-100' 
+                              : 'bg-green-100'
+                        }`}>
+                          {zatcaStatus.expiry_status.is_expired ? (
+                            <AlertTriangle size={24} className="text-red-600" />
+                          ) : zatcaStatus.expiry_status.needs_renewal ? (
+                            <Clock size={24} className="text-amber-600" />
+                          ) : (
+                            <Shield size={24} className="text-green-600" />
+                          )}
+                        </div>
+                        <div>
+                          <h3 className={`font-semibold ${
+                            zatcaStatus.expiry_status.is_expired 
+                              ? 'text-red-800' 
+                              : zatcaStatus.expiry_status.needs_renewal 
+                                ? 'text-amber-800' 
+                                : 'text-green-800'
+                          }`}>
+                            {zatcaStatus.expiry_status.is_expired 
+                              ? '⚠️ CSID Expired!' 
+                              : zatcaStatus.expiry_status.needs_renewal 
+                                ? `⏰ CSID Expires in ${zatcaStatus.expiry_status.days_until_expiry} days`
+                                : `✓ CSID Valid for ${zatcaStatus.expiry_status.days_until_expiry} days`
+                            }
+                          </h3>
+                          <p className={`text-sm ${
+                            zatcaStatus.expiry_status.is_expired 
+                              ? 'text-red-600' 
+                              : zatcaStatus.expiry_status.needs_renewal 
+                                ? 'text-amber-600' 
+                                : 'text-green-600'
+                          }`}>
+                            Expiry Date: {zatcaStatus.expiry_status.expiry_date}
+                            {zatcaStatus.expiry_status.needs_renewal && !zatcaStatus.expiry_status.is_expired && (
+                              <span className="ml-2">(Alerts active - {zatcaStatus.expiry_status.alert_days} days before expiry)</span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      {(zatcaStatus.expiry_status.is_expired || zatcaStatus.expiry_status.needs_renewal) && (
+                        <a 
+                          href="https://fatoora.zatca.gov.sa/onboard" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className={`px-4 py-2 rounded-full font-medium text-white transition-colors ${
+                            zatcaStatus.expiry_status.is_expired 
+                              ? 'bg-red-600 hover:bg-red-700' 
+                              : 'bg-amber-600 hover:bg-amber-700'
+                          }`}
+                        >
+                          Renew CSID Now
+                        </a>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Environment Selection */}
               <Card className="border-border">
                 <CardHeader>
