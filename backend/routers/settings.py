@@ -399,6 +399,28 @@ async def get_zatca_status(current_user: User = Depends(get_current_user)):
     zatca_invoices = await db.invoices.count_documents({"uuid": {"$exists": True, "$ne": None}})
     submitted_invoices = await db.invoices.count_documents({"zatca_status": "submitted"})
     
+    # Check CSID expiry
+    expiry_status = None
+    if settings:
+        environment = settings.get("environment", "sandbox")
+        expiry_date_str = settings.get("production_csid_expiry") if environment == "production" else settings.get("csid_expiry")
+        
+        if expiry_date_str:
+            try:
+                expiry_date = datetime.strptime(expiry_date_str, "%Y-%m-%d")
+                days_until_expiry = (expiry_date - datetime.now()).days
+                alert_days = settings.get("expiry_alert_days", 30)
+                
+                expiry_status = {
+                    "expiry_date": expiry_date_str,
+                    "days_until_expiry": days_until_expiry,
+                    "is_expired": days_until_expiry < 0,
+                    "needs_renewal": days_until_expiry <= alert_days,
+                    "alert_days": alert_days
+                }
+            except ValueError:
+                pass
+    
     return {
         "enabled": settings.get("enabled", False) if settings else False,
         "environment": settings.get("environment", "sandbox") if settings else "sandbox",
@@ -407,9 +429,122 @@ async def get_zatca_status(current_user: User = Depends(get_current_user)):
         "csid_configured": bool(settings.get("csid") or settings.get("production_csid")) if settings else False,
         "auto_submit": settings.get("auto_submit", False) if settings else False,
         "invoice_counter": settings.get("invoice_counter", 1) if settings else 1,
+        "expiry_status": expiry_status,
         "statistics": {
             "total_invoices": total_invoices,
             "zatca_ready": zatca_invoices,
             "submitted": submitted_invoices
         }
     }
+
+
+@router.post("/settings/zatca/check-expiry")
+async def check_csid_expiry(current_user: User = Depends(get_current_user)):
+    """Check CSID expiry and send alerts if needed"""
+    settings = await db.zatca_settings.find_one({}, {"_id": 0})
+    
+    if not settings or not settings.get("enabled"):
+        return {"success": False, "message": "ZATCA not enabled"}
+    
+    environment = settings.get("environment", "sandbox")
+    expiry_date_str = settings.get("production_csid_expiry") if environment == "production" else settings.get("csid_expiry")
+    
+    if not expiry_date_str:
+        return {"success": False, "message": "No expiry date configured"}
+    
+    try:
+        expiry_date = datetime.strptime(expiry_date_str, "%Y-%m-%d")
+        days_until_expiry = (expiry_date - datetime.now()).days
+        alert_days = settings.get("expiry_alert_days", 30)
+        
+        if days_until_expiry <= alert_days:
+            # Create alert notification
+            await create_csid_expiry_notification(days_until_expiry, expiry_date_str, environment)
+            
+            return {
+                "success": True,
+                "needs_renewal": True,
+                "days_until_expiry": days_until_expiry,
+                "message": f"CSID expires in {days_until_expiry} days. Please renew!"
+            }
+        
+        return {
+            "success": True,
+            "needs_renewal": False,
+            "days_until_expiry": days_until_expiry,
+            "message": f"CSID is valid for {days_until_expiry} more days"
+        }
+        
+    except ValueError:
+        return {"success": False, "message": "Invalid expiry date format"}
+
+
+async def create_csid_expiry_notification(days_until_expiry: int, expiry_date: str, environment: str):
+    """Create notification for CSID expiry"""
+    # Check if we already sent a notification today
+    today = datetime.now().strftime("%Y-%m-%d")
+    existing = await db.notifications.find_one({
+        "type": "zatca_csid_expiry",
+        "created_at": {"$regex": f"^{today}"}
+    })
+    
+    if existing:
+        return  # Already notified today
+    
+    if days_until_expiry < 0:
+        title = "⚠️ ZATCA CSID Expired!"
+        message = f"Your {environment} CSID expired on {expiry_date}. Please renew immediately to continue e-invoicing."
+        priority = "critical"
+    elif days_until_expiry == 0:
+        title = "🚨 ZATCA CSID Expires Today!"
+        message = f"Your {environment} CSID expires TODAY ({expiry_date}). Renew now to avoid invoice submission failures."
+        priority = "critical"
+    elif days_until_expiry <= 7:
+        title = "⚠️ ZATCA CSID Expiring Soon!"
+        message = f"Your {environment} CSID expires in {days_until_expiry} days ({expiry_date}). Please renew soon."
+        priority = "high"
+    else:
+        title = "📋 ZATCA CSID Renewal Reminder"
+        message = f"Your {environment} CSID will expire in {days_until_expiry} days ({expiry_date}). Consider renewing."
+        priority = "medium"
+    
+    notification = {
+        "id": f"zatca_expiry_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+        "type": "zatca_csid_expiry",
+        "title": title,
+        "message": message,
+        "priority": priority,
+        "data": {
+            "days_until_expiry": days_until_expiry,
+            "expiry_date": expiry_date,
+            "environment": environment,
+            "action_url": "/settings"
+        },
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.notifications.insert_one(notification)
+    
+    # Also try to send WhatsApp/Email if configured
+    try:
+        # WhatsApp
+        wa_config = await db.whatsapp_config.find_one({}, {"_id": 0})
+        if wa_config and wa_config.get("enabled") and wa_config.get("account_sid"):
+            from twilio.rest import Client
+            client = Client(wa_config["account_sid"], wa_config["auth_token"])
+            recipients = [r.strip() for r in wa_config.get("recipient_number", "").split(",") if r.strip()]
+            wa_message = f"🔔 *ZATCA CSID Alert*\n\n{message}\n\nRenew at: https://fatoora.zatca.gov.sa/onboard"
+            for recipient in recipients[:3]:  # Max 3 recipients
+                try:
+                    client.messages.create(
+                        from_=f'whatsapp:{wa_config["phone_number"]}',
+                        body=wa_message,
+                        to=f'whatsapp:{recipient}'
+                    )
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    
+    return notification
