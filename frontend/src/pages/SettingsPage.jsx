@@ -179,6 +179,7 @@ export default function SettingsPage() {
             <TabsTrigger value="import"><Upload size={14} className="mr-2" />Import Data</TabsTrigger>
             <TabsTrigger value="backup"><Database size={14} className="mr-2" />Backup</TabsTrigger>
             <TabsTrigger value="scheduler"><Clock size={14} className="mr-2" />Scheduler</TabsTrigger>
+            <TabsTrigger value="cctv"><Camera size={14} className="mr-2" />CCTV</TabsTrigger>
             <TabsTrigger value="deploy"><Shield size={14} className="mr-2" />Deploy</TabsTrigger>
             <TabsTrigger value="company">Company</TabsTrigger>
           </TabsList>
