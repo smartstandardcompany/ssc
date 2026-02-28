@@ -18,6 +18,42 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 
 ## Recent Updates (Feb 28, 2026)
 
+### P3 Features (COMPLETED)
+
+#### ZATCA Phase 2 Compliance
+- **UBL 2.1 XML Generation**: Full compliance with ZATCA e-invoicing schema
+  - ProfileID, UUID, InvoiceNumber, IssueDate/Time
+  - InvoiceTypeCode (381 for simplified B2C, 388 for standard B2B)
+  - Digital signature structure placeholder (requires CSID)
+  - Supplier/Customer party details
+  - PaymentMeans, TaxTotal, LegalMonetaryTotal
+  - InvoiceLine details with tax categories
+- **9-Tag TLV QR Code**: Base64-encoded QR with
+  - Tag 1: Seller Name
+  - Tag 2: VAT Number
+  - Tag 3: Timestamp (ISO 8601)
+  - Tag 4: Total with VAT
+  - Tag 5: VAT Amount
+  - Tag 6: SHA-256 Hash of XML
+  - Tags 7-9: Signature/PublicKey/CSID placeholders (requires ZATCA registration)
+- **API Endpoints**:
+  - `GET /api/invoices/{id}/zatca-phase2` - Generate Phase 2 XML and QR
+  - `POST /api/invoices/{id}/zatca-submit` - Prepare for ZATCA submission with next steps
+- **Backend Service**: `/app/backend/services/zatca_phase2.py`
+
+#### Internationalization (i18n) Expansion
+Added 50+ new translation keys across all 4 languages (EN, AR, UR, HI) for:
+- CCTV features (cctv_title, live_view, face_recognition, object_detection, people_count, motion_analysis, etc.)
+- Partner P&L (partner_pl_title, company_summary, partner_breakdown, profit_share, etc.)
+- ZATCA Phase 2 (zatca_phase2, generate_xml, submit_zatca, xml_invoice, qr_code, etc.)
+- Scheduled Monitoring (scheduled_monitoring, monitoring_interval, notification_channels, etc.)
+- Mobile Navigation (customize_nav, reset_default, select_items, more)
+
+#### UX Refinements
+- Mobile bottom navigation customization with 12 options
+- Persistent navigation preferences (localStorage)
+- Reset to Default functionality
+
 ### P1 & P2 Features (COMPLETED)
 
 #### P1: Scheduled AI Monitoring with Notifications
