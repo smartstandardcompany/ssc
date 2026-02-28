@@ -43,6 +43,7 @@ const NAV_GROUPS = [
       { path: '/customers', icon: Users, label: 'Customers', perm: 'customers' },
       { path: '/suppliers', icon: Truck, label: 'Suppliers', perm: 'suppliers', roles: ['admin', 'manager'] },
       { path: '/employees', icon: UserCheck, label: 'Employees', perm: 'employees', roles: ['admin', 'manager'] },
+      { path: '/loans', icon: Wallet, label: 'Loans', perm: 'employees', roles: ['admin', 'manager'] },
       { path: '/leave-approvals', icon: Bell, label: 'Leave Approvals', perm: 'employees', roles: ['admin', 'manager'] },
       { path: '/schedule', icon: CalendarClock, label: 'Schedule', perm: 'shifts', roles: ['admin', 'manager'] },
     ]
