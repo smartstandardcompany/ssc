@@ -359,7 +359,7 @@ export default function ShiftReportPage() {
                           </BarChart>
                         </ResponsiveContainer>
                       ) : (
-                        <div className="text-center py-8 text-muted-foreground">No branch data</div>
+                        <div className="text-center py-8 text-muted-foreground">{t('no_data')}</div>
                       )}
                     </CardContent>
                   </Card>
@@ -368,23 +368,23 @@ export default function ShiftReportPage() {
                 {/* Shift Details Table */}
                 <Card className="border-border">
                   <CardHeader>
-                    <CardTitle className="font-outfit">Shift Details</CardTitle>
+                    <CardTitle className="font-outfit">{t('shift_details')}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm" data-testid="shifts-table">
                         <thead>
                           <tr className="border-b border-border">
-                            <th className="text-left p-3 font-medium">Cashier</th>
-                            <th className="text-left p-3 font-medium">Branch</th>
-                            <th className="text-center p-3 font-medium">Time</th>
-                            <th className="text-center p-3 font-medium">Duration</th>
-                            <th className="text-right p-3 font-medium">Opening</th>
-                            <th className="text-right p-3 font-medium">Expected</th>
-                            <th className="text-right p-3 font-medium">Closing</th>
-                            <th className="text-right p-3 font-medium">Difference</th>
-                            <th className="text-right p-3 font-medium">Sales</th>
-                            <th className="text-center p-3 font-medium">Status</th>
+                            <th className="text-left p-3 font-medium">{t('cashier')}</th>
+                            <th className="text-left p-3 font-medium">{t('branch')}</th>
+                            <th className="text-center p-3 font-medium">{t('time')}</th>
+                            <th className="text-center p-3 font-medium">{t('duration')}</th>
+                            <th className="text-right p-3 font-medium">{t('opening_cash')}</th>
+                            <th className="text-right p-3 font-medium">{t('expected_cash')}</th>
+                            <th className="text-right p-3 font-medium">{t('closing_cash')}</th>
+                            <th className="text-right p-3 font-medium">{t('cash_difference')}</th>
+                            <th className="text-right p-3 font-medium">{t('total_sales')}</th>
+                            <th className="text-center p-3 font-medium">{t('status')}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -405,7 +405,7 @@ export default function ShiftReportPage() {
                               <td className="p-3 text-right font-bold">SAR {(shift.total_sales || 0).toFixed(2)}</td>
                               <td className="p-3 text-center">
                                 <Badge className={shift.status === 'closed' ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}>
-                                  {shift.status}
+                                  {shift.status === 'closed' ? t('completed') : t('in_progress')}
                                 </Badge>
                               </td>
                             </tr>
@@ -413,7 +413,7 @@ export default function ShiftReportPage() {
                           {(!report.shifts || report.shifts.length === 0) && (
                             <tr>
                               <td colSpan={10} className="p-8 text-center text-muted-foreground">
-                                No shifts found for this date
+                                {t('no_data')}
                               </td>
                             </tr>
                           )}
@@ -427,7 +427,7 @@ export default function ShiftReportPage() {
                 {report.top_items && report.top_items.length > 0 && (
                   <Card className="border-border">
                     <CardHeader>
-                      <CardTitle className="font-outfit">Top Selling Items</CardTitle>
+                      <CardTitle className="font-outfit">{t('top_selling_items')}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
