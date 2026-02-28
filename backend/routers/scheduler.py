@@ -709,3 +709,55 @@ async def trigger_ai_report(report_type: str, current_user: User = Depends(get_c
     report = await AI_REPORT_BUILDERS[report_type]()
     await run_ai_report(report_type)
     return {"message": f"Report '{report_type}' triggered", "preview": report}
+
+
+
+# =====================================================
+# ZATCA CSID EXPIRY CHECK (Daily at 8 AM)
+# =====================================================
+
+async def check_zatca_csid_expiry_job():
+    """Daily job to check ZATCA CSID expiry and send alerts"""
+    from routers.settings import create_csid_expiry_notification
+    
+    settings = await db.zatca_settings.find_one({}, {"_id": 0})
+    
+    if not settings or not settings.get("enabled"):
+        return {"checked": False, "reason": "ZATCA not enabled"}
+    
+    environment = settings.get("environment", "sandbox")
+    expiry_date_str = settings.get("production_csid_expiry") if environment == "production" else settings.get("csid_expiry")
+    
+    if not expiry_date_str:
+        return {"checked": False, "reason": "No expiry date configured"}
+    
+    try:
+        expiry_date = datetime.strptime(expiry_date_str, "%Y-%m-%d")
+        days_until_expiry = (expiry_date - datetime.now()).days
+        alert_days = settings.get("expiry_alert_days", 30)
+        
+        if days_until_expiry <= alert_days:
+            await create_csid_expiry_notification(days_until_expiry, expiry_date_str, environment)
+            return {
+                "checked": True,
+                "alert_sent": True,
+                "days_until_expiry": days_until_expiry,
+                "environment": environment
+            }
+        
+        return {
+            "checked": True,
+            "alert_sent": False,
+            "days_until_expiry": days_until_expiry,
+            "environment": environment
+        }
+        
+    except ValueError as e:
+        return {"checked": False, "reason": f"Invalid date: {str(e)}"}
+
+
+@router.post("/scheduler/zatca-expiry-check/trigger")
+async def trigger_zatca_expiry_check(current_user: User = Depends(get_current_user)):
+    """Manually trigger ZATCA CSID expiry check"""
+    result = await check_zatca_csid_expiry_job()
+    return {"message": "ZATCA expiry check completed", "result": result}
