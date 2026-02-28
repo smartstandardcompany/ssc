@@ -41,6 +41,11 @@ export default function SettingsPage() {
     people_counting_enabled: true, motion_alerts_enabled: true,
     alert_sensitivity: 'medium', counting_interval: 5
   });
+  const [monitoringConfig, setMonitoringConfig] = useState({
+    enabled: false, interval_minutes: 5,
+    cameras: [], features: ['people_counting', 'motion_detection'],
+    notification_channels: ['in_app']
+  });
   const [branches, setBranches] = useState([]);
   const [dvrs, setDvrs] = useState([]);
   const [newDVR, setNewDVR] = useState({
