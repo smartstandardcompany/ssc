@@ -16,6 +16,42 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 /app/frontend/ - React SPA with 40+ pages
 ```
 
+## Recent Updates (Feb 28, 2026)
+
+### Translation & UX Improvements
+- **Full i18n Translation Coverage** for:
+  - Shift Report page (all labels, card titles, table headers)
+  - Bulk Salary Payment dialog (all labels, buttons, status messages)
+  - Dashboard widget customization (widget names and descriptions)
+  - Expense categories (main and sub-categories)
+  - Common UI elements (loading, status, actions)
+- **4-Language Support**: English (EN), Arabic (AR), Urdu (UR), Hindi (HI)
+- **RTL Support**: Proper right-to-left layout for Arabic and Urdu
+- **Loading Skeleton**: Added animated loading skeletons for ShiftReportPage
+- **Mobile Responsiveness**: Verified and working on all new pages
+
+### 4-Part Feature Enhancement (Feb 28, 2026)
+1. **Daily Shift Report** (`/shift-report`)
+   - Daily & date range views with summary cards
+   - Payment breakdown pie chart, branch sales bar chart
+   - Shift details table with all cash amounts
+   - Backend endpoints: `/api/cashier/shift-report`, `/api/cashier/shift-report/range`
+
+2. **Full Dashboard Widget Customization**
+   - 8 toggleable widgets with descriptions
+   - Show All/Minimize quick actions
+   - Backend persistence via `/api/dashboard/layout`
+
+3. **Bulk Salary Payment UI** (Employees page)
+   - One-click salary for all/selected employees
+   - Preview with to-pay/already-paid counts
+   - Auto-creates expense records and notifications
+
+4. **General API Improvements**
+   - Dashboard layout preferences API
+   - Shift report aggregation with branch filtering
+   - Bulk salary with duplicate detection
+
 ## Features Implemented
 
 ### Core
