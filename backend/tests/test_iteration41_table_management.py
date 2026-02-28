@@ -15,8 +15,13 @@ import requests
 import os
 import json
 import time
+import uuid
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
+
+def unique_id():
+    """Generate short unique identifier for test data"""
+    return str(uuid.uuid4())[:8]
 
 # =====================================================
 # FIXTURES
