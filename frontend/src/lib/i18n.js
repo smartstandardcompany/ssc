@@ -355,6 +355,35 @@ const translations = {
     category_report_title: 'تقرير الفئات', kitchen_title: 'شاشة المطبخ',
     notifications_title: 'الإشعارات', help_title: 'المساعدة والدليل',
     portal_title: 'بوابة الموظف',
+    // CCTV
+    cctv_title: 'كاميرات المراقبة', cctv_subtitle: 'مراقبة فيديو وتحليلات بالذكاء الاصطناعي',
+    live_view: 'العرض المباشر', face_recognition: 'التعرف على الوجوه', object_detection: 'كشف الأجسام',
+    people_count: 'عدد الأشخاص', motion_analysis: 'تحليل الحركة', alerts: 'التنبيهات',
+    devices: 'الأجهزة', register_face: 'تسجيل وجه', registered_faces: 'الوجوه المسجلة',
+    face_attendance: 'حضور بالتعرف على الوجه', detect_objects: 'كشف الأجسام',
+    count_people: 'عد الأشخاص', analyze_motion: 'تحليل الحركة',
+    crowd_density: 'كثافة الحشد', motion_detected: 'تم كشف حركة', security_concern: 'تنبيه أمني',
+    no_cameras: 'لا توجد كاميرات مهيأة', upload_image: 'رفع صورة', run_analysis: 'تشغيل التحليل',
+    // Scheduled Monitoring
+    scheduled_monitoring: 'المراقبة المجدولة بالذكاء الاصطناعي', monitoring_interval: 'فترة المراقبة',
+    enable_monitoring: 'تفعيل المراقبة المجدولة', run_now: 'تشغيل الآن',
+    notification_channels: 'قنوات الإشعار', in_app: 'داخل التطبيق', whatsapp: 'واتساب',
+    // Partner P&L
+    partner_pl_title: 'تقرير أرباح وخسائر الشركاء', partner_pl_subtitle: 'تفصيل الأرباح والخسائر حسب نسبة الملكية',
+    company_summary: 'ملخص الشركة', partner_breakdown: 'تفصيل الشركاء',
+    expense_categories: 'فئات المصروفات', payment_modes: 'طرق الدفع',
+    revenue: 'الإيرادات', gross_profit: 'الربح الإجمالي', operating_expenses: 'مصروفات التشغيل',
+    profit_share: 'حصة الأرباح', ownership_percentage: 'نسبة الملكية', investments: 'الاستثمارات',
+    withdrawals: 'المسحوبات', current_balance: 'الرصيد الحالي', available_withdrawal: 'متاح للسحب',
+    // ZATCA Phase 2
+    zatca_phase2: 'زاتكا المرحلة الثانية', zatca_compliance: 'التوافق مع زاتكا',
+    generate_xml: 'إنشاء فاتورة XML', submit_zatca: 'إرسال لزاتكا',
+    xml_invoice: 'فاتورة XML', qr_code: 'رمز QR', invoice_uuid: 'معرف الفاتورة',
+    digital_signature: 'التوقيع الرقمي', csid_required: 'مطلوب CSID',
+    b2b_invoice: 'فاتورة ضريبية B2B', b2c_invoice: 'فاتورة ضريبية مبسطة',
+    // Mobile Navigation
+    customize_nav: 'تخصيص شريط التنقل السفلي', reset_default: 'إعادة التعيين',
+    select_items: 'اختر حتى 5 عناصر', more: 'المزيد',
   },
   ur: {
     nav_operations: 'آپریشنز', nav_finance: 'مالیات', nav_people: 'لوگ',
