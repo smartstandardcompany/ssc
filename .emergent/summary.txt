@@ -8,83 +8,62 @@ The user initially requested a data entry application to track sales, expenses, 
 - **Stock Management:** Inventory tracking with item images, stock-in, stock-out, multi-branch inventory transfers, and real-time low-stock alerts.
 - **Restaurant Operations:** A dedicated, mobile-optimized Point-of-Sale (POS) page with a Foodics-style interface, menu items with modifiers, multiple payment options (including credit), a Kitchen Display System (KDS), and a Customer-Facing Order Status Display.
 - **Asset & Liability Tracking:** Document management with expiry alerts, company fines, loans, and partner investments.
+- **CCTV Security Module:** Integration with Hikvision cameras for live viewing, AI-powered people counting, motion alerts, face recognition for employee attendance, and object detection for inventory monitoring.
 - **Cash Flow Management:** Branch-to-branch transfers and a central company balance.
 - **Bank Reconciliation:** A Bank Statement Analyzer and a manual side-by-side reconciliation tool.
 - **Reporting & Analytics:** A multi-tab main dashboard with customizable, drag-and-drop widgets, a real-time POS analytics dashboard, advanced reporting modules (EOD, Partner P&L), AI-driven predictive analytics (sales/expense forecasting, churn, cash flow, seasonal trends), and advanced data visualizations (Heatmaps, Funnels, etc.).
-- **Administration:** Granular role-based access control (including a PIN-only Cashier role), self-service settings for Email/WhatsApp (including scheduled AI reports), company branding, and data import/backup.
+- **Administration:** Granular role-based access control (including a PIN-only Cashier role), self-service settings for Email/WhatsApp/CCTV, company branding, and data import/backup.
 - **UI/UX:** A dedicated, mobile-optimized POS page, dark mode, keyboard shortcuts, a mobile-friendly bottom tab bar, and multi-language support (English, Arabic, Urdu, Hindi).
 
 **User's preferred language**: English
 
 **what currently exists?**
-A feature-rich, full-stack ERP application (SSC Track). The latest session successfully completed a 5-part feature update, which included:
-1.  **Basic Drag-and-Drop Dashboard:** Widgets on the main dashboard can now be repositioned.
-2.  **Full Cashier Shift Management:** The POS page now has a complete workflow for cashiers to start their shift (with opening cash) and end it (with closing cash).
-3.  **Customer-Facing Order Display:** A functional, auto-refreshing page that shows orders as Preparing or Ready for Pickup.
-4.  **Menu Item Images:** An image upload feature has been added, and a new Menu Items management page allows admins to add/edit items and their images.
-5.  **Cashier PIN Login:** The PIN-only login for cashiers has been implemented and tested.
+A comprehensive full-stack ERP system. In the last session, the agent implemented four major features: a daily shift report page, a fully customizable drag-and-drop dashboard with persistence, a bulk salary payment UI, and all associated backend APIs. Extensive internationalization (i18n) was added for these new features and existing pages.
 
-All these features were validated by the testing agent.
+Following that, the agent built a new CCTV Security module. After discovering that direct integration with the Hik-Connect cloud API requires a formal partnership, the agent pivoted to create a robust settings page. This allows the user to manually configure their Hik-Connect credentials and add DVR/NVR devices. The agent has now begun implementing the user's request for advanced AI features (face and object detection) for the CCTV module, using OpenAI Vision via the Emergent LLM Key.
 
 **Last working item**:
-    - Last item agent was working: The agent received a new set of four feature requests from the user and was in the planning phase. It had just reviewed the relevant files to understand the scope before starting implementation.
-    - Status: NOT STARTED
+    - Last item agent was working: Implementing AI-powered Face Recognition and Object Detection for the CCTV module. The agent has already set up the backend service () using  for OpenAI Vision (GPT-4o) and created the necessary API endpoints in the CCTV router (). On the frontend, the agent started updating the  to include new tabs for these AI features and was in the process of adding the required state and data-fetching logic.
+    - Status: IN PROGRESS
     - Agent Testing Done: N
-    - Which testing method agent to use? both. The dashboard and HR changes will require frontend testing, while the new shift report and bulk salary logic will require backend testing.
+    - Which testing method agent to use? both. The backend AI analysis endpoints should be tested with , and the complete end-to-end flow requires frontend testing with the .
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-- No pending issues or bugs have been identified.
+- No pending bugs or issues.
 
 **In progress Task List**:
-- The following tasks were requested by the user and are pending implementation.
-
-  - Task 1:  Daily Shift Report Generation (P0)
-  - Task 2:  Full Drag-and-Drop Widget Customization (P1)
-  - Task 3:  Bulk Salary Payment UI (P1)
-  - Task 4:  General API Improvements (P2)
+  - Task 1:  Implement AI-Powered CCTV Features (P0)
 
  Task Detail:
-  - Task 1: **Daily Shift Report Generation**
-     - Where to resume: This is a new task. The agent needs to design and implement a backend endpoint to aggregate shift data (opening/closing cash, sales, etc.) into a daily report. A new frontend page or component will be needed to display this report.
-     - What will be achieved with this?: Provides managers with a summary of cashier activities for each day.
-     - Status:  NOT STARTED
+  - Task 1: **Implement AI-Powered CCTV Features**
+     - Where to resume: The backend service and endpoints are in place. The next step is to complete the frontend integration.
+        1. Finish updating  to fetch employee data and manage state for the new AI tabs.
+        2. Flesh out the  component to handle camera feed capture (or image upload for now), call the new backend AI analysis endpoints (), and display the results (e.g., recognized employee name, detected objects).
+        3. Ensure the UI is user-friendly, providing clear feedback during analysis and for the results.
+     - What will be achieved with this?: The CCTV module will be enhanced with two key AI capabilities: recognizing employees for attendance and detecting specified objects for inventory monitoring.
+     - Status:  IN PROGRESS
      - Should Test frontend/backend/both after fix?: both
-     - Blocked on something: No.
-  - Task 2: **Full Drag-and-Drop Widget Customization**
-     - Where to resume: The basic drag-and-drop is implemented. The user now wants a more complete solution, likely involving saving layouts per user, adding/removing widgets, and resizing them. This will require significant changes to  and potentially new backend endpoints to store user preferences.
-     - What will be achieved with this?: A fully customizable user dashboard experience.
-     - Status:  NOT STARTED
-     - Should Test frontend/backend/both after fix?: both
-     - Blocked on something: No.
-  - Task 3: **Bulk Salary Payment UI**
-     - Where to resume: This is a new task. The user wants a simplified way to pay salaries for all employees across all branches with a single action. This will require a new frontend interface and a backend endpoint to process the bulk payments.
-     - What will be achieved with this?: Streamlines the payroll process for the HR/Admin role.
-     - Status:  NOT STARTED
-     - Should Test frontend/backend/both after fix?: both
-     - Blocked on something: No.
-  - Task 4: **General API Improvements**
-     - Where to resume: This is a broad request. The agent needs to review existing backend API endpoints for potential performance optimizations, security enhancements, or code quality improvements as identified.
-     - What will be achieved with this?: A more robust and efficient backend.
-     - Status:  NOT STARTED
-     - Should Test frontend/backend/both after fix?: backend
      - Blocked on something: No.
 
 **Upcoming and Future Tasks**
+    Upcoming Tasks:
+    - **AI People Counting (P1):** Implement the People Counting feature using camera feeds to track foot traffic, as configured in the CCTV settings.
+    - **Motion Detection Alerts (P1):** Implement the Motion Detection Alerts feature to send notifications when motion is detected, based on the settings configured.
+
     Future Tasks:
-    - **Additional AI Features:** Further enhancements to predictive analytics based on user feedback.
-    - **Further UX Refinements:** Ongoing improvements to the user experience as new feedback is gathered.
+    - **Advanced Reporting:** Add a Partner P&L report.
+    - **UX Customization:** Allow users to customize the mobile bottom tab bar.
+    - **ZATCA Phase 2 Compliance:** Implement Phase 2 e-invoicing requirements.
+    - **Further UX Refinements:** Ongoing improvements based on user feedback.
 
 **Completed work in this session**
-- **Drag-and-Drop Dashboard Widgets:** Implemented basic repositioning of widgets on the dashboard using .
-- **Cashier Shift Management UI:** Created a modal for cashiers to start and end their shifts, which interacts with the backend to record opening and closing cash amounts.
-- **Customer Order Status Display:** Implemented a live, auto-refreshing page for customers to see the status of their orders.
-- **Menu Item Image Management:**
-    - Added a backend endpoint for image uploads ().
-    - Configured the backend to serve static images from the  directory.
-    - Created a new Menu Items management page for admins to add, edit, delete, and upload images for menu items.
-    - Added a link to the new page in the main navigation sidebar.
-- **Comprehensive Testing:** Used the  to validate all new features, which identified and fixed issues with the PIN login logic.
+- **Daily Shift Report:** Implemented a new backend endpoint and a corresponding frontend page () with data visualizations.
+- **Full Widget Customization:** Enhanced  to allow users to toggle widget visibility and save their drag-and-drop layouts to the backend.
+- **Bulk Salary Payment:** Created a complete UI workflow, from a button on the  to a multi-step modal (), for paying all employees at once.
+- **Internationalization (i18n):** Added and applied translations (EN, AR, UR, HI) across all newly created components and several existing ones.
+- **CCTV Configuration Page:** Created a new CCTV tab in the main  for managing Hik-Connect credentials, adding DVR/NVR devices, and toggling AI features.
+- **AI Backend Foundation:** Set up the initial backend service () and API endpoints for face and object detection.
 
 **Earlier issues found/mentioned but not fixed**
    - None.
@@ -96,63 +75,83 @@ All these features were validated by the testing agent.
 
 
 **Key Technical Concepts**
-- **Backend:** FastAPI, Pydantic, Motor (async MongoDB driver), JWT, File uploads ().
+- **Backend:** FastAPI, Pydantic, Motor (async MongoDB driver), JWT.
 - **Frontend:** React, TailwindCSS, Shadcn UI, Recharts, .
 - **Database:** MongoDB.
-- **Internationalization (i18n):** Custom React Context for multi-language support (EN, AR, UR, HI).
+- **AI:** OpenAI Vision (GPT-4o) via  library.
+- **Internationalization (i18n):** Custom React Context for multi-language support.
 
 **key DB schema**
-  - **items**: The  field is now actively used. The URL points to an image in the  directory.
-  - **shifts**: This collection is now fully utilized by the frontend UI for starting and ending cashier shifts.
+  - **user_preferences**:  - Stores individual user dashboard widget layouts and visibility.
+  - **cctv_settings**:  - Stores global CCTV configurations.
+  - **dvr_devices**:  - Stores details for each configured DVR/NVR.
 
 **changes in tech stack**
-  - No new dependencies were added. Existing libraries like  were implemented.
+  - Added  for seamless access to the OpenAI Vision API using the Emergent LLM Key.
 
 **All files of reference**
-- **/app/frontend/src/pages/DashboardPage.jsx**: Updated to implement drag-and-drop widget layout.
-- **/app/frontend/src/pages/CashierPOSPage.jsx**: Updated to integrate the shift management modal.
-- **/app/frontend/src/components/cashier/ShiftManagementModal.jsx**: New file for the cashier shift UI.
-- **/app/frontend/src/pages/OrderStatusPage.jsx**: Updated with logic to fetch and display active orders.
-- **/app/backend/routers/cashier_pos.py**: Updated with a new endpoint for item image uploads.
-- **/app/backend/server.py**: Updated to serve static files from the  directory.
-- **/app/frontend/src/pages/MenuItemManagementPage.jsx**: New page for admins to manage all aspects of menu items, including images.
-- **/app/frontend/src/App.js**: Updated to include the route for the new .
-- **/app/frontend/src/components/layout/DashboardLayout.jsx**: Updated to add a navigation link to the Menu Items page.
+- **AI & CCTV:**
+  - : New service that uses OpenAI GPT-4o for vision tasks.
+  - : New router managing all CCTV configurations and AI analysis endpoints.
+  - : New frontend page that serves as the main hub for all CCTV features.
+  - : New (in-progress) component for Face/Object Recognition UI.
+  - : Updated to include a comprehensive CCTV configuration tab.
+- **Reports & Payments:**
+  - : New page for viewing daily shift summaries.
+  - : New component for the bulk salary payment workflow.
+- **Dashboard & Core UI:**
+  - : Heavily updated to support persistent, user-configurable widget layouts.
+  - : Significantly updated with new translation keys for all new features.
 
 **Areas that need refactoring**:
-- None identified.
+- None identified. The agent successfully pivoted the CCTV integration approach when the initial plan was blocked.
 
 **key api endpoints**
-- : Starts a cashier shift.
-- : Ends a cashier shift.
-- : Fetches active orders for the customer display.
-- ****: (New) Uploads an image for a specific menu item.
+- **CCTV & AI:**
+  - : Save Hik-Connect credentials.
+  - : Save AI feature configurations.
+  - : Add a new DVR/NVR device.
+  - : (New) Endpoint to analyze a camera frame for faces.
+  - : (New) Endpoint to analyze a camera frame for objects.
+- **Dashboard:**
+  - : Load the user's saved dashboard layout.
+  - : Save the user's dashboard layout.
+- **Reports & HR:**
+  - : Generate a daily or date-range shift report.
+  - : Process salary payments for multiple employees.
 
 **Critical Info for New Agent**
-- The previous agent successfully completed the large 5-part task that was pending from the last fork. All features were implemented and tested.
-- The user has provided a new set of four tasks. Your first priority is to begin work on these new requests, starting with the Daily Shift Report.
-- The user's request for Full drag-and-drop widget customization implies the initial implementation was a first step, and a more robust solution is now expected.
-- All credentials and core architecture remain the same.
+- The user does not have an AWS account. All AI features must be implemented using solutions that do not require user-provided cloud credentials, such as the  library which leverages the Emergent LLM Key.
+- The direct Hik-Connect API integration is not feasible without a formal partner key. The current implementation correctly handles this by providing a manual configuration interface in the  page. Do not attempt to re-implement direct cloud login.
+- The immediate task is to finish the frontend for the AI vision features. The backend is mostly ready to be consumed.
 
 **documents and test reports created in this job**
-  -  (updated)
+  - 
+  - 
   - 
 
 **Last 10 User Messages and any pending HUMAN messages** 
- - 4.  (User approves plan for 4 new features).
- - 3. Agent proposes plan for the 4 new features after reviewing files.
- - 2.  (User requests 4 new features: shift report, better dashboard customization, bulk salary payment, and API review).
- - 1. Agent finishes the previous 5-part task.
-- **Status:** The user is waiting for the agent to start implementing the newly approved 4-part plan.
+ - 10.  - User confirms to proceed with AI features but clarifies they don't have AWS credentials.
+ - 9. Agent proposes a plan to use YOLO or AWS Rekognition for AI features.
+ - 8.  - User requests specific advanced AI features.
+ - 7.  - User approves moving CCTV config to Settings and requests more AI features.
+ - 6. Agent finishes CCTV settings page implementation.
+ - 5.  - User provides Hikvision credentials.
+ - 4.  - User provides detailed requirements for the CCTV integration.
+ - 3.  - User initiates the request for camera integration.
+ - 2.  - User asks for cashier login instructions.
+ - 1.  - User asks for admin credentials.
+- **Status:** The user is waiting for the implementation of the AI features (Face/Object Recognition).
 
 **Project Health Check:**
 - **Broken:** None.
-- **Mocked:** N/A.
-- **Needs Attention:** The new feature requests from the user are the immediate priority.
+- **Mocked:** The Hik-Connect API integration is effectively mocked by saving user credentials to a file instead of establishing a live session, due to the lack of official API keys. The functionality relies on the user providing correct device info (like serial numbers) manually.
+- **Needs Attention:** The AI features are mid-implementation and need to be completed and tested.
 
 **3rd Party Integrations**
+- **OpenAI Vision (GPT-4o)**: For Face Recognition and Object Detection. Uses **Emergent LLM Key**.
 - **Twilio** : For sending WhatsApp notifications.
-- **Emergent Integrations** : For Gemini-powered OCR. Uses Emergent LLM Key.
+- **Emergent Integrations** : For Gemini-powered OCR. Uses **Emergent LLM Key**.
 - **APScheduler** : For running scheduled backend jobs.
 - **QR Code** , : For generating ZATCA-compliant invoice QR codes.
 - **Statsmodels** : For predictive sales forecasting.
@@ -161,7 +160,7 @@ All these features were validated by the testing agent.
 - **React Grid Layout** : For the drag-and-drop dashboard.
 
 **Testing status**
-  - Testing agent used after significant changes: YES. The agent ran the testing agent after completing the 5-part feature implementation. All tests passed after the agent fixed a PIN login bug.
+  - Testing agent used after significant changes: YES. Used after the initial 4-part feature implementation.
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: []
   - Known regressions: None.
@@ -175,6 +174,9 @@ All these features were validated by the testing agent.
   - **Password:** 
 - **Cashier/KDS PIN:**
   - **Default PIN:** 
+- **Hik-Connect (Saved in settings):**
+  - **Email:** 
+  - **Password:** 
 
 **What agent forgot to execute**
-The agent successfully completed all tasks assigned in the previous handoff. It is now pending the start of a new set of user requests.</analysis>
+The agent has been diligent in following the user's requests. The current in-progress task (AI features) is the next logical step and was not forgotten.</analysis>
