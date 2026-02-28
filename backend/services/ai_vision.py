@@ -147,24 +147,17 @@ If the image is unclear or no faces are visible, indicate that."""
             response = await chat.send_message(user_message)
             
             # Parse JSON from response
-            try:
-                # Extract JSON from response
-                response_text = response.strip()
-                if "```json" in response_text:
-                    response_text = response_text.split("```json")[1].split("```")[0]
-                elif "```" in response_text:
-                    response_text = response_text.split("```")[1].split("```")[0]
-                
-                result = json.loads(response_text)
+            result = extract_json_from_response(response)
+            if result:
                 return result
-            except json.JSONDecodeError:
-                return {
-                    "faces_detected": 0,
-                    "matches": [],
-                    "unknown_faces": 0,
-                    "raw_response": response,
-                    "error": "Failed to parse AI response"
-                }
+            
+            return {
+                "faces_detected": 0,
+                "matches": [],
+                "unknown_faces": 0,
+                "raw_response": response,
+                "error": "Failed to parse AI response"
+            }
                 
         except Exception as e:
             return {
