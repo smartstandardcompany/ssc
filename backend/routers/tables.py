@@ -478,7 +478,7 @@ async def close_table_order(
     if not table.get("current_order_id"):
         raise HTTPException(status_code=400, detail="Table has no active order")
     
-    order = await db.pos_orders.find_one({"id": table["current_order_id"]})
+    order = await db.pos_orders.find_one({"id": table["current_order_id"]}, {"_id": 0})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     
