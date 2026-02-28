@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from datetime import datetime, timezone
-import uuid, os
+import uuid
+import os
 from pathlib import Path
 
 from database import db, get_current_user, ROOT_DIR
@@ -143,7 +144,8 @@ async def get_zatca_qr(invoice_id: str, current_user: User = Depends(get_current
     if not inv:
         raise HTTPException(status_code=404, detail="Invoice not found")
     company = await db.company_settings.find_one({}, {"_id": 0}) or {}
-    import base64, struct
+    import base64
+    import struct
     def tlv_encode(tag, value):
         value_bytes = value.encode('utf-8')
         return struct.pack(f'BB{len(value_bytes)}s', tag, len(value_bytes), value_bytes)
