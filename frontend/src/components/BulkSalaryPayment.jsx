@@ -17,7 +17,6 @@ export function BulkSalaryPayment({ onComplete }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
