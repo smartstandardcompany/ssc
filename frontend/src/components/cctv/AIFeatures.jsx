@@ -389,7 +389,21 @@ export function ObjectDetectionPanel({ cameras = [] }) {
             Upload an image from your camera or inventory area to detect and count objects.
           </p>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label>Camera (optional)</Label>
+              <Select value={selectedCamera} onValueChange={setSelectedCamera}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Any camera" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Any camera</SelectItem>
+                  {cameras.map(cam => (
+                    <SelectItem key={cam.id} value={cam.id}>{cam.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <Label>Context</Label>
               <Select value={context} onValueChange={setContext}>
