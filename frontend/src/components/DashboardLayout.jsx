@@ -61,6 +61,7 @@ const NAV_GROUPS = [
     items: [
       { path: '/analytics', icon: BarChart3, label: 'Analytics', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/visualizations', icon: Activity, label: 'Visualizations', perm: 'reports', roles: ['admin', 'manager'] },
+      { path: '/shift-report', icon: CalendarClock, label: 'Shift Report', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/reports', icon: BarChart3, label: 'Reports', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/credit-report', icon: CreditCard, label: 'Credit Report', perm: 'credit_report', roles: ['admin', 'manager'] },
       { path: '/supplier-report', icon: FileText, label: 'Supplier Report', perm: 'supplier_report', roles: ['admin', 'manager'] },
