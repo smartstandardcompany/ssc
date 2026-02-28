@@ -719,6 +719,74 @@ async def get_pos_stats(branch_id: Optional[str] = None, current_user: User = De
     }
 
 
+# =====================================================
+# MENU ITEM IMAGE UPLOAD
+# =====================================================
+
+UPLOAD_DIR = "/app/uploads/menu"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+@router.post("/cashier/menu/{item_id}/image")
+async def upload_menu_item_image(
+    item_id: str, 
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload an image for a menu item"""
+    # Verify item exists
+    item = await db.menu_items.find_one({"id": item_id})
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Invalid file type. Allowed: JPEG, PNG, WebP, GIF")
+    
+    # Validate file size (max 5MB)
+    max_size = 5 * 1024 * 1024
+    content = await file.read()
+    if len(content) > max_size:
+        raise HTTPException(status_code=400, detail="File too large. Maximum size is 5MB")
+    
+    # Generate unique filename
+    file_ext = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
+    filename = f"{item_id}_{uuid.uuid4().hex[:8]}.{file_ext}"
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    
+    # Delete old image if exists
+    if item.get("image_url"):
+        old_filename = item["image_url"].split("/")[-1]
+        old_path = os.path.join(UPLOAD_DIR, old_filename)
+        if os.path.exists(old_path):
+            os.remove(old_path)
+    
+    # Save file
+    with open(filepath, "wb") as f:
+        f.write(content)
+    
+    # Update database with relative URL
+    image_url = f"/uploads/menu/{filename}"
+    await db.menu_items.update_one({"id": item_id}, {"$set": {"image_url": image_url}})
+    
+    return {"message": "Image uploaded successfully", "image_url": image_url}
+
+@router.delete("/cashier/menu/{item_id}/image")
+async def delete_menu_item_image(item_id: str, current_user: User = Depends(get_current_user)):
+    """Delete menu item image"""
+    item = await db.menu_items.find_one({"id": item_id})
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    if item.get("image_url"):
+        filename = item["image_url"].split("/")[-1]
+        filepath = os.path.join(UPLOAD_DIR, filename)
+        if os.path.exists(filepath):
+            os.remove(filepath)
+    
+    await db.menu_items.update_one({"id": item_id}, {"$set": {"image_url": None}})
+    return {"message": "Image deleted successfully"}
+
 
 # =====================================================
 # SEED SAMPLE MENU DATA
