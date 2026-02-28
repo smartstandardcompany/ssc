@@ -6,7 +6,7 @@ import {
   User as UserIcon, Settings, ArrowLeftRight, FileInput, AlertTriangle,
   Handshake, HelpCircle, Building2, Package, ChefHat, CalendarClock,
   ArrowDownUp, Activity, PackageCheck, ChevronDown, Menu, X, Zap,
-  AlertCircle, Moon, Sun, Keyboard, Globe, UtensilsCrossed, Camera
+  AlertCircle, Moon, Sun, Keyboard, Globe, UtensilsCrossed, Camera, Armchair
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
