@@ -671,8 +671,8 @@ export default function DashboardPage() {
         {/* Widget Customization Dialog */}
         <Dialog open={showWidgetSettings} onOpenChange={setShowWidgetSettings}>
           <DialogContent className="max-w-md" data-testid="widget-settings-dialog">
-            <DialogHeader><DialogTitle className="font-outfit">Customize Dashboard</DialogTitle></DialogHeader>
-            <p className="text-sm text-muted-foreground mb-2">Choose which sections to show on your dashboard. Your preferences are saved automatically.</p>
+            <DialogHeader><DialogTitle className="font-outfit">{tr('customize_widgets')}</DialogTitle></DialogHeader>
+            <p className="text-sm text-muted-foreground mb-2">{tr('customize_widgets')}</p>
             <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
               {WIDGET_OPTIONS.map(w => (
                 <div 
@@ -687,8 +687,8 @@ export default function DashboardPage() {
                     <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${widgets[w.key] ? 'left-5' : 'left-1'}`} />
                   </button>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{w.label}</p>
-                    <p className="text-xs text-muted-foreground truncate">{w.description}</p>
+                    <p className="text-sm font-medium">{tr(w.labelKey)}</p>
+                    <p className="text-xs text-muted-foreground truncate">{tr(w.descKey)}</p>
                   </div>
                   {widgets[w.key] ? <Eye size={16} className="text-success flex-shrink-0" /> : <EyeOff size={16} className="text-stone-400 flex-shrink-0" />}
                 </div>
