@@ -119,6 +119,18 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchStats();
+    // Load user's saved layout preferences from backend
+    api.get('/dashboard/layout').then(res => {
+      if (res.data?.widgets) {
+        const merged = { ...DEFAULT_WIDGETS, ...res.data.widgets };
+        setWidgets(merged);
+        saveWidgetPrefs(merged);
+      }
+      if (res.data?.layout) {
+        setLayout(res.data.layout);
+        saveLayoutPrefs(res.data.layout);
+      }
+    }).catch(() => {});
   }, [branchFilter, dateFilter]);
 
   const fetchStats = async () => {
