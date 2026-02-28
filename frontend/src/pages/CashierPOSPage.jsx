@@ -75,16 +75,18 @@ export default function CashierPOSPage() {
     try {
       const token = localStorage.getItem('cashier_token');
       const headers = { Authorization: `Bearer ${token}` };
-      const [catRes, menuRes, custRes, statsRes] = await Promise.all([
+      const [catRes, menuRes, custRes, statsRes, shiftRes] = await Promise.all([
         api.get('/cashier/categories', { headers }),
         api.get('/cashier/menu', { headers }),
         api.get('/cashier/customers', { headers }),
         api.get('/cashier/stats', { headers }),
+        api.get('/cashier/shift/current', { headers }).catch(() => ({ data: null })),
       ]);
       setCategories(catRes.data);
       setMenuItems(menuRes.data);
       setCustomers(custRes.data);
       setStats(statsRes.data);
+      setCurrentShift(shiftRes.data);
     } catch (err) {
       console.error('Failed to fetch data:', err);
     }
