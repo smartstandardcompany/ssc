@@ -7,7 +7,7 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - **Backend:** FastAPI, Motor (async MongoDB), JWT auth, APScheduler, reportlab (PDF)
 - **Frontend:** React, TailwindCSS, Shadcn UI, Recharts, react-to-print, react-grid-layout
 - **Database:** MongoDB
-- **AI:** emergentintegrations (GPT-4o OCR, GPT-4o-mini categorization & forecasting)
+- **AI:** emergentintegrations (GPT-4o Vision for Face Recognition, Object Detection, People Counting, Motion Analysis)
 - **Other:** Twilio (WhatsApp), qrcode (ZATCA)
 
 ## Architecture
@@ -18,7 +18,53 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 
 ## Recent Updates (Feb 28, 2026)
 
-### CCTV Security Module (NEW)
+### AI-Powered CCTV Features (COMPLETED)
+- **Face Recognition for Attendance**
+  - Register employee faces via image upload
+  - AI-powered face matching (>70% confidence auto-logs attendance)
+  - View registered faces and daily attendance records
+  - Uses GPT-4o Vision via emergentintegrations
+  
+- **Object Detection for Inventory**
+  - Upload camera images to detect and count objects
+  - Context selection (Retail, Warehouse, Kitchen, Office, Grocery)
+  - Target objects filter (specific items to look for)
+  - Stock level analysis (high/medium/low/empty)
+  - Auto-creates alerts for low stock or empty shelves
+  
+- **AI People Counting**
+  - Upload images to count people in frame
+  - Crowd density analysis (empty/low/medium/high/very_high)
+  - Estimated entries/exits tracking
+  - Demographics breakdown (adults, children, groups)
+  
+- **AI Motion Analysis**
+  - Upload camera frames for motion/security analysis
+  - Activity type detection (person, vehicle, animal, object)
+  - Alert level (none/low/medium/high/critical)
+  - Security concern flagging with automatic alert creation
+  - Snapshot saving on detected motion
+
+**CCTV Frontend (8 Tabs):**
+- Live View - Camera grid with branch filtering
+- Analytics - Traffic trends and hourly distribution
+- Face Recognition - Register faces, view attendance
+- Object Detection - Upload images, detect objects
+- People Count - Upload images, count people
+- Motion - Upload images, analyze motion
+- Alerts - View and acknowledge motion/inventory alerts
+- Devices - Manage DVRs and cameras
+
+**AI Backend APIs:**
+- `/api/cctv/ai/count-people` - AI people counting
+- `/api/cctv/ai/detect-objects` - AI object detection
+- `/api/cctv/ai/recognize-face` - AI face recognition
+- `/api/cctv/ai/analyze-motion` - AI motion analysis
+- `/api/cctv/faces/register` - Register employee face
+- `/api/cctv/faces` - List registered faces
+- `/api/cctv/attendance` - Face recognition attendance
+
+### CCTV Security Module (Base)
 - **Full Hikvision Integration** with Hik-Connect cloud support
 - **Settings Page Configuration** - CCTV tab in Settings for all configuration
 - **Live Camera Grid View**: 2x2, 3x3, 4x4 layouts with branch filtering
