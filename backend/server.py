@@ -75,6 +75,10 @@ for module in [
 async def root():
     return {"message": "SSC Track API"}
 
+# Mount static files for uploads
+os.makedirs("/app/uploads/menu", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="/app/uploads"), name="uploads")
+
 
 logging.basicConfig(
     level=logging.INFO,
