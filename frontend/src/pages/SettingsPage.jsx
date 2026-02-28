@@ -122,6 +122,45 @@ export default function SettingsPage() {
     } catch { toast.error('Upload failed'); }
   };
 
+  const saveHikConnect = async () => {
+    try {
+      await api.post('/cctv/hik-connect/auth', { email: cctvSettings.hik_email, password: cctvSettings.hik_password });
+      toast.success('Hik-Connect credentials saved');
+      fetchSettings();
+    } catch (e) { toast.error(e.response?.data?.detail || 'Failed'); }
+  };
+
+  const saveCctvSettings = async () => {
+    try {
+      await api.post('/cctv/settings', {
+        people_counting_enabled: cctvSettings.people_counting_enabled,
+        motion_alerts_enabled: cctvSettings.motion_alerts_enabled,
+        alert_sensitivity: cctvSettings.alert_sensitivity,
+        counting_interval: cctvSettings.counting_interval
+      });
+      toast.success('CCTV settings saved');
+    } catch (e) { toast.error(e.response?.data?.detail || 'Failed'); }
+  };
+
+  const addDVR = async () => {
+    try {
+      const branch = branches.find(b => b.id === newDVR.branch_id);
+      await api.post('/cctv/dvrs', { ...newDVR, branch_name: branch?.name || '' });
+      toast.success('DVR added successfully');
+      setNewDVR({ branch_id: '', name: '', ip_address: '', port: 8000, username: 'admin', password: '', device_serial: '', is_cloud: true, channels: 4 });
+      fetchSettings();
+    } catch (e) { toast.error(e.response?.data?.detail || 'Failed to add DVR'); }
+  };
+
+  const deleteDVR = async (dvrId) => {
+    if (!confirm('Delete this DVR and all its cameras?')) return;
+    try {
+      await api.delete(`/cctv/dvrs/${dvrId}`);
+      toast.success('DVR deleted');
+      fetchSettings();
+    } catch { toast.error('Failed to delete DVR'); }
+  };
+
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-64">Loading...</div></DashboardLayout>;
 
   return (
