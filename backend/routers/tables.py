@@ -378,6 +378,7 @@ async def start_table_order(
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.pos_orders.insert_one(order)
+    order.pop("_id", None)  # Remove MongoDB ObjectId
     
     # Update table status
     await db.tables.update_one(
