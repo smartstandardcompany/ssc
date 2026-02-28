@@ -196,9 +196,9 @@ export default function LoanManagementPage() {
 
           <TabsContent value={activeTab} className="mt-4">
             {filteredLoans.length === 0 ? (
-              <Card className="border-dashed border-2">
+              <Card className="border-dashed border-2 dark:bg-stone-900 dark:border-stone-700">
                 <CardContent className="p-12 text-center">
-                  <Wallet size={48} className="mx-auto mb-4 text-stone-300" />
+                  <Wallet size={48} className="mx-auto mb-4 text-stone-300 dark:text-stone-600" />
                   <h3 className="font-semibold text-lg mb-2">No loans found</h3>
                   <p className="text-muted-foreground text-sm">Create a new loan to get started</p>
                 </CardContent>
