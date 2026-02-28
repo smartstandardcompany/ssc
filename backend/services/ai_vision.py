@@ -249,33 +249,27 @@ Be thorough but only report objects you can clearly identify."""
             }
         """
         system_message = """You are an AI people counting system for retail analytics.
-Your task is to accurately count the number of people visible in security camera footage.
+Your task is to accurately count the number of people visible in any image provided.
 Focus on precision and report confidence levels.
-Always respond in valid JSON format."""
+IMPORTANT: You MUST always respond ONLY with valid JSON. No explanations outside JSON."""
 
-        prompt = f"""Count the people visible in this security camera image.
+        prompt = f"""Analyze this image and count people visible.
 
 Previous count in this area was: {previous_count}
 
-Return a JSON response:
+RESPOND ONLY WITH THIS JSON FORMAT (no other text):
 {{
-    "people_count": <total number of people visible>,
-    "confidence": 0.0-1.0,
-    "estimated_entries": <estimated new entries based on positions>,
+    "people_count": <number of people visible, 0 if none>,
+    "confidence": <0.0-1.0>,
+    "estimated_entries": <estimated new entries>,
     "estimated_exits": <estimated exits>,
     "crowd_density": "empty|low|medium|high|very_high",
-    "areas": [
-        {{"location": "area description", "count": <people in that area>}}
-    ],
-    "demographics": {{
-        "adults": <count>,
-        "children": <count>,
-        "groups": <number of groups>
-    }},
-    "notes": "any observations about crowd behavior or movement patterns"
+    "areas": [],
+    "demographics": {{"adults": 0, "children": 0, "groups": 0}},
+    "notes": "description of what you see"
 }}
 
-Be precise with the count. If partially visible people, include them with lower confidence."""
+If no people are visible or you cannot determine, return people_count: 0 with a note explaining why."""
 
         try:
             chat = self._create_chat(
