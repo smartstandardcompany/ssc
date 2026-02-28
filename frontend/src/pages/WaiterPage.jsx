@@ -406,6 +406,9 @@ export default function WaiterPage() {
               <Button variant="ghost" className="w-full" onClick={() => navigate('/cashier')}>
                 Switch to Cashier
               </Button>
+              <Button variant="ghost" className="w-full text-xs text-muted-foreground" onClick={() => navigate('/kds')}>
+                Kitchen Display
+              </Button>
             </div>
           </CardContent>
         </Card>
