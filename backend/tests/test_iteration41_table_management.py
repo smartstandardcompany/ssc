@@ -557,17 +557,17 @@ class TestWaiterEndpoints:
         data = response.json()
         assert isinstance(data, list)
     
-    def test_waiter_login_endpoint(self, api_client):
-        """POST /api/waiters/login should authenticate waiter"""
+    def test_waiter_login_uses_cashier_endpoint(self, api_client):
+        """POST /api/cashier/login should authenticate waiter (frontend uses this)"""
+        # The WaiterPage actually uses /api/cashier/login endpoint
         response = api_client.post(
-            f"{BASE_URL}/api/waiters/login",
+            f"{BASE_URL}/api/cashier/login",
             json={"pin": "1234"}
         )
         assert response.status_code == 200
         data = response.json()
-        assert "success" in data
-        assert data["success"] == True
-        assert "waiter" in data
+        assert "access_token" in data
+        assert "user" in data
 
 
 if __name__ == "__main__":
