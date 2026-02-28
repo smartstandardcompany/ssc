@@ -1404,7 +1404,7 @@ async def get_camera_snapshot_base64(camera_id: str, dvr: dict) -> Optional[str]
 
 async def send_motion_notification(camera: dict, result: dict, channels: List[str]):
     """Send motion detection notification via configured channels"""
-    message = f"🚨 *CCTV Motion Alert*\n\n"
+    message = "🚨 *CCTV Motion Alert*\n\n"
     message += f"Camera: {camera.get('name', camera['id'])}\n"
     message += f"Activity: {result.get('activity_type', 'Unknown')}\n"
     message += f"Alert Level: {result.get('alert_level', 'Unknown')}\n"
