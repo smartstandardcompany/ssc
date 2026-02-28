@@ -46,6 +46,19 @@ export default function ExpensesPage() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const isAdmin = user.role === 'admin' || user.role === 'manager';
 
+  // Category translation helper
+  const catMap = {
+    'Salary': 'cat_salary', 'Rent': 'cat_rent', 'Utilities': 'cat_utilities', 'Vehicle': 'cat_vehicle',
+    'Maintenance': 'cat_maintenance', 'Supplier': 'cat_supplier', 'Tickets': 'cat_tickets',
+    'ID Card': 'cat_id_card', 'Other': 'cat_other',
+    'Basic Salary': 'cat_basic_salary', 'Overtime': 'cat_overtime', 'Bonus': 'cat_bonus',
+    'Office Rent': 'cat_office_rent', 'Warehouse Rent': 'cat_warehouse_rent', 'Shop Rent': 'cat_shop_rent',
+    'Electricity': 'cat_electricity', 'Water': 'cat_water', 'Internet': 'cat_internet', 'Phone': 'cat_phone',
+    'Fuel': 'cat_fuel', 'Insurance': 'cat_insurance', 'Office Maintenance': 'cat_office_maintenance',
+    'Equipment Repair': 'cat_equipment_repair'
+  };
+  const tc = (cat) => t(catMap[cat]) || cat;
+
   const defaultCats = [
     { name: 'Salary', subs: ['Basic Salary', 'Overtime', 'Bonus'] },
     { name: 'Rent', subs: ['Office Rent', 'Warehouse Rent', 'Shop Rent'] },
