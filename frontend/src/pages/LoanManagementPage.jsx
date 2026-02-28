@@ -216,7 +216,7 @@ export default function LoanManagementPage() {
                               <Banknote size={20} className="text-orange-600" />
                             </div>
                             <div>
-                              <h3 className="font-semibold">{loan.employee_name}</h3>
+                              <h3 className="font-semibold dark:text-white">{loan.employee_name}</h3>
                               <div className="flex items-center gap-2 mt-0.5">
                                 <Badge variant="secondary" className="capitalize text-xs">{loan.loan_type.replace('_', ' ')}</Badge>
                                 <StatusBadge status={loan.status} />
