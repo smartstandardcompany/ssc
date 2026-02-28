@@ -143,6 +143,7 @@ function App() {
           <Route path="/cashier/pos" element={<CashierPOSPage />} />
           <Route path="/waiter" element={<WaiterPage />} />
           <Route path="/table-management" element={isAuthenticated ? <TableManagementPage /> : <Navigate to="/login" />} />
+          <Route path="/loans" element={isAuthenticated ? <LoanManagementPage /> : <Navigate to="/login" />} />
           <Route path="/kds" element={<KitchenDisplayPage />} />
           <Route path="/order-status" element={<OrderStatusPage />} />
         </Routes>
