@@ -331,6 +331,276 @@ export default function SettingsPage() {
             </Card>
           </TabsContent>
 
+          {/* ZATCA Phase 2 Settings Tab */}
+          <TabsContent value="zatca">
+            <div className="space-y-6">
+              {/* Overview Card */}
+              <Card className="border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50">
+                <CardHeader>
+                  <CardTitle className="font-outfit flex items-center gap-2">
+                    <FileCheck size={20} className="text-orange-600" />
+                    ZATCA Fatoora Integration (Phase 2)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Configure your ZATCA e-invoicing credentials for Phase 2 compliance. You need to register on the 
+                    <a href="https://fatoora.zatca.gov.sa" target="_blank" rel="noopener noreferrer" className="text-orange-600 hover:underline mx-1">ZATCA Fatoora Portal</a>
+                    to obtain your CSID (Cryptographic Stamp Identifier).
+                  </p>
+                  
+                  <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-orange-200">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${zatcaSettings.enabled ? 'bg-success/20' : 'bg-stone-200'}`}>
+                        <Shield size={18} className={zatcaSettings.enabled ? 'text-success' : 'text-stone-500'} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">Enable ZATCA Phase 2</p>
+                        <p className="text-xs text-muted-foreground">Enable automatic XML generation and QR code with digital signature</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={zatcaSettings.enabled}
+                      onCheckedChange={(v) => setZatcaSettings({ ...zatcaSettings, enabled: v })}
+                      data-testid="zatca-phase2-toggle"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Environment Selection */}
+              <Card className="border-border">
+                <CardHeader>
+                  <CardTitle className="font-outfit text-base">Environment</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      className={`p-4 rounded-xl border-2 text-left transition-all ${zatcaSettings.environment === 'sandbox' ? 'border-orange-500 bg-orange-50' : 'border-stone-200 hover:border-stone-300'}`}
+                      onClick={() => setZatcaSettings({ ...zatcaSettings, environment: 'sandbox' })}
+                      data-testid="zatca-sandbox-btn"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={`w-3 h-3 rounded-full ${zatcaSettings.environment === 'sandbox' ? 'bg-orange-500' : 'bg-stone-300'}`} />
+                        <span className="font-medium">Sandbox (Testing)</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Use for development and testing. Invoices won't be submitted to ZATCA.</p>
+                    </button>
+                    <button
+                      className={`p-4 rounded-xl border-2 text-left transition-all ${zatcaSettings.environment === 'production' ? 'border-success bg-success/5' : 'border-stone-200 hover:border-stone-300'}`}
+                      onClick={() => setZatcaSettings({ ...zatcaSettings, environment: 'production' })}
+                      data-testid="zatca-production-btn"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={`w-3 h-3 rounded-full ${zatcaSettings.environment === 'production' ? 'bg-success' : 'bg-stone-300'}`} />
+                        <span className="font-medium">Production</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Live environment. Invoices will be submitted to ZATCA for clearance.</p>
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Credentials */}
+              <Card className="border-border">
+                <CardHeader>
+                  <CardTitle className="font-outfit text-base flex items-center gap-2">
+                    <Shield size={18} />
+                    CSID Credentials
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Enter your CSID credentials obtained from the ZATCA Fatoora Portal after completing the onboarding process.
+                  </p>
+
+                  {zatcaSettings.environment === 'sandbox' ? (
+                    <div className="space-y-4 p-4 bg-orange-50 rounded-xl border border-orange-200">
+                      <h4 className="font-medium text-sm flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-orange-500" />
+                        Sandbox Credentials
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-xs">CSID (Sandbox)</Label>
+                          <Input
+                            value={zatcaSettings.csid}
+                            onChange={(e) => setZatcaSettings({ ...zatcaSettings, csid: e.target.value })}
+                            placeholder="TUxTRDox..."
+                            className="h-9 mt-1 font-mono text-xs"
+                            data-testid="zatca-csid-sandbox"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">CSID Secret (Sandbox)</Label>
+                          <Input
+                            type="password"
+                            value={zatcaSettings.csid_secret}
+                            onChange={(e) => setZatcaSettings({ ...zatcaSettings, csid_secret: e.target.value })}
+                            placeholder="••••••••"
+                            className="h-9 mt-1"
+                            data-testid="zatca-secret-sandbox"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4 p-4 bg-green-50 rounded-xl border border-green-200">
+                      <h4 className="font-medium text-sm flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-success" />
+                        Production Credentials
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-xs">CSID (Production)</Label>
+                          <Input
+                            value={zatcaSettings.production_csid}
+                            onChange={(e) => setZatcaSettings({ ...zatcaSettings, production_csid: e.target.value })}
+                            placeholder="TUxTRDox..."
+                            className="h-9 mt-1 font-mono text-xs"
+                            data-testid="zatca-csid-production"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">CSID Secret (Production)</Label>
+                          <Input
+                            type="password"
+                            value={zatcaSettings.production_secret}
+                            onChange={(e) => setZatcaSettings({ ...zatcaSettings, production_secret: e.target.value })}
+                            placeholder="••••••••"
+                            className="h-9 mt-1"
+                            data-testid="zatca-secret-production"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Certificate & Private Key (Advanced) */}
+                  <details className="group">
+                    <summary className="cursor-pointer text-sm font-medium text-stone-600 hover:text-stone-800 flex items-center gap-2">
+                      <span className="text-xs bg-stone-200 px-2 py-0.5 rounded">Advanced</span>
+                      Certificate & Private Key (Optional)
+                    </summary>
+                    <div className="mt-4 space-y-4 p-4 bg-stone-50 rounded-xl">
+                      <div>
+                        <Label className="text-xs">Certificate (PEM format)</Label>
+                        <textarea
+                          value={zatcaSettings.certificate}
+                          onChange={(e) => setZatcaSettings({ ...zatcaSettings, certificate: e.target.value })}
+                          placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
+                          className="w-full h-24 mt-1 p-2 text-xs font-mono border rounded-lg resize-none"
+                          data-testid="zatca-certificate"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Private Key (PEM format)</Label>
+                        <textarea
+                          value={zatcaSettings.private_key}
+                          onChange={(e) => setZatcaSettings({ ...zatcaSettings, private_key: e.target.value })}
+                          placeholder="-----BEGIN EC PRIVATE KEY-----&#10;...&#10;-----END EC PRIVATE KEY-----"
+                          className="w-full h-24 mt-1 p-2 text-xs font-mono border rounded-lg resize-none"
+                          data-testid="zatca-private-key"
+                        />
+                      </div>
+                    </div>
+                  </details>
+                </CardContent>
+              </Card>
+
+              {/* Invoice Settings */}
+              <Card className="border-border">
+                <CardHeader>
+                  <CardTitle className="font-outfit text-base">Invoice Settings</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-stone-50 rounded-xl">
+                    <div>
+                      <p className="text-sm font-medium">Auto-submit to ZATCA</p>
+                      <p className="text-xs text-muted-foreground">Automatically submit invoices to ZATCA after creation</p>
+                    </div>
+                    <Switch
+                      checked={zatcaSettings.auto_submit}
+                      onCheckedChange={(v) => setZatcaSettings({ ...zatcaSettings, auto_submit: v })}
+                      data-testid="zatca-auto-submit"
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs">Invoice Counter (ICV)</Label>
+                      <Input
+                        type="number"
+                        value={zatcaSettings.invoice_counter}
+                        onChange={(e) => setZatcaSettings({ ...zatcaSettings, invoice_counter: parseInt(e.target.value) || 1 })}
+                        className="h-9 mt-1"
+                        min={1}
+                        data-testid="zatca-invoice-counter"
+                      />
+                      <p className="text-[10px] text-muted-foreground mt-1">Sequential counter for invoice chain</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs">OTP (One-Time Password)</Label>
+                      <Input
+                        value={zatcaSettings.otp}
+                        onChange={(e) => setZatcaSettings({ ...zatcaSettings, otp: e.target.value })}
+                        placeholder="123456"
+                        className="h-9 mt-1"
+                        data-testid="zatca-otp"
+                      />
+                      <p className="text-[10px] text-muted-foreground mt-1">Required for initial CSID generation</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Actions */}
+              <Card className="border-border">
+                <CardContent className="pt-6">
+                  <div className="flex flex-wrap gap-3">
+                    <Button onClick={saveZatcaSettings} className="rounded-full" data-testid="save-zatca-btn">
+                      Save ZATCA Settings
+                    </Button>
+                    <Button variant="outline" onClick={testZatcaConnection} className="rounded-full" data-testid="test-zatca-btn">
+                      <Shield size={14} className="mr-2" />
+                      Test Connection
+                    </Button>
+                    <a
+                      href="https://fatoora.zatca.gov.sa"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-orange-600 bg-orange-50 rounded-full hover:bg-orange-100 transition-colors"
+                    >
+                      Open ZATCA Portal
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </a>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Help Card */}
+              <Card className="border-blue-200 bg-blue-50/30">
+                <CardContent className="pt-6">
+                  <h3 className="font-medium text-sm mb-3 flex items-center gap-2">
+                    <AlertTriangle size={16} className="text-blue-600" />
+                    ZATCA Phase 2 Registration Steps
+                  </h3>
+                  <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
+                    <li>Register on the <a href="https://fatoora.zatca.gov.sa" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">ZATCA Fatoora Portal</a></li>
+                    <li>Generate a CSR (Certificate Signing Request) from your solution</li>
+                    <li>Submit CSR to ZATCA using your OTP to receive your CSID</li>
+                    <li>Enter the CSID and secret in the fields above</li>
+                    <li>Test your connection using the "Test Connection" button</li>
+                    <li>Switch to Production when ready for live invoicing</li>
+                  </ol>
+                  <p className="text-xs text-muted-foreground mt-4">
+                    Note: Sandbox mode generates compliant XML but doesn't submit to ZATCA. Use it for testing before going live.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
           <TabsContent value="company">
             <div className="space-y-6">
               {/* ZATCA Invoicing Toggle - Prominent */}
