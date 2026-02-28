@@ -1,79 +1,93 @@
 <analysis>**original_problem_statement:**
-The user initially requested a data entry application to track sales, expenses, and supplier payments. Over the course of development, this has evolved into a comprehensive business management ERP system named SSC Track.
+The user initially requested a data entry application to track sales, expenses, and supplier payments. This has evolved into a comprehensive business management ERP system named SSC Track.
 
 **PRODUCT REQUIREMENTS:**
-- **Financial Management:** Sales (Bank/Cash/Online/Credit), Expenses (with categories/sub-categories), Supplier Payments, Customer Credit Management, Invoicing with an item master list, Item-level Profit & Loss (P&L) reporting.
-- **HR Management:** Employee database with Job Titles (affecting salary and permissions), detailed salary payments (including bonus, overtime, advance, deductions), leave tracking (annual, sick), loan management, an Employee Self-Service Portal, and Staff Shift Scheduling.
-- **Stock Management:** Inventory tracking with item costs, stock-in from supplier invoices (with OCR for data entry), and stock-out for usage.
-- **Asset & Liability Tracking:** Document management with expiry alerts, company fines, company loans, and partner investments.
-- **Cash Flow Management:** Branch-to-branch transfers, a central company balance, and inter-branch due tracking.
-- **Bank Reconciliation:** A Bank Statement Analyzer that parses PDF/XLS files, auto-categorizes transactions, and includes a reconciliation tool.
-- **Reporting & Analytics:** A multi-tab dashboard with KPIs, charts, and an advanced reporting module.
-- **Administration:** Granular role-based access control, self-service settings for Email/WhatsApp, company branding, data import, database backup, and an in-app deployment guide.
-- **Deployment & Accessibility:** The application is a Progressive Web App (PWA) and is prepared for deployment on servers like GoDaddy.
+- **Financial Management:** Sales (Bank/Cash/Online/Credit), Expenses, Supplier Payments, Customer Credit Management, ZATCA-compliant Invoicing with an item master list, Item-level Profit & Loss (P&L) reporting.
+- **HR Management:** Employee database with Job Titles linked to permissions, salary payments, leave tracking, loan management, and an Employee Self-Service Portal.
+- **Staff Management:** Manual and AI-driven Staff Shift Scheduling, Cashier shift management (start/end shifts with cash counts).
+- **Stock Management:** Inventory tracking with item images, stock-in, stock-out, multi-branch inventory transfers, and real-time low-stock alerts.
+- **Restaurant Operations:** A dedicated, mobile-optimized Point-of-Sale (POS) page with a Foodics-style interface, menu items with modifiers, multiple payment options (including credit), a Kitchen Display System (KDS), and a Customer-Facing Order Status Display.
+- **Asset & Liability Tracking:** Document management with expiry alerts, company fines, loans, and partner investments.
+- **Cash Flow Management:** Branch-to-branch transfers and a central company balance.
+- **Bank Reconciliation:** A Bank Statement Analyzer and a manual side-by-side reconciliation tool.
+- **Reporting & Analytics:** A multi-tab main dashboard with customizable, drag-and-drop widgets, a real-time POS analytics dashboard, advanced reporting modules (EOD, Partner P&L), AI-driven predictive analytics (sales/expense forecasting, churn, cash flow, seasonal trends), and advanced data visualizations (Heatmaps, Funnels, etc.).
+- **Administration:** Granular role-based access control (including a PIN-only Cashier role), self-service settings for Email/WhatsApp (including scheduled AI reports), company branding, and data import/backup.
+- **UI/UX:** A dedicated, mobile-optimized POS page, dark mode, keyboard shortcuts, a mobile-friendly bottom tab bar, and multi-language support (English, Arabic, Urdu, Hindi).
 
 **User's preferred language**: English
 
 **what currently exists?**
-A feature-rich, full-stack ERP application (SSC Track) with a FastAPI backend and a React/Shadcn UI frontend. A major backend refactoring is currently in progress. The goal is to break down the monolithic  file by moving all API routes into a modular structure under the  directory.
+A feature-rich, full-stack ERP application (SSC Track). The latest session successfully completed a 5-part feature update, which included:
+1.  **Basic Drag-and-Drop Dashboard:** Widgets on the main dashboard can now be repositioned.
+2.  **Full Cashier Shift Management:** The POS page now has a complete workflow for cashiers to start their shift (with opening cash) and end it (with closing cash).
+3.  **Customer-Facing Order Display:** A functional, auto-refreshing page that shows orders as Preparing or Ready for Pickup.
+4.  **Menu Item Images:** An image upload feature has been added, and a new Menu Items management page allows admins to add/edit items and their images.
+5.  **Cashier PIN Login:** The PIN-only login for cashiers has been implemented and tested.
+
+All these features were validated by the testing agent.
 
 **Last working item**:
-    - Last item agent was working: The agent was executing the **P0: Backend Refactoring** task. After a full analysis of the ~5000-line , the agent created the final set of new, empty router files: , , , and .
-    - Status: IN PROGRESS
+    - Last item agent was working: The agent received a new set of four feature requests from the user and was in the planning phase. It had just reviewed the relevant files to understand the scope before starting implementation.
+    - Status: NOT STARTED
     - Agent Testing Done: N
-    - Which testing method agent to use? backend testing agent. A full regression test of all API endpoints is mandatory once the refactoring is complete.
+    - Which testing method agent to use? both. The dashboard and HR changes will require frontend testing, while the new shift report and bulk salary logic will require backend testing.
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1:  warning on startup (Priority: P3)
-  
-  Issues Detail:
-  - Issue 1: 
-     - Description: The backend log intermittently shows an  warning. This is a known compatibility issue with .
-     - Attempted fixes: Pinning  and  was tried previously but the issue has returned.
-     - Next debug checklist: Investigate dependency conflicts between , , and . Consider upgrading or downgrading  to a version confirmed to be compatible with the installed  version.
-     - Why fix this issue and what will be achieved with the fix? It's a low-priority warning, but fixing it will clean up the server logs and mitigate any potential risk of future authentication-related bugs.
-     - Status:  NOT STARTED
-     - Is recurring issue? Y
-     - Should Test frontend/backend/both after fix? backend
-     - Blocked on other issue: No.
+- No pending issues or bugs have been identified.
 
 **In progress Task List**:
-  - Task 1: Complete Backend Refactoring (Priority: P0)
-     - Where to resume: 
-        1. The new router files (, , , ) have been created but are empty.
-        2. The immediate next step is to populate these files by moving the corresponding code blocks from .
-        3. After all logic is moved, create a new, slimmed-down  (or replace ).
-        4. This new main file should import all the individual routers from the  directory and include them using .
-        5. Finally, delete the old monolithic  if it hasn't been replaced.
-     - What will be achieved with this? This will complete the modularization of the backend, significantly improving maintainability, scalability, and organization.
-     - Status: IN PROGRESS
-     - Should Test frontend/backend/both after fix? backend
+- The following tasks were requested by the user and are pending implementation.
+
+  - Task 1:  Daily Shift Report Generation (P0)
+  - Task 2:  Full Drag-and-Drop Widget Customization (P1)
+  - Task 3:  Bulk Salary Payment UI (P1)
+  - Task 4:  General API Improvements (P2)
+
+ Task Detail:
+  - Task 1: **Daily Shift Report Generation**
+     - Where to resume: This is a new task. The agent needs to design and implement a backend endpoint to aggregate shift data (opening/closing cash, sales, etc.) into a daily report. A new frontend page or component will be needed to display this report.
+     - What will be achieved with this?: Provides managers with a summary of cashier activities for each day.
+     - Status:  NOT STARTED
+     - Should Test frontend/backend/both after fix?: both
+     - Blocked on something: No.
+  - Task 2: **Full Drag-and-Drop Widget Customization**
+     - Where to resume: The basic drag-and-drop is implemented. The user now wants a more complete solution, likely involving saving layouts per user, adding/removing widgets, and resizing them. This will require significant changes to  and potentially new backend endpoints to store user preferences.
+     - What will be achieved with this?: A fully customizable user dashboard experience.
+     - Status:  NOT STARTED
+     - Should Test frontend/backend/both after fix?: both
+     - Blocked on something: No.
+  - Task 3: **Bulk Salary Payment UI**
+     - Where to resume: This is a new task. The user wants a simplified way to pay salaries for all employees across all branches with a single action. This will require a new frontend interface and a backend endpoint to process the bulk payments.
+     - What will be achieved with this?: Streamlines the payroll process for the HR/Admin role.
+     - Status:  NOT STARTED
+     - Should Test frontend/backend/both after fix?: both
+     - Blocked on something: No.
+  - Task 4: **General API Improvements**
+     - Where to resume: This is a broad request. The agent needs to review existing backend API endpoints for potential performance optimizations, security enhancements, or code quality improvements as identified.
+     - What will be achieved with this?: A more robust and efficient backend.
+     - Status:  NOT STARTED
+     - Should Test frontend/backend/both after fix?: backend
      - Blocked on something: No.
 
 **Upcoming and Future Tasks**
-    Upcoming Tasks:
-    - **P1:** Link Job Titles to Permissions: The user requested that job titles should affect user permissions. This requires creating a mapping between a  and a set of permissions and applying it when an employee logs in.
-    - **P2:** Enhance Bank Reconciliation UI: Create a dedicated reconciliation page where users can see SSC Track sales side-by-side with bank POS deposits and manually match or flag discrepancies.
-
     Future Tasks:
-    - **P3:** Automated WhatsApp Notification Triggers: Implement automated, scheduled triggers (e.g., send a daily sales summary every night via WhatsApp).
-    - **P4:** Advanced Stock/Inventory Reporting: Build more detailed reports on stock consumption, wastage, and profitability over time.
+    - **Additional AI Features:** Further enhancements to predictive analytics based on user feedback.
+    - **Further UX Refinements:** Ongoing improvements to the user experience as new feedback is gathered.
 
 **Completed work in this session**
-- Answered a user's question about connecting a GoDaddy domain to a Railway deployment.
-- **Refactor (In Progress):** Continued the P0 backend refactoring by creating the final set of empty router files:
-  - 
-  - 
-  - 
-  - 
+- **Drag-and-Drop Dashboard Widgets:** Implemented basic repositioning of widgets on the dashboard using .
+- **Cashier Shift Management UI:** Created a modal for cashiers to start and end their shifts, which interacts with the backend to record opening and closing cash amounts.
+- **Customer Order Status Display:** Implemented a live, auto-refreshing page for customers to see the status of their orders.
+- **Menu Item Image Management:**
+    - Added a backend endpoint for image uploads ().
+    - Configured the backend to serve static images from the  directory.
+    - Created a new Menu Items management page for admins to add, edit, delete, and upload images for menu items.
+    - Added a link to the new page in the main navigation sidebar.
+- **Comprehensive Testing:** Used the  to validate all new features, which identified and fixed issues with the PIN login logic.
 
 **Earlier issues found/mentioned but not fixed**
-   - Issue 1: 
-     - Debug checklist: Check  and  package versions for compatibility issues.
-     - Why to solve this issue and what will be achieved with this? To clean up server logs and prevent potential auth issues.
-     - Should Test frontend/backend/both after fix: backend
-     - Is recurring issue? Y
+   - None.
 
 **Known issue recurrence from previous fork**
   - None.
@@ -82,70 +96,75 @@ A feature-rich, full-stack ERP application (SSC Track) with a FastAPI backend an
 
 
 **Key Technical Concepts**
-- **Backend:** FastAPI, Pydantic, Motor (async MongoDB driver), JWT for auth.
-- **Frontend:** React, TailwindCSS, Shadcn UI, Recharts for graphs.
+- **Backend:** FastAPI, Pydantic, Motor (async MongoDB driver), JWT, File uploads ().
+- **Frontend:** React, TailwindCSS, Shadcn UI, Recharts, .
 - **Database:** MongoDB.
-- **Integrations:** Twilio (WhatsApp),  (for Gemini OCR).
+- **Internationalization (i18n):** Custom React Context for multi-language support (EN, AR, UR, HI).
 
 **key DB schema**
-- **StockItem:** {name, category, unit, current_stock, last_cost_price, average_cost_price}
-- **StockLog:** {item_id, branch_id, type: ['in', 'out', 'adjustment'], quantity, cost_price}
-- **JobTitle:** {name, department, base_salary, max_salary}
-- **Shift:** {name, start_time, end_time, branch_id}
-- **ShiftAssignment:** {employee_id, shift_id, date, status: ['scheduled', 'attended', 'absent']}
+  - **items**: The  field is now actively used. The URL points to an image in the  directory.
+  - **shifts**: This collection is now fully utilized by the frontend UI for starting and ending cashier shifts.
 
 **changes in tech stack**
-  - No changes in this session.
+  - No new dependencies were added. Existing libraries like  were implemented.
 
 **All files of reference**
-- **Created Files (in this session):**
-  - : To house stock management endpoints.
-  - : For staff shift scheduling endpoints.
-  - : For bank and reconciliation endpoints.
-  - : For Profit & Loss reporting endpoints.
-- **Referenced Files:**
-  - : The source file for the entire refactoring effort.
-  - : Referenced for Pydantic models used in the routes.
-  - : Referenced for database and authentication helper functions.
-  - All files in .
+- **/app/frontend/src/pages/DashboardPage.jsx**: Updated to implement drag-and-drop widget layout.
+- **/app/frontend/src/pages/CashierPOSPage.jsx**: Updated to integrate the shift management modal.
+- **/app/frontend/src/components/cashier/ShiftManagementModal.jsx**: New file for the cashier shift UI.
+- **/app/frontend/src/pages/OrderStatusPage.jsx**: Updated with logic to fetch and display active orders.
+- **/app/backend/routers/cashier_pos.py**: Updated with a new endpoint for item image uploads.
+- **/app/backend/server.py**: Updated to serve static files from the  directory.
+- **/app/frontend/src/pages/MenuItemManagementPage.jsx**: New page for admins to manage all aspects of menu items, including images.
+- **/app/frontend/src/App.js**: Updated to include the route for the new .
+- **/app/frontend/src/components/layout/DashboardLayout.jsx**: Updated to add a navigation link to the Menu Items page.
 
 **Areas that need refactoring**:
-- **:** This remains the focus. The task is to finalize moving all remaining logic out of it and replace it with a slimmed-down version that simply includes the new routers.
+- None identified.
 
 **key api endpoints**
-- All API endpoints are in the process of being moved from  to their respective files in .
+- : Starts a cashier shift.
+- : Ends a cashier shift.
+- : Fetches active orders for the customer display.
+- ****: (New) Uploads an image for a specific menu item.
 
 **Critical Info for New Agent**
-- **Resume Backend Refactoring:** Your top priority is to complete the P0 task. The creation of router files is complete.
-- **Next Steps:**
-    1.  Populate the newly created, empty router files (, , , ) by moving logic from .
-    2.  Create a new, clean  (or ) that initializes the FastAPI app and includes all routers from the  directory.
-    3.  Replace the old  with the new one.
-- **CRITICAL: Test After Refactor:** After completing the file moves and setting up the new , you MUST call the backend testing agent to perform a full regression test. This is a large-scale change, and breakage is likely.
-- **User Approval:** The user has approved continuing with the P0 refactoring. After it is complete and verified, proceed with task P1 (Link Job Titles to Permissions).
+- The previous agent successfully completed the large 5-part task that was pending from the last fork. All features were implemented and tested.
+- The user has provided a new set of four tasks. Your first priority is to begin work on these new requests, starting with the Daily Shift Report.
+- The user's request for Full drag-and-drop widget customization implies the initial implementation was a first step, and a more robust solution is now expected.
+- All credentials and core architecture remain the same.
 
 **documents and test reports created in this job**
-- None.
+  -  (updated)
+  - 
 
 **Last 10 User Messages and any pending HUMAN messages** 
- - 1. User: yes pls contuine P0 Backend Refactoring. **Status: In Progress.**
- - 2. User: How to use custom domain option on railway which points to our domain hosted on godaddy. **Status: Completed (Agent provided instructions).**
+ - 4.  (User approves plan for 4 new features).
+ - 3. Agent proposes plan for the 4 new features after reviewing files.
+ - 2.  (User requests 4 new features: shift report, better dashboard customization, bulk salary payment, and API review).
+ - 1. Agent finishes the previous 5-part task.
+- **Status:** The user is waiting for the agent to start implementing the newly approved 4-part plan.
 
 **Project Health Check:**
-- **Broken:** None. The app is functional, but the backend codebase is in a transitional state due to the ongoing refactoring.
+- **Broken:** None.
 - **Mocked:** N/A.
+- **Needs Attention:** The new feature requests from the user are the immediate priority.
 
 **3rd Party Integrations**
 - **Twilio** : For sending WhatsApp notifications.
-- **ReportLab** : For generating PDF reports.
-- **Openpyxl / xlrd**: For parsing and generating Excel/XLS files.
-- **Emergent Integrations** : For Gemini-powered OCR on invoices. Uses Emergent LLM Key.
+- **Emergent Integrations** : For Gemini-powered OCR. Uses Emergent LLM Key.
+- **APScheduler** : For running scheduled backend jobs.
+- **QR Code** , : For generating ZATCA-compliant invoice QR codes.
+- **Statsmodels** : For predictive sales forecasting.
+- **FPDF2** : For generating PDF reports.
+- **html2canvas** : For exporting chart components as images.
+- **React Grid Layout** : For the drag-and-drop dashboard.
 
 **Testing status**
-  - Testing agent used after significant changes: NO (The refactoring work is not yet complete).
+  - Testing agent used after significant changes: YES. The agent ran the testing agent after completing the 5-part feature implementation. All tests passed after the agent fixed a PIN login bug.
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: []
-  - Known regressions: None yet, but high potential for regressions after refactoring, which necessitates thorough testing.
+  - Known regressions: None.
 
 **Credentials to test flow:**
 - **Admin:**
@@ -154,6 +173,8 @@ A feature-rich, full-stack ERP application (SSC Track) with a FastAPI backend an
 - **Employee:**
   - **Email:** 
   - **Password:** 
+- **Cashier/KDS PIN:**
+  - **Default PIN:** 
 
 **What agent forgot to execute**
-- The agent did not immediately present a plan with  as instructed. It first explored the codebase, then got interrupted by a user question. It did, however, receive user confirmation to proceed (yes pls contuine P0 Backend Refactoring) before starting the main task. The work is on the correct path.</analysis>
+The agent successfully completed all tasks assigned in the previous handoff. It is now pending the start of a new set of user requests.</analysis>
