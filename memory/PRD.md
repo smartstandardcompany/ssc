@@ -328,11 +328,15 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - **P3:** Further UX refinements based on user feedback
 
 ## File Structure Updates
-- `/app/frontend/src/pages/ShiftReportPage.jsx` - NEW (Feb 28)
-- `/app/frontend/src/components/BulkSalaryPayment.jsx` - NEW (Feb 28)
+- `/app/frontend/src/pages/CCTVPage.jsx` - CCTV Security page with 8 AI tabs
+- `/app/frontend/src/components/cctv/AIFeatures.jsx` - AI panels (FaceRecognition, ObjectDetection, PeopleCounting, MotionAnalysis)
+- `/app/backend/services/ai_vision.py` - AI Vision service using GPT-4o via emergentintegrations
+- `/app/backend/routers/cctv.py` - CCTV and AI endpoints
+- `/app/frontend/src/pages/ShiftReportPage.jsx` - Shift Report (Feb 28)
+- `/app/frontend/src/components/BulkSalaryPayment.jsx` - Bulk Salary (Feb 28)
 - `/app/frontend/src/components/CashierShiftModal.jsx` - Shift management
 - `/app/frontend/src/pages/MenuItemsPage.jsx` - Menu item management
-- `/app/frontend/src/pages/OrderStatusPage.jsx` - Updated with full implementation
-- `/app/frontend/src/pages/CashierPOSPage.jsx` - Added shift management integration
-- `/app/backend/routers/cashier_pos.py` - Added image upload endpoints
-- `/app/backend/server.py` - Added static file serving for /uploads
+- `/app/frontend/src/pages/OrderStatusPage.jsx` - Order status display
+- `/app/frontend/src/pages/CashierPOSPage.jsx` - POS with shift integration
+- `/app/backend/routers/cashier_pos.py` - Image upload endpoints
+- `/app/backend/server.py` - Static file serving for /uploads
