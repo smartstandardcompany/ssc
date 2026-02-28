@@ -576,6 +576,267 @@ export default function SettingsPage() {
             </div>
           </TabsContent>
 
+          <TabsContent value="cctv">
+            <div className="space-y-6">
+              {/* Hik-Connect Configuration */}
+              <Card className="border-border">
+                <CardHeader>
+                  <CardTitle className="font-outfit flex items-center gap-2">
+                    <Wifi size={18} />
+                    Hik-Connect Cloud Configuration
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">Connect your Hikvision account to access cloud-connected DVRs. This is the same account you use in the Hik-Connect mobile app.</p>
+                  
+                  {cctvSettings.hik_status?.connected && (
+                    <div className="p-3 bg-success/10 rounded-xl border border-success/30 flex items-center gap-2">
+                      <Wifi size={16} className="text-success" />
+                      <span className="text-sm font-medium text-success">Connected</span>
+                      <span className="text-xs text-muted-foreground ml-2">{cctvSettings.hik_status.email}</span>
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Hik-Connect Email</Label>
+                      <Input 
+                        value={cctvSettings.hik_email} 
+                        onChange={(e) => setCctvSettings({ ...cctvSettings, hik_email: e.target.value })}
+                        placeholder="your@email.com"
+                        data-testid="hik-email"
+                      />
+                    </div>
+                    <div>
+                      <Label>Password</Label>
+                      <Input 
+                        type="password" 
+                        value={cctvSettings.hik_password} 
+                        onChange={(e) => setCctvSettings({ ...cctvSettings, hik_password: e.target.value })}
+                        placeholder="••••••••"
+                        data-testid="hik-password"
+                      />
+                    </div>
+                  </div>
+                  <Button onClick={saveHikConnect} className="rounded-full" data-testid="save-hik">
+                    <Wifi size={14} className="mr-2" />Save Hik-Connect Credentials
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* DVR Management */}
+              <Card className="border-border">
+                <CardHeader>
+                  <CardTitle className="font-outfit flex items-center gap-2">
+                    <Video size={18} />
+                    DVR/NVR Configuration
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">Add your DVRs here. For local network DVRs, provide IP address. For cloud DVRs, provide device serial number.</p>
+                  
+                  {/* Existing DVRs */}
+                  {dvrs.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Configured DVRs ({dvrs.length})</Label>
+                      {dvrs.map(dvr => (
+                        <div key={dvr.id} className="flex items-center justify-between p-3 bg-stone-50 rounded-xl">
+                          <div className="flex items-center gap-3">
+                            <Video size={18} className="text-primary" />
+                            <div>
+                              <p className="text-sm font-medium">{dvr.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {dvr.branch_name} • {dvr.camera_count || dvr.channels} cameras • {dvr.is_cloud ? 'Cloud' : dvr.ip_address}
+                              </p>
+                            </div>
+                          </div>
+                          <Button size="sm" variant="ghost" className="text-error" onClick={() => deleteDVR(dvr.id)}>Delete</Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add New DVR */}
+                  <div className="p-4 border rounded-xl bg-stone-50 space-y-4">
+                    <h3 className="font-medium text-sm">Add New DVR</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Branch *</Label>
+                        <Select value={newDVR.branch_id} onValueChange={(v) => setNewDVR({ ...newDVR, branch_id: v })}>
+                          <SelectTrigger><SelectValue placeholder="Select Branch" /></SelectTrigger>
+                          <SelectContent>
+                            {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>DVR Name *</Label>
+                        <Input value={newDVR.name} onChange={(e) => setNewDVR({ ...newDVR, name: e.target.value })} placeholder="Main Store DVR" />
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Button 
+                        variant={newDVR.is_cloud ? "default" : "outline"} 
+                        size="sm" 
+                        className="flex-1 rounded-xl"
+                        onClick={() => setNewDVR({ ...newDVR, is_cloud: true })}
+                      >
+                        <Wifi size={14} className="mr-1" /> Cloud (Hik-Connect)
+                      </Button>
+                      <Button 
+                        variant={!newDVR.is_cloud ? "default" : "outline"} 
+                        size="sm" 
+                        className="flex-1 rounded-xl"
+                        onClick={() => setNewDVR({ ...newDVR, is_cloud: false })}
+                      >
+                        <Video size={14} className="mr-1" /> Local IP
+                      </Button>
+                    </div>
+
+                    {newDVR.is_cloud ? (
+                      <div>
+                        <Label>Device Serial Number</Label>
+                        <Input value={newDVR.device_serial} onChange={(e) => setNewDVR({ ...newDVR, device_serial: e.target.value })} placeholder="DS-7208HQHI-K1 (found on DVR label)" />
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>IP Address *</Label>
+                          <Input value={newDVR.ip_address} onChange={(e) => setNewDVR({ ...newDVR, ip_address: e.target.value })} placeholder="192.168.1.100" />
+                        </div>
+                        <div>
+                          <Label>Port</Label>
+                          <Input type="number" value={newDVR.port} onChange={(e) => setNewDVR({ ...newDVR, port: parseInt(e.target.value) })} />
+                        </div>
+                        <div>
+                          <Label>Username</Label>
+                          <Input value={newDVR.username} onChange={(e) => setNewDVR({ ...newDVR, username: e.target.value })} />
+                        </div>
+                        <div>
+                          <Label>Password</Label>
+                          <Input type="password" value={newDVR.password} onChange={(e) => setNewDVR({ ...newDVR, password: e.target.value })} />
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <Label>Number of Channels</Label>
+                      <Select value={String(newDVR.channels)} onValueChange={(v) => setNewDVR({ ...newDVR, channels: parseInt(v) })}>
+                        <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {[4, 8, 16, 32].map(n => <SelectItem key={n} value={String(n)}>{n} Channels</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Button onClick={addDVR} disabled={!newDVR.branch_id || !newDVR.name} className="rounded-full">
+                      Add DVR
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* AI Features */}
+              <Card className="border-border">
+                <CardHeader>
+                  <CardTitle className="font-outfit flex items-center gap-2">
+                    <Users size={18} />
+                    AI Features Configuration
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">Configure AI-powered features for your CCTV system.</p>
+
+                  <div className="space-y-4">
+                    {/* People Counting */}
+                    <div className="flex items-center justify-between p-4 bg-stone-50 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-success/10 rounded-lg"><Users size={18} className="text-success" /></div>
+                        <div>
+                          <p className="text-sm font-medium">People Counting</p>
+                          <p className="text-xs text-muted-foreground">AI counts people entering and exiting your stores</p>
+                        </div>
+                      </div>
+                      <Switch 
+                        checked={cctvSettings.people_counting_enabled} 
+                        onCheckedChange={(v) => setCctvSettings({ ...cctvSettings, people_counting_enabled: v })}
+                      />
+                    </div>
+
+                    {cctvSettings.people_counting_enabled && (
+                      <div className="ml-6 p-3 border-l-2 border-primary/30 space-y-3">
+                        <div>
+                          <Label className="text-xs">Counting Interval (minutes)</Label>
+                          <Select value={String(cctvSettings.counting_interval)} onValueChange={(v) => setCctvSettings({ ...cctvSettings, counting_interval: parseInt(v) })}>
+                            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1">1 min</SelectItem>
+                              <SelectItem value="5">5 min</SelectItem>
+                              <SelectItem value="15">15 min</SelectItem>
+                              <SelectItem value="30">30 min</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Motion Alerts */}
+                    <div className="flex items-center justify-between p-4 bg-stone-50 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-warning/10 rounded-lg"><AlertTriangle size={18} className="text-warning" /></div>
+                        <div>
+                          <p className="text-sm font-medium">Motion Detection Alerts</p>
+                          <p className="text-xs text-muted-foreground">Get alerts when motion is detected after hours</p>
+                        </div>
+                      </div>
+                      <Switch 
+                        checked={cctvSettings.motion_alerts_enabled} 
+                        onCheckedChange={(v) => setCctvSettings({ ...cctvSettings, motion_alerts_enabled: v })}
+                      />
+                    </div>
+
+                    {cctvSettings.motion_alerts_enabled && (
+                      <div className="ml-6 p-3 border-l-2 border-warning/30 space-y-3">
+                        <div>
+                          <Label className="text-xs">Alert Sensitivity</Label>
+                          <Select value={cctvSettings.alert_sensitivity} onValueChange={(v) => setCctvSettings({ ...cctvSettings, alert_sensitivity: v })}>
+                            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="low">Low</SelectItem>
+                              <SelectItem value="medium">Medium</SelectItem>
+                              <SelectItem value="high">High</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <Button onClick={saveCctvSettings} className="rounded-full">
+                    Save AI Settings
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Help Card */}
+              <Card className="border-primary/30 bg-primary/5">
+                <CardContent className="pt-4">
+                  <h3 className="font-medium text-sm mb-2">How to Find Your DVR Serial Number</h3>
+                  <ol className="text-xs text-muted-foreground space-y-1 ml-4 list-decimal">
+                    <li>Look at the sticker on your DVR/NVR device</li>
+                    <li>Or open the Hik-Connect mobile app → Device Management → Select your device → Device Info</li>
+                    <li>The serial number looks like: DS-7208HQHI-K1</li>
+                  </ol>
+                  <p className="text-xs text-muted-foreground mt-3">
+                    <strong>Note:</strong> For live streaming via cloud, full API access requires Hikvision Partner registration at <a href="https://tpp.hikvision.com" target="_blank" rel="noreferrer" className="text-primary underline">tpp.hikvision.com</a>. 
+                    For immediate viewing, use local IP connection or the Hik-Connect mobile app.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
           <TabsContent value="deploy">
             <div className="space-y-6">
               <Card className="border-stone-100">
