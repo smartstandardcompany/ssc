@@ -310,6 +310,9 @@ async def save_zatca_settings(body: dict, current_user: User = Depends(get_curre
         "certificate": body.get("certificate", ""),
         "auto_submit": body.get("auto_submit", False),
         "invoice_counter": int(body.get("invoice_counter", 1) or 1),
+        "csid_expiry": body.get("csid_expiry", ""),
+        "production_csid_expiry": body.get("production_csid_expiry", ""),
+        "expiry_alert_days": int(body.get("expiry_alert_days", 30) or 30),
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "updated_by": current_user.id
     }
