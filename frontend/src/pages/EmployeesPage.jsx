@@ -16,6 +16,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
 import { BranchFilter } from '@/components/BranchFilter';
+import { BulkSalaryPayment } from '@/components/BulkSalaryPayment';
 
 const PAYMENT_TYPES = [
   { value: 'salary', label: 'Salary', color: 'bg-success/20 text-success' },
