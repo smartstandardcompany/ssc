@@ -32,6 +32,12 @@ export default function SettingsPage() {
   const [whatsappSettings, setWhatsappSettings] = useState({ account_sid: '', auth_token: '', phone_number: '', recipient_number: '', enabled: true });
   const [notifPrefs, setNotifPrefs] = useState({ email_daily_sales: false, email_document_expiry: true, email_leave_updates: false, whatsapp_daily_sales: false, whatsapp_document_expiry: false });
   const [companyInfo, setCompanyInfo] = useState({ company_name: 'Smart Standard Company', address_line1: '', address_line2: '', city: '', country: '', phone: '', email: '', cr_number: '', vat_number: '', vat_enabled: false, vat_rate: 15 });
+  const [zatcaSettings, setZatcaSettings] = useState({
+    enabled: false, environment: 'sandbox', otp: '',
+    csid: '', csid_secret: '', production_csid: '', production_secret: '',
+    certificate: '', private_key: '',
+    auto_submit: false, invoice_counter: 1
+  });
   const [testEmail, setTestEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [schedulerJobs, setSchedulerJobs] = useState([]);
