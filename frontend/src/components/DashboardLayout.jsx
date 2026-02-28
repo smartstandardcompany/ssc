@@ -52,6 +52,7 @@ const NAV_GROUPS = [
     items: [
       { path: '/stock', icon: Package, label: 'Inventory', perm: 'stock', roles: ['admin', 'manager'] },
       { path: '/transfers', icon: PackageCheck, label: 'Transfers', perm: 'stock', roles: ['admin', 'manager'] },
+      { path: '/menu-items', icon: UtensilsCrossed, label: 'Menu Items', perm: 'stock', roles: ['admin', 'manager'] },
       { path: '/kitchen', icon: ChefHat, label: 'Kitchen', perm: 'kitchen' },
     ]
   },
