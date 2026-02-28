@@ -282,11 +282,13 @@ class TestPOSRoleSeparation:
             headers={"Authorization": f"Bearer {self.token}"})
         assert update_res.status_code == 200, f"Failed to update employee: {update_res.text}"
         
-        # Verify update
-        verify_res = requests.get(f"{BASE_URL}/api/employees/{emp_id}",
+        # Verify update by getting all employees and finding the updated one
+        verify_res = requests.get(f"{BASE_URL}/api/employees",
             headers={"Authorization": f"Bearer {self.token}"})
         assert verify_res.status_code == 200
-        assert verify_res.json().get("pos_role") == "waiter"
+        updated_emp = next((e for e in verify_res.json() if e["id"] == emp_id), None)
+        assert updated_emp is not None, "Employee not found after update"
+        assert updated_emp.get("pos_role") == "waiter", f"pos_role should be 'waiter', got: {updated_emp.get('pos_role')}"
         
         # Restore original value
         requests.put(f"{BASE_URL}/api/employees/{emp_id}",
