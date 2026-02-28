@@ -5,11 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { 
   UserCheck, Camera, Upload, Trash2, Loader2, CheckCircle, XCircle,
-  Package, AlertTriangle, Clock, Calendar, Eye, Scan
+  Package, AlertTriangle, Clock, Calendar, Eye, Scan, Users
 } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
