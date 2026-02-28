@@ -158,12 +158,8 @@ If the image is unclear or no faces are visible, indicate that."""
             }
         """
         system_message = """You are an AI object detection system for inventory monitoring.
-Your task is to:
-1. Identify and count objects visible in the image
-2. Estimate stock levels where possible
-3. Flag any potential issues (low stock, misplaced items, etc.)
-
-Always respond in valid JSON format with precise counts."""
+Your task is to identify and count objects visible in the image provided.
+IMPORTANT: You MUST always respond ONLY with valid JSON. No explanations outside JSON."""
 
         target_str = ""
         if target_objects:
@@ -171,20 +167,18 @@ Always respond in valid JSON format with precise counts."""
 
         prompt = f"""Analyze this image for inventory monitoring in a {context}.{target_str}
 
-Please identify all visible products/objects and return a JSON response:
+RESPOND ONLY WITH THIS JSON FORMAT (no other text):
 {{
     "objects_detected": [
-        {{"name": "object name", "count": <estimated count>, "location": "shelf/area description", "confidence": 0.0-1.0, "stock_level": "high/medium/low/empty"}}
+        {{"name": "object name", "count": 1, "location": "description", "confidence": 0.8, "stock_level": "high|medium|low|empty"}}
     ],
-    "total_items": <total count of all items>,
-    "shelf_analysis": "description of shelf organization",
-    "alerts": [
-        {{"type": "low_stock|empty_shelf|misplaced|damage", "object": "item name", "message": "description"}}
-    ],
-    "recommendations": ["any suggestions for inventory management"]
+    "total_items": <total count>,
+    "shelf_analysis": "description",
+    "alerts": [],
+    "recommendations": []
 }}
 
-Be thorough but only report objects you can clearly identify."""
+If no objects are visible, return objects_detected as an empty array with total_items: 0."""
 
         try:
             chat = self._create_chat(
