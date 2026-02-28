@@ -445,24 +445,101 @@ export const DashboardLayout = ({ children }) => {
 
       {/* Mobile Bottom Tab Bar */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-stone-900 border-t border-stone-100 dark:border-stone-700 flex items-center justify-around px-1 py-1.5 safe-area-bottom" data-testid="mobile-bottom-nav">
-        {[
-          { path: '/', icon: LayoutDashboard, label: 'Home' },
-          { path: '/sales', icon: ShoppingCart, label: 'Sales' },
-          { path: '/expenses', icon: Receipt, label: 'Expenses' },
-          { path: '/stock', icon: Package, label: 'Stock' },
-          { path: '/reports', icon: BarChart3, label: 'Reports' },
-        ].map(item => {
-          const Icon = item.icon;
-          const isActive = location.pathname === item.path;
-          return (
-            <Link key={item.path} to={item.path} data-testid={`bottom-nav-${item.label.toLowerCase()}`}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors ${isActive ? 'text-orange-600' : 'text-stone-400'}`}>
-              <Icon size={18} strokeWidth={isActive ? 2.5 : 1.5} />
-              <span className="text-[9px] font-medium">{item.label}</span>
-            </Link>
-          );
-        })}
+        {(() => {
+          const iconMap = { LayoutDashboard, ShoppingCart, Receipt, Package, BarChart3, Users, Settings, Store, CreditCard, FileText, Camera };
+          return bottomNavItems.filter(item => item.enabled).slice(0, 5).map(item => {
+            const Icon = iconMap[item.icon] || LayoutDashboard;
+            const isActive = location.pathname === item.path;
+            return (
+              <Link key={item.path} to={item.path} data-testid={`bottom-nav-${item.label.toLowerCase()}`}
+                className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors ${isActive ? 'text-orange-600' : 'text-stone-400'}`}>
+                <Icon size={18} strokeWidth={isActive ? 2.5 : 1.5} />
+                <span className="text-[9px] font-medium">{item.label}</span>
+              </Link>
+            );
+          });
+        })()}
+        <button onClick={() => setShowNavCustomize(true)} data-testid="customize-nav-btn"
+          className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-stone-400 hover:text-stone-600">
+          <Settings size={16} strokeWidth={1.5} />
+          <span className="text-[9px] font-medium">More</span>
+        </button>
       </nav>
+
+      {/* Mobile Nav Customization Modal */}
+      {showNavCustomize && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50" onClick={() => setShowNavCustomize(false)}>
+          <div className="bg-white dark:bg-stone-800 rounded-t-2xl shadow-2xl w-full max-w-lg p-5 max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()} data-testid="nav-customize-modal">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold font-outfit dark:text-white">Customize Bottom Navigation</h3>
+              <button onClick={() => setShowNavCustomize(false)} className="text-stone-400 hover:text-stone-600"><X size={18} /></button>
+            </div>
+            <p className="text-xs text-muted-foreground mb-4">Select up to 5 items to show in the bottom navigation bar.</p>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { path: '/', icon: 'LayoutDashboard', label: 'Home' },
+                { path: '/sales', icon: 'ShoppingCart', label: 'Sales' },
+                { path: '/expenses', icon: 'Receipt', label: 'Expenses' },
+                { path: '/stock', icon: 'Package', label: 'Stock' },
+                { path: '/reports', icon: 'BarChart3', label: 'Reports' },
+                { path: '/customers', icon: 'Users', label: 'Customers' },
+                { path: '/employees', icon: 'Users', label: 'Employees' },
+                { path: '/branches', icon: 'Store', label: 'Branches' },
+                { path: '/analytics', icon: 'BarChart3', label: 'Analytics' },
+                { path: '/cctv', icon: 'Camera', label: 'CCTV' },
+                { path: '/credit-report', icon: 'CreditCard', label: 'Credits' },
+                { path: '/settings', icon: 'Settings', label: 'Settings' },
+              ].map(item => {
+                const isEnabled = bottomNavItems.find(n => n.path === item.path)?.enabled;
+                const enabledCount = bottomNavItems.filter(n => n.enabled).length;
+                const iconMap = { LayoutDashboard, ShoppingCart, Receipt, Package, BarChart3, Users, Settings, Store, CreditCard, Camera };
+                const Icon = iconMap[item.icon] || LayoutDashboard;
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => {
+                      const existing = bottomNavItems.find(n => n.path === item.path);
+                      if (existing) {
+                        if (existing.enabled && enabledCount <= 1) return; // Must have at least 1
+                        const updated = bottomNavItems.map(n => n.path === item.path ? { ...n, enabled: !n.enabled } : n);
+                        setBottomNavItems(updated);
+                        localStorage.setItem('ssc_bottom_nav', JSON.stringify(updated));
+                      } else {
+                        if (enabledCount >= 5) return; // Max 5
+                        const updated = [...bottomNavItems, { ...item, enabled: true }];
+                        setBottomNavItems(updated);
+                        localStorage.setItem('ssc_bottom_nav', JSON.stringify(updated));
+                      }
+                    }}
+                    className={`flex items-center gap-2 p-3 rounded-xl text-sm font-medium transition-colors ${
+                      isEnabled ? 'bg-orange-50 text-orange-600 border-2 border-orange-500' : 'bg-stone-50 text-stone-500 border-2 border-transparent hover:bg-stone-100'
+                    } ${enabledCount >= 5 && !isEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    data-testid={`nav-option-${item.label.toLowerCase()}`}
+                  >
+                    <Icon size={18} />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-4 flex gap-2">
+              <Button variant="outline" size="sm" className="flex-1 rounded-full" onClick={() => {
+                const defaults = [
+                  { path: '/', icon: 'LayoutDashboard', label: 'Home', enabled: true },
+                  { path: '/sales', icon: 'ShoppingCart', label: 'Sales', enabled: true },
+                  { path: '/expenses', icon: 'Receipt', label: 'Expenses', enabled: true },
+                  { path: '/stock', icon: 'Package', label: 'Stock', enabled: true },
+                  { path: '/reports', icon: 'BarChart3', label: 'Reports', enabled: true },
+                ];
+                setBottomNavItems(defaults);
+                localStorage.setItem('ssc_bottom_nav', JSON.stringify(defaults));
+                toast.success('Reset to defaults');
+              }}>Reset to Default</Button>
+              <Button size="sm" className="flex-1 rounded-full" onClick={() => setShowNavCustomize(false)}>Done</Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Keyboard Shortcuts Modal */}
       {showShortcuts && (
