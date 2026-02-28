@@ -6,6 +6,8 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional, List
 from datetime import datetime, timezone, timedelta
 import uuid
+import random
+import string
 
 from database import db, get_current_user, hash_password, verify_password
 from models import (User, MenuItem, MenuItemCreate, POSOrder, POSOrderCreate, 
@@ -14,25 +16,56 @@ from models import (User, MenuItem, MenuItemCreate, POSOrder, POSOrderCreate,
 router = APIRouter()
 
 # =====================================================
-# CASHIER AUTHENTICATION (Separate from main auth)
+# CASHIER AUTHENTICATION (PIN-based login)
 # =====================================================
 
 @router.post("/cashier/login")
 async def cashier_login(body: dict):
-    """Login endpoint for cashier POS - requires cashier or admin role"""
+    """Login endpoint for cashier POS - supports PIN or email/password"""
+    pin = body.get("pin")
     email = body.get("email")
     password = body.get("password")
-    pin = body.get("pin")  # Optional PIN-based login
     
-    if not email or not password:
-        raise HTTPException(status_code=400, detail="Email and password required")
+    user = None
+    employee = None
     
-    user = await db.users.find_one({"email": email}, {"_id": 0})
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+    # PIN-based login (preferred for cashiers)
+    if pin:
+        # Find employee/user by PIN
+        employee = await db.employees.find_one({"cashier_pin": pin, "status": "active"}, {"_id": 0})
+        if employee:
+            if employee.get("user_id"):
+                user = await db.users.find_one({"id": employee["user_id"]}, {"_id": 0})
+            else:
+                # Create a virtual user object for employee without user account
+                user = {
+                    "id": employee["id"],
+                    "name": employee["name"],
+                    "email": employee.get("email", ""),
+                    "role": "cashier",
+                    "branch_id": employee.get("branch_id"),
+                    "permissions": ["cashier", "pos", "sales"]
+                }
+        else:
+            # Also check users collection for admin PIN
+            user = await db.users.find_one({"cashier_pin": pin}, {"_id": 0})
+            if not user:
+                raise HTTPException(status_code=401, detail="Invalid PIN")
     
-    if not verify_password(password, user.get("password", "")):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+    # Email/password login (fallback)
+    elif email and password:
+        user = await db.users.find_one({"email": email}, {"_id": 0})
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+        if not verify_password(password, user.get("password", "")):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+        # Get employee details if linked
+        if user.get("id"):
+            employee = await db.employees.find_one({"user_id": user["id"]}, {"_id": 0})
+    else:
+        raise HTTPException(status_code=400, detail="PIN or email/password required")
     
     # Check if user has cashier access
     allowed_roles = ["admin", "cashier", "manager"]
@@ -43,11 +76,6 @@ async def cashier_login(body: dict):
     
     if not has_role and not has_permission:
         raise HTTPException(status_code=403, detail="You don't have cashier access")
-    
-    # Get employee details if linked
-    employee = None
-    if user.get("id"):
-        employee = await db.employees.find_one({"user_id": user["id"]}, {"_id": 0})
     
     # Get branch info
     branch = None
