@@ -52,13 +52,16 @@ export default function SettingsPage() {
 
   const fetchSettings = async () => {
     try {
-      const [emailRes, waRes, prefRes, coRes, schedRes, logRes] = await Promise.all([
+      const [emailRes, waRes, prefRes, coRes, schedRes, logRes, hikRes, branchRes, dvrRes] = await Promise.all([
         api.get('/settings/email').catch(() => ({ data: null })),
         api.get('/settings/whatsapp').catch(() => ({ data: null })),
         api.get('/settings/notifications').catch(() => ({ data: null })),
         api.get('/settings/company').catch(() => ({ data: null })),
         api.get('/scheduler/config').catch(() => ({ data: [] })),
         api.get('/scheduler/logs').catch(() => ({ data: [] })),
+        api.get('/cctv/hik-connect/status').catch(() => ({ data: null })),
+        api.get('/branches').catch(() => ({ data: [] })),
+        api.get('/cctv/dvrs').catch(() => ({ data: [] })),
       ]);
       if (emailRes.data) setEmailSettings(prev => ({ ...prev, ...emailRes.data }));
       if (waRes.data) setWhatsappSettings(prev => ({ ...prev, ...waRes.data }));
@@ -66,6 +69,9 @@ export default function SettingsPage() {
       if (coRes.data) setCompanyInfo(prev => ({ ...prev, ...coRes.data }));
       if (schedRes.data) setSchedulerJobs(schedRes.data);
       if (logRes.data) setSchedulerLogs(logRes.data);
+      if (hikRes.data) setCctvSettings(prev => ({ ...prev, hik_email: hikRes.data.email || '', hik_status: hikRes.data }));
+      if (branchRes.data) setBranches(branchRes.data);
+      if (dvrRes.data) setDvrs(dvrRes.data);
     } catch {}
     finally { setLoading(false); }
   };
