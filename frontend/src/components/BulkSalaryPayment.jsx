@@ -11,8 +11,10 @@ import { AlertCircle, DollarSign, Users, Building2, CheckCircle, XCircle, Loader
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export function BulkSalaryPayment({ onComplete }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [previewing, setPreviewing] = useState(false);
