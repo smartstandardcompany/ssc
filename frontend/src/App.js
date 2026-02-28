@@ -140,6 +140,8 @@ function App() {
           <Route path="/partner-pl-report" element={isAuthenticated ? <PartnerPLReportPage /> : <Navigate to="/login" />} />
           <Route path="/cashier" element={<CashierLoginPage />} />
           <Route path="/cashier/pos" element={<CashierPOSPage />} />
+          <Route path="/waiter" element={<WaiterPage />} />
+          <Route path="/table-management" element={isAuthenticated ? <TableManagementPage /> : <Navigate to="/login" />} />
           <Route path="/kds" element={<KitchenDisplayPage />} />
           <Route path="/order-status" element={<OrderStatusPage />} />
         </Routes>
