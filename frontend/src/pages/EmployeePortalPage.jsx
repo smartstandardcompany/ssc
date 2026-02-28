@@ -151,7 +151,7 @@ export default function EmployeePortalPage() {
         )}
 
         <Tabs defaultValue="attendance">
-          <TabsList><TabsTrigger value="attendance">Attendance</TabsTrigger><TabsTrigger value="payments">Payments</TabsTrigger><TabsTrigger value="leaves">Leaves</TabsTrigger><TabsTrigger value="requests">Requests</TabsTrigger><TabsTrigger value="letters">Letters</TabsTrigger></TabsList>
+          <TabsList><TabsTrigger value="attendance">Attendance</TabsTrigger><TabsTrigger value="payments">Payments</TabsTrigger><TabsTrigger value="leaves">Leaves</TabsTrigger><TabsTrigger value="loans">Loans</TabsTrigger><TabsTrigger value="requests">Requests</TabsTrigger><TabsTrigger value="letters">Letters</TabsTrigger></TabsList>
 
           <TabsContent value="attendance">
             <Card className="border-stone-100"><CardHeader><CardTitle className="font-outfit text-base">Attendance Records</CardTitle></CardHeader><CardContent>
