@@ -136,6 +136,16 @@ export default function WaiterPage() {
         throw new Error(err.detail || 'Invalid PIN');
       }
       const data = await res.json();
+      const posRole = data.user?.pos_role || 'both';
+      
+      // Check if user has waiter access
+      if (posRole === 'cashier') {
+        toast.error('This PIN is for cashier access only. Please use Cashier POS.');
+        setPin('');
+        setLoginLoading(false);
+        return;
+      }
+      
       localStorage.setItem('waiter_token', data.access_token);
       localStorage.setItem('waiter_user', JSON.stringify(data.user));
       setWaiter(data.user);
