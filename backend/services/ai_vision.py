@@ -388,23 +388,17 @@ Be thorough in identifying any movement or unusual activity."""
             response = await chat.send_message(user_message)
             
             # Parse JSON from response
-            try:
-                response_text = response.strip()
-                if "```json" in response_text:
-                    response_text = response_text.split("```json")[1].split("```")[0]
-                elif "```" in response_text:
-                    response_text = response_text.split("```")[1].split("```")[0]
-                
-                result = json.loads(response_text)
+            result = extract_json_from_response(response)
+            if result:
                 return result
-            except json.JSONDecodeError:
-                return {
-                    "motion_detected": False,
-                    "motion_score": 0,
-                    "activity_type": "unknown",
-                    "raw_response": response,
-                    "error": "Failed to parse AI response"
-                }
+            
+            return {
+                "motion_detected": False,
+                "motion_score": 0,
+                "activity_type": "unknown",
+                "raw_response": response,
+                "error": "Failed to parse AI response"
+            }
                 
         except Exception as e:
             return {
