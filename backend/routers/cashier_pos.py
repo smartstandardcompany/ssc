@@ -2,12 +2,14 @@
 Restaurant POS System - Cashier Interface
 Foodics-style POS with menu items, modifiers, and multiple payment options
 """
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from typing import Optional, List
 from datetime import datetime, timezone, timedelta
 import uuid
 import random
 import string
+import os
+import shutil
 
 from database import db, get_current_user, hash_password, verify_password
 from models import (User, MenuItem, MenuItemCreate, POSOrder, POSOrderCreate, 
