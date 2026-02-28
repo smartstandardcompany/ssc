@@ -114,20 +114,20 @@ export default function ShiftReportPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
           <div>
             <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-1" data-testid="shift-report-title">
-              Daily Shift Report
+              {t('shift_report_title')}
             </h1>
-            <p className="text-sm text-muted-foreground">Cashier shifts, sales breakdown, and cash reconciliation</p>
+            <p className="text-sm text-muted-foreground">{t('shift_report_subtitle')}</p>
           </div>
           <Button size="sm" variant="outline" className="rounded-xl" onClick={() => activeTab === 'daily' ? fetchDailyReport() : fetchRangeReport()}>
-            <RefreshCw size={14} className="mr-1" /> Refresh
+            <RefreshCw size={14} className="mr-1" /> {t('refresh')}
           </Button>
         </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="daily" data-testid="daily-tab">Daily Report</TabsTrigger>
-            <TabsTrigger value="range" data-testid="range-tab">Date Range</TabsTrigger>
+            <TabsTrigger value="daily" data-testid="daily-tab">{t('daily_report')}</TabsTrigger>
+            <TabsTrigger value="range" data-testid="range-tab">{t('date_range')}</TabsTrigger>
           </TabsList>
 
           {/* Filters */}
