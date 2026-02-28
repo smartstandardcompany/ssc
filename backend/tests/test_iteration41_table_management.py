@@ -163,8 +163,9 @@ class TestTablesCRUD:
     
     def test_create_table(self, api_client, admin_token):
         """POST /api/tables should create a new table"""
+        uid = unique_id()
         table_data = {
-            "table_number": "TEST_T99",
+            "table_number": f"TEST_T{uid}",
             "section": "Main Hall",
             "capacity": 6,
             "shape": "round"
@@ -174,9 +175,9 @@ class TestTablesCRUD:
             headers={"Authorization": f"Bearer {admin_token}"},
             json=table_data
         )
-        assert response.status_code == 200
+        assert response.status_code == 200, f"Failed to create table: {response.text}"
         data = response.json()
-        assert data["table_number"] == "TEST_T99"
+        assert data["table_number"] == f"TEST_T{uid}"
         assert data["section"] == "Main Hall"
         assert data["capacity"] == 6
         assert data["status"] == "available"
@@ -189,7 +190,7 @@ class TestTablesCRUD:
             headers={"Authorization": f"Bearer {admin_token}"}
         )
         tables = get_response.json()
-        created_table = next((t for t in tables if t["table_number"] == "TEST_T99"), None)
+        created_table = next((t for t in tables if t["table_number"] == f"TEST_T{uid}"), None)
         assert created_table is not None, "Created table not found in GET response"
         
         # Cleanup
