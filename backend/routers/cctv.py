@@ -566,7 +566,7 @@ async def process_camera_frame(body: dict, current_user: User = Depends(get_curr
     }
     """
     camera_id = body.get("camera_id")
-    frame_data = body.get("frame_data")  # Base64 encoded
+    _ = body.get("frame_data")  # Base64 encoded - reserved for future AI processing
     timestamp = body.get("timestamp", datetime.now(timezone.utc).isoformat())
     
     if not camera_id:
