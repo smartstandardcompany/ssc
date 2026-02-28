@@ -13,8 +13,41 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const CHART_COLORS = ['#F5841F', '#22C55E', '#0EA5E9', '#EF4444', '#8B5CF6', '#EC4899'];
+
+// Loading skeleton for the report page
+const ReportSkeleton = () => (
+  <div className="space-y-6 animate-pulse">
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      {[1,2,3,4,5,6].map(i => (
+        <div key={i} className="p-4 rounded-xl border border-border">
+          <Skeleton className="h-3 w-20 mb-2" />
+          <Skeleton className="h-8 w-24" />
+        </div>
+      ))}
+    </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="p-4 rounded-xl border border-border">
+        <Skeleton className="h-4 w-40 mb-4" />
+        <Skeleton className="h-48 w-full rounded-lg" />
+      </div>
+      <div className="p-4 rounded-xl border border-border">
+        <Skeleton className="h-4 w-32 mb-4" />
+        <Skeleton className="h-48 w-full rounded-lg" />
+      </div>
+    </div>
+    <div className="p-4 rounded-xl border border-border">
+      <Skeleton className="h-4 w-28 mb-4" />
+      <div className="space-y-2">
+        {[1,2,3].map(i => (
+          <Skeleton key={i} className="h-12 w-full" />
+        ))}
+      </div>
+    </div>
+  </div>
+);
 
 export default function ShiftReportPage() {
   const [loading, setLoading] = useState(true);
