@@ -103,9 +103,16 @@ export default function OrderStatusPage() {
                           {order.customer_name && (
                             <p className="text-white font-medium">{order.customer_name}</p>
                           )}
-                          <Badge variant="outline" className="text-xs text-stone-400 border-stone-600 capitalize">
-                            {order.order_type?.replace('_', ' ')}
-                          </Badge>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="outline" className="text-xs text-stone-400 border-stone-600 capitalize">
+                              {order.order_type?.replace('_', ' ')}
+                            </Badge>
+                            {order.table_number && (
+                              <Badge className="bg-orange-500/20 text-orange-300 border border-orange-500/40 text-xs">
+                                <Armchair size={12} className="mr-1" />Table {order.table_number}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 text-amber-400">
