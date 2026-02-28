@@ -174,6 +174,35 @@ const translations = {
     category_report_title: 'Category Report', kitchen_title: 'Kitchen Display',
     notifications_title: 'Notifications', help_title: 'Help & Guide',
     portal_title: 'Employee Portal',
+    // CCTV
+    cctv_title: 'CCTV Security', cctv_subtitle: 'AI-powered video surveillance and analytics',
+    live_view: 'Live View', face_recognition: 'Face Recognition', object_detection: 'Object Detection',
+    people_count: 'People Count', motion_analysis: 'Motion Analysis', alerts: 'Alerts',
+    devices: 'Devices', register_face: 'Register Face', registered_faces: 'Registered Faces',
+    face_attendance: 'Face Recognition Attendance', detect_objects: 'Detect Objects',
+    count_people: 'Count People', analyze_motion: 'Analyze Motion',
+    crowd_density: 'Crowd Density', motion_detected: 'Motion Detected', security_concern: 'Security Concern',
+    no_cameras: 'No cameras configured', upload_image: 'Upload Image', run_analysis: 'Run Analysis',
+    // Scheduled Monitoring
+    scheduled_monitoring: 'Scheduled AI Monitoring', monitoring_interval: 'Monitoring Interval',
+    enable_monitoring: 'Enable Scheduled Monitoring', run_now: 'Run Now',
+    notification_channels: 'Notification Channels', in_app: 'In-App', whatsapp: 'WhatsApp',
+    // Partner P&L
+    partner_pl_title: 'Partner P&L Report', partner_pl_subtitle: 'Profit & Loss breakdown by partner ownership',
+    company_summary: 'Company Summary', partner_breakdown: 'Partner Breakdown',
+    expense_categories: 'Expense Categories', payment_modes: 'Payment Modes',
+    revenue: 'Revenue', gross_profit: 'Gross Profit', operating_expenses: 'Operating Expenses',
+    profit_share: 'Profit Share', ownership_percentage: 'Ownership %', investments: 'Investments',
+    withdrawals: 'Withdrawals', current_balance: 'Current Balance', available_withdrawal: 'Available for Withdrawal',
+    // ZATCA Phase 2
+    zatca_phase2: 'ZATCA Phase 2', zatca_compliance: 'ZATCA Compliance',
+    generate_xml: 'Generate XML Invoice', submit_zatca: 'Submit to ZATCA',
+    xml_invoice: 'XML Invoice', qr_code: 'QR Code', invoice_uuid: 'Invoice UUID',
+    digital_signature: 'Digital Signature', csid_required: 'CSID Required',
+    b2b_invoice: 'B2B Tax Invoice', b2c_invoice: 'Simplified Tax Invoice',
+    // Mobile Navigation
+    customize_nav: 'Customize Bottom Navigation', reset_default: 'Reset to Default',
+    select_items: 'Select up to 5 items', more: 'More',
   },
   ar: {
     nav_operations: 'العمليات', nav_finance: 'المالية', nav_people: 'الأشخاص',
