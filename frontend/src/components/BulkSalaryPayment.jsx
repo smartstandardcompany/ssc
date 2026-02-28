@@ -362,10 +362,10 @@ export function BulkSalaryPayment({ onComplete }) {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-xs">Period *</Label>
+                <Label className="text-xs">{t('period')} *</Label>
                 <Select value={formData.period} onValueChange={(v) => setFormData(f => ({ ...f, period: v }))}>
                   <SelectTrigger data-testid="bulk-period-select">
-                    <SelectValue placeholder="Select Month" />
+                    <SelectValue placeholder={t('period')} />
                   </SelectTrigger>
                   <SelectContent>
                     {getMonthOptions().map(m => (
@@ -375,13 +375,13 @@ export function BulkSalaryPayment({ onComplete }) {
                 </Select>
               </div>
               <div>
-                <Label className="text-xs">Branch (Optional)</Label>
+                <Label className="text-xs">{t('branch')}</Label>
                 <Select value={formData.branch_id || "all"} onValueChange={(v) => setFormData(f => ({ ...f, branch_id: v === "all" ? "" : v }))}>
                   <SelectTrigger>
-                    <SelectValue placeholder="All Branches" />
+                    <SelectValue placeholder={t('all_branches')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Branches</SelectItem>
+                    <SelectItem value="all">{t('all_branches')}</SelectItem>
                     {branches.map(b => (
                       <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                     ))}
@@ -391,11 +391,11 @@ export function BulkSalaryPayment({ onComplete }) {
             </div>
 
             <div>
-              <Label className="text-xs">Notes</Label>
+              <Label className="text-xs">{t('notes')}</Label>
               <Input 
                 value={formData.notes} 
                 onChange={(e) => setFormData(f => ({ ...f, notes: e.target.value }))}
-                placeholder="Payment notes"
+                placeholder={t('notes')}
               />
             </div>
 
@@ -406,7 +406,7 @@ export function BulkSalaryPayment({ onComplete }) {
               data-testid="preview-bulk-pay"
             >
               {previewing ? <Loader2 size={14} className="animate-spin mr-1" /> : <Users size={14} className="mr-1" />}
-              Preview & Select Employees
+              {t('preview_select')}
             </Button>
           </div>
         )}
