@@ -36,9 +36,21 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
   - Tag 5: VAT Amount
   - Tag 6: SHA-256 Hash of XML
   - Tags 7-9: Signature/PublicKey/CSID placeholders (requires ZATCA registration)
+- **ZATCA Settings Section** (Settings > ZATCA tab):
+  - Enable/Disable Phase 2 toggle
+  - Environment selection (Sandbox/Production)
+  - CSID credentials for both environments
+  - Advanced: Certificate and Private Key (PEM format)
+  - Invoice Settings: Auto-submit, Invoice Counter (ICV), OTP
+  - Test Connection button (validates credential format)
+  - Link to ZATCA Fatoora Portal
+  - 6-step Registration Guide
 - **API Endpoints**:
   - `GET /api/invoices/{id}/zatca-phase2` - Generate Phase 2 XML and QR
-  - `POST /api/invoices/{id}/zatca-submit` - Prepare for ZATCA submission with next steps
+  - `POST /api/invoices/{id}/zatca-submit` - Prepare for ZATCA submission
+  - `GET/POST /api/settings/zatca` - ZATCA configuration
+  - `POST /api/settings/zatca/test` - Test connection
+  - `GET /api/settings/zatca/status` - Status summary
 - **Backend Service**: `/app/backend/services/zatca_phase2.py`
 
 #### Internationalization (i18n) Expansion
