@@ -123,7 +123,7 @@ async def refresh_hik_connect_token(email: str, password: str):
                                     }}
                                 )
                                 return token_data.get("sessionId")
-                except:
+                except Exception:
                     continue
         
         # If cloud API fails, mark as credentials saved only
