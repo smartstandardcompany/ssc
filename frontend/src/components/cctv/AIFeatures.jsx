@@ -625,7 +625,7 @@ export function PeopleCountingPanel({ cameras = [] }) {
                   <SelectValue placeholder="Any camera" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Any camera</SelectItem>
+                  <SelectItem value="all">Any camera</SelectItem>
                   {cameras.map(cam => (
                     <SelectItem key={cam.id} value={cam.id}>{cam.name}</SelectItem>
                   ))}
@@ -840,7 +840,7 @@ export function MotionAnalysisPanel({ cameras = [] }) {
                   <SelectValue placeholder="Any camera" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Any camera</SelectItem>
+                  <SelectItem value="all">Any camera</SelectItem>
                   {cameras.map(cam => (
                     <SelectItem key={cam.id} value={cam.id}>{cam.name}</SelectItem>
                   ))}
