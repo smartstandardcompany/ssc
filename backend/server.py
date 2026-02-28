@@ -69,6 +69,7 @@ for module in [
     shifts,
     stock,
     suppliers,
+    tables,
     transfers,
     whatsapp,
     targets,
