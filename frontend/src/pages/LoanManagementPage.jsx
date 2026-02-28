@@ -208,7 +208,7 @@ export default function LoanManagementPage() {
                 {filteredLoans.map(loan => {
                   const progress = loan.amount > 0 ? ((loan.amount - (loan.remaining_balance || 0)) / loan.amount) * 100 : 0;
                   return (
-                    <Card key={loan.id} className="hover:shadow-md transition-all cursor-pointer" onClick={() => loadLoanDetail(loan.id)} data-testid={`loan-card-${loan.id}`}>
+                    <Card key={loan.id} className="hover:shadow-md transition-all cursor-pointer dark:bg-stone-900 dark:border-stone-700 dark:hover:bg-stone-800" onClick={() => loadLoanDetail(loan.id)} data-testid={`loan-card-${loan.id}`}>
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
