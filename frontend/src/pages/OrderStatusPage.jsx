@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, ChefHat, CheckCircle2, Bell, UtensilsCrossed } from 'lucide-react';
+import { Clock, ChefHat, CheckCircle2, Bell, UtensilsCrossed, Armchair } from 'lucide-react';
 import api from '@/lib/api';
 
 export default function OrderStatusPage() {
