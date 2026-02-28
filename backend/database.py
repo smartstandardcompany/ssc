@@ -57,7 +57,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         employee = await db.employees.find_one({"id": user_id}, {"_id": 0})
         if employee:
             # Generate a valid placeholder email if not provided
-            emp_email = employee.get("email", "") or f"cashier_{employee['id'][:8]}@pos.local"
+            emp_email = employee.get("email", "") or f"cashier.{employee['id'][:8]}@example.com"
             user = {
                 "id": employee["id"],
                 "email": emp_email,
