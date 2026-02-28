@@ -104,6 +104,8 @@ export default function DashboardPage() {
   const handleLayoutChange = useCallback((newLayout) => {
     setLayout(newLayout);
     saveLayoutPrefs(newLayout);
+    // Save to backend for persistence across devices
+    api.post('/dashboard/layout', { layout: newLayout }).catch(() => {});
   }, []);
 
   const resetLayout = () => {
