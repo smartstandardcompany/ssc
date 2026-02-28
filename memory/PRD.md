@@ -20,26 +20,43 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 
 ### CCTV Security Module (NEW)
 - **Full Hikvision Integration** with Hik-Connect cloud support
+- **Settings Page Configuration** - CCTV tab in Settings for all configuration
 - **Live Camera Grid View**: 2x2, 3x3, 4x4 layouts with branch filtering
 - **DVR/NVR Management**: Add, configure, delete DVRs per branch
-- **People Counting Analytics**: Daily/hourly visitor tracking with charts
-- **Motion Alerts**: Alert management with acknowledge functionality
+- **AI People Counting**: 
+  - Configurable counting interval (1, 5, 15, 30 min)
+  - Tracks entries/exits per camera
+  - Daily visitor statistics with hourly breakdown
+- **Motion Detection Alerts**:
+  - Configurable sensitivity (Low, Medium, High)
+  - Auto-saves snapshots on motion detection
+  - Alert acknowledgment system
 - **Analytics Dashboard**: Daily traffic trends, hourly distribution, peak hours
 - **Face Recognition** (placeholder for future AI integration)
 - **Recording Playback** support for local DVRs via RTSP
 
+**Settings Page (CCTV Tab):**
+- Hik-Connect Cloud Configuration (email/password)
+- DVR/NVR Configuration (add Cloud or Local IP DVRs)
+- AI Features Configuration (People Counting, Motion Alerts)
+- Help guide for finding DVR serial numbers
+
 **Backend APIs:**
 - `/api/cctv/hik-connect/auth` - Hik-Connect authentication
+- `/api/cctv/settings` - AI features settings
 - `/api/cctv/dvrs` - DVR CRUD operations
 - `/api/cctv/cameras` - Camera management
 - `/api/cctv/stream/{camera_id}` - Get stream URL
 - `/api/cctv/snapshot/{camera_id}` - Get camera snapshot
 - `/api/cctv/people-count` - People counting data
+- `/api/cctv/process-frame` - AI frame processing
+- `/api/cctv/detect-motion` - Motion detection processing
 - `/api/cctv/alerts` - Motion alerts
 - `/api/cctv/analytics` - CCTV analytics
 
 **Frontend:**
 - `/cctv` - CCTV Security page with Live View, Analytics, Alerts, Devices tabs
+- `/settings` → CCTV tab - Full configuration interface
 
 ### Translation & UX Improvements
 - **Full i18n Translation Coverage** for:
