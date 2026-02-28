@@ -99,6 +99,7 @@ async def cashier_login(body: dict):
             "email": user.get("email", ""),
             "name": user["name"],
             "role": user.get("role"),
+            "pos_role": employee.get("pos_role", "both") if employee else "both",
             "branch_id": branch_id,
             "branch_name": branch["name"] if branch else None,
             "employee_id": employee["id"] if employee else None
