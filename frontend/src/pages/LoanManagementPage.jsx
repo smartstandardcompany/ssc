@@ -157,7 +157,7 @@ export default function LoanManagementPage() {
       <div className="space-y-6" data-testid="loan-management-page">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold font-outfit tracking-tight">Loan Management</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold font-outfit tracking-tight dark:text-white">Loan Management</h1>
             <p className="text-muted-foreground text-sm mt-1">Track and manage employee loans and installments</p>
           </div>
           <Button onClick={() => setShowCreateLoan(true)} data-testid="create-loan-btn">
