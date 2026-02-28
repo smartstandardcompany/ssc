@@ -654,30 +654,62 @@ export default function DashboardPage() {
 
         {/* Widget Customization Dialog */}
         <Dialog open={showWidgetSettings} onOpenChange={setShowWidgetSettings}>
-          <DialogContent className="max-w-sm" data-testid="widget-settings-dialog">
+          <DialogContent className="max-w-md" data-testid="widget-settings-dialog">
             <DialogHeader><DialogTitle className="font-outfit">Customize Dashboard</DialogTitle></DialogHeader>
-            <p className="text-sm text-muted-foreground">Choose which sections to show on your dashboard.</p>
-            <div className="space-y-3 mt-2">
-              {[
-                { key: 'stats', label: 'Main Stats (Sales, Expenses, Profit)' },
-                { key: 'charts', label: 'Quick Charts (Branch Sales, Expense Pie)' },
-                { key: 'cashBank', label: 'Cash & Bank In Hand' },
-                { key: 'paymentMode', label: 'Payment Mode Breakdown' },
-                { key: 'spending', label: 'Spending Breakdown' },
-                { key: 'dues', label: 'Supplier Dues, Fines & Salaries' },
-                { key: 'vatSummary', label: 'VAT Summary' },
-              ].map(w => (
-                <div key={w.key} className="flex items-center gap-3 p-2.5 bg-stone-50 rounded-lg hover:bg-stone-100 cursor-pointer transition-colors" onClick={() => toggleWidget(w.key)}>
-                  <button className={`w-8 h-5 rounded-full relative transition-colors ${widgets[w.key] ? 'bg-emerald-500' : 'bg-stone-300'}`} data-testid={`widget-toggle-${w.key}`}>
-                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${widgets[w.key] ? 'left-3.5' : 'left-0.5'}`} />
+            <p className="text-sm text-muted-foreground mb-2">Choose which sections to show on your dashboard. Your preferences are saved automatically.</p>
+            <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
+              {WIDGET_OPTIONS.map(w => (
+                <div 
+                  key={w.key} 
+                  className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${widgets[w.key] ? 'bg-success/5 border-success/30' : 'bg-stone-50 border-stone-200 hover:border-stone-300'}`} 
+                  onClick={() => toggleWidget(w.key)}
+                >
+                  <button 
+                    className={`w-10 h-6 rounded-full relative transition-colors flex-shrink-0 ${widgets[w.key] ? 'bg-success' : 'bg-stone-300'}`} 
+                    data-testid={`widget-toggle-${w.key}`}
+                  >
+                    <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${widgets[w.key] ? 'left-5' : 'left-1'}`} />
                   </button>
-                  <span className="text-sm font-medium flex-1">{w.label}</span>
-                  {widgets[w.key] ? <Eye size={14} className="text-emerald-500" /> : <EyeOff size={14} className="text-stone-400" />}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{w.label}</p>
+                    <p className="text-xs text-muted-foreground truncate">{w.description}</p>
+                  </div>
+                  {widgets[w.key] ? <Eye size={16} className="text-success flex-shrink-0" /> : <EyeOff size={16} className="text-stone-400 flex-shrink-0" />}
                 </div>
               ))}
             </div>
-            <div className="flex gap-2 mt-2">
-              <Button variant="outline" size="sm" className="flex-1 rounded-xl" onClick={() => { const all = {}; Object.keys(DEFAULT_WIDGETS).forEach(k => all[k] = true); setWidgets(all); saveWidgetPrefs(all); }}>Show All</Button>
+            <div className="flex gap-2 mt-3 pt-3 border-t">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex-1 rounded-xl" 
+                onClick={() => { 
+                  const all = {}; 
+                  WIDGET_OPTIONS.forEach(w => all[w.key] = true); 
+                  setWidgets(all); 
+                  saveWidgetPrefs(all);
+                  api.post('/dashboard/layout', { widgets: all }).catch(() => {});
+                  toast.success('All widgets enabled');
+                }}
+              >
+                Show All
+              </Button>
+              <Button 
+                variant="outline"
+                size="sm" 
+                className="flex-1 rounded-xl" 
+                onClick={() => { 
+                  const none = {}; 
+                  WIDGET_OPTIONS.forEach(w => none[w.key] = false); 
+                  none.stats = true; // Keep at least stats visible
+                  setWidgets(none); 
+                  saveWidgetPrefs(none);
+                  api.post('/dashboard/layout', { widgets: none }).catch(() => {});
+                  toast.success('Minimized dashboard');
+                }}
+              >
+                Minimize
+              </Button>
               <Button size="sm" className="flex-1 rounded-xl" onClick={() => setShowWidgetSettings(false)}>Done</Button>
             </div>
           </DialogContent>
