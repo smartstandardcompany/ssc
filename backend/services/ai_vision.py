@@ -305,24 +305,19 @@ If no people are visible or you cannot determine, return people_count: 0 with a 
             response = await chat.send_message(user_message)
             
             # Parse JSON from response
-            try:
-                response_text = response.strip()
-                if "```json" in response_text:
-                    response_text = response_text.split("```json")[1].split("```")[0]
-                elif "```" in response_text:
-                    response_text = response_text.split("```")[1].split("```")[0]
-                
-                result = json.loads(response_text)
+            result = extract_json_from_response(response)
+            if result:
                 return result
-            except json.JSONDecodeError:
-                return {
-                    "people_count": 0,
-                    "confidence": 0,
-                    "estimated_entries": 0,
-                    "estimated_exits": 0,
-                    "raw_response": response,
-                    "error": "Failed to parse AI response"
-                }
+            
+            return {
+                "people_count": 0,
+                "confidence": 0,
+                "estimated_entries": 0,
+                "estimated_exits": 0,
+                "crowd_density": "unknown",
+                "raw_response": response,
+                "error": "Failed to parse AI response"
+            }
                 
         except Exception as e:
             return {
