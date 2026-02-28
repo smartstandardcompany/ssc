@@ -176,7 +176,7 @@ export default function LoanManagementPage() {
               { label: 'Outstanding', value: `SAR ${(stats.total_outstanding || 0).toLocaleString()}`, color: 'red' },
               { label: 'Collected', value: `SAR ${(stats.total_collected || 0).toLocaleString()}`, color: 'emerald' },
             ].map(s => (
-              <Card key={s.label} className="border-0 shadow-sm">
+              <Card key={s.label} className="border-0 shadow-sm dark:bg-stone-900">
                 <CardContent className="p-4 text-center">
                   <p className={`text-lg font-bold font-outfit text-${s.color}-600`}>{s.value}</p>
                   <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
