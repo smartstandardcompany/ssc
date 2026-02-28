@@ -211,7 +211,10 @@ export const DashboardLayout = ({ children }) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const shortcuts = {
       'd': '/', 'n': '/pos', 'p': '/pos', 's': '/sales', 'e': '/expenses',
-      'i': '/stock', 'r': '/reports', 'a': '/analytics', 'v': '/visualizations', '?': 'shortcuts',
+      'i': '/stock', 'r': '/reports', 'a': '/analytics', 'v': '/visualizations',
+      't': '/table-management', 'l': '/loans', 'w': '/waiter', 'c': '/cashier',
+      'k': '/kds', 'h': '/employees', 'o': '/order-status',
+      '?': 'shortcuts',
     };
     const target = shortcuts[e.key.toLowerCase()];
     if (target === 'shortcuts') { e.preventDefault(); setShowShortcuts(s => !s); }
