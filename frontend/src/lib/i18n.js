@@ -571,6 +571,15 @@ const translations = {
     transactions: 'लेनदेन', items: 'आइटम', payments: 'भुगतान',
     overview: 'अवलोकन', period: 'अवधि', compare: 'तुलना', trends: 'रुझान',
     item_pnl: 'आइटम लाभ',
+    // Common UI
+    loading: 'लोड हो रहा है...', no_data: 'कोई डेटा नहीं', error_occurred: 'त्रुटि हुई',
+    try_again: 'पुनः प्रयास करें', confirm: 'पुष्टि करें', cancel: 'रद्द करें', save: 'सहेजें', delete: 'हटाएँ',
+    edit: 'संपादित करें', view: 'देखें', add: 'जोड़ें', back: 'वापस', next: 'अगला', previous: 'पिछला',
+    search: 'खोजें', filter: 'फ़िल्टर', sort: 'क्रमबद्ध', export: 'निर्यात', import: 'आयात',
+    refresh: 'रीफ्रेश', reset: 'रीसेट', apply: 'लागू करें', clear: 'साफ़ करें',
+    // Status messages
+    success: 'सफलता', failed: 'विफल', pending: 'लंबित', completed: 'पूर्ण',
+    in_progress: 'प्रगति में', cancelled: 'रद्द',
     // Shift Report
     shift_report_title: 'दैनिक शिफ्ट रिपोर्ट', shift_report_subtitle: 'कैशियर शिफ्ट, बिक्री विवरण और नकद समाधान',
     daily_report: 'दैनिक रिपोर्ट', date_range: 'तारीख सीमा', total_shifts: 'कुल शिफ्ट',
