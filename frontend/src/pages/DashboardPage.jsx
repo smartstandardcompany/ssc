@@ -40,6 +40,17 @@ const PIE_COLORS = ['#F5841F', '#22C55E', '#0EA5E9', '#EF4444', '#F59E0B', '#8B5
 
 const DEFAULT_WIDGETS = { stats: true, charts: true, cashBank: true, paymentMode: true, spending: true, dues: true, branchDues: true, vatSummary: true };
 
+const WIDGET_OPTIONS = [
+  { key: 'stats', label: 'Main Statistics', description: 'Sales, expenses, profit overview' },
+  { key: 'charts', label: 'Quick Charts', description: 'Expense distribution & comparison' },
+  { key: 'cashBank', label: 'Cash & Bank', description: 'Cash and bank balances' },
+  { key: 'paymentMode', label: 'Payment Modes', description: 'Cash, bank, credit breakdown' },
+  { key: 'spending', label: 'Spending Details', description: 'Expense categories & spending' },
+  { key: 'dues', label: 'Dues & Alerts', description: 'Supplier dues, fines, alerts' },
+  { key: 'branchDues', label: 'Branch Dues', description: 'Inter-branch balances' },
+  { key: 'vatSummary', label: 'VAT Summary', description: 'VAT calculations' },
+];
+
 const DEFAULT_LAYOUT = [
   { i: 'stats', x: 0, y: 0, w: 12, h: 4, minW: 6 },
   { i: 'charts', x: 0, y: 4, w: 12, h: 5, minW: 6 },
