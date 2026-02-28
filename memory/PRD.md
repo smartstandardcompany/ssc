@@ -18,6 +18,39 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 
 ## Recent Updates (Feb 28, 2026)
 
+### P1 & P2 Features (COMPLETED)
+
+#### P1: Scheduled AI Monitoring with Notifications
+- **Enable/Disable Toggle** - Turn automatic monitoring on/off
+- **Monitoring Interval** - Configure 1, 5, 15, or 30 minute intervals
+- **Features Selection** - Choose from People Counting, Motion Detection, Object Detection
+- **Notification Channels** - In-App, WhatsApp, Email alerts for motion/security events
+- **Manual Trigger** - "Run Now" button to execute monitoring immediately
+- **Logging** - All monitoring runs logged with timestamps and results
+
+#### P1: Motion Detection Alerts
+- Automatic alerts when motion is detected above configured sensitivity
+- In-app notifications stored in database
+- WhatsApp notifications via Twilio (requires configured credentials)
+- Email notifications via SMTP (requires configured credentials)
+- Alert severity levels: none, low, medium, high, critical
+
+#### P2: Partner P&L Report (`/partner-pl-report`)
+- **Company Summary Cards** - Total Revenue, Cost of Goods, Gross Profit, Operating Expenses, Net Profit
+- **Partner Breakdown** - Per-partner ownership %, revenue share, expense share, profit share
+- **Period Transactions** - Investments, withdrawals, profit taken per partner
+- **Balance Tracking** - Current balance, profit entitlement, available for withdrawal
+- **Expense Categories** - Pie chart breakdown of expenses by category
+- **Payment Modes** - Bar chart of revenue by payment mode (Cash, Bank, Online, Credit)
+- **Export to CSV** - Download report data
+
+#### P2: Mobile Tab Bar Customization
+- Customizable bottom navigation for mobile users
+- Choose up to 5 items from 12 options (Home, Sales, Expenses, Stock, Reports, Customers, Employees, Branches, Analytics, CCTV, Credits, Settings)
+- Persistent across sessions (localStorage)
+- Reset to Default button
+- "More" button opens customization modal
+
 ### AI-Powered CCTV Features (COMPLETED)
 - **Face Recognition for Attendance**
   - Register employee faces via image upload
