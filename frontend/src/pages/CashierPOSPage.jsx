@@ -12,9 +12,10 @@ import { toast } from 'sonner';
 import { 
   Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, Banknote,
   Users, Printer, ChefHat, X, Check, Clock, Coffee, UtensilsCrossed, Cake,
-  Pizza, Salad, Grid, Star, LogOut, Receipt, Percent, DollarSign, User, Building2
+  Pizza, Salad, Grid, Star, LogOut, Receipt, Percent, DollarSign, User, Building2, PlayCircle
 } from 'lucide-react';
 import api from '@/lib/api';
+import CashierShiftModal from '@/components/CashierShiftModal';
 
 const CATEGORY_ICONS = {
   all: Grid,
