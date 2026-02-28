@@ -551,6 +551,426 @@ async def save_cctv_settings(body: dict, current_user: User = Depends(get_curren
 # AI PEOPLE COUNTING PROCESSOR
 # =====================================================
 
+@router.post("/cctv/ai/count-people")
+async def ai_count_people(body: dict, current_user: User = Depends(get_current_user)):
+    """AI-powered people counting using OpenAI Vision
+    
+    Expected body: {
+        camera_id: str,
+        image_data: str (base64 encoded image),
+        previous_count: int (optional)
+    }
+    """
+    from services.ai_vision import get_ai_vision_service
+    
+    camera_id = body.get("camera_id")
+    image_data = body.get("image_data")
+    previous_count = body.get("previous_count", 0)
+    
+    if not camera_id or not image_data:
+        raise HTTPException(status_code=400, detail="camera_id and image_data required")
+    
+    # Check if people counting is enabled
+    settings = await db.cctv_settings.find_one({}, {"_id": 0})
+    if not settings or not settings.get("people_counting_enabled", True):
+        return {"success": False, "message": "People counting disabled"}
+    
+    try:
+        ai_service = get_ai_vision_service()
+        result = await ai_service.count_people(image_data, previous_count)
+        
+        # Store the count
+        count_record = {
+            "camera_id": camera_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "entries": result.get("estimated_entries", 0),
+            "exits": result.get("estimated_exits", 0),
+            "total_count": result.get("people_count", 0),
+            "crowd_density": result.get("crowd_density", "unknown"),
+            "ai_response": result,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.cctv_people_count.insert_one(count_record)
+        
+        return {
+            "success": True,
+            "people_count": result.get("people_count", 0),
+            "entries": result.get("estimated_entries", 0),
+            "exits": result.get("estimated_exits", 0),
+            "crowd_density": result.get("crowd_density", "unknown"),
+            "details": result
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/cctv/ai/recognize-face")
+async def ai_recognize_face(body: dict, current_user: User = Depends(get_current_user)):
+    """AI-powered face recognition for attendance
+    
+    Expected body: {
+        camera_id: str,
+        image_data: str (base64 encoded image),
+        branch_id: str (optional - to filter employees)
+    }
+    """
+    from services.ai_vision import get_ai_vision_service
+    
+    camera_id = body.get("camera_id")
+    image_data = body.get("image_data")
+    branch_id = body.get("branch_id")
+    
+    if not image_data:
+        raise HTTPException(status_code=400, detail="image_data required")
+    
+    # Get registered faces
+    query = {}
+    if branch_id:
+        # Get employees from this branch
+        employees = await db.employees.find({"branch_id": branch_id, "active": {"$ne": False}}, {"_id": 0}).to_list(100)
+        emp_ids = [e["id"] for e in employees]
+        query["employee_id"] = {"$in": emp_ids}
+    
+    registered_faces = await db.cctv_faces.find(query, {"_id": 0}).to_list(100)
+    
+    if not registered_faces:
+        return {
+            "success": True,
+            "faces_detected": 0,
+            "matches": [],
+            "message": "No registered faces found. Please register employee faces first."
+        }
+    
+    try:
+        ai_service = get_ai_vision_service()
+        result = await ai_service.recognize_face(image_data, registered_faces)
+        
+        # Log attendance for matched employees
+        matches = result.get("matches", [])
+        attendance_logged = []
+        
+        for match in matches:
+            if match.get("confidence", 0) >= 0.7:
+                emp_id = match.get("employee_id")
+                if emp_id:
+                    # Check if already logged today
+                    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+                    existing = await db.cctv_attendance.find_one({
+                        "employee_id": emp_id,
+                        "date": today
+                    })
+                    
+                    if not existing:
+                        attendance_record = {
+                            "id": f"att_{datetime.now().strftime('%Y%m%d%H%M%S')}_{emp_id}",
+                            "employee_id": emp_id,
+                            "employee_name": match.get("name"),
+                            "camera_id": camera_id,
+                            "date": today,
+                            "check_in": datetime.now(timezone.utc).isoformat(),
+                            "confidence": match.get("confidence"),
+                            "method": "face_recognition",
+                            "created_at": datetime.now(timezone.utc).isoformat()
+                        }
+                        await db.cctv_attendance.insert_one(attendance_record)
+                        attendance_logged.append({
+                            "employee_id": emp_id,
+                            "name": match.get("name"),
+                            "action": "check_in"
+                        })
+        
+        return {
+            "success": True,
+            "faces_detected": result.get("faces_detected", 0),
+            "matches": matches,
+            "unknown_faces": result.get("unknown_faces", 0),
+            "attendance_logged": attendance_logged
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/cctv/ai/detect-objects")
+async def ai_detect_objects(body: dict, current_user: User = Depends(get_current_user)):
+    """AI-powered object detection for inventory monitoring
+    
+    Expected body: {
+        camera_id: str,
+        image_data: str (base64 encoded image),
+        target_objects: list (optional - specific items to look for),
+        context: str (optional - e.g., "kitchen", "warehouse", "retail shelf")
+    }
+    """
+    from services.ai_vision import get_ai_vision_service
+    
+    camera_id = body.get("camera_id")
+    image_data = body.get("image_data")
+    target_objects = body.get("target_objects")
+    context = body.get("context", "retail store inventory")
+    
+    if not image_data:
+        raise HTTPException(status_code=400, detail="image_data required")
+    
+    try:
+        ai_service = get_ai_vision_service()
+        result = await ai_service.detect_objects(image_data, target_objects, context)
+        
+        # Store the detection result
+        detection_record = {
+            "id": f"det_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+            "camera_id": camera_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "objects_detected": result.get("objects_detected", []),
+            "total_items": result.get("total_items", 0),
+            "alerts": result.get("alerts", []),
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.cctv_object_detections.insert_one(detection_record)
+        
+        # Create alerts for low stock or issues
+        alerts = result.get("alerts", [])
+        for alert in alerts:
+            if alert.get("type") in ["low_stock", "empty_shelf", "damage"]:
+                alert_record = {
+                    "id": f"inv_alert_{datetime.now().strftime('%Y%m%d%H%M%S%f')}",
+                    "camera_id": camera_id,
+                    "type": "inventory",
+                    "subtype": alert.get("type"),
+                    "object": alert.get("object"),
+                    "message": alert.get("message"),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "acknowledged": False
+                }
+                await db.cctv_alerts.insert_one(alert_record)
+        
+        return {
+            "success": True,
+            "objects_detected": result.get("objects_detected", []),
+            "total_items": result.get("total_items", 0),
+            "alerts": alerts,
+            "shelf_analysis": result.get("shelf_analysis"),
+            "recommendations": result.get("recommendations", [])
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/cctv/ai/analyze-motion")
+async def ai_analyze_motion(body: dict, current_user: User = Depends(get_current_user)):
+    """AI-powered motion analysis for security
+    
+    Expected body: {
+        camera_id: str,
+        image_data: str (base64 encoded image)
+    }
+    """
+    from services.ai_vision import get_ai_vision_service
+    
+    camera_id = body.get("camera_id")
+    image_data = body.get("image_data")
+    
+    if not image_data:
+        raise HTTPException(status_code=400, detail="image_data required")
+    
+    # Check if motion alerts are enabled
+    settings = await db.cctv_settings.find_one({}, {"_id": 0})
+    if not settings or not settings.get("motion_alerts_enabled", True):
+        return {"success": False, "message": "Motion alerts disabled"}
+    
+    try:
+        ai_service = get_ai_vision_service()
+        result = await ai_service.analyze_motion(image_data)
+        
+        # Create alert if security concern
+        if result.get("security_concern") or result.get("alert_level") in ["medium", "high", "critical"]:
+            # Save snapshot
+            snapshot_filename = f"motion_{camera_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.jpg"
+            snapshot_path = os.path.join(ROOT_DIR, "uploads", snapshot_filename)
+            try:
+                with open(snapshot_path, "wb") as f:
+                    f.write(base64.b64decode(image_data))
+                snapshot_url = f"/uploads/{snapshot_filename}"
+            except Exception:
+                snapshot_url = None
+            
+            alert_record = {
+                "id": f"motion_{datetime.now().strftime('%Y%m%d%H%M%S%f')}",
+                "camera_id": camera_id,
+                "type": "motion",
+                "activity_type": result.get("activity_type"),
+                "alert_level": result.get("alert_level"),
+                "motion_score": result.get("motion_score", 0),
+                "description": result.get("description"),
+                "snapshot_url": snapshot_url,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "acknowledged": False,
+                "ai_analysis": result
+            }
+            await db.cctv_alerts.insert_one(alert_record)
+        
+        return {
+            "success": True,
+            "motion_detected": result.get("motion_detected", False),
+            "motion_score": result.get("motion_score", 0),
+            "activity_type": result.get("activity_type"),
+            "alert_level": result.get("alert_level"),
+            "description": result.get("description"),
+            "security_concern": result.get("security_concern", False)
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# =====================================================
+# FACE REGISTRATION FOR EMPLOYEES
+# =====================================================
+
+@router.post("/cctv/faces/register")
+async def register_employee_face(body: dict, current_user: User = Depends(get_current_user)):
+    """Register an employee's face for recognition
+    
+    Expected body: {
+        employee_id: str,
+        image_data: str (base64 encoded face image)
+    }
+    """
+    employee_id = body.get("employee_id")
+    image_data = body.get("image_data")
+    
+    if not employee_id or not image_data:
+        raise HTTPException(status_code=400, detail="employee_id and image_data required")
+    
+    # Get employee info
+    employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Save face image
+    face_filename = f"face_{employee_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.jpg"
+    face_path = os.path.join(ROOT_DIR, "uploads", "faces", face_filename)
+    os.makedirs(os.path.dirname(face_path), exist_ok=True)
+    
+    try:
+        with open(face_path, "wb") as f:
+            f.write(base64.b64decode(image_data))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save face image: {str(e)}")
+    
+    # Check if face already registered
+    existing = await db.cctv_faces.find_one({"employee_id": employee_id})
+    
+    face_data = {
+        "employee_id": employee_id,
+        "name": employee.get("name"),
+        "branch_id": employee.get("branch_id"),
+        "image_path": f"/uploads/faces/{face_filename}",
+        "image_data": image_data,  # Store base64 for AI comparison
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    if existing:
+        await db.cctv_faces.update_one({"employee_id": employee_id}, {"$set": face_data})
+    else:
+        face_data["id"] = f"face_{employee_id}"
+        face_data["created_at"] = datetime.now(timezone.utc).isoformat()
+        face_data["created_by"] = current_user.id
+        await db.cctv_faces.insert_one(face_data)
+    
+    return {
+        "success": True,
+        "message": f"Face registered for {employee.get('name')}",
+        "employee_id": employee_id
+    }
+
+
+@router.delete("/cctv/faces/{employee_id}")
+async def delete_employee_face(employee_id: str, current_user: User = Depends(get_current_user)):
+    """Remove registered face for an employee"""
+    result = await db.cctv_faces.delete_one({"employee_id": employee_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Face registration not found")
+    return {"success": True, "message": "Face registration removed"}
+
+
+# =====================================================
+# ATTENDANCE FROM FACE RECOGNITION
+# =====================================================
+
+@router.get("/cctv/attendance")
+async def get_face_attendance(
+    date: Optional[str] = None,
+    branch_id: Optional[str] = None,
+    employee_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get attendance records from face recognition"""
+    if not date:
+        date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    query = {"date": date}
+    if branch_id:
+        # Get employees from branch
+        employees = await db.employees.find({"branch_id": branch_id}, {"_id": 0}).to_list(500)
+        emp_ids = [e["id"] for e in employees]
+        query["employee_id"] = {"$in": emp_ids}
+    if employee_id:
+        query["employee_id"] = employee_id
+    
+    records = await db.cctv_attendance.find(query, {"_id": 0}).to_list(500)
+    
+    return {
+        "date": date,
+        "total_records": len(records),
+        "records": records
+    }
+
+
+@router.post("/cctv/attendance/checkout")
+async def face_attendance_checkout(body: dict, current_user: User = Depends(get_current_user)):
+    """Record checkout time for an employee"""
+    employee_id = body.get("employee_id")
+    
+    if not employee_id:
+        raise HTTPException(status_code=400, detail="employee_id required")
+    
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    result = await db.cctv_attendance.update_one(
+        {"employee_id": employee_id, "date": today, "check_out": {"$exists": False}},
+        {"$set": {
+            "check_out": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="No check-in found for today or already checked out")
+    
+    return {"success": True, "message": "Check-out recorded"}
+
+
+# =====================================================
+# OBJECT DETECTION HISTORY
+# =====================================================
+
+@router.get("/cctv/object-detections")
+async def get_object_detections(
+    camera_id: Optional[str] = None,
+    date: Optional[str] = None,
+    limit: int = 50,
+    current_user: User = Depends(get_current_user)
+):
+    """Get object detection history"""
+    query = {}
+    if camera_id:
+        query["camera_id"] = camera_id
+    if date:
+        query["timestamp"] = {"$gte": f"{date}T00:00:00", "$lt": f"{date}T23:59:59"}
+    
+    records = await db.cctv_object_detections.find(query, {"_id": 0}).sort("timestamp", -1).to_list(limit)
+    return records
+
+
 @router.post("/cctv/process-frame")
 async def process_camera_frame(body: dict, current_user: User = Depends(get_current_user)):
     """Process a camera frame for people counting (receives frame from client or scheduled job)
