@@ -271,6 +271,7 @@ class EmployeeCreate(BaseModel):
     sick_leave_entitled: Optional[int] = 15
     ticket_entitled: Optional[int] = 1
     ticket_years: Optional[int] = 2
+    pos_role: Optional[str] = None
     notes: Optional[str] = None
 
 class Document(BaseModel):
