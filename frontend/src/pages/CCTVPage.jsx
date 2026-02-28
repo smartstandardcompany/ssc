@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,18 +7,18 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { 
-  Camera, Video, Bell, Users, Building2, Plus, Settings, Play, Pause, 
+  Camera, Video, Bell, Users, Building2, Plus, 
   Maximize2, Grid3X3, LayoutGrid, AlertTriangle, CheckCircle, RefreshCw,
-  Eye, EyeOff, Trash2, Edit, Wifi, WifiOff, Clock, TrendingUp, UserCheck, Package, Scan
+  Eye, Trash2, Wifi, WifiOff, Clock, TrendingUp, UserCheck, Package, Scan, Activity
 } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { FaceRecognitionPanel, ObjectDetectionPanel } from '@/components/cctv/AIFeatures';
+import { FaceRecognitionPanel, ObjectDetectionPanel, PeopleCountingPanel, MotionAnalysisPanel } from '@/components/cctv/AIFeatures';
 
 export default function CCTVPage() {
   const { t } = useLanguage();
