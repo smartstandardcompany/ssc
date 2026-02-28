@@ -353,13 +353,16 @@ async def test_zatca_connection(current_user: User = Depends(get_current_user)):
     
     if environment == "sandbox":
         csid = settings.get("csid", "")
-        secret = settings.get("csid_secret", "")
+        has_secret = bool(settings.get("csid_secret", ""))
     else:
         csid = settings.get("production_csid", "")
-        secret = settings.get("production_secret", "")
+        has_secret = bool(settings.get("production_secret", ""))
     
     if not csid:
         return {"success": False, "message": f"No CSID configured for {environment} environment"}
+    
+    if not has_secret:
+        return {"success": False, "message": f"No secret configured for {environment} environment"}
     
     # For now, we validate the format of credentials
     # Actual API test would require the ZATCA SDK or direct API call
