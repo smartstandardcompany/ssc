@@ -5,7 +5,7 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 
 ## Tech Stack
 - **Backend:** FastAPI, Motor (async MongoDB), JWT auth, APScheduler, reportlab (PDF)
-- **Frontend:** React, TailwindCSS, Shadcn UI, Recharts, react-to-print
+- **Frontend:** React, TailwindCSS, Shadcn UI, Recharts, react-to-print, react-grid-layout
 - **Database:** MongoDB
 - **AI:** emergentintegrations (GPT-4o OCR, GPT-4o-mini categorization & forecasting)
 - **Other:** Twilio (WhatsApp), qrcode (ZATCA)
@@ -13,7 +13,7 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 ## Architecture
 ```
 /app/backend/ - FastAPI with 20+ modular routers
-/app/frontend/ - React SPA with 36+ pages
+/app/frontend/ - React SPA with 40+ pages
 ```
 
 ## Features Implemented
@@ -40,6 +40,23 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
   - Revenue Trend Analysis - weekly/monthly with growth rates
   - Customer Churn Risk - identify inactive customers (4 risk levels)
   - Profit Margin Optimizer - item recommendations (star/promote/review/maintain)
+- **Cash Flow Prediction**: 14-day forecast based on 90-day historical patterns
+- **Seasonal Sales Forecasting**: Day-of-week analysis with pattern detection
+- **Employee Performance Scoring**: AI-calculated scores with tier rankings
+- **Smart Expense Alerts**: Anomaly detection using 2-standard-deviation threshold
+- **Supplier Payment Optimization**: Credit utilization analysis and recommendations
+
+### Restaurant POS System
+- **Foodics-style POS Interface** at `/cashier/pos`
+- **PIN-based Cashier Login** at `/cashier` - 4-digit PIN keypad with auto-submit
+- **Cashier Shift Management** - Start/end shifts with cash counts, expected cash calculation
+- **Menu Categories**: All Items, Popular, Main Dishes, Appetizers, Beverages, Desserts, Sides
+- **Item Modifiers**: Size options (Regular/Large), extras with pricing
+- **Menu Item Management** at `/menu-items` - CRUD with image upload
+- **Order Types**: Dine-in, Takeaway, Delivery
+- **Payment Methods**: Cash, Bank, Credit (customer credit)
+- **Kitchen Display System (KDS)** at `/kds` - Real-time order display with status updates
+- **Customer-Facing Order Display** at `/order-status` - "Preparing" and "Ready" columns, auto-refresh
 
 ### HR & People
 - Employee management with auto user creation
@@ -62,11 +79,12 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - Mobile card views for all data tables
 - Responsive headings and layouts
 - Currency consistency (SAR everywhere)
-- **Real-time Stock Alerts** - Banner at top of dashboard when items drop below minimum stock level
-- **Dashboard Sparklines** - Mini SVG charts on stat cards showing 7-day trends
-- **Dark Mode** - Toggle in sidebar footer and mobile header (class-based Tailwind)
-- **Keyboard Shortcuts** - D=Dashboard, N/P=POS, S=Sales, E=Expenses, I=Inventory, R=Reports, A=Analytics, ?=Help
-- **Mobile Bottom Tab Bar** - 5-item quick nav (Home, Sales, Expenses, Stock, Reports)
+- **Real-time Stock Alerts** - Banner at top of dashboard
+- **Dashboard Sparklines** - Mini SVG charts on stat cards
+- **Dark Mode** - Toggle in sidebar footer
+- **Keyboard Shortcuts** - D=Dashboard, N/P=POS, S=Sales, E=Expenses, I=Inventory, R=Reports, A=Analytics
+- **Mobile Bottom Tab Bar** - 5-item quick nav
+- **Full Multi-Language Support** - English, Arabic (RTL), Urdu (RTL), Hindi
 
 ## Key API Endpoints
 - `/api/targets` + `/api/targets/progress` - Sales target CRUD & progress
@@ -74,117 +92,74 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - `/api/reports/analytics-pdf` - PDF export
 - `/api/reports/eod-summary?date=YYYY-MM-DD` - End-of-Day summary report
 - `/api/reports/partner-pnl` - Partner Profit & Loss report
-- `/api/reports/expense-forecast` - Predicted expenses by category
-- `/api/reports/stock-reorder` - Stock reorder predictions
-- `/api/reports/revenue-trends` - Weekly/monthly revenue trends with growth rates
-- `/api/reports/customer-churn` - Customer churn risk analysis
-- `/api/reports/margin-optimizer` - Item margin analysis & recommendations
-- `/api/reports/heatmap-data` - Daily activity data for 365-day heatmap
-- `/api/reports/sales-funnel` - Sales pipeline funnel with conversion rates
-- `/api/reports/expense-treemap` - Hierarchical expense breakdown
-- `/api/reports/kpi-gauges` - KPI gauge indicators
-- `/api/reports/branch-radar` - Multi-metric branch comparison
-- `/api/reports/cashflow-waterfall` - Cash flow waterfall chart data
-- `/api/reports/money-flow` - Money flow (Sankey-style) data
-- `/api/reports/time-series-compare` - Multi-period daily sales comparison
-- `/api/stock/alerts` - Low stock alerts (items below min_stock_level)
-- `/api/expenses/auto-categorize` - AI expense categorization
-- `/api/invoices/ocr-scan` - Invoice OCR
-- `/api/dashboard/today-vs-yesterday` - Daily comparison
-- `/api/whatsapp/send-to` - Send reports via WhatsApp (6 report types)
-- `/api/scheduler/config` - Scheduled job configs (incl. eod_summary auto-send)
+- `/api/cashier/login` - PIN-based cashier login
+- `/api/cashier/shift/start` - Start cashier shift with opening cash
+- `/api/cashier/shift/current` - Get current shift with totals
+- `/api/cashier/shift/end` - End shift with closing cash count
+- `/api/cashier/menu` - Menu items CRUD
+- `/api/cashier/menu/{item_id}/image` - Menu item image upload
+- `/api/cashier/orders` - POS orders CRUD
+- `/api/order-status/active` - Customer-facing order display (public)
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
 - Employee: ahmed@test.com / emp@123
+- Cashier PIN: 1234
 
-## Recently Completed (Dec 2025)
+## Recently Completed (Feb 2026)
 
-- **Restaurant POS Payment Refinements:**
-  - 3 payment options: Cash, Bank, Credit (removed Online)
-  - Credit payment requires customer selection from dropdown
-  - Branch fixed to cashier's assigned branch (displayed in header)
-  - All sales automatically recorded to cashier's branch
+### 5-Part POS and Dashboard Enhancement:
 
-- **Kitchen Display System (KDS) at `/kds`:**
-  - PIN-based authentication (default: 1234)
-  - Dark theme optimized for kitchen environments
-  - Auto-refresh every 5 seconds for new orders
-  - Displays orders with "preparing" status
-  - URGENT badge for orders > 10 minutes old
-  - Order cards show: order #, items, modifiers, time elapsed
-  - "Ready" button to mark orders as ready
-  - "Served" button to mark ready orders as completed
-  - Sound notifications for new orders (toggleable)
-  - Branch filter dropdown for multi-branch kitchens
+1. **Cashier Shift Management (Start/End with Cash Count)**
+   - New `CashierShiftModal.jsx` component
+   - "Shift Active" button in POS header opens modal
+   - Start shift with opening cash amount
+   - View current shift totals: total sales, payment breakdown (Cash, Card, Online, Credit)
+   - Expected cash calculation (opening + cash sales)
+   - End shift with closing cash count and difference detection (shortage/overage)
+   - Backend endpoints: `/api/cashier/shift/start`, `/api/cashier/shift/current`, `/api/cashier/shift/end`
 
-- **Restaurant POS Cashier Interface (Foodics-Style):**
-  - Dedicated `/cashier` login and `/cashier/pos` interface
-  - Separate cashier authentication (role-based: admin, cashier, manager)
-  - Menu grid with 7 categories (All, Popular, Main, Appetizers, Beverages, Desserts, Sides)
-  - 26 sample menu items with Arabic names and pricing
-  - **Item modifiers**: Size (Regular/Large +SAR), Extras (multiple selection with pricing)
-  - Shopping cart with quantity controls, subtotal, VAT (15%), total
-  - **4 payment methods**: Cash, Card, Online, Credit
-  - Credit payment requires customer selection from dropdown
-  - Order completion with order number, Print, and Send to Kitchen buttons
-  - Today's sales and orders count in header
+2. **Customer-Facing Order Status Display** at `/order-status`
+   - Public page (no auth required)
+   - Two columns: "Preparing" (amber) and "Ready for Pickup" (green)
+   - Real-time clock with date
+   - Auto-refresh every 3 seconds
+   - Order cards show order number, customer name, order type
+   - Pulsing animation on ready orders
 
-- **Scheduled AI Reports (WhatsApp & Email):**
-  - Weekly Cash Flow Alert - 7-day forecast, low cash warnings, weekly patterns
-  - Weekly Employee Performance - Top performers ranking, team totals
-  - Daily Expense Anomaly Alert - Unusual spending detection (2σ threshold)
-  - Weekly Supplier Payment Reminder - Priority payments, cash impact analysis
-  - Schedule via `/api/scheduler/ai-reports` with cron configuration
-  - Manual trigger for testing via `/api/scheduler/ai-reports/{type}/trigger`
+3. **Cashier PIN Login** at `/cashier`
+   - 4-digit numeric PIN keypad
+   - Auto-submit after 4 digits entered (requires Sign In click confirmation)
+   - Clear and Backspace buttons
+   - Links to Main Login and Kitchen Display
+   - Backend supports both PIN-only and email/password login
 
-- **5 NEW AI Predictive Analytics Features:**
-  1. **Cash Flow Prediction**: 14-day forecast based on 90-day historical patterns, low cash alerts, weekly pattern insights, risk level assessment
-  2. **Seasonal Sales Forecasting**: Day-of-week analysis, best/worst days identification, weekend vs weekday comparison, next 7-day predictions
-  3. **Employee Performance Scoring**: AI-calculated scores (sales, consistency, attendance, value), tier rankings (Top Performer, Good, Average, Needs Improvement), recommendations
-  4. **Smart Expense Alerts**: Anomaly detection using 2-standard-deviation threshold, spending trend analysis, category breakdown, severity-based alerts
-  5. **Supplier Payment Optimization**: Credit utilization analysis, payment schedule recommendations, cash impact predictions, priority-based scheduling
+4. **Menu Item Images**
+   - New `MenuItemsPage.jsx` at `/menu-items`
+   - Grid view of all menu items with category filter and search
+   - Image upload on hover (supports JPEG, PNG, WebP, GIF, max 5MB)
+   - Edit/delete buttons per item
+   - Add Item dialog with all fields (name EN/AR, category, price, cost, prep time, tags)
+   - Backend endpoints: `/api/cashier/menu/{id}/image` (POST/DELETE)
+   - Static files served from `/uploads/menu`
 
-- **Full Multi-Language Support (4 Languages):**
-  - LanguageContext with useLanguage hook and localStorage persistence
-  - Full translations for English, Arabic (العربية), Urdu (اردو), Hindi (हिंदी)
-  - 150+ translation keys covering all major UI elements
-  - RTL layout auto-applied for Arabic and Urdu (dir="rtl")
-  - LTR layout for English and Hindi
-  - Language dropdown in sidebar footer (replaced cycle button)
-  - All pages have useLanguage hook integrated
-  - Dashboard, POS, Expenses, Stock, and navigation items translated
-
-- **Language Dropdown Implementation:**
-  - Converted language toggle from cycle button to dropdown menu
-  - Shows all 4 languages with flag indicators (EN, عر, ار, हि)
-  - Both desktop sidebar and mobile header have dropdown
-  - Selected language highlighted in dropdown
-
-- **Interactive Drill-Down on Visualizations:**
-  - Heatmap day click → EOD Summary pre-filled with date
-  - Funnel stage click → Customers or Sales page
-  - Treemap category click → Expenses filtered by category
-  - Waterfall step click → Sales (income) or Expenses (expense)
-  - Radar branch click → Dashboard filtered by branch
-  - "Click to drill down" hint text on all interactive charts
-
-- **Dashboard Widget Customization:**
-  - Toggle visibility for Stats, Charts, Cash/Bank, Payment Mode, Spending, Dues, VAT Summary
-  - Settings persist in localStorage
-  - react-grid-layout installed for future drag-and-drop
-
-- **Advanced Data Visualizations (10 features)** — Heatmap, Funnel, Treemap, Gauges, Radar, Waterfall, Money Flow, Time-Series, Export PNG
-- **Predictive Analytics Hub** — 5 AI modules
-- **Scheduled EOD Auto-Send, Dark Mode, Keyboard Shortcuts, Mobile Bottom Nav, Sparklines**
-- **Real-time Stock Alerts** - Polling-based alerts with expandable banner
-- **End-of-Day (EOD) Summary Report** - New tab in Reports with date/branch filter
-- **Partner Profit & Loss (P&L)** - New tab in Reports with partner breakdown
-- **WhatsApp Report Integration** - EOD Summary and Partner P&L added as report types
+5. **Dashboard Widget Customization**
+   - react-grid-layout library installed
+   - "Customize Widgets" button opens settings dialog
+   - 7 toggleable widgets: Stats, Charts, Cash/Bank, Payment Mode, Spending, Dues, VAT Summary
+   - Widget visibility persisted in localStorage
+   - "Edit Layout" mode for drag-and-drop (foundation in place)
 
 ## Backlog
-- Implement full drag-and-drop dashboard widget rearrangement (react-grid-layout installed)
+- Implement full drag-and-drop widget rearrangement (react-grid-layout is installed)
 - Translate remaining hardcoded text (expense category buttons, some chart labels)
 - Further UX refinements based on user feedback
-- Add more menu item images for POS
-- Cashier shift management (start/end shift with cash count)
+- Add more menu item images via the new upload feature
+
+## File Structure Updates
+- `/app/frontend/src/components/CashierShiftModal.jsx` - NEW
+- `/app/frontend/src/pages/MenuItemsPage.jsx` - NEW
+- `/app/frontend/src/pages/OrderStatusPage.jsx` - Updated with full implementation
+- `/app/frontend/src/pages/CashierPOSPage.jsx` - Added shift management integration
+- `/app/backend/routers/cashier_pos.py` - Added image upload endpoints
+- `/app/backend/server.py` - Added static file serving for /uploads
