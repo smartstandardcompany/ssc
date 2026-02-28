@@ -758,6 +758,16 @@ export default function CashierPOSPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Shift Management Modal */}
+      <CashierShiftModal 
+        open={showShiftModal} 
+        onClose={() => setShowShiftModal(false)}
+        onShiftChange={(shift) => {
+          setCurrentShift(shift);
+          fetchData();
+        }}
+      />
     </div>
   );
 }
