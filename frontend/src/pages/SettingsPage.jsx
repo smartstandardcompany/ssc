@@ -36,8 +36,10 @@ export default function SettingsPage() {
     enabled: false, environment: 'sandbox', otp: '',
     csid: '', csid_secret: '', production_csid: '', production_secret: '',
     certificate: '', private_key: '',
-    auto_submit: false, invoice_counter: 1
+    auto_submit: false, invoice_counter: 1,
+    csid_expiry: '', production_csid_expiry: '', expiry_alert_days: 30
   });
+  const [zatcaStatus, setZatcaStatus] = useState(null);
   const [testEmail, setTestEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [schedulerJobs, setSchedulerJobs] = useState([]);
