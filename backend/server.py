@@ -131,7 +131,7 @@ async def seed_database():
             }
             
             await db.users.insert_one(admin_user)
-            logger.info(f"✅ Default admin user created: ss@ssc.com")
+            logger.info("✅ Default admin user created: ss@ssc.com")
             
             # Create default branch
             branch_count = await db.branches.count_documents({})
