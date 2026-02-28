@@ -222,7 +222,7 @@ export default function TableManagementPage() {
               { label: 'Customers', value: stats.current_customers, color: 'orange' },
               { label: 'Occupancy', value: `${stats.occupancy_rate}%`, color: 'purple' },
             ].map(s => (
-              <Card key={s.label} className="border-0 shadow-sm">
+              <Card key={s.label} className="border-0 shadow-sm dark:bg-stone-900">
                 <CardContent className="p-4 text-center">
                   <p className={`text-2xl font-bold font-outfit text-${s.color}-600`}>{s.value}</p>
                   <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
