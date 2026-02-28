@@ -6,6 +6,7 @@ Uses OpenAI GPT-4o Vision via Emergent LLM Key
 import os
 import base64
 import json
+import re
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from dotenv import load_dotenv
@@ -14,6 +15,43 @@ load_dotenv()
 
 # Import emergent integrations
 from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+
+
+def extract_json_from_response(response: str) -> Optional[Dict]:
+    """Try to extract JSON from AI response using multiple strategies"""
+    response = response.strip()
+    
+    # Strategy 1: Direct JSON parse
+    try:
+        return json.loads(response)
+    except json.JSONDecodeError:
+        pass
+    
+    # Strategy 2: Extract from markdown code block
+    if "```json" in response:
+        try:
+            json_str = response.split("```json")[1].split("```")[0].strip()
+            return json.loads(json_str)
+        except (IndexError, json.JSONDecodeError):
+            pass
+    
+    # Strategy 3: Extract from any code block
+    if "```" in response:
+        try:
+            json_str = response.split("```")[1].split("```")[0].strip()
+            return json.loads(json_str)
+        except (IndexError, json.JSONDecodeError):
+            pass
+    
+    # Strategy 4: Find JSON object in response using regex
+    try:
+        match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', response, re.DOTALL)
+        if match:
+            return json.loads(match.group())
+    except json.JSONDecodeError:
+        pass
+    
+    return None
 
 
 class AIVisionService:
