@@ -601,6 +601,7 @@ const navLabelToKey = {
   'Customers': 'nav_customers', 'Suppliers': 'nav_suppliers', 'Employees': 'nav_employees',
   'Leave Approvals': 'nav_leave_approvals', 'Schedule': 'nav_schedule',
   'Inventory': 'nav_inventory', 'Transfers': 'nav_transfers', 'Kitchen': 'nav_kitchen',
+  'Menu Items': 'nav_menu_items', 'Shift Report': 'shift_report_title',
   'Analytics': 'nav_analytics', 'Visualizations': 'nav_visualizations',
   'Credit Report': 'nav_credit_report', 'Supplier Report': 'nav_supplier_report',
   'Category Report': 'nav_category_report', 'Bank Statements': 'nav_bank_statements',
