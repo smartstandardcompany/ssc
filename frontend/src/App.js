@@ -40,6 +40,7 @@ import VisualizationsPage from "./pages/VisualizationsPage";
 import CashierPOSPage from "./pages/CashierPOSPage";
 import CashierLoginPage from "./pages/CashierLoginPage";
 import KitchenDisplayPage from "./pages/KitchenDisplayPage";
+import OrderStatusPage from "./pages/OrderStatusPage";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 
