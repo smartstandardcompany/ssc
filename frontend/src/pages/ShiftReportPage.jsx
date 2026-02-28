@@ -127,7 +127,15 @@ export default function ShiftReportPage() {
   if (loading && !report && !rangeReport) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-64">Loading...</div>
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
+            <div>
+              <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-1">{t('shift_report_title')}</h1>
+              <p className="text-sm text-muted-foreground">{t('shift_report_subtitle')}</p>
+            </div>
+          </div>
+          <ReportSkeleton />
+        </div>
       </DashboardLayout>
     );
   }
