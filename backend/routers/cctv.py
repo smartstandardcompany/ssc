@@ -16,7 +16,7 @@ import json
 import os
 import io
 
-from database import db, get_current_user
+from database import db, get_current_user, ROOT_DIR
 from models import User
 
 router = APIRouter(tags=["CCTV"])
