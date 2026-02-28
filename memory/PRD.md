@@ -197,14 +197,16 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
    - "Edit Layout" mode for drag-and-drop (foundation in place)
 
 ## Backlog
-- Implement full drag-and-drop widget rearrangement (react-grid-layout is installed)
 - Translate remaining hardcoded text (expense category buttons, some chart labels)
 - Further UX refinements based on user feedback
 - Add more menu item images via the new upload feature
+- Additional AI-powered features (based on user feedback)
 
 ## File Structure Updates
-- `/app/frontend/src/components/CashierShiftModal.jsx` - NEW
-- `/app/frontend/src/pages/MenuItemsPage.jsx` - NEW
+- `/app/frontend/src/pages/ShiftReportPage.jsx` - NEW (Feb 28)
+- `/app/frontend/src/components/BulkSalaryPayment.jsx` - NEW (Feb 28)
+- `/app/frontend/src/components/CashierShiftModal.jsx` - Shift management
+- `/app/frontend/src/pages/MenuItemsPage.jsx` - Menu item management
 - `/app/frontend/src/pages/OrderStatusPage.jsx` - Updated with full implementation
 - `/app/frontend/src/pages/CashierPOSPage.jsx` - Added shift management integration
 - `/app/backend/routers/cashier_pos.py` - Added image upload endpoints
