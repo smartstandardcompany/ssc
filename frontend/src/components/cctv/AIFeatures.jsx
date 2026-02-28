@@ -359,7 +359,7 @@ export function ObjectDetectionPanel({ cameras = [] }) {
     setLoading(true);
     try {
       const res = await api.post('/cctv/ai/detect-objects', {
-        camera_id: 'test',
+        camera_id: selectedCamera || 'test',
         image_data: testImage.base64,
         target_objects: targetObjects ? targetObjects.split(',').map(s => s.trim()) : null,
         context: context
