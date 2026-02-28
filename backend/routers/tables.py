@@ -347,7 +347,7 @@ async def start_table_order(
     current_user: User = Depends(get_current_user)
 ):
     """Start a new order for a table"""
-    table = await db.tables.find_one({"id": table_id})
+    table = await db.tables.find_one({"id": table_id}, {"_id": 0})
     if not table:
         raise HTTPException(status_code=404, detail="Table not found")
     
