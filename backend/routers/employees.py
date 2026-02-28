@@ -14,6 +14,7 @@ from models import (User, Employee, EmployeeCreate, SalaryPayment, SalaryPayment
                     Leave, LeaveCreate, Notification, Attendance, EmployeeDocument,
                     EmployeeDocumentCreate, EmployeeRequest, EmployeeRequestCreate,
                     Expense, SalaryDeduction, SalaryDeductionCreate, SalaryHistory)
+from fastapi import Query
 
 router = APIRouter()
 
