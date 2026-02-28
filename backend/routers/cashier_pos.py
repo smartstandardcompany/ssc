@@ -91,13 +91,101 @@ async def cashier_login(body: dict):
         "token_type": "bearer",
         "user": {
             "id": user["id"],
-            "email": user["email"],
+            "email": user.get("email", ""),
             "name": user["name"],
             "role": user.get("role"),
             "branch_id": branch_id,
             "branch_name": branch["name"] if branch else None,
             "employee_id": employee["id"] if employee else None
         }
+    }
+
+
+# =====================================================
+# CASHIER PIN MANAGEMENT
+# =====================================================
+
+def generate_pin(length=4):
+    """Generate a random numeric PIN"""
+    return ''.join(random.choices(string.digits, k=length))
+
+@router.post("/cashier/generate-pin/{employee_id}")
+async def generate_cashier_pin(employee_id: str, current_user: User = Depends(get_current_user)):
+    """Generate a new cashier PIN for an employee"""
+    employee = await db.employees.find_one({"id": employee_id})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Generate unique PIN
+    while True:
+        new_pin = generate_pin(4)
+        existing = await db.employees.find_one({"cashier_pin": new_pin})
+        if not existing:
+            break
+    
+    await db.employees.update_one({"id": employee_id}, {"$set": {"cashier_pin": new_pin}})
+    return {"employee_id": employee_id, "name": employee["name"], "pin": new_pin}
+
+@router.get("/cashier/pins")
+async def get_cashier_pins(current_user: User = Depends(get_current_user)):
+    """Get all cashier PINs (admin only)"""
+    employees = await db.employees.find(
+        {"cashier_pin": {"$exists": True, "$ne": None}, "status": "active"},
+        {"_id": 0, "id": 1, "name": 1, "cashier_pin": 1, "branch_id": 1}
+    ).to_list(500)
+    
+    # Get branch names
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branch_map = {b["id"]: b["name"] for b in branches}
+    
+    for emp in employees:
+        emp["branch_name"] = branch_map.get(emp.get("branch_id"), "-")
+    
+    return employees
+
+@router.delete("/cashier/pin/{employee_id}")
+async def revoke_cashier_pin(employee_id: str, current_user: User = Depends(get_current_user)):
+    """Revoke a cashier's PIN"""
+    result = await db.employees.update_one({"id": employee_id}, {"$unset": {"cashier_pin": ""}})
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Employee not found or no PIN to revoke")
+    return {"message": "PIN revoked successfully"}
+
+
+# =====================================================
+# CUSTOMER ORDER STATUS (Public endpoint)
+# =====================================================
+
+@router.get("/order-status/active")
+async def get_active_orders_for_display(branch_id: Optional[str] = None):
+    """Get active orders for customer-facing display (no auth required)"""
+    query = {"status": {"$in": ["preparing", "ready"]}}
+    if branch_id:
+        query["branch_id"] = branch_id
+    
+    # Only get orders from today
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    query["created_at"] = {"$gte": f"{today}T00:00:00"}
+    
+    orders = await db.pos_orders.find(query, {
+        "_id": 0,
+        "id": 1,
+        "order_number": 1,
+        "status": 1,
+        "order_type": 1,
+        "customer_name": 1,
+        "created_at": 1
+    }).sort("order_number", 1).to_list(100)
+    
+    # Separate by status
+    preparing = [o for o in orders if o["status"] == "preparing"]
+    ready = [o for o in orders if o["status"] == "ready"]
+    
+    return {
+        "preparing": preparing,
+        "ready": ready,
+        "total_preparing": len(preparing),
+        "total_ready": len(ready)
     }
 
 
