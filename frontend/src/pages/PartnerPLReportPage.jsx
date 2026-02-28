@@ -15,10 +15,12 @@ import { PieChart as RechartsPie, Pie, Cell, BarChart, Bar, XAxis, YAxis, Cartes
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const COLORS = ['#f97316', '#3b82f6', '#22c55e', '#a855f7', '#ec4899', '#14b8a6'];
 
 export default function PartnerPLReportPage() {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [report, setReport] = useState(null);
   const [partners, setPartners] = useState([]);
