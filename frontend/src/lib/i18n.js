@@ -268,6 +268,15 @@ const translations = {
     transactions: 'معاملات', items: 'عناصر', payments: 'مدفوعات',
     overview: 'نظرة عامة', period: 'الفترة', compare: 'مقارنة', trends: 'الاتجاهات',
     item_pnl: 'أرباح المنتجات',
+    // Common UI
+    loading: 'جاري التحميل...', no_data: 'لا توجد بيانات', error_occurred: 'حدث خطأ',
+    try_again: 'حاول مرة أخرى', confirm: 'تأكيد', cancel: 'إلغاء', save: 'حفظ', delete: 'حذف',
+    edit: 'تعديل', view: 'عرض', add: 'إضافة', back: 'رجوع', next: 'التالي', previous: 'السابق',
+    search: 'بحث', filter: 'تصفية', sort: 'ترتيب', export: 'تصدير', import: 'استيراد',
+    refresh: 'تحديث', reset: 'إعادة تعيين', apply: 'تطبيق', clear: 'مسح',
+    // Status messages
+    success: 'نجاح', failed: 'فشل', pending: 'معلق', completed: 'مكتمل',
+    in_progress: 'قيد التنفيذ', cancelled: 'ملغى',
     // Shift Report
     shift_report_title: 'تقرير الوردية اليومي', shift_report_subtitle: 'ورديات الكاشير وتفصيل المبيعات والتسوية النقدية',
     daily_report: 'التقرير اليومي', date_range: 'نطاق التاريخ', total_shifts: 'إجمالي الورديات',
