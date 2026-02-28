@@ -193,10 +193,11 @@ export default function SettingsPage() {
         </div>
 
         <Tabs defaultValue="email">
-          <TabsList>
+          <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="email"><Mail size={14} className="mr-2" />Email</TabsTrigger>
             <TabsTrigger value="whatsapp"><MessageCircle size={14} className="mr-2" />WhatsApp</TabsTrigger>
             <TabsTrigger value="notifications"><Bell size={14} className="mr-2" />Alerts</TabsTrigger>
+            <TabsTrigger value="zatca" data-testid="zatca-tab"><FileCheck size={14} className="mr-2" />ZATCA</TabsTrigger>
             <TabsTrigger value="import"><Upload size={14} className="mr-2" />Import Data</TabsTrigger>
             <TabsTrigger value="backup"><Database size={14} className="mr-2" />Backup</TabsTrigger>
             <TabsTrigger value="scheduler"><Clock size={14} className="mr-2" />Scheduler</TabsTrigger>
