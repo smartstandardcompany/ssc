@@ -392,12 +392,12 @@ export function ObjectDetectionPanel({ cameras = [] }) {
           <div className="grid grid-cols-3 gap-4">
             <div>
               <Label>Camera (optional)</Label>
-              <Select value={selectedCamera} onValueChange={setSelectedCamera}>
+              <Select value={selectedCamera || "all"} onValueChange={(v) => setSelectedCamera(v === "all" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Any camera" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Any camera</SelectItem>
+                  <SelectItem value="all">Any camera</SelectItem>
                   {cameras.map(cam => (
                     <SelectItem key={cam.id} value={cam.id}>{cam.name}</SelectItem>
                   ))}
