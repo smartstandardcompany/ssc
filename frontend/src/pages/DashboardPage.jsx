@@ -41,14 +41,14 @@ const PIE_COLORS = ['#F5841F', '#22C55E', '#0EA5E9', '#EF4444', '#F59E0B', '#8B5
 const DEFAULT_WIDGETS = { stats: true, charts: true, cashBank: true, paymentMode: true, spending: true, dues: true, branchDues: true, vatSummary: true };
 
 const WIDGET_OPTIONS = [
-  { key: 'stats', label: 'Main Statistics', description: 'Sales, expenses, profit overview' },
-  { key: 'charts', label: 'Quick Charts', description: 'Expense distribution & comparison' },
-  { key: 'cashBank', label: 'Cash & Bank', description: 'Cash and bank balances' },
-  { key: 'paymentMode', label: 'Payment Modes', description: 'Cash, bank, credit breakdown' },
-  { key: 'spending', label: 'Spending Details', description: 'Expense categories & spending' },
-  { key: 'dues', label: 'Dues & Alerts', description: 'Supplier dues, fines, alerts' },
-  { key: 'branchDues', label: 'Branch Dues', description: 'Inter-branch balances' },
-  { key: 'vatSummary', label: 'VAT Summary', description: 'VAT calculations' },
+  { key: 'stats', labelKey: 'widget_stats', descKey: 'widget_desc_stats' },
+  { key: 'charts', labelKey: 'widget_charts', descKey: 'widget_desc_charts' },
+  { key: 'cashBank', labelKey: 'widget_cash_bank', descKey: 'widget_desc_cash' },
+  { key: 'paymentMode', labelKey: 'widget_payment_mode', descKey: 'widget_desc_payment' },
+  { key: 'spending', labelKey: 'widget_spending', descKey: 'widget_desc_spending' },
+  { key: 'dues', labelKey: 'widget_dues', descKey: 'widget_desc_dues' },
+  { key: 'branchDues', labelKey: 'widget_branch_dues', descKey: 'widget_desc_branch' },
+  { key: 'vatSummary', labelKey: 'widget_vat', descKey: 'widget_desc_vat' },
 ];
 
 const DEFAULT_LAYOUT = [
