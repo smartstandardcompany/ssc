@@ -1175,3 +1175,326 @@ async def get_recordings(
         "recordings": [],
         "message": "Cloud playback available via Hik-Connect app"
     }
+
+
+
+# =====================================================
+# SCHEDULED AI MONITORING
+# =====================================================
+
+class ScheduledMonitoringConfig(BaseModel):
+    enabled: bool = True
+    interval_minutes: int = 5  # 1, 5, 15, 30
+    cameras: List[str] = []  # Empty = all cameras
+    features: List[str] = ["people_counting", "motion_detection"]  # Available: people_counting, motion_detection, object_detection
+    notification_channels: List[str] = ["in_app"]  # in_app, whatsapp, email
+
+
+@router.get("/cctv/monitoring/config")
+async def get_monitoring_config(current_user: User = Depends(get_current_user)):
+    """Get scheduled monitoring configuration"""
+    config = await db.cctv_monitoring_config.find_one({}, {"_id": 0})
+    if not config:
+        default_config = {
+            "enabled": False,
+            "interval_minutes": 5,
+            "cameras": [],
+            "features": ["people_counting", "motion_detection"],
+            "notification_channels": ["in_app"],
+            "last_run": None,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.cctv_monitoring_config.insert_one(default_config)
+        return default_config
+    return config
+
+
+@router.post("/cctv/monitoring/config")
+async def save_monitoring_config(config: ScheduledMonitoringConfig, current_user: User = Depends(get_current_user)):
+    """Save scheduled monitoring configuration"""
+    config_dict = config.model_dump()
+    config_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    config_dict["updated_by"] = current_user.id
+    
+    await db.cctv_monitoring_config.update_one({}, {"$set": config_dict}, upsert=True)
+    
+    return {"success": True, "message": "Monitoring configuration saved"}
+
+
+@router.post("/cctv/monitoring/run")
+async def run_scheduled_monitoring(background_tasks: BackgroundTasks, current_user: User = Depends(get_current_user)):
+    """Manually trigger scheduled monitoring for all configured cameras"""
+    config = await db.cctv_monitoring_config.find_one({}, {"_id": 0})
+    if not config or not config.get("enabled"):
+        return {"success": False, "message": "Scheduled monitoring is disabled"}
+    
+    # Queue the monitoring task
+    background_tasks.add_task(execute_scheduled_monitoring)
+    
+    return {"success": True, "message": "Monitoring task queued"}
+
+
+async def execute_scheduled_monitoring():
+    """Execute scheduled monitoring for all cameras"""
+    from services.ai_vision import get_ai_vision_service
+    
+    config = await db.cctv_monitoring_config.find_one({}, {"_id": 0})
+    if not config or not config.get("enabled"):
+        return
+    
+    # Get cameras to monitor
+    camera_ids = config.get("cameras", [])
+    if not camera_ids:
+        cameras = await db.cctv_cameras.find({"enabled": True}, {"_id": 0}).to_list(100)
+    else:
+        cameras = await db.cctv_cameras.find({"id": {"$in": camera_ids}, "enabled": True}, {"_id": 0}).to_list(100)
+    
+    if not cameras:
+        return
+    
+    features = config.get("features", [])
+    ai_service = get_ai_vision_service()
+    results = []
+    
+    for camera in cameras:
+        try:
+            # Get camera snapshot (for cameras with accessible streams)
+            dvr = await db.cctv_dvrs.find_one({"id": camera.get("dvr_id")}, {"_id": 0})
+            if not dvr:
+                continue
+            
+            # For this demo, we'll use stored test frames or skip if no frame available
+            # In production, this would capture from RTSP stream
+            snapshot_data = await get_camera_snapshot_base64(camera["id"], dvr)
+            if not snapshot_data:
+                continue
+            
+            camera_results = {
+                "camera_id": camera["id"],
+                "camera_name": camera.get("name"),
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+            
+            # People counting
+            if "people_counting" in features:
+                # Get previous count
+                prev = await db.cctv_people_count.find_one(
+                    {"camera_id": camera["id"]},
+                    sort=[("timestamp", -1)]
+                )
+                prev_count = prev.get("total_count", 0) if prev else 0
+                
+                result = await ai_service.count_people(snapshot_data, prev_count)
+                
+                # Store result
+                count_record = {
+                    "camera_id": camera["id"],
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "entries": result.get("estimated_entries", 0),
+                    "exits": result.get("estimated_exits", 0),
+                    "total_count": result.get("people_count", 0),
+                    "crowd_density": result.get("crowd_density", "unknown"),
+                    "source": "scheduled",
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+                await db.cctv_people_count.insert_one(count_record)
+                camera_results["people_counting"] = result
+            
+            # Motion detection
+            if "motion_detection" in features:
+                result = await ai_service.analyze_motion(snapshot_data)
+                
+                if result.get("motion_detected") and result.get("alert_level") in ["medium", "high", "critical"]:
+                    # Create alert
+                    alert_record = {
+                        "id": f"sched_motion_{datetime.now().strftime('%Y%m%d%H%M%S%f')}",
+                        "camera_id": camera["id"],
+                        "type": "motion",
+                        "activity_type": result.get("activity_type"),
+                        "alert_level": result.get("alert_level"),
+                        "motion_score": result.get("motion_score", 0),
+                        "description": result.get("description"),
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "acknowledged": False,
+                        "source": "scheduled"
+                    }
+                    await db.cctv_alerts.insert_one(alert_record)
+                    
+                    # Send notifications
+                    await send_motion_notification(camera, result, config.get("notification_channels", []))
+                
+                camera_results["motion_detection"] = result
+            
+            # Object detection
+            if "object_detection" in features:
+                result = await ai_service.detect_objects(snapshot_data, None, "inventory monitoring")
+                
+                # Check for alerts
+                for alert in result.get("alerts", []):
+                    if alert.get("type") in ["low_stock", "empty_shelf"]:
+                        alert_record = {
+                            "id": f"sched_inv_{datetime.now().strftime('%Y%m%d%H%M%S%f')}",
+                            "camera_id": camera["id"],
+                            "type": "inventory",
+                            "subtype": alert.get("type"),
+                            "object": alert.get("object"),
+                            "message": alert.get("message"),
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                            "acknowledged": False,
+                            "source": "scheduled"
+                        }
+                        await db.cctv_alerts.insert_one(alert_record)
+                
+                camera_results["object_detection"] = result
+            
+            results.append(camera_results)
+            
+        except Exception as e:
+            results.append({
+                "camera_id": camera["id"],
+                "error": str(e)
+            })
+    
+    # Update last run time
+    await db.cctv_monitoring_config.update_one({}, {"$set": {"last_run": datetime.now(timezone.utc).isoformat()}})
+    
+    # Log the monitoring run
+    log = {
+        "id": f"monitor_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "cameras_processed": len(results),
+        "features": features,
+        "results_summary": {
+            "success": len([r for r in results if "error" not in r]),
+            "errors": len([r for r in results if "error" in r])
+        }
+    }
+    await db.cctv_monitoring_logs.insert_one(log)
+    
+    return results
+
+
+async def get_camera_snapshot_base64(camera_id: str, dvr: dict) -> Optional[str]:
+    """Get camera snapshot as base64. Returns None if not available."""
+    # For local DVR with IP access
+    if not dvr.get("is_cloud") and dvr.get("ip_address"):
+        try:
+            # Try to get snapshot via Hikvision ISAPI
+            import aiohttp
+            auth = aiohttp.BasicAuth(dvr.get("username", "admin"), dvr.get("password", ""))
+            channel = 1  # Default channel, should be from camera config
+            url = f"http://{dvr['ip_address']}:{dvr.get('port', 80)}/ISAPI/Streaming/channels/{channel}01/picture"
+            
+            async with aiohttp.ClientSession(auth=auth) as session:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                    if resp.status == 200:
+                        image_data = await resp.read()
+                        return base64.b64encode(image_data).decode('utf-8')
+        except Exception:
+            pass
+    
+    # Check for stored test frames
+    test_frame_path = os.path.join(ROOT_DIR, "uploads", "cctv_frames", f"{camera_id}_latest.jpg")
+    if os.path.exists(test_frame_path):
+        with open(test_frame_path, "rb") as f:
+            return base64.b64encode(f.read()).decode('utf-8')
+    
+    return None
+
+
+async def send_motion_notification(camera: dict, result: dict, channels: List[str]):
+    """Send motion detection notification via configured channels"""
+    message = f"🚨 *CCTV Motion Alert*\n\n"
+    message += f"Camera: {camera.get('name', camera['id'])}\n"
+    message += f"Activity: {result.get('activity_type', 'Unknown')}\n"
+    message += f"Alert Level: {result.get('alert_level', 'Unknown')}\n"
+    message += f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+    if result.get("description"):
+        message += f"\nDetails: {result['description'][:100]}"
+    
+    # In-app notification
+    if "in_app" in channels:
+        notification = {
+            "id": f"notif_{datetime.now().strftime('%Y%m%d%H%M%S%f')}",
+            "type": "cctv_motion",
+            "title": "CCTV Motion Detected",
+            "message": f"Motion detected on {camera.get('name', 'Camera')}: {result.get('activity_type', 'activity')}",
+            "data": {"camera_id": camera["id"], "alert_level": result.get("alert_level")},
+            "read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.notifications.insert_one(notification)
+    
+    # WhatsApp notification
+    if "whatsapp" in channels:
+        try:
+            from twilio.rest import Client
+            config = await db.whatsapp_config.find_one({}, {"_id": 0})
+            if config and config.get("account_sid") and config.get("auth_token"):
+                client = Client(config["account_sid"], config["auth_token"])
+                recipients = [r.strip() for r in config.get("recipient_number", "").split(",") if r.strip()]
+                for recipient in recipients:
+                    try:
+                        client.messages.create(
+                            from_=f'whatsapp:{config["phone_number"]}',
+                            body=message,
+                            to=f'whatsapp:{recipient}'
+                        )
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+    
+    # Email notification
+    if "email" in channels:
+        try:
+            import aiosmtplib
+            from email.mime.text import MIMEText
+            settings = await db.email_settings.find_one({}, {"_id": 0})
+            if settings and settings.get("smtp_host") and settings.get("password"):
+                msg = MIMEText(message.replace("*", ""))
+                msg["Subject"] = f"CCTV Alert: Motion Detected - {camera.get('name', 'Camera')}"
+                msg["From"] = settings.get("from_email", settings["username"])
+                msg["To"] = settings.get("from_email", settings["username"])
+                await aiosmtplib.send(
+                    msg,
+                    hostname=settings["smtp_host"],
+                    port=settings["smtp_port"],
+                    username=settings["username"],
+                    password=settings["password"],
+                    use_tls=settings.get("use_tls", True)
+                )
+        except Exception:
+            pass
+
+
+@router.get("/cctv/monitoring/logs")
+async def get_monitoring_logs(limit: int = 50, current_user: User = Depends(get_current_user)):
+    """Get scheduled monitoring logs"""
+    logs = await db.cctv_monitoring_logs.find({}, {"_id": 0}).sort("timestamp", -1).to_list(limit)
+    return logs
+
+
+# =====================================================
+# UPLOAD CAMERA FRAME FOR MONITORING
+# =====================================================
+
+@router.post("/cctv/cameras/{camera_id}/upload-frame")
+async def upload_camera_frame(camera_id: str, body: dict, current_user: User = Depends(get_current_user)):
+    """Upload a camera frame for AI processing (used when direct camera access is not available)"""
+    image_data = body.get("image_data")
+    if not image_data:
+        raise HTTPException(status_code=400, detail="image_data required")
+    
+    # Save the frame for scheduled monitoring
+    frames_dir = os.path.join(ROOT_DIR, "uploads", "cctv_frames")
+    os.makedirs(frames_dir, exist_ok=True)
+    
+    frame_path = os.path.join(frames_dir, f"{camera_id}_latest.jpg")
+    try:
+        with open(frame_path, "wb") as f:
+            f.write(base64.b64decode(image_data))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save frame: {str(e)}")
+    
+    return {"success": True, "message": "Frame uploaded successfully", "camera_id": camera_id}
