@@ -56,10 +56,12 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         # For cashier PIN login - check employees collection and create virtual user
         employee = await db.employees.find_one({"id": user_id}, {"_id": 0})
         if employee:
+            # Generate a valid placeholder email if not provided
+            emp_email = employee.get("email", "") or f"cashier_{employee['id'][:8]}@pos.local"
             user = {
                 "id": employee["id"],
-                "email": employee.get("email", ""),
-                "name": employee.get("name", ""),
+                "email": emp_email,
+                "name": employee.get("name", "Cashier"),
                 "role": "cashier",
                 "branch_id": employee.get("branch_id"),
                 "permissions": ["cashier", "pos", "sales"],
