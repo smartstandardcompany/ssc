@@ -57,7 +57,7 @@ export default function SettingsPage() {
 
   const fetchSettings = async () => {
     try {
-      const [emailRes, waRes, prefRes, coRes, schedRes, logRes, hikRes, branchRes, dvrRes] = await Promise.all([
+      const [emailRes, waRes, prefRes, coRes, schedRes, logRes, hikRes, branchRes, dvrRes, monitorRes] = await Promise.all([
         api.get('/settings/email').catch(() => ({ data: null })),
         api.get('/settings/whatsapp').catch(() => ({ data: null })),
         api.get('/settings/notifications').catch(() => ({ data: null })),
@@ -67,6 +67,7 @@ export default function SettingsPage() {
         api.get('/cctv/hik-connect/status').catch(() => ({ data: null })),
         api.get('/branches').catch(() => ({ data: [] })),
         api.get('/cctv/dvrs').catch(() => ({ data: [] })),
+        api.get('/cctv/monitoring/config').catch(() => ({ data: null })),
       ]);
       if (emailRes.data) setEmailSettings(prev => ({ ...prev, ...emailRes.data }));
       if (waRes.data) setWhatsappSettings(prev => ({ ...prev, ...waRes.data }));
@@ -77,6 +78,7 @@ export default function SettingsPage() {
       if (hikRes.data) setCctvSettings(prev => ({ ...prev, hik_email: hikRes.data.email || '', hik_status: hikRes.data }));
       if (branchRes.data) setBranches(branchRes.data);
       if (dvrRes.data) setDvrs(dvrRes.data);
+      if (monitorRes.data) setMonitoringConfig(prev => ({ ...prev, ...monitorRes.data }));
     } catch {}
     finally { setLoading(false); }
   };
