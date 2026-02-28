@@ -294,3 +294,57 @@ async def get_live_analytics(current_user: User = Depends(get_current_user)):
         "payment_modes": mode_totals,
         "timestamp": now.isoformat(),
     }
+
+
+# =====================================================
+# DASHBOARD LAYOUT PREFERENCES (Per User)
+# =====================================================
+
+@router.get("/dashboard/layout")
+async def get_dashboard_layout(current_user: User = Depends(get_current_user)):
+    """Get user's saved dashboard layout preferences"""
+    prefs = await db.dashboard_layouts.find_one({"user_id": current_user.id}, {"_id": 0})
+    if not prefs:
+        return {
+            "user_id": current_user.id,
+            "layout": None,
+            "widgets": None,
+            "theme": "default"
+        }
+    return prefs
+
+
+@router.post("/dashboard/layout")
+async def save_dashboard_layout(body: dict, current_user: User = Depends(get_current_user)):
+    """Save user's dashboard layout preferences"""
+    layout = body.get("layout")  # Grid layout positions
+    widgets = body.get("widgets")  # Widget visibility settings
+    theme = body.get("theme", "default")
+    
+    existing = await db.dashboard_layouts.find_one({"user_id": current_user.id})
+    
+    update_data = {
+        "user_id": current_user.id,
+        "layout": layout,
+        "widgets": widgets,
+        "theme": theme,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    if existing:
+        await db.dashboard_layouts.update_one(
+            {"user_id": current_user.id},
+            {"$set": update_data}
+        )
+    else:
+        update_data["created_at"] = datetime.now(timezone.utc).isoformat()
+        await db.dashboard_layouts.insert_one(update_data)
+    
+    return {"success": True, "message": "Dashboard layout saved"}
+
+
+@router.delete("/dashboard/layout")
+async def reset_dashboard_layout(current_user: User = Depends(get_current_user)):
+    """Reset user's dashboard layout to default"""
+    await db.dashboard_layouts.delete_one({"user_id": current_user.id})
+    return {"success": True, "message": "Dashboard layout reset to default"}
