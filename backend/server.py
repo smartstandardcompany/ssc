@@ -62,6 +62,7 @@ for module in [
     exports,
     invoices,
     job_titles,
+    loans,
     partners,
     reports,
     sales,
