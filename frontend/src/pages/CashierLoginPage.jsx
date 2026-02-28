@@ -175,6 +175,9 @@ export default function CashierLoginPage() {
               <ArrowLeft size={12} />
               Main Login
             </a>
+            <a href="/waiter" className="text-stone-500 hover:underline">
+              Waiter Mode
+            </a>
             <a href="/kds" className="text-stone-500 hover:underline">
               Kitchen Display →
             </a>
