@@ -151,6 +151,7 @@ async def create_table(table: TableCreate, current_user: User = Depends(get_curr
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.tables.insert_one(table_dict)
+    table_dict.pop("_id", None)  # Remove MongoDB ObjectId
     return table_dict
 
 
