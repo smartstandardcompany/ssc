@@ -31,11 +31,11 @@ function TableCard({ table, onEdit, onStatusChange, onDelete }) {
   const status = STATUS_COLORS[table.status] || STATUS_COLORS.available;
   return (
     <div
-      className={`relative border-2 rounded-xl p-4 transition-all hover:shadow-lg cursor-pointer ${status.bg}`}
+      className={`relative border-2 rounded-xl p-4 transition-all hover:shadow-lg cursor-pointer ${status.bg} dark:bg-opacity-20`}
       data-testid={`table-${table.table_number}`}
     >
       <div className="flex items-center justify-between mb-2">
-        <span className="font-bold font-outfit text-lg">{table.table_number}</span>
+        <span className="font-bold font-outfit text-lg dark:text-white">{table.table_number}</span>
         <div className="flex gap-1">
           <button onClick={(e) => { e.stopPropagation(); onEdit(table); }} className="p-1 rounded hover:bg-white/50">
             <Edit2 size={14} className="text-stone-600" />
