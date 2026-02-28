@@ -30,6 +30,7 @@ from routers import (
     shifts,
     stock,
     suppliers,
+    tables,
     transfers,
     whatsapp,
     targets,
