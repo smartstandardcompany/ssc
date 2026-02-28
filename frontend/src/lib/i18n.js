@@ -121,6 +121,9 @@ const translations = {
     edit: 'Edit', view: 'View', add: 'Add', back: 'Back', next: 'Next', previous: 'Previous',
     search: 'Search', filter: 'Filter', sort: 'Sort', export: 'Export', import: 'Import',
     refresh: 'Refresh', reset: 'Reset', apply: 'Apply', clear: 'Clear',
+    date: 'Date', time: 'Time', branch: 'Branch', status: 'Status', orders: 'orders',
+    period: 'Period', notes: 'Notes', payment_mode: 'Payment Mode', payment_date: 'Payment Date',
+    all_branches: 'All Branches', start_date: 'Start Date', end_date: 'End Date',
     // Status messages
     success: 'Success', failed: 'Failed', pending: 'Pending', completed: 'Completed',
     in_progress: 'In Progress', cancelled: 'Cancelled',
