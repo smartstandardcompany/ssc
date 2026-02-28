@@ -108,7 +108,48 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 
 ## Recently Completed (Feb 2026)
 
-### 5-Part POS and Dashboard Enhancement:
+### 4-Part Feature Enhancement (Latest - Feb 28, 2026):
+
+1. **Daily Shift Report Generation**
+   - New `ShiftReportPage.jsx` at `/shift-report`
+   - Two tabs: Daily Report and Date Range
+   - Daily view shows: Total Shifts, Total Sales, Opening/Closing/Expected Cash, Cash Difference
+   - Payment Method Breakdown pie chart
+   - Sales by Branch bar chart
+   - Detailed Shift table with cashier, times, duration, all cash amounts, status
+   - Top Selling Items for the day
+   - Range view shows: Days, Total Shifts/Sales/Orders, Avg Sales/Day
+   - Daily Sales Trend line chart
+   - Daily Breakdown table
+   - Backend endpoints: `/api/cashier/shift-report`, `/api/cashier/shift-report/range`
+
+2. **Full Drag-and-Drop Widget Customization**
+   - Enhanced widget settings dialog with 8 toggleable sections
+   - Each widget has label, description, and toggle switch
+   - Widget options: Main Statistics, Quick Charts, Cash & Bank, Payment Modes, Spending Details, Dues & Alerts, Branch Dues, VAT Summary
+   - "Show All" and "Minimize" quick actions
+   - Preferences saved to backend via `/api/dashboard/layout`
+   - Persisted across devices (synced via API)
+
+3. **Bulk Salary Payment UI**
+   - New `BulkSalaryPayment.jsx` component in Employees page
+   - "Bulk Pay Salaries" button opens dialog
+   - Period selector with month options
+   - Branch filter for targeted payments
+   - Preview step shows: To Pay count, Already Paid count, Total Amount
+   - Employee list with checkboxes and Select All
+   - Payment Mode and Date selectors
+   - Results show paid/skipped/failed breakdown by branch
+   - Backend endpoints: `/api/salary-payments/bulk-preview`, `/api/salary-payments/bulk`
+
+4. **General API Improvements**
+   - Dashboard layout preferences API (GET/POST/DELETE `/api/dashboard/layout`)
+   - Shift report aggregation endpoints with branch filtering
+   - Bulk salary payment with duplicate detection
+   - Automatic expense creation for salary payments
+   - Employee notification on salary payment
+
+### 5-Part POS and Dashboard Enhancement (Earlier):
 
 1. **Cashier Shift Management (Start/End with Cash Count)**
    - New `CashierShiftModal.jsx` component
