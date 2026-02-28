@@ -146,10 +146,14 @@ async def refresh_hik_connect_token(email: str, password: str):
 @router.post("/cctv/hik-connect/auth")
 async def authenticate_hik_connect(creds: HikConnectCredentials, current_user: User = Depends(get_current_user)):
     """Authenticate with Hik-Connect cloud service"""
-    token = await refresh_hik_connect_token(creds.email, creds.password)
-    if token:
-        return {"success": True, "message": "Connected to Hik-Connect"}
-    raise HTTPException(status_code=401, detail="Authentication failed")
+    result = await refresh_hik_connect_token(creds.email, creds.password)
+    if result:
+        return {
+            "success": True, 
+            "message": "Credentials saved. For full cloud access, use the Hik-Connect mobile app or apply for API access at tpp.hikvision.com",
+            "status": result
+        }
+    raise HTTPException(status_code=401, detail="Failed to save credentials")
 
 @router.get("/cctv/hik-connect/status")
 async def get_hik_connect_status(current_user: User = Depends(get_current_user)):
