@@ -168,6 +168,132 @@ async def get_zatca_qr(invoice_id: str, current_user: User = Depends(get_current
         "invoice_number": inv.get("invoice_number", ""),
     }
 
+
+@router.get("/invoices/{invoice_id}/zatca-phase2")
+async def get_zatca_phase2(invoice_id: str, current_user: User = Depends(get_current_user)):
+    """Generate ZATCA Phase 2 compliant XML and 9-tag QR code for an invoice."""
+    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not inv:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    
+    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    customer = None
+    if inv.get("customer_id"):
+        customer = await db.customers.find_one({"id": inv["customer_id"]}, {"_id": 0})
+    
+    from services.zatca_phase2 import get_zatca_service
+    zatca_service = get_zatca_service(company)
+    
+    # Prepare invoice data
+    invoice_data = {
+        "uuid": inv.get("uuid") or str(uuid.uuid4()),
+        "invoice_number": inv.get("invoice_number"),
+        "date": inv.get("date", "").split("T")[0] if isinstance(inv.get("date"), str) else datetime.now().strftime("%Y-%m-%d"),
+        "time": inv.get("date", "").split("T")[1][:8] if isinstance(inv.get("date"), str) and "T" in inv.get("date", "") else datetime.now().strftime("%H:%M:%S"),
+        "timestamp": inv.get("date") if isinstance(inv.get("date"), str) else datetime.now(timezone.utc).isoformat(),
+        "items": inv.get("items", []),
+        "subtotal": inv.get("subtotal", 0),
+        "discount": inv.get("discount", 0),
+        "total": inv.get("total", 0),
+        "vat_rate": inv.get("vat_rate", 15),
+        "vat_amount": inv.get("vat_amount", 0),
+        "total_with_vat": inv.get("total_with_vat", inv.get("total", 0)),
+        "payment_mode": inv.get("payment_mode", "cash"),
+    }
+    
+    customer_data = None
+    if customer:
+        customer_data = {
+            "name": customer.get("name"),
+            "vat_number": inv.get("buyer_vat_number") or customer.get("vat_number"),
+            "id_number": customer.get("id_number", ""),
+        }
+    
+    result = zatca_service.prepare_for_submission(invoice_data, customer_data)
+    
+    # Save UUID to invoice if not present
+    if not inv.get("uuid"):
+        await db.invoices.update_one({"id": invoice_id}, {"$set": {"uuid": result["uuid"]}})
+    
+    return result
+
+
+@router.post("/invoices/{invoice_id}/zatca-submit")
+async def submit_to_zatca(invoice_id: str, current_user: User = Depends(get_current_user)):
+    """
+    Submit invoice to ZATCA Fatoora Portal (Phase 2).
+    Note: Actual submission requires CSID (Cryptographic Stamp Identifier) from ZATCA.
+    This endpoint prepares the invoice for submission and returns the required data.
+    """
+    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not inv:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    
+    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    
+    # Check required company settings for ZATCA submission
+    required_fields = ["company_name", "vat_number"]
+    missing = [f for f in required_fields if not company.get(f)]
+    if missing:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Company settings missing required fields for ZATCA: {', '.join(missing)}. Please configure in Settings."
+        )
+    
+    customer = None
+    if inv.get("customer_id"):
+        customer = await db.customers.find_one({"id": inv["customer_id"]}, {"_id": 0})
+    
+    from services.zatca_phase2 import get_zatca_service
+    zatca_service = get_zatca_service(company)
+    
+    invoice_data = {
+        "uuid": inv.get("uuid") or str(uuid.uuid4()),
+        "invoice_number": inv.get("invoice_number"),
+        "date": inv.get("date", "").split("T")[0] if isinstance(inv.get("date"), str) else datetime.now().strftime("%Y-%m-%d"),
+        "time": inv.get("date", "").split("T")[1][:8] if isinstance(inv.get("date"), str) and "T" in inv.get("date", "") else datetime.now().strftime("%H:%M:%S"),
+        "timestamp": inv.get("date") if isinstance(inv.get("date"), str) else datetime.now(timezone.utc).isoformat(),
+        "items": inv.get("items", []),
+        "subtotal": inv.get("subtotal", 0),
+        "discount": inv.get("discount", 0),
+        "total": inv.get("total", 0),
+        "vat_rate": inv.get("vat_rate", 15),
+        "vat_amount": inv.get("vat_amount", 0),
+        "total_with_vat": inv.get("total_with_vat", inv.get("total", 0)),
+        "payment_mode": inv.get("payment_mode", "cash"),
+    }
+    
+    customer_data = {"name": customer.get("name"), "vat_number": inv.get("buyer_vat_number")} if customer else None
+    
+    result = zatca_service.prepare_for_submission(invoice_data, customer_data)
+    
+    # Update invoice with ZATCA data
+    await db.invoices.update_one({"id": invoice_id}, {"$set": {
+        "uuid": result["uuid"],
+        "zatca_qr_phase2": result["qr_code_base64"],
+        "zatca_xml_hash": result["xml_hash"],
+        "zatca_status": "ready_for_submission",
+        "zatca_updated_at": datetime.now(timezone.utc).isoformat()
+    }})
+    
+    return {
+        "success": True,
+        "invoice_id": invoice_id,
+        "uuid": result["uuid"],
+        "qr_code_base64": result["qr_code_base64"],
+        "is_b2c": result["is_b2c"],
+        "status": "ready_for_submission",
+        "message": "Invoice prepared for ZATCA Phase 2 submission. To complete submission, you need to register with ZATCA and obtain CSID.",
+        "next_steps": [
+            "1. Register on ZATCA Fatoora Developer Portal",
+            "2. Generate and register CSR (Certificate Signing Request)",
+            "3. Obtain CSID (Cryptographic Stamp Identifier)",
+            "4. Configure CSID in Settings",
+            "5. Resubmit for actual clearance"
+        ]
+    }
+
+
 @router.post("/invoices/{invoice_id}/upload-image")
 async def upload_invoice_image(invoice_id: str, file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
     inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
