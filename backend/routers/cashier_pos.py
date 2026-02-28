@@ -179,6 +179,8 @@ async def get_active_orders_for_display(branch_id: Optional[str] = None):
         "status": 1,
         "order_type": 1,
         "customer_name": 1,
+        "table_number": 1,
+        "table_id": 1,
         "created_at": 1
     }).sort("order_number", 1).to_list(100)
     
