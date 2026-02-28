@@ -472,13 +472,15 @@ class TestOrderFlow:
     
     def test_close_order(self, api_client, admin_token):
         """POST /api/tables/{id}/close-order should close and pay the order"""
+        uid = unique_id()
         # Create table, start order, add items
-        table_data = {"table_number": "TEST_CLOSE", "section": "Main Hall", "capacity": 4}
+        table_data = {"table_number": f"TEST_CLS{uid}", "section": "Main Hall", "capacity": 4}
         create_response = api_client.post(
             f"{BASE_URL}/api/tables",
             headers={"Authorization": f"Bearer {admin_token}"},
             json=table_data
         )
+        assert create_response.status_code == 200, f"Failed to create table: {create_response.text}"
         table_id = create_response.json()["id"]
         
         api_client.post(
