@@ -82,6 +82,7 @@ async def create_section(section: SectionCreate, current_user: User = Depends(ge
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.table_sections.insert_one(section_dict)
+    section_dict.pop("_id", None)  # Remove MongoDB ObjectId
     return section_dict
 
 
