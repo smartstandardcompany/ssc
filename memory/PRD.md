@@ -352,9 +352,7 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
    - "Edit Layout" mode for drag-and-drop (foundation in place)
 
 ## Backlog
-- **P3:** ZATCA Phase 2 Compliance
-- **P3:** Translate remaining hardcoded text
-- **P3:** Further UX refinements based on user feedback
+- Future enhancements based on user feedback
 
 ## File Structure Updates
 - `/app/frontend/src/pages/CCTVPage.jsx` - CCTV Security page with 8 AI tabs
