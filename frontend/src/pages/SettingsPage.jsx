@@ -404,14 +404,25 @@ export default function SettingsPage() {
               {/* Credentials */}
               <Card className="border-border">
                 <CardHeader>
-                  <CardTitle className="font-outfit text-base flex items-center gap-2">
-                    <Shield size={18} />
-                    CSID Credentials
+                  <CardTitle className="font-outfit text-base flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Shield size={18} />
+                      CSID Credentials
+                    </span>
+                    <a 
+                      href="https://fatoora.zatca.gov.sa/onboard" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-orange-600 bg-orange-50 rounded-full hover:bg-orange-100 transition-colors"
+                    >
+                      Get CSID from ZATCA Portal
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </a>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Enter your CSID credentials obtained from the ZATCA Fatoora Portal after completing the onboarding process.
+                    Enter your CSID credentials obtained from the <a href="https://fatoora.zatca.gov.sa/onboard" target="_blank" rel="noopener noreferrer" className="text-orange-600 hover:underline font-medium">ZATCA Fatoora Onboarding Portal</a>.
                   </p>
 
                   {zatcaSettings.environment === 'sandbox' ? (
@@ -443,6 +454,32 @@ export default function SettingsPage() {
                           />
                         </div>
                       </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-xs">CSID Expiry Date</Label>
+                          <Input
+                            type="date"
+                            value={zatcaSettings.csid_expiry || ''}
+                            onChange={(e) => setZatcaSettings({ ...zatcaSettings, csid_expiry: e.target.value })}
+                            className="h-9 mt-1"
+                            data-testid="zatca-csid-expiry-sandbox"
+                          />
+                          <p className="text-[10px] text-muted-foreground mt-1">You'll receive alerts before expiry</p>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Alert Days Before Expiry</Label>
+                          <Input
+                            type="number"
+                            value={zatcaSettings.expiry_alert_days || 30}
+                            onChange={(e) => setZatcaSettings({ ...zatcaSettings, expiry_alert_days: parseInt(e.target.value) || 30 })}
+                            className="h-9 mt-1"
+                            min={1}
+                            max={90}
+                            data-testid="zatca-alert-days"
+                          />
+                          <p className="text-[10px] text-muted-foreground mt-1">Daily alerts until renewed</p>
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-4 p-4 bg-green-50 rounded-xl border border-green-200">
@@ -471,6 +508,32 @@ export default function SettingsPage() {
                             className="h-9 mt-1"
                             data-testid="zatca-secret-production"
                           />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-xs">CSID Expiry Date</Label>
+                          <Input
+                            type="date"
+                            value={zatcaSettings.production_csid_expiry || ''}
+                            onChange={(e) => setZatcaSettings({ ...zatcaSettings, production_csid_expiry: e.target.value })}
+                            className="h-9 mt-1"
+                            data-testid="zatca-csid-expiry-production"
+                          />
+                          <p className="text-[10px] text-muted-foreground mt-1">You'll receive alerts before expiry</p>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Alert Days Before Expiry</Label>
+                          <Input
+                            type="number"
+                            value={zatcaSettings.expiry_alert_days || 30}
+                            onChange={(e) => setZatcaSettings({ ...zatcaSettings, expiry_alert_days: parseInt(e.target.value) || 30 })}
+                            className="h-9 mt-1"
+                            min={1}
+                            max={90}
+                            data-testid="zatca-alert-days-prod"
+                          />
+                          <p className="text-[10px] text-muted-foreground mt-1">Daily alerts until renewed</p>
                         </div>
                       </div>
                     </div>
