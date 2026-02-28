@@ -579,23 +579,218 @@ export default function SettingsPage() {
               </Card>
 
               {/* Help Card */}
-              <Card className="border-blue-200 bg-blue-50/30">
-                <CardContent className="pt-6">
-                  <h3 className="font-medium text-sm mb-3 flex items-center gap-2">
-                    <AlertTriangle size={16} className="text-blue-600" />
-                    ZATCA Phase 2 Registration Steps
-                  </h3>
-                  <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
-                    <li>Register on the <a href="https://fatoora.zatca.gov.sa" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">ZATCA Fatoora Portal</a></li>
-                    <li>Generate a CSR (Certificate Signing Request) from your solution</li>
-                    <li>Submit CSR to ZATCA using your OTP to receive your CSID</li>
-                    <li>Enter the CSID and secret in the fields above</li>
-                    <li>Test your connection using the "Test Connection" button</li>
-                    <li>Switch to Production when ready for live invoicing</li>
-                  </ol>
-                  <p className="text-xs text-muted-foreground mt-4">
-                    Note: Sandbox mode generates compliant XML but doesn't submit to ZATCA. Use it for testing before going live.
-                  </p>
+              <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
+                <CardHeader>
+                  <CardTitle className="font-outfit text-base flex items-center gap-2">
+                    <AlertTriangle size={18} className="text-blue-600" />
+                    ZATCA Phase 2 Complete Registration Guide
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Prerequisites */}
+                  <div className="p-4 bg-white rounded-xl border border-blue-100">
+                    <h4 className="font-semibold text-sm text-blue-800 mb-3 flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">!</span>
+                      Prerequisites
+                    </h4>
+                    <ul className="space-y-2 text-sm text-stone-600">
+                      <li className="flex items-start gap-2">
+                        <span className="text-blue-500 mt-1">•</span>
+                        <span>Valid Commercial Registration (CR) number</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-blue-500 mt-1">•</span>
+                        <span>Valid VAT Registration number (15 digits starting with 3)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-blue-500 mt-1">•</span>
+                        <span>Authorized signatory access to ZATCA Fatoora Portal</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-blue-500 mt-1">•</span>
+                        <span>Mobile phone for OTP verification</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Step by Step Guide */}
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-sm text-stone-800">Step-by-Step Registration Process</h4>
+                    
+                    {/* Step 1 */}
+                    <div className="p-4 bg-white rounded-xl border border-stone-200 hover:border-blue-300 transition-colors">
+                      <div className="flex items-start gap-3">
+                        <span className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">1</span>
+                        <div className="flex-1">
+                          <h5 className="font-semibold text-sm text-stone-800">Register on ZATCA Fatoora Portal</h5>
+                          <p className="text-xs text-stone-500 mt-1">Create your taxpayer account on the official ZATCA e-invoicing platform</p>
+                          <div className="mt-3 p-3 bg-stone-50 rounded-lg">
+                            <ol className="text-xs text-stone-600 space-y-1 list-decimal list-inside">
+                              <li>Visit <a href="https://fatoora.zatca.gov.sa" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">fatoora.zatca.gov.sa</a></li>
+                              <li>Click "Register" and select "Taxpayer Registration"</li>
+                              <li>Enter your VAT number and verify via OTP</li>
+                              <li>Complete your business profile information</li>
+                              <li>Verify your email address</li>
+                            </ol>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Step 2 */}
+                    <div className="p-4 bg-white rounded-xl border border-stone-200 hover:border-blue-300 transition-colors">
+                      <div className="flex items-start gap-3">
+                        <span className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">2</span>
+                        <div className="flex-1">
+                          <h5 className="font-semibold text-sm text-stone-800">Generate OTP for Device Onboarding</h5>
+                          <p className="text-xs text-stone-500 mt-1">Get a One-Time Password to register your e-invoicing solution</p>
+                          <div className="mt-3 p-3 bg-stone-50 rounded-lg">
+                            <ol className="text-xs text-stone-600 space-y-1 list-decimal list-inside">
+                              <li>Log in to the Fatoora Portal</li>
+                              <li>Go to "Onboarding & Management" → "EGS Units"</li>
+                              <li>Click "Add New Unit/Device"</li>
+                              <li>Generate an OTP (valid for 1 hour)</li>
+                              <li>Copy the OTP and enter it in the field above</li>
+                            </ol>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Step 3 */}
+                    <div className="p-4 bg-white rounded-xl border border-stone-200 hover:border-blue-300 transition-colors">
+                      <div className="flex items-start gap-3">
+                        <span className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">3</span>
+                        <div className="flex-1">
+                          <h5 className="font-semibold text-sm text-stone-800">Submit CSR and Receive CSID</h5>
+                          <p className="text-xs text-stone-500 mt-1">Submit Certificate Signing Request to get your Cryptographic Stamp ID</p>
+                          <div className="mt-3 p-3 bg-stone-50 rounded-lg">
+                            <ol className="text-xs text-stone-600 space-y-1 list-decimal list-inside">
+                              <li>Our system will automatically generate a CSR for you</li>
+                              <li>The CSR is submitted to ZATCA using your OTP</li>
+                              <li>ZATCA returns a CSID (Compliance CSID for sandbox)</li>
+                              <li>Enter the CSID in the credentials section above</li>
+                              <li>The CSID is valid for a limited time - renew before expiry</li>
+                            </ol>
+                          </div>
+                          <div className="mt-2 p-2 bg-amber-50 rounded-lg border border-amber-200">
+                            <p className="text-xs text-amber-700">
+                              <strong>Note:</strong> Sandbox CSID is for testing. After successful testing, you'll receive a Production CSID.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Step 4 */}
+                    <div className="p-4 bg-white rounded-xl border border-stone-200 hover:border-blue-300 transition-colors">
+                      <div className="flex items-start gap-3">
+                        <span className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">4</span>
+                        <div className="flex-1">
+                          <h5 className="font-semibold text-sm text-stone-800">Test in Sandbox Environment</h5>
+                          <p className="text-xs text-stone-500 mt-1">Validate your integration before going live</p>
+                          <div className="mt-3 p-3 bg-stone-50 rounded-lg">
+                            <ol className="text-xs text-stone-600 space-y-1 list-decimal list-inside">
+                              <li>Keep environment set to "Sandbox"</li>
+                              <li>Create test invoices in the system</li>
+                              <li>Use the "Test Connection" button to verify</li>
+                              <li>Check that XML and QR codes generate correctly</li>
+                              <li>Verify invoice submission responses</li>
+                            </ol>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Step 5 */}
+                    <div className="p-4 bg-white rounded-xl border border-stone-200 hover:border-blue-300 transition-colors">
+                      <div className="flex items-start gap-3">
+                        <span className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">5</span>
+                        <div className="flex-1">
+                          <h5 className="font-semibold text-sm text-stone-800">Request Production CSID</h5>
+                          <p className="text-xs text-stone-500 mt-1">After successful sandbox testing, get your production credentials</p>
+                          <div className="mt-3 p-3 bg-stone-50 rounded-lg">
+                            <ol className="text-xs text-stone-600 space-y-1 list-decimal list-inside">
+                              <li>Log in to Fatoora Portal</li>
+                              <li>Go to "Onboarding & Management"</li>
+                              <li>Select your device and request Production CSID</li>
+                              <li>ZATCA reviews and approves (usually 24-48 hours)</li>
+                              <li>Enter Production CSID in the fields above</li>
+                            </ol>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Step 6 */}
+                    <div className="p-4 bg-white rounded-xl border border-green-200 bg-green-50/30">
+                      <div className="flex items-start gap-3">
+                        <span className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">6</span>
+                        <div className="flex-1">
+                          <h5 className="font-semibold text-sm text-green-800">Go Live!</h5>
+                          <p className="text-xs text-green-600 mt-1">Switch to production and start issuing compliant e-invoices</p>
+                          <div className="mt-3 p-3 bg-white rounded-lg border border-green-200">
+                            <ol className="text-xs text-stone-600 space-y-1 list-decimal list-inside">
+                              <li>Switch environment to "Production" above</li>
+                              <li>Enable "Auto-submit to ZATCA" if desired</li>
+                              <li>All new invoices will be automatically cleared with ZATCA</li>
+                              <li>Monitor submission status in the invoices list</li>
+                              <li>Keep your CSID renewed before expiry</li>
+                            </ol>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Important Notes */}
+                  <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                    <h4 className="font-semibold text-sm text-amber-800 mb-2 flex items-center gap-2">
+                      <AlertTriangle size={16} className="text-amber-600" />
+                      Important Notes
+                    </h4>
+                    <ul className="space-y-2 text-xs text-amber-700">
+                      <li className="flex items-start gap-2">
+                        <span>•</span>
+                        <span><strong>Invoice Types:</strong> Standard (B2B) invoices require buyer VAT number. Simplified (B2C) invoices don't.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span>•</span>
+                        <span><strong>Clearance vs Reporting:</strong> B2B invoices need real-time clearance. B2C invoices are reported within 24 hours.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span>•</span>
+                        <span><strong>Invoice Counter (ICV):</strong> Must be sequential and never reset. System manages this automatically.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span>•</span>
+                        <span><strong>CSID Expiry:</strong> Production CSID expires after 1 year. Renew 30 days before expiry.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span>•</span>
+                        <span><strong>Support:</strong> For issues, contact ZATCA support at 19993 or visit the Fatoora Portal help section.</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Quick Links */}
+                  <div className="flex flex-wrap gap-2">
+                    <a href="https://fatoora.zatca.gov.sa" target="_blank" rel="noopener noreferrer" 
+                       className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-full hover:bg-blue-100">
+                      Fatoora Portal
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </a>
+                    <a href="https://zatca.gov.sa/en/E-Invoicing/Pages/default.aspx" target="_blank" rel="noopener noreferrer"
+                       className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 rounded-full hover:bg-green-100">
+                      ZATCA E-Invoicing Guide
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </a>
+                    <a href="https://zatca.gov.sa/en/E-Invoicing/Introduction/Pages/TechnicalRequirements.aspx" target="_blank" rel="noopener noreferrer"
+                       className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-purple-600 bg-purple-50 rounded-full hover:bg-purple-100">
+                      Technical Requirements
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </a>
+                  </div>
                 </CardContent>
               </Card>
             </div>
