@@ -708,7 +708,7 @@ export default function DashboardPage() {
                   toast.success('All widgets enabled');
                 }}
               >
-                Show All
+                {tr('show_all')}
               </Button>
               <Button 
                 variant="outline"
@@ -724,9 +724,9 @@ export default function DashboardPage() {
                   toast.success('Minimized dashboard');
                 }}
               >
-                Minimize
+                {tr('minimize')}
               </Button>
-              <Button size="sm" className="flex-1 rounded-xl" onClick={() => setShowWidgetSettings(false)}>Done</Button>
+              <Button size="sm" className="flex-1 rounded-xl" onClick={() => setShowWidgetSettings(false)}>{tr('done')}</Button>
             </div>
           </DialogContent>
         </Dialog>
