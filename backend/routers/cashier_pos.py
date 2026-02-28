@@ -33,8 +33,11 @@ async def cashier_login(body: dict):
     
     # PIN-based login (preferred for cashiers)
     if pin:
-        # Find employee/user by PIN
-        employee = await db.employees.find_one({"cashier_pin": pin, "status": "active"}, {"_id": 0})
+        # Find employee/user by PIN (check both status="active" and active=True for compatibility)
+        employee = await db.employees.find_one({
+            "cashier_pin": pin, 
+            "$or": [{"status": "active"}, {"active": True}]
+        }, {"_id": 0})
         if employee:
             if employee.get("user_id"):
                 user = await db.users.find_one({"id": employee["user_id"]}, {"_id": 0})
