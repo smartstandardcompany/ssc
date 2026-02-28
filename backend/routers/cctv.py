@@ -162,16 +162,13 @@ async def get_hik_connect_status(current_user: User = Depends(get_current_user))
     if not creds:
         return {"connected": False, "message": "Not configured"}
     
-    expires_at = creds.get("expires_at")
-    if expires_at:
-        exp_time = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
-        if exp_time < datetime.now(timezone.utc):
-            return {"connected": False, "message": "Token expired", "email": creds.get("email")}
-    
+    status = creds.get("status", "unknown")
     return {
-        "connected": True,
+        "connected": status in ["connected", "credentials_saved"],
+        "status": status,
         "email": creds.get("email"),
-        "updated_at": creds.get("updated_at")
+        "updated_at": creds.get("updated_at"),
+        "note": creds.get("note", "")
     }
 
 # =====================================================
