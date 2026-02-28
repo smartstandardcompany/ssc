@@ -198,7 +198,7 @@ export function BulkSalaryPayment({ onComplete }) {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-1">
                     <AlertCircle size={14} className="text-warning" />
-                    Skipped / Failed
+                    {t('skipped_failed')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -212,7 +212,7 @@ export function BulkSalaryPayment({ onComplete }) {
                     {result.details.failed?.map((emp, i) => (
                       <div key={i} className="flex justify-between items-center text-xs p-1.5 bg-error/10 rounded">
                         <span>{emp.name}</span>
-                        <Badge className="bg-error/20 text-error text-[10px]">Failed</Badge>
+                        <Badge className="bg-error/20 text-error text-[10px]">{t('failed')}</Badge>
                       </div>
                     ))}
                   </div>
@@ -221,7 +221,7 @@ export function BulkSalaryPayment({ onComplete }) {
             )}
 
             <Button className="w-full rounded-xl" onClick={() => { setOpen(false); resetDialog(); }}>
-              Done
+              {t('done')}
             </Button>
           </div>
         )}
@@ -232,15 +232,15 @@ export function BulkSalaryPayment({ onComplete }) {
             <div className="grid grid-cols-3 gap-3">
               <div className="p-3 bg-primary/10 rounded-xl text-center">
                 <p className="text-2xl font-bold text-primary">{preview.to_pay_count}</p>
-                <p className="text-xs text-muted-foreground">To Pay</p>
+                <p className="text-xs text-muted-foreground">{t('to_pay')}</p>
               </div>
               <div className="p-3 bg-success/10 rounded-xl text-center">
                 <p className="text-2xl font-bold text-success">{preview.already_paid_count}</p>
-                <p className="text-xs text-muted-foreground">Already Paid</p>
+                <p className="text-xs text-muted-foreground">{t('already_paid')}</p>
               </div>
               <div className="p-3 bg-stone-100 rounded-xl text-center">
                 <p className="text-2xl font-bold">SAR {preview.to_pay_total.toFixed(2)}</p>
-                <p className="text-xs text-muted-foreground">Total Amount</p>
+                <p className="text-xs text-muted-foreground">{t('total_amount')}</p>
               </div>
             </div>
 
@@ -249,14 +249,14 @@ export function BulkSalaryPayment({ onComplete }) {
               <Card className="border-border">
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-center">
-                    <CardTitle className="text-sm">Employees to Pay ({preview.to_pay_count})</CardTitle>
+                    <CardTitle className="text-sm">{t('employees_to_pay')} ({preview.to_pay_count})</CardTitle>
                     <div className="flex items-center gap-2">
                       <Checkbox 
                         checked={selectAll} 
                         onCheckedChange={toggleSelectAll}
                         id="select-all"
                       />
-                      <Label htmlFor="select-all" className="text-xs cursor-pointer">Select All</Label>
+                      <Label htmlFor="select-all" className="text-xs cursor-pointer">{t('select_all')}</Label>
                     </div>
                   </div>
                 </CardHeader>
