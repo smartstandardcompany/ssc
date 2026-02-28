@@ -170,7 +170,7 @@ export default function EmployeesPage() {
 
   const handleEdit = (emp) => {
     setEditingEmp(emp);
-    setFormData({ name: emp.name, document_id: emp.document_id || '', phone: emp.phone || '', email: emp.email || '', position: emp.position || '', job_title_id: emp.job_title_id || '', branch_id: emp.branch_id || '', salary: emp.salary || '', pay_frequency: emp.pay_frequency || 'monthly', join_date: emp.join_date ? new Date(emp.join_date).toISOString().split('T')[0] : '', document_expiry: emp.document_expiry ? new Date(emp.document_expiry).toISOString().split('T')[0] : '', annual_leave_entitled: emp.annual_leave_entitled || 30, sick_leave_entitled: emp.sick_leave_entitled || 15, notes: emp.notes || '' });
+    setFormData({ name: emp.name, document_id: emp.document_id || '', phone: emp.phone || '', email: emp.email || '', position: emp.position || '', job_title_id: emp.job_title_id || '', branch_id: emp.branch_id || '', salary: emp.salary || '', pay_frequency: emp.pay_frequency || 'monthly', join_date: emp.join_date ? new Date(emp.join_date).toISOString().split('T')[0] : '', document_expiry: emp.document_expiry ? new Date(emp.document_expiry).toISOString().split('T')[0] : '', annual_leave_entitled: emp.annual_leave_entitled || 30, sick_leave_entitled: emp.sick_leave_entitled || 15, pos_role: emp.pos_role || '', notes: emp.notes || '' });
     setShowDialog(true);
   };
 
