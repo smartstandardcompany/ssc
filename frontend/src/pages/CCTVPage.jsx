@@ -237,14 +237,18 @@ export default function CCTVPage() {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
+          <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="live" data-testid="live-tab"><Video size={14} className="mr-1" /> Live View</TabsTrigger>
             <TabsTrigger value="analytics" data-testid="analytics-tab"><TrendingUp size={14} className="mr-1" /> Analytics</TabsTrigger>
+            <TabsTrigger value="face" data-testid="face-tab"><UserCheck size={14} className="mr-1" /> Face Recognition</TabsTrigger>
+            <TabsTrigger value="objects" data-testid="objects-tab"><Package size={14} className="mr-1" /> Object Detection</TabsTrigger>
+            <TabsTrigger value="people" data-testid="people-tab"><Users size={14} className="mr-1" /> People Count</TabsTrigger>
+            <TabsTrigger value="motion" data-testid="motion-tab"><Activity size={14} className="mr-1" /> Motion</TabsTrigger>
             <TabsTrigger value="alerts" data-testid="alerts-tab">
               <Bell size={14} className="mr-1" /> Alerts
               {unacknowledgedAlerts > 0 && <Badge className="ml-1 bg-error text-white text-[10px] px-1">{unacknowledgedAlerts}</Badge>}
             </TabsTrigger>
-            <TabsTrigger value="devices" data-testid="devices-tab"><Settings size={14} className="mr-1" /> Devices</TabsTrigger>
+            <TabsTrigger value="devices" data-testid="devices-tab"><Camera size={14} className="mr-1" /> Devices</TabsTrigger>
           </TabsList>
 
           {/* Live View Tab */}
