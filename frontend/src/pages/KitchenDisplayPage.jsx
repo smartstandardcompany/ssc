@@ -319,6 +319,17 @@ export default function KitchenDisplayPage() {
                   data-testid={`order-${order.id}`}
                 >
                   <CardContent className="p-4">
+                    {/* Table Number Banner - Large & Prominent */}
+                    {order.table_number && order.order_type === 'dine_in' && (
+                      <div className="bg-orange-500 -mx-4 -mt-4 mb-3 px-4 py-3 rounded-t-lg flex items-center justify-between" data-testid={`kds-table-badge-${order.order_number}`}>
+                        <div className="flex items-center gap-2">
+                          <Armchair size={22} className="text-white" />
+                          <span className="text-2xl font-black font-outfit text-white tracking-wide">TABLE {order.table_number}</span>
+                        </div>
+                        <Badge className="bg-white/20 text-white text-xs">Dine In</Badge>
+                      </div>
+                    )}
+
                     {/* Order Header */}
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
@@ -337,11 +348,16 @@ export default function KitchenDisplayPage() {
                     {/* Order Type & Time */}
                     <div className="flex items-center justify-between text-sm mb-3 pb-3 border-b border-stone-700">
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs border-stone-600 text-stone-300 capitalize">
-                          {order.order_type?.replace('_', ' ')}
-                        </Badge>
-                        {order.table_number && (
+                        {order.order_type !== 'dine_in' && (
+                          <Badge variant="outline" className="text-xs border-stone-600 text-stone-300 capitalize">
+                            {order.order_type?.replace('_', ' ')}
+                          </Badge>
+                        )}
+                        {order.order_type !== 'dine_in' && order.table_number && (
                           <span className="text-stone-400">Table {order.table_number}</span>
+                        )}
+                        {order.customer_name && (
+                          <span className="text-stone-400 text-xs">{order.customer_name}</span>
                         )}
                       </div>
                       <div className="flex items-center gap-1 text-stone-400">
