@@ -272,12 +272,13 @@ class TestPOSRoleSeparation:
         if not employees:
             pytest.skip("No employees to update")
         
-        emp_id = employees[0]["id"]
-        original_pos_role = employees[0].get("pos_role")
+        emp = employees[0]
+        emp_id = emp["id"]
+        original_pos_role = emp.get("pos_role")
         
-        # Update pos_role to "waiter"
+        # Update pos_role to "waiter" - must include name since it's required
         update_res = requests.put(f"{BASE_URL}/api/employees/{emp_id}",
-            json={"pos_role": "waiter"},
+            json={"name": emp["name"], "pos_role": "waiter"},
             headers={"Authorization": f"Bearer {self.token}"})
         assert update_res.status_code == 200, f"Failed to update employee: {update_res.text}"
         
@@ -289,7 +290,7 @@ class TestPOSRoleSeparation:
         
         # Restore original value
         requests.put(f"{BASE_URL}/api/employees/{emp_id}",
-            json={"pos_role": original_pos_role},
+            json={"name": emp["name"], "pos_role": original_pos_role},
             headers={"Authorization": f"Bearer {self.token}"})
         print(f"Employee pos_role updated and restored successfully")
 
