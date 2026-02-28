@@ -131,6 +131,7 @@ function App() {
           <Route path="/cashier" element={<CashierLoginPage />} />
           <Route path="/cashier/pos" element={<CashierPOSPage />} />
           <Route path="/kds" element={<KitchenDisplayPage />} />
+          <Route path="/order-status" element={<OrderStatusPage />} />
         </Routes>
       </BrowserRouter>
       <Toaster position="top-right" richColors />
