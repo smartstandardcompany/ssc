@@ -530,7 +530,8 @@ async def get_recordings(
     if not dvr.get("is_cloud") and dvr.get("ip_address"):
         try:
             from hikvisionapi import Client
-            client = Client(
+            # Initialize client for potential future recording queries
+            _ = Client(
                 f"http://{dvr['ip_address']}",
                 dvr["username"],
                 dvr["password"]
