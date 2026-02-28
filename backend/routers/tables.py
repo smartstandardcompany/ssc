@@ -286,6 +286,7 @@ async def create_waiter(body: dict, current_user: User = Depends(get_current_use
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.cashier_pins.insert_one(waiter)
+    waiter.pop("_id", None)  # Remove MongoDB ObjectId
     return waiter
 
 
