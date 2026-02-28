@@ -11,13 +11,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { 
   Camera, Video, Bell, Users, Building2, Plus, Settings, Play, Pause, 
   Maximize2, Grid3X3, LayoutGrid, AlertTriangle, CheckCircle, RefreshCw,
-  Eye, EyeOff, Trash2, Edit, Wifi, WifiOff, Clock, TrendingUp, UserCheck
+  Eye, EyeOff, Trash2, Edit, Wifi, WifiOff, Clock, TrendingUp, UserCheck, Package, Scan
 } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { FaceRecognitionPanel, ObjectDetectionPanel } from '@/components/cctv/AIFeatures';
 
 export default function CCTVPage() {
   const { t } = useLanguage();
