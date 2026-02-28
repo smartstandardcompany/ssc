@@ -749,6 +749,7 @@ const navLabelToKey = {
   'Reconciliation': 'nav_reconciliation', 'Branches': 'nav_branches', 'Documents': 'nav_documents',
   'Fines & Penalties': 'nav_fines', 'Partners': 'nav_partners', 'Company Loans': 'nav_company_loans',
   'Users': 'nav_users', 'Settings': 'nav_settings', 'Help & Guide': 'nav_help',
+  'CCTV': 'cctv_title', 'Partner P&L': 'partner_pl_title',
 };
 
 const LANGUAGES = [
