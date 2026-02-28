@@ -115,6 +115,15 @@ const translations = {
     transactions: 'transactions', items: 'items', payments: 'payments',
     overview: 'Overview', period: 'Period', compare: 'Compare', trends: 'Trends',
     item_pnl: 'Item P&L',
+    // Common UI
+    loading: 'Loading...', no_data: 'No data available', error_occurred: 'An error occurred',
+    try_again: 'Try again', confirm: 'Confirm', cancel: 'Cancel', save: 'Save', delete: 'Delete',
+    edit: 'Edit', view: 'View', add: 'Add', back: 'Back', next: 'Next', previous: 'Previous',
+    search: 'Search', filter: 'Filter', sort: 'Sort', export: 'Export', import: 'Import',
+    refresh: 'Refresh', reset: 'Reset', apply: 'Apply', clear: 'Clear',
+    // Status messages
+    success: 'Success', failed: 'Failed', pending: 'Pending', completed: 'Completed',
+    in_progress: 'In Progress', cancelled: 'Cancelled',
     // Shift Report
     shift_report_title: 'Daily Shift Report', shift_report_subtitle: 'Cashier shifts, sales breakdown, and cash reconciliation',
     daily_report: 'Daily Report', date_range: 'Date Range', total_shifts: 'Total Shifts',
