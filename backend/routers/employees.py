@@ -777,6 +777,210 @@ async def get_employees_pending(current_user: User = Depends(get_current_user)):
     total_salary = sum(e["salary"] for e in result); total_paid = sum(e["salary_paid"] for e in result); total_pending = sum(e["pending_salary"] for e in result)
     return {"employees": result, "branch_summary": branch_summary, "totals": {"total_salary": total_salary, "total_paid": total_paid, "total_pending": total_pending, "employee_count": len(result)}, "period": current_period}
 
+# =====================================================
+# BULK SALARY PAYMENTS
+# =====================================================
+
+@router.post("/salary-payments/bulk")
+async def create_bulk_salary_payments(body: dict, current_user: User = Depends(get_current_user)):
+    """Pay salaries to all employees or selected branch in one action"""
+    branch_id = body.get("branch_id")  # Optional - filter by branch
+    period = body.get("period")  # Required - e.g., "Dec 2025"
+    payment_mode = body.get("payment_mode", "bank")
+    notes = body.get("notes", "Bulk salary payment")
+    pay_date = body.get("date", datetime.now(timezone.utc).isoformat())
+    employee_ids = body.get("employee_ids")  # Optional - specific employees
+    
+    if not period:
+        raise HTTPException(status_code=400, detail="Period is required")
+    
+    # Get active employees
+    query = {"active": {"$ne": False}, "status": {"$in": ["active", None]}}
+    if branch_id:
+        query["branch_id"] = branch_id
+    if employee_ids:
+        query["id"] = {"$in": employee_ids}
+    
+    employees = await db.employees.find(query, {"_id": 0}).to_list(1000)
+    
+    if not employees:
+        raise HTTPException(status_code=404, detail="No active employees found")
+    
+    # Check which employees haven't been paid for this period
+    results = {"paid": [], "skipped": [], "failed": []}
+    total_paid = 0
+    
+    for emp in employees:
+        # Check if already paid
+        existing = await db.salary_payments.find_one({
+            "employee_id": emp["id"], 
+            "period": period, 
+            "payment_type": "salary"
+        }, {"_id": 0})
+        
+        if existing:
+            results["skipped"].append({
+                "id": emp["id"],
+                "name": emp["name"],
+                "reason": f"Already paid for {period}"
+            })
+            continue
+        
+        salary = emp.get("salary", 0)
+        if salary <= 0:
+            results["skipped"].append({
+                "id": emp["id"],
+                "name": emp["name"],
+                "reason": "No salary defined"
+            })
+            continue
+        
+        try:
+            # Create payment
+            payment = SalaryPayment(
+                employee_id=emp["id"],
+                employee_name=emp["name"],
+                payment_type="salary",
+                amount=salary,
+                payment_mode=payment_mode,
+                branch_id=emp.get("branch_id"),
+                period=period,
+                date=datetime.fromisoformat(pay_date.replace("Z", "+00:00")),
+                notes=notes,
+                created_by=current_user.id
+            )
+            p_dict = payment.model_dump()
+            p_dict["date"] = p_dict["date"].isoformat()
+            p_dict["created_at"] = p_dict["created_at"].isoformat()
+            await db.salary_payments.insert_one(p_dict)
+            
+            # Create corresponding expense
+            expense = Expense(
+                category="salary",
+                description=f"Salary - {emp['name']} - {period}",
+                amount=salary,
+                payment_mode=payment_mode,
+                branch_id=emp.get("branch_id"),
+                date=datetime.fromisoformat(pay_date.replace("Z", "+00:00")),
+                notes=notes,
+                created_by=current_user.id
+            )
+            e_dict = expense.model_dump()
+            e_dict["date"] = e_dict["date"].isoformat()
+            e_dict["created_at"] = e_dict["created_at"].isoformat()
+            await db.expenses.insert_one(e_dict)
+            
+            # Send notification if user linked
+            if emp.get("user_id"):
+                notif = Notification(
+                    user_id=emp["user_id"],
+                    title="Salary Payment Received",
+                    message=f"SAR {salary:.2f} salary for {period} via {payment_mode}. Please acknowledge receipt.",
+                    type="salary_paid",
+                    related_id=payment.id
+                )
+                n_dict = notif.model_dump()
+                n_dict["created_at"] = n_dict["created_at"].isoformat()
+                await db.notifications.insert_one(n_dict)
+            
+            results["paid"].append({
+                "id": emp["id"],
+                "name": emp["name"],
+                "amount": salary,
+                "branch_id": emp.get("branch_id")
+            })
+            total_paid += salary
+            
+        except Exception as e:
+            results["failed"].append({
+                "id": emp["id"],
+                "name": emp["name"],
+                "error": str(e)
+            })
+    
+    # Get branch names for response
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branch_map = {b["id"]: b["name"] for b in branches}
+    
+    # Group paid by branch
+    branch_totals = {}
+    for emp in results["paid"]:
+        bid = emp.get("branch_id")
+        bname = branch_map.get(bid, "No Branch") if bid else "No Branch"
+        if bname not in branch_totals:
+            branch_totals[bname] = {"count": 0, "amount": 0}
+        branch_totals[bname]["count"] += 1
+        branch_totals[bname]["amount"] += emp["amount"]
+    
+    return {
+        "success": True,
+        "period": period,
+        "payment_mode": payment_mode,
+        "summary": {
+            "total_paid": len(results["paid"]),
+            "total_amount": round(total_paid, 2),
+            "skipped": len(results["skipped"]),
+            "failed": len(results["failed"])
+        },
+        "branch_totals": branch_totals,
+        "details": results
+    }
+
+
+@router.get("/salary-payments/bulk-preview")
+async def preview_bulk_salary(
+    period: str,
+    branch_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Preview bulk salary payment before executing"""
+    query = {"active": {"$ne": False}, "status": {"$in": ["active", None]}}
+    if branch_id:
+        query["branch_id"] = branch_id
+    
+    employees = await db.employees.find(query, {"_id": 0}).to_list(1000)
+    
+    # Check payment status for each
+    to_pay = []
+    already_paid = []
+    no_salary = []
+    
+    for emp in employees:
+        existing = await db.salary_payments.find_one({
+            "employee_id": emp["id"],
+            "period": period,
+            "payment_type": "salary"
+        }, {"_id": 0})
+        
+        if existing:
+            already_paid.append({"id": emp["id"], "name": emp["name"], "salary": emp.get("salary", 0)})
+        elif emp.get("salary", 0) <= 0:
+            no_salary.append({"id": emp["id"], "name": emp["name"]})
+        else:
+            to_pay.append({"id": emp["id"], "name": emp["name"], "salary": emp.get("salary", 0), "branch_id": emp.get("branch_id")})
+    
+    # Get branch names
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branch_map = {b["id"]: b["name"] for b in branches}
+    
+    for emp in to_pay:
+        emp["branch_name"] = branch_map.get(emp.get("branch_id"), "No Branch") if emp.get("branch_id") else "No Branch"
+    
+    total_to_pay = sum(e["salary"] for e in to_pay)
+    
+    return {
+        "period": period,
+        "total_employees": len(employees),
+        "to_pay": to_pay,
+        "to_pay_count": len(to_pay),
+        "to_pay_total": round(total_to_pay, 2),
+        "already_paid": already_paid,
+        "already_paid_count": len(already_paid),
+        "no_salary": no_salary,
+        "no_salary_count": len(no_salary)
+    }
+
+
 # Items Master
 @router.get("/items")
 async def get_items(current_user: User = Depends(get_current_user)):
