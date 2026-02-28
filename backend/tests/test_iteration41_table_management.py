@@ -263,14 +263,15 @@ class TestTableStatus:
     
     def test_update_table_status(self, api_client, admin_token):
         """POST /api/tables/{id}/status should update table status"""
+        uid = unique_id()
         # Create a test table
-        table_data = {"table_number": "TEST_STATUS", "section": "Main Hall", "capacity": 4}
+        table_data = {"table_number": f"TEST_STS{uid}", "section": "Main Hall", "capacity": 4}
         create_response = api_client.post(
             f"{BASE_URL}/api/tables",
             headers={"Authorization": f"Bearer {admin_token}"},
             json=table_data
         )
-        assert create_response.status_code == 200
+        assert create_response.status_code == 200, f"Failed to create table: {create_response.text}"
         table_id = create_response.json()["id"]
         
         # Update status to reserved
