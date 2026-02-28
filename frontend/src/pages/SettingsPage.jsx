@@ -63,7 +63,7 @@ export default function SettingsPage() {
 
   const fetchSettings = async () => {
     try {
-      const [emailRes, waRes, prefRes, coRes, schedRes, logRes, hikRes, branchRes, dvrRes, monitorRes] = await Promise.all([
+      const [emailRes, waRes, prefRes, coRes, schedRes, logRes, hikRes, branchRes, dvrRes, monitorRes, zatcaRes] = await Promise.all([
         api.get('/settings/email').catch(() => ({ data: null })),
         api.get('/settings/whatsapp').catch(() => ({ data: null })),
         api.get('/settings/notifications').catch(() => ({ data: null })),
@@ -74,6 +74,7 @@ export default function SettingsPage() {
         api.get('/branches').catch(() => ({ data: [] })),
         api.get('/cctv/dvrs').catch(() => ({ data: [] })),
         api.get('/cctv/monitoring/config').catch(() => ({ data: null })),
+        api.get('/settings/zatca').catch(() => ({ data: null })),
       ]);
       if (emailRes.data) setEmailSettings(prev => ({ ...prev, ...emailRes.data }));
       if (waRes.data) setWhatsappSettings(prev => ({ ...prev, ...waRes.data }));
@@ -85,6 +86,7 @@ export default function SettingsPage() {
       if (branchRes.data) setBranches(branchRes.data);
       if (dvrRes.data) setDvrs(dvrRes.data);
       if (monitorRes.data) setMonitoringConfig(prev => ({ ...prev, ...monitorRes.data }));
+      if (zatcaRes.data) setZatcaSettings(prev => ({ ...prev, ...zatcaRes.data }));
     } catch {}
     finally { setLoading(false); }
   };
