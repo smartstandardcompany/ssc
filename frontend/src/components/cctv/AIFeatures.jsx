@@ -620,7 +620,7 @@ export function PeopleCountingPanel({ cameras = [] }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label className="text-xs mb-2 block">Select Camera (optional)</Label>
-              <Select value={selectedCamera} onValueChange={setSelectedCamera}>
+              <Select value={selectedCamera || "all"} onValueChange={(v) => setSelectedCamera(v === "all" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Any camera" />
                 </SelectTrigger>
@@ -835,7 +835,7 @@ export function MotionAnalysisPanel({ cameras = [] }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label className="text-xs mb-2 block">Select Camera (optional)</Label>
-              <Select value={selectedCamera} onValueChange={setSelectedCamera}>
+              <Select value={selectedCamera || "all"} onValueChange={(v) => setSelectedCamera(v === "all" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Any camera" />
                 </SelectTrigger>
