@@ -1,12 +1,16 @@
 {
-  "name": "SSC Track",
+  "name": "SSC Track - Business Management",
   "short_name": "SSC Track",
-  "description": "Smart Standard Company - Business Management",
-  "start_url": "/",
+  "description": "Smart Standard Company - Complete Business Management ERP",
+  "start_url": "/dashboard",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#FFF8F0",
   "theme_color": "#F5841F",
   "orientation": "any",
+  "categories": ["business", "finance", "productivity"],
+  "lang": "en",
+  "dir": "auto",
   "icons": [
     {
       "src": "/icon-192.png",
@@ -20,5 +24,7 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
 }
