@@ -242,6 +242,155 @@ async def get_acknowledgements(reminder_id: str, current_user: User = Depends(ge
     return acks
 
 
+@router.get("/task-reminders/compliance")
+async def get_compliance_dashboard(days: int = 30, current_user: User = Depends(get_current_user)):
+    """Comprehensive compliance analytics for task reminders."""
+    from collections import defaultdict
+    now = datetime.now(timezone.utc)
+    cutoff = (now - timedelta(days=days)).isoformat()
+
+    reminders = await db.task_reminders.find({}, {"_id": 0}).to_list(500)
+    alerts = await db.reminder_alerts.find({"sent_at": {"$gte": cutoff}}, {"_id": 0}).to_list(50000)
+    acks = await db.reminder_acknowledgements.find({"acknowledged_at": {"$gte": cutoff}}, {"_id": 0}).to_list(50000)
+    employees = await db.employees.find({"status": {"$ne": "terminated"}}, {"_id": 0}).to_list(1000)
+    job_titles = await db.job_titles.find({}, {"_id": 0}).to_list(100)
+    jt_map = {jt["id"]: jt.get("title", "") for jt in job_titles}
+
+    # Build employee info map
+    emp_map = {}
+    for e in employees:
+        role = jt_map.get(e.get("job_title_id", ""), e.get("pos_role", "unknown"))
+        emp_map[e["id"]] = {"name": e.get("name", "Unknown"), "role": role}
+
+    # Index alerts by reminder_id
+    alerts_by_reminder = defaultdict(int)
+    alerts_by_role = defaultdict(int)
+    for a in alerts:
+        alerts_by_reminder[a.get("reminder_id")] += a.get("employees_notified", 0)
+        alerts_by_role[a.get("target_value", "Other")] += a.get("employees_notified", 0)
+
+    # Index acks by employee + reminder
+    acks_by_employee = defaultdict(int)
+    acks_by_role = defaultdict(int)
+    acks_by_reminder = defaultdict(int)
+    ack_hours = defaultdict(int)  # hour -> count
+    ack_dow = defaultdict(int)    # dow -> count
+    ack_hour_dow = defaultdict(lambda: defaultdict(int))  # dow -> hour -> count
+    daily_acks = defaultdict(int)
+
+    for a in acks:
+        acks_by_employee[a.get("employee_id", "")] += 1
+        acks_by_reminder[a.get("reminder_id", "")] += 1
+        emp_info = emp_map.get(a.get("employee_id", ""), {})
+        acks_by_role[emp_info.get("role", "Unknown")] += 1
+        try:
+            ack_dt = datetime.fromisoformat(a["acknowledged_at"].replace("Z", "+00:00"))
+            ack_hours[ack_dt.hour] += 1
+            ack_dow[ack_dt.weekday()] += 1
+            ack_hour_dow[ack_dt.weekday()][ack_dt.hour] += 1
+            daily_acks[ack_dt.strftime("%Y-%m-%d")] += 1
+        except Exception:
+            pass
+
+    total_alerts_sent = sum(alerts_by_reminder.values())
+    total_acks = len(acks)
+    overall_compliance = round((total_acks / max(total_alerts_sent, 1)) * 100, 1)
+
+    # Role compliance
+    role_compliance = []
+    all_roles = set(list(alerts_by_role.keys()) + list(acks_by_role.keys()))
+    for role in sorted(all_roles):
+        sent = alerts_by_role.get(role, 0)
+        acked = acks_by_role.get(role, 0)
+        pct = round((acked / max(sent, 1)) * 100, 1) if sent > 0 else 0
+        role_compliance.append({"role": role, "alerts_sent": sent, "acknowledged": acked, "compliance": pct})
+    role_compliance.sort(key=lambda x: -x["compliance"])
+
+    # Employee leaderboard
+    employee_scores = []
+    reminder_by_id = {r["id"]: r for r in reminders}
+    # Count how many alerts each employee should have received
+    emp_alert_count = defaultdict(int)
+    for a in alerts:
+        rid = a.get("reminder_id")
+        r = reminder_by_id.get(rid)
+        if not r:
+            continue
+        notified = a.get("employees_notified", 0)
+        # Distribute among matching employees
+        if r["target_type"] == "employee":
+            emp_alert_count[r["target_value"]] += 1
+        elif r["target_type"] == "role":
+            target_role = r["target_value"].lower()
+            for eid, einfo in emp_map.items():
+                if einfo["role"].lower() == target_role:
+                    emp_alert_count[eid] += 1
+
+    all_emp_ids = set(list(emp_alert_count.keys()) + list(acks_by_employee.keys()))
+    for eid in all_emp_ids:
+        einfo = emp_map.get(eid, {"name": "Unknown", "role": "Unknown"})
+        sent = emp_alert_count.get(eid, 0)
+        acked = acks_by_employee.get(eid, 0)
+        pct = round((acked / max(sent, 1)) * 100, 1) if sent > 0 else (100 if acked > 0 else 0)
+        status = "excellent" if pct >= 80 else "good" if pct >= 60 else "needs_attention" if pct >= 40 else "critical"
+        employee_scores.append({
+            "employee_id": eid, "name": einfo["name"], "role": einfo["role"],
+            "alerts_received": sent, "acknowledged": acked, "compliance": min(pct, 100), "status": status
+        })
+    employee_scores.sort(key=lambda x: -x["compliance"])
+
+    # Heatmap: day of week x hour
+    day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    heatmap = []
+    for dow in range(7):
+        for h in range(24):
+            count = ack_hour_dow[dow][h]
+            if count > 0:
+                heatmap.append({"day": day_names[dow], "day_num": dow, "hour": h, "label": f"{h:02d}:00", "count": count})
+
+    # Daily trend
+    trend = []
+    daily_alert_count = defaultdict(int)
+    for a in alerts:
+        try:
+            d = a["sent_at"][:10]
+            daily_alert_count[d] += a.get("employees_notified", 0)
+        except Exception:
+            pass
+
+    for i in range(days):
+        d = (now - timedelta(days=days - 1 - i)).strftime("%Y-%m-%d")
+        sent = daily_alert_count.get(d, 0)
+        acked = daily_acks.get(d, 0)
+        pct = round((acked / max(sent, 1)) * 100, 1) if sent > 0 else 0
+        trend.append({"date": d, "alerts_sent": sent, "acknowledged": acked, "compliance": pct})
+
+    # Flagged employees (below 50%)
+    flagged = [e for e in employee_scores if e["compliance"] < 50 and e["alerts_received"] > 0]
+
+    # Best performing role
+    best_role = role_compliance[0]["role"] if role_compliance and role_compliance[0]["compliance"] > 0 else "-"
+
+    return {
+        "overview": {
+            "overall_compliance": overall_compliance,
+            "total_alerts_sent": total_alerts_sent,
+            "total_acknowledgements": total_acks,
+            "active_reminders": len([r for r in reminders if r.get("enabled")]),
+            "best_role": best_role,
+            "employees_tracked": len(employee_scores),
+            "flagged_count": len(flagged),
+            "period_days": days,
+        },
+        "role_compliance": role_compliance,
+        "employee_leaderboard": employee_scores[:30],
+        "heatmap": heatmap,
+        "trend": trend,
+        "flagged_employees": flagged,
+    }
+
+
+
 async def process_task_reminders():
     """Called by scheduler - check and fire due reminders."""
     now = datetime.now(timezone.utc)
