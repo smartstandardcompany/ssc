@@ -188,3 +188,28 @@ async def create_and_push_notification(user_id: str, notif_type: str, title: str
             await send_push_to_user(user_id, title, message, data)
         if prefs.get("channel_whatsapp", False):
             await send_whatsapp_notification(message)
+
+
+
+async def send_whatsapp_notification(message: str):
+    """Send a WhatsApp notification via Twilio."""
+    try:
+        from twilio.rest import Client
+        config = await db.whatsapp_config.find_one({}, {"_id": 0})
+        if not config or not config.get("account_sid") or not config.get("auth_token"):
+            return
+        client_tw = Client(config["account_sid"], config["auth_token"])
+        recipients = [r.strip() for r in config.get("recipient_number", "").split(",") if r.strip()]
+        for recipient in recipients:
+            try:
+                client_tw.messages.create(
+                    from_=f'whatsapp:{config["phone_number"]}',
+                    body=message,
+                    to=f'whatsapp:{recipient}'
+                )
+            except Exception:
+                pass
+    except ImportError:
+        logger.warning("twilio not installed")
+    except Exception as e:
+        logger.warning(f"WhatsApp send error: {e}")
