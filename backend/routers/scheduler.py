@@ -789,6 +789,7 @@ async def get_ai_report_schedules(current_user: User = Depends(get_current_user)
     return {
         "schedules": schedules,
         "available_reports": [
+            {"type": "daily_digest", "name": "Daily Digest", "description": "Comprehensive daily business summary with alerts"},
             {"type": "cashflow_alert", "name": "Cash Flow Alert", "description": "Weekly cash flow prediction and alerts"},
             {"type": "employee_performance", "name": "Employee Performance", "description": "Weekly team performance summary"},
             {"type": "expense_anomaly", "name": "Expense Anomaly Alert", "description": "Daily unusual spending detection"},
