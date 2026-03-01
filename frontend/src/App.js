@@ -51,6 +51,15 @@ import LoanManagementPage from "./pages/LoanManagementPage";
 import NotificationPreferencesPage from "./pages/NotificationPreferencesPage";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
+import { ShortcutHelpDialog } from "@/components/ShortcutHelpDialog";
+
+function KeyboardShortcutProvider({ children }) {
+  // Import hook inside Router context since it uses useNavigate
+  const { useKeyboardShortcuts } = require('@/hooks/useKeyboardShortcuts');
+  useKeyboardShortcuts();
+  return children;
+}
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
