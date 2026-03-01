@@ -78,7 +78,11 @@ export default function ReconciliationPage() {
   const [flagForm, setFlagForm] = useState({ flag: '', notes: '' });
   const [autoMatches, setAutoMatches] = useState([]);
   const [matchLoading, setMatchLoading] = useState(false);
-  const [matchTab, setMatchTab] = useState('reconciliation'); // 'reconciliation' or 'auto-match'
+  const [matchTab, setMatchTab] = useState('reconciliation');
+  const [unmatchedData, setUnmatchedData] = useState(null);
+  const [unmatchedLoading, setUnmatchedLoading] = useState(false);
+  const [tolerance, setTolerance] = useState('5');
+  const [dateRange, setDateRange] = useState('3');
 
   useEffect(() => {
     api.get('/bank-statements').then(r => setStatements(r.data)).catch(() => {});
