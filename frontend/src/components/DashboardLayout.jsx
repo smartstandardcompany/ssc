@@ -89,6 +89,7 @@ const NAV_GROUPS = [
     items: [
       { path: '/users', icon: Shield, label: 'Users', perm: 'users', roles: ['admin'] },
       { path: '/settings', icon: Settings, label: 'Settings', perm: 'settings', roles: ['admin'] },
+      { path: '/notification-preferences', icon: Bell, label: 'Notif. Settings' },
       { path: '/help', icon: HelpCircle, label: 'Help & Guide' },
     ]
   },
