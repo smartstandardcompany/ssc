@@ -224,6 +224,8 @@ async def run_scheduled_job(job_type: str):
             report = await _build_period_digest(30)
         elif job_type == "eod_summary":
             report = await _build_eod_report()
+        elif job_type == "daily_digest":
+            report = await _build_daily_digest()
         else:
             log_entry["status"] = "unknown_type"
             await db.scheduler_logs.insert_one(log_entry)
