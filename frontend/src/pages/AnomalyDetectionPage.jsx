@@ -31,14 +31,42 @@ export default function AnomalyDetectionPage() {
   const [filter, setFilter] = useState('all');
   const [sevFilter, setSevFilter] = useState('all');
   const [history, setHistory] = useState([]);
+  const [schedule, setSchedule] = useState(null);
+  const [testingAutoScan, setTestingAutoScan] = useState(false);
 
-  useEffect(() => { loadHistory(); }, []);
+  useEffect(() => { loadHistory(); loadSchedule(); }, []);
 
   const loadHistory = async () => {
     try {
       const { data: h } = await api.get('/anomaly-detection/history');
       setHistory(h);
     } catch {}
+  };
+
+  const loadSchedule = async () => {
+    try {
+      const { data: s } = await api.get('/anomaly-detection/schedule');
+      setSchedule(s);
+    } catch {}
+  };
+
+  const saveSchedule = async (updates) => {
+    const newSettings = { ...schedule, ...updates };
+    try {
+      const { data } = await api.put('/anomaly-detection/schedule', newSettings);
+      setSchedule(data);
+      toast.success('Schedule saved');
+    } catch { toast.error('Failed to save schedule'); }
+  };
+
+  const testAutoScan = async () => {
+    setTestingAutoScan(true);
+    try {
+      const { data } = await api.post('/anomaly-detection/test-scan');
+      toast.success(`Auto-scan test complete: ${data.scan?.total_anomalies || 0} anomalies`);
+      loadHistory();
+    } catch { toast.error('Test scan failed'); }
+    finally { setTestingAutoScan(false); }
   };
 
   const runScan = async () => {
