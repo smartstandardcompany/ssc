@@ -141,6 +141,7 @@ function App() {
           <Route path="/kds" element={<KitchenDisplayPage />} />
           <Route path="/order-status" element={<OrderStatusPage />} />
           <Route path="/notification-preferences" element={isAuthenticated ? <NotificationPreferencesPage /> : <Navigate to="/login" />} />
+          <Route path="/task-reminders" element={isAuthenticated ? <TaskRemindersPage /> : <Navigate to="/login" />} />
         </Routes>
         </KeyboardShortcutProvider>
       </BrowserRouter>
