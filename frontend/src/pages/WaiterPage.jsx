@@ -524,7 +524,6 @@ export default function WaiterPage() {
   }
 
   // ============ ORDER VIEW ============
-  const [showMobileCart, setShowMobileCart] = useState(false);
 
   return (
     <div className="h-screen flex flex-col md:flex-row bg-stone-100 overflow-hidden" data-testid="waiter-order">
