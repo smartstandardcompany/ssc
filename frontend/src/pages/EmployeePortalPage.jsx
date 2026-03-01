@@ -460,7 +460,7 @@ export default function EmployeePortalPage() {
                             {task.last_acknowledged && <span className="text-emerald-500">Acknowledged: {new Date(task.last_acknowledged).toLocaleTimeString()}</span>}
                           </div>
                         </div>
-                        <Button size="sm" variant="outline" className="rounded-xl border-emerald-200 text-emerald-600 hover:bg-emerald-50" onClick={() => handleAcknowledge(task.id)} data-testid={`ack-task-${task.id}`}>
+                        <Button size="sm" variant="outline" className="rounded-xl border-emerald-200 text-emerald-600 hover:bg-emerald-50" onClick={() => handleAcknowledgeTask(task.id)} data-testid={`ack-task-${task.id}`}>
                           <CheckCircle size={14} className="mr-1" />Done
                         </Button>
                       </div>
