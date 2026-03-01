@@ -83,7 +83,9 @@ async def get_notification_preferences(current_user: User = Depends(get_current_
             "loan_installments": True,
             "expense_anomalies": True,
             "document_expiry": True,
-            "daily_summary": False
+            "daily_summary": False,
+            "channel_push": True,
+            "channel_whatsapp": False
         }
     return prefs
 
