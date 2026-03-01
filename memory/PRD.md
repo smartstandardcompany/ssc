@@ -56,6 +56,21 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - **Actions**: Ctrl+F (Filter), Ctrl+Shift+E (Export)
 - Updated shortcut modal with all new entries grouped by category
 
+### Feature: Automated Reconciliation Alerts (COMPLETED)
+- **Backend**: Weekly scheduled job that scans all bank statements for unmatched transactions above configurable threshold
+  - `GET /api/reconciliation-alerts/settings` — configurable threshold, schedule (day/hour), channels, enabled toggle
+  - `PUT /api/reconciliation-alerts/settings` — updates settings and manages APScheduler job
+  - `POST /api/reconciliation-alerts/run` — manual trigger, generates alert, sends WhatsApp/Email/Push notifications
+  - `GET /api/reconciliation-alerts` — alert history sorted by date
+  - `GET /api/reconciliation-alerts/latest` — most recent alert
+  - Flags high-value unmatched transactions with statement summaries and match rates
+- **Frontend**: New "Alerts" tab on Reconciliation page
+  - Alert Settings card with threshold dropdown (SAR 100-5000), schedule day/hour, enabled toggle, channel badges
+  - "Run Now" button for manual execution
+  - Alert History with Flagged/Clean status badges, statement summaries, top flagged item previews
+- **Notifications**: Sends via WhatsApp, Push, and Email channels (WhatsApp/Email require credentials)
+- **Testing**: 100% pass rate (20/20 backend, all frontend features verified)
+
 ### Previous Session Features
 1. Enhanced Predictive Analytics (Inventory Demand, CLV, Peak Hours, Profit Decomposition)
 2. Custom Report Builder with Saved Views, Column Toggles, CSV Export
