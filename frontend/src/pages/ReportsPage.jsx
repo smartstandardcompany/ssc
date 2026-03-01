@@ -8,7 +8,213 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { FileText, FileSpreadsheet, Users, UserCheck, CalendarDays, TrendingUp, TrendingDown } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+
+function HRAnalyticsTab() {
+  const [employees, setEmployees] = useState([]);
+  const [leaves, setLeaves] = useState([]);
+  const [loans, setLo] = useState([]);
+  const [loanStats, setLoanStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetch = async () => {
+      try {
+        const [empRes, leaveRes, loanRes, lsRes] = await Promise.all([
+          api.get('/employees'), api.get('/leaves'),
+          api.get('/loans'), api.get('/loans/summary/stats')
+        ]);
+        setEmployees(empRes.data.filter(e => e.active !== false));
+        setLeaves(leaveRes.data);
+        setLo(loanRes.data);
+        setLoanStats(lsRes.data);
+      } catch {}
+      finally { setLoading(false); }
+    };
+    fetch();
+  }, []);
+
+  if (loading) return <div className="py-12 text-center text-muted-foreground">Loading HR data...</div>;
+
+  // Department distribution
+  const deptMap = {};
+  employees.forEach(e => { const d = e.position || 'Unassigned'; deptMap[d] = (deptMap[d] || 0) + 1; });
+  const deptData = Object.entries(deptMap).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 8);
+
+  // Leave type distribution
+  const leaveTypeMap = {};
+  leaves.filter(l => l.status === 'approved').forEach(l => { leaveTypeMap[l.leave_type] = (leaveTypeMap[l.leave_type] || 0) + (l.days || 0); });
+  const leaveTypeData = Object.entries(leaveTypeMap).map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value }));
+
+  // Monthly leave trend
+  const monthlyLeave = {};
+  leaves.filter(l => l.status === 'approved').forEach(l => {
+    const m = new Date(l.start_date).toLocaleDateString('en-US', { month: 'short' });
+    monthlyLeave[m] = (monthlyLeave[m] || 0) + (l.days || 0);
+  });
+  const leaveMonthData = Object.entries(monthlyLeave).map(([month, days]) => ({ month, days }));
+
+  // Loan type breakdown
+  const loanTypeMap = {};
+  loans.forEach(l => { loanTypeMap[l.loan_type] = (loanTypeMap[l.loan_type] || 0) + l.amount; });
+  const loanTypeData = Object.entries(loanTypeMap).map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1).replace('_', ' '), value }));
+
+  // Radar chart: Department metrics
+  const radarData = deptData.slice(0, 6).map(d => ({
+    department: d.name.substring(0, 12),
+    headcount: d.value,
+    leaves: leaves.filter(l => employees.find(e => e.position === d.name && e.name === l.employee_name) && l.status === 'approved').length,
+    loans: loans.filter(l => employees.find(e => e.position === d.name && e.name === l.employee_name)).length,
+  }));
+
+  // Salary distribution buckets
+  const salaryBuckets = { '0-2K': 0, '2K-4K': 0, '4K-6K': 0, '6K-8K': 0, '8K+': 0 };
+  employees.forEach(e => {
+    const s = e.salary || 0;
+    if (s <= 2000) salaryBuckets['0-2K']++;
+    else if (s <= 4000) salaryBuckets['2K-4K']++;
+    else if (s <= 6000) salaryBuckets['4K-6K']++;
+    else if (s <= 8000) salaryBuckets['6K-8K']++;
+    else salaryBuckets['8K+']++;
+  });
+  const salaryData = Object.entries(salaryBuckets).map(([range, count]) => ({ range, count }));
+
+  const totalSalary = employees.reduce((s, e) => s + (e.salary || 0), 0);
+
+  return (
+    <>
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+        {[
+          { label: 'Employees', value: employees.length, color: 'text-blue-600' },
+          { label: 'Monthly Payroll', value: `SAR ${totalSalary.toLocaleString()}`, color: 'text-emerald-600' },
+          { label: 'Avg Salary', value: `SAR ${employees.length ? Math.round(totalSalary / employees.length).toLocaleString() : 0}`, color: 'text-purple-600' },
+          { label: 'Active Loans', value: loanStats?.active_loans || 0, color: 'text-amber-600' },
+          { label: 'Outstanding', value: `SAR ${(loanStats?.total_outstanding || 0).toLocaleString()}`, color: 'text-red-600' },
+          { label: 'Total Leaves', value: leaves.filter(l => l.status === 'approved').length, color: 'text-orange-600' },
+        ].map(s => (
+          <Card key={s.label} className="dark:bg-stone-900 dark:border-stone-700">
+            <CardContent className="p-4 text-center">
+              <p className={`text-lg font-bold font-outfit ${s.color}`}>{s.value}</p>
+              <p className="text-xs text-muted-foreground">{s.label}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Charts Row 1: Department Pie + Salary Distribution */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card className="dark:bg-stone-900 dark:border-stone-700">
+          <CardHeader><CardTitle className="font-outfit text-base dark:text-white">Department Distribution</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie data={deptData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label={({ name, value }) => `${name}: ${value}`}>
+                  {deptData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="dark:bg-stone-900 dark:border-stone-700">
+          <CardHeader><CardTitle className="font-outfit text-base dark:text-white">Salary Distribution</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={salaryData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="range" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Bar dataKey="count" name="Employees" fill="#F5841F" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Row 2: Radar + Leave Trend */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {radarData.length > 0 && (
+          <Card className="dark:bg-stone-900 dark:border-stone-700" data-testid="radar-chart-card">
+            <CardHeader><CardTitle className="font-outfit text-base dark:text-white">Department Radar</CardTitle></CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={280}>
+                <RadarChart data={radarData}>
+                  <PolarGrid stroke="#e5e7eb" />
+                  <PolarAngleAxis dataKey="department" tick={{ fontSize: 10 }} />
+                  <PolarRadiusAxis tick={{ fontSize: 10 }} />
+                  <Radar name="Headcount" dataKey="headcount" stroke="#F5841F" fill="#F5841F" fillOpacity={0.3} />
+                  <Radar name="Leaves" dataKey="leaves" stroke="#22C55E" fill="#22C55E" fillOpacity={0.2} />
+                  <Radar name="Loans" dataKey="loans" stroke="#0EA5E9" fill="#0EA5E9" fillOpacity={0.2} />
+                  <Legend />
+                  <Tooltip />
+                </RadarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card className="dark:bg-stone-900 dark:border-stone-700">
+          <CardHeader><CardTitle className="font-outfit text-base dark:text-white">Leave by Type</CardTitle></CardHeader>
+          <CardContent>
+            {leaveTypeData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
+                  <Pie data={leaveTypeData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={100} label={({ name, value }) => `${name}: ${value}d`}>
+                    {leaveTypeData.map((_, i) => <Cell key={i} fill={['#22C55E', '#0EA5E9', '#F59E0B', '#EF4444', '#8B5CF6'][i % 5]} />)}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-center text-muted-foreground py-8">No approved leaves yet</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Row 3: Loan Breakdown + Monthly Leave Trend */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {loanTypeData.length > 0 && (
+          <Card className="dark:bg-stone-900 dark:border-stone-700">
+            <CardHeader><CardTitle className="font-outfit text-base dark:text-white">Loan Breakdown by Type</CardTitle></CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={loanTypeData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis type="number" tickFormatter={v => `SAR ${(v / 1000).toFixed(0)}K`} tick={{ fontSize: 10 }} />
+                  <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11 }} />
+                  <Tooltip formatter={v => `SAR ${Number(v).toLocaleString()}`} />
+                  <Bar dataKey="value" name="Amount" fill="#F59E0B" radius={[0, 6, 6, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {leaveMonthData.length > 0 && (
+          <Card className="dark:bg-stone-900 dark:border-stone-700">
+            <CardHeader><CardTitle className="font-outfit text-base dark:text-white">Monthly Leave Trend</CardTitle></CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={250}>
+                <AreaChart data={leaveMonthData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Area type="monotone" dataKey="days" name="Leave Days" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </>
+  );
+}
 import { BranchFilter } from '@/components/BranchFilter';
 import api from '@/lib/api';
 import { toast } from 'sonner';
