@@ -121,6 +121,14 @@ export default function AnalyticsPage() {
         const { data } = await api.get('/reports/expense-anomalies'); setExpenseAnomalies(data);
       } else if (section === 'supplier_optimization' && !supplierOptimization) {
         const { data } = await api.get('/reports/supplier-optimization'); setSupplierOptimization(data);
+      } else if (section === 'inventory_demand' && !inventoryDemand) {
+        const { data } = await api.get('/predictions/inventory-demand'); setInventoryDemand(data);
+      } else if (section === 'customer_clv' && !customerCLV) {
+        const { data } = await api.get('/predictions/customer-clv'); setCustomerCLV(data);
+      } else if (section === 'peak_hours' && !peakHours) {
+        const { data } = await api.get('/predictions/peak-hours'); setPeakHours(data);
+      } else if (section === 'profit_decomposition' && !profitDecomp) {
+        const { data } = await api.get('/predictions/profit-decomposition'); setProfitDecomp(data);
       }
     } catch { toast.error('Failed to load analytics'); }
   };
