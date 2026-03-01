@@ -262,29 +262,32 @@ export default function CashierPOSPage() {
     navigate('/cashier');
   };
 
+  const [showMobilePosCart, setShowMobilePosCart] = useState(false);
+
   if (!user) return null;
 
   return (
-    <div className="h-screen flex bg-stone-100 overflow-hidden" data-testid="cashier-pos">
+    <div className="h-screen flex flex-col md:flex-row bg-stone-100 overflow-hidden" data-testid="cashier-pos">
       {/* Left: Menu Section */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="bg-white border-b p-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
-              <UtensilsCrossed size={20} className="text-orange-600" />
+        <div className="bg-white border-b p-2 sm:p-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+              <UtensilsCrossed size={16} className="text-orange-600 sm:hidden" />
+              <UtensilsCrossed size={20} className="text-orange-600 hidden sm:block" />
             </div>
             <div>
-              <h1 className="font-bold text-lg font-outfit" data-testid="pos-title">Restaurant POS</h1>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Building2 size={12} />
+              <h1 className="font-bold text-sm sm:text-lg font-outfit" data-testid="pos-title">Restaurant POS</h1>
+              <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
+                <Building2 size={10} />
                 <span className="font-medium text-orange-600">{user.branch_name || 'Main Branch'}</span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {stats && (
-              <div className="flex gap-4 text-xs">
+              <div className="hidden sm:flex gap-4 text-xs">
                 <div className="text-center px-3 py-1 bg-emerald-50 rounded-lg">
                   <p className="text-emerald-600 font-medium">Today Sales</p>
                   <p className="font-bold text-emerald-700" data-testid="today-sales">SAR {stats.today?.total_sales?.toLocaleString()}</p>
@@ -295,6 +298,11 @@ export default function CashierPOSPage() {
                 </div>
               </div>
             )}
+            {/* Mobile cart toggle */}
+            <Button size="sm" className="md:hidden bg-orange-500 hover:bg-orange-600 relative h-8 w-8 p-0" onClick={() => setShowMobilePosCart(true)} data-testid="pos-mobile-cart-toggle">
+              <ShoppingCart size={16} />
+              {cart.length > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] flex items-center justify-center text-white">{cart.length}</span>}
+            </Button>
             <Button 
               size="sm" 
               variant={currentShift ? 'default' : 'outline'}
