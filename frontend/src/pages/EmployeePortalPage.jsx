@@ -249,6 +249,7 @@ export default function EmployeePortalPage() {
               <TabsTrigger value="loans" className="text-xs sm:text-sm">Loans ({myLoans.length})</TabsTrigger>
               <TabsTrigger value="requests" className="text-xs sm:text-sm">Requests</TabsTrigger>
               <TabsTrigger value="letters" className="text-xs sm:text-sm">Letters</TabsTrigger>
+              <TabsTrigger value="tasks" className="text-xs sm:text-sm">My Tasks</TabsTrigger>
             </TabsList>
           </div>
 
