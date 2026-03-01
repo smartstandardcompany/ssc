@@ -558,6 +558,178 @@ export default function ReconciliationPage() {
           </Card>
         )}
 
+        {/* Alerts Tab */}
+        {matchTab === 'alerts' && (
+          <div className="space-y-4" data-testid="alerts-section">
+            {/* Alert Settings Card */}
+            <Card className="dark:bg-stone-900 dark:border-stone-700">
+              <CardHeader className="py-3 px-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-outfit flex items-center gap-2">
+                    <Settings size={14} /> Alert Settings
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" onClick={runAlertNow} disabled={runningAlert} data-testid="run-alert-btn"
+                      className="border-orange-200 text-orange-600 hover:bg-orange-50">
+                      <Play size={13} className="mr-1" />{runningAlert ? 'Running...' : 'Run Now'}
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pb-4">
+                {alertSettings && (
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs text-muted-foreground whitespace-nowrap">Threshold (SAR):</Label>
+                      <Select value={String(alertSettings.threshold)} onValueChange={v => saveAlertSettings({ threshold: parseInt(v) })} data-testid="alert-threshold">
+                        <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="100">100</SelectItem>
+                          <SelectItem value="250">250</SelectItem>
+                          <SelectItem value="500">500</SelectItem>
+                          <SelectItem value="1000">1,000</SelectItem>
+                          <SelectItem value="2500">2,500</SelectItem>
+                          <SelectItem value="5000">5,000</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs text-muted-foreground whitespace-nowrap">Schedule:</Label>
+                      <Select value={alertSettings.day_of_week} onValueChange={v => saveAlertSettings({ day_of_week: v })} data-testid="alert-day">
+                        <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="sun">Sunday</SelectItem>
+                          <SelectItem value="mon">Monday</SelectItem>
+                          <SelectItem value="tue">Tuesday</SelectItem>
+                          <SelectItem value="wed">Wednesday</SelectItem>
+                          <SelectItem value="thu">Thursday</SelectItem>
+                          <SelectItem value="fri">Friday</SelectItem>
+                          <SelectItem value="sat">Saturday</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <span className="text-xs text-muted-foreground">at</span>
+                      <Select value={String(alertSettings.hour)} onValueChange={v => saveAlertSettings({ hour: parseInt(v) })} data-testid="alert-hour">
+                        <SelectTrigger className="h-8 w-20 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {[6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21].map(h => (
+                            <SelectItem key={h} value={String(h)}>{h}:00</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs text-muted-foreground">Enabled:</Label>
+                      <button
+                        onClick={() => saveAlertSettings({ enabled: !alertSettings.enabled })}
+                        data-testid="alert-toggle"
+                        className={`relative w-10 h-5 rounded-full transition-colors ${alertSettings.enabled ? 'bg-emerald-500' : 'bg-stone-300 dark:bg-stone-600'}`}>
+                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${alertSettings.enabled ? 'translate-x-5' : ''}`} />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Label className="text-xs text-muted-foreground">Channels:</Label>
+                      {['whatsapp', 'push', 'email'].map(ch => (
+                        <Badge key={ch} variant="outline"
+                          className={`text-[9px] cursor-pointer transition-colors ${(alertSettings.channels || []).includes(ch) ? 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400' : 'opacity-40'}`}
+                          onClick={() => {
+                            const chs = alertSettings.channels || [];
+                            const updated = chs.includes(ch) ? chs.filter(c => c !== ch) : [...chs, ch];
+                            saveAlertSettings({ channels: updated });
+                          }}>
+                          {ch}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Alert History */}
+            <Card className="dark:bg-stone-900 dark:border-stone-700">
+              <CardHeader className="py-3 px-4">
+                <CardTitle className="text-sm font-outfit flex items-center gap-2">
+                  <Clock size={14} /> Alert History
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {alertLoading ? (
+                  <div className="p-8 text-center text-muted-foreground">Loading alerts...</div>
+                ) : alertHistory.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <Bell size={36} className="mx-auto text-stone-300 mb-3" />
+                    <p className="text-muted-foreground text-sm font-medium">No Alerts Yet</p>
+                    <p className="text-xs text-stone-400 mt-1">Click "Run Now" to generate your first reconciliation alert.</p>
+                  </div>
+                ) : (
+                  <div className="divide-y dark:divide-stone-700" data-testid="alert-history-list">
+                    {alertHistory.map((alert, idx) => (
+                      <div key={alert.id} className="p-4 hover:bg-stone-50/50 dark:hover:bg-stone-800/50" data-testid={`alert-row-${idx}`}>
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div className="flex items-center gap-2">
+                            {alert.status === 'flagged' ? (
+                              <AlertOctagon size={18} className="text-red-500 shrink-0" />
+                            ) : (
+                              <Shield size={18} className="text-emerald-500 shrink-0" />
+                            )}
+                            <div>
+                              <p className="text-sm font-medium">
+                                {alert.status === 'flagged'
+                                  ? `${alert.total_flagged} flagged transactions above SAR ${alert.threshold?.toLocaleString()}`
+                                  : 'All clear — no flagged transactions'}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {new Date(alert.created_at).toLocaleString()} &middot; {alert.total_statements} statements &middot; {alert.total_unmatched} unmatched total
+                              </p>
+                            </div>
+                          </div>
+                          <Badge className={alert.status === 'flagged' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}>
+                            {alert.status === 'flagged' ? 'Flagged' : 'Clean'}
+                          </Badge>
+                        </div>
+
+                        {/* Statement summaries */}
+                        {alert.statement_summaries?.length > 0 && (
+                          <div className="ml-7 space-y-1.5 mb-2">
+                            {alert.statement_summaries.map((ss, si) => (
+                              <div key={si} className="flex items-center gap-2 text-xs">
+                                <span className="font-medium">{ss.file_name}</span>
+                                <span className="text-muted-foreground">{ss.match_rate}% matched</span>
+                                <span className="text-muted-foreground">({ss.matched}/{ss.total_txns})</span>
+                                {ss.flagged > 0 && (
+                                  <Badge variant="outline" className="text-[8px] border-red-200 text-red-600">{ss.flagged} flagged (SAR {ss.flagged_amount?.toLocaleString()})</Badge>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Flagged items preview */}
+                        {alert.flagged_items?.length > 0 && (
+                          <div className="ml-7 border-l-2 border-red-200 dark:border-red-800 pl-3 space-y-1">
+                            <p className="text-[10px] font-semibold uppercase text-stone-400">Top Flagged</p>
+                            {alert.flagged_items.slice(0, 4).map((fi, fii) => (
+                              <div key={fii} className="flex items-center gap-2 text-xs">
+                                <span className="font-mono">{fi.date}</span>
+                                <Badge variant="outline" className={`text-[8px] ${fi.type === 'credit' ? 'border-emerald-200 text-emerald-600' : 'border-red-200 text-red-600'}`}>{fi.type}</Badge>
+                                <span className="font-semibold">SAR {fi.amount?.toLocaleString()}</span>
+                                <span className="text-muted-foreground truncate max-w-[200px]">{fi.description}</span>
+                              </div>
+                            ))}
+                            {alert.flagged_items.length > 4 && (
+                              <p className="text-[10px] text-stone-400">+ {alert.flagged_items.length - 4} more</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Reconciliation Table */}
         {loading && <div className="text-center py-8 text-muted-foreground">Loading reconciliation data...</div>}
         {matchTab === 'reconciliation' && !loading && reconciliation && (
