@@ -8,31 +8,29 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - **Frontend:** React, TailwindCSS, Shadcn UI, Recharts (Radar/Pie/Bar/Area), react-grid-layout, date-fns
 - **Database:** MongoDB
 - **AI:** emergentintegrations (GPT-4o Vision)
+- **Push:** pywebpush + VAPID keys for browser push notifications
 
 ## Latest Updates (Mar 1, 2026)
 
-### Customer-Facing Order Display (COMPLETED)
-- Dark theme with orange gradient header and live clock (HH:MM:SS)
-- Status summary bar showing Preparing/Ready counts
-- Order cards with progress bars and estimated wait time
-- Delayed order highlighting (>15min turns red with flame icon)
-- Ready orders glow animation effect
-- Table number badges for dine-in orders
-- Mobile-responsive (stacks columns on small screens)
-- "No Active Orders" empty state
-- Live indicator in footer with auto-refresh every 3s
+### Phase 1: Enhanced Predictive Analytics (COMPLETED)
+- **Inventory Demand Forecast** — Weighted moving average per item, day-of-week patterns, stockout prediction
+- **Customer Lifetime Value (CLV)** — Predicts annual value, purchase frequency, retention, segments (Platinum/Gold/Silver/Bronze)
+- **Peak Hours Analysis** — Hourly order distribution, peak/slow hours, staffing recommendations, heatmap
+- **Profit Decomposition** — Daily profit vs 7-day trend, day-of-week seasonality, monthly P&L, anomaly detection
+- New tabs added to Analytics Dashboard Predictive Hub
 
-### Advanced Export Options (COMPLETED)
-- New export types: **Loans**, **Attendance**, **Leaves** (Excel + PDF)
-- Reusable `ExportButton` component (`/app/frontend/src/components/ExportButton.jsx`)
-- Export dialogs with Excel/PDF format selection
-- Added to: Employees page, Loans page, Leave Approvals page
-- Backend: POST `/api/export/data` with `{type, format}`
+### Phase 2: Report Customization (COMPLETED)
+- **Custom Report Builder** — Select report type (Sales/Expenses/Stock/Employees/Customers), date range, branch filter
+- **Column Visibility Toggles** — Click to show/hide columns in report output
+- **Save View** — Save custom report configurations and reload them later
+- **CSV Export** — One-click CSV download of any custom report
+- Backend: `/api/report-views` CRUD, `/api/report-views/data/{type}` filtered data
 
-### Mobile POS/Waiter Optimizations (COMPLETED)
-- **Cashier POS**: Slide-in cart overlay on mobile, floating orange cart bar at bottom, responsive 2-col menu grid, hidden stats on small screens
-- **Waiter Mode**: Same mobile cart pattern, responsive menu grid, mobile-friendly header
-- Both pages: Cart panel hidden on desktop sidebar, shown as full-height overlay on mobile with close button
+### Phase 3: Push Notifications (COMPLETED)
+- **Browser Push** — Service Worker registration, VAPID key-based Web Push subscription
+- **Notification Preferences** — Per-type toggles: Low Stock, Leave Requests, Order Updates, Loan Installments, Expense Anomalies, Document Expiry, Daily Summary
+- **Notification Preferences Page** — New page at `/notification-preferences` with sidebar link
+- Backend: `/api/push/` endpoints for subscribe, unsubscribe, preferences, status
 
 ### All Completed Features
 - Employee Self-Service Portal (profile, financials, leave balance bars, loans, letters, edit profile)
@@ -46,6 +44,12 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - KDS with Table Banners, Keyboard Shortcuts
 - AI CCTV, ZATCA Phase 2, i18n (EN/AR/UR/HI)
 - Full core ERP: Sales, Expenses, Customers, Suppliers, Employees, Stock, Invoicing
+- Customer-Facing Order Display (dark theme, progress bars, estimated wait time)
+- Advanced Export (Loans, Attendance, Leaves — Excel + PDF)
+- Mobile POS/Waiter Optimizations (slide-in cart, floating action bar)
+- 14 Predictive Analytics Models (Expense Forecast, Stock Reorder, Revenue Trends, Customer Churn, Margin Optimizer, Cash Flow, Seasonal, Team Score, Expense Anomalies, Supplier Optimization, Inventory Demand, CLV, Peak Hours, Profit Decomposition)
+- Custom Report Builder with Saved Views
+- Push Notification Preferences with per-type toggles
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
@@ -53,6 +57,5 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - Cashier/Waiter/Kitchen PIN: 1234
 
 ## Backlog / Future Tasks
-- More predictive analytics models
-- Additional report customization options
-- Push notifications for mobile users
+- Bank Reconciliation: Full statement analyzer logic
+- Expand system-wide keyboard shortcuts
