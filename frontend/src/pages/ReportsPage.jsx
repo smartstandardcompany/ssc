@@ -1009,6 +1009,11 @@ export default function ReportsPage() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* HR ANALYTICS */}
+          <TabsContent value="hr_analytics" className="space-y-6" data-testid="hr-analytics-content">
+            <HRAnalyticsTab />
+          </TabsContent>
         </Tabs>
       </div>
     </DashboardLayout>
