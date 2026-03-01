@@ -474,3 +474,162 @@ async def flag_reconciliation_row(stmt_id: str, body: dict, current_user: User =
 async def get_reconciliation_flags(stmt_id: str, current_user: User = Depends(get_current_user)):
     flags = await db.reconciliation_flags.find({"statement_id": stmt_id}, {"_id": 0}).to_list(10000)
     return {f["row_key"]: {"flag": f["flag"], "notes": f.get("notes", "")} for f in flags}
+
+
+# =====================================================
+# AUTO-MATCHING ENGINE
+# =====================================================
+
+@router.post("/bank-statements/{stmt_id}/auto-match")
+async def auto_match_transactions(stmt_id: str, tolerance: float = 1.0, date_range: int = 2, current_user: User = Depends(get_current_user)):
+    """Smart auto-matching of bank transactions to system records."""
+    stmt = await db.bank_statements.find_one({"id": stmt_id}, {"_id": 0})
+    if not stmt:
+        raise HTTPException(status_code=404, detail="Statement not found")
+
+    txns = stmt.get("transactions", [])
+    existing_matches = await db.auto_matches.find({"statement_id": stmt_id}, {"_id": 0}).to_list(50000)
+    matched_txn_indices = {m["txn_index"] for m in existing_matches}
+
+    # Load system records
+    sales = await db.sales.find({}, {"_id": 0}).to_list(50000)
+    expenses = await db.expenses.find({}, {"_id": 0}).to_list(20000)
+    supplier_payments = await db.supplier_payments.find({}, {"_id": 0}).to_list(20000)
+    suppliers = {s["id"]: s["name"] for s in await db.suppliers.find({}, {"_id": 0, "id": 1, "name": 1}).to_list(1000)}
+
+    def parse_date(d):
+        if not d:
+            return None
+        for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y", "%m/%d/%Y", "%Y/%m/%d"):
+            try:
+                return datetime.strptime(d[:10], fmt).date()
+            except:
+                pass
+        return None
+
+    matched = []
+    unmatched = []
+    stats = {"total_txns": len(txns), "auto_matched": 0, "already_matched": len(matched_txn_indices), "unmatched": 0}
+
+    for idx, txn in enumerate(txns):
+        if idx in matched_txn_indices:
+            continue
+
+        # Skip internal/fee transactions
+        cat = txn.get("category", "")
+        if cat in ("bank_fees", "vat_fees", "pos_fees"):
+            continue
+
+        txn_amount = txn.get("credit", 0) or txn.get("debit", 0)
+        if txn_amount == 0:
+            continue
+
+        txn_date = parse_date(txn.get("date", ""))
+        is_credit = txn.get("credit", 0) > 0
+
+        best_match = None
+        best_score = 0
+
+        # Try matching against sales (credits)
+        if is_credit:
+            for s in sales:
+                sale_amt = s.get("final_amount", s.get("amount", 0) - s.get("discount", 0))
+                # Check bank payment component
+                bank_amt = sum(p["amount"] for p in s.get("payment_details", []) if p.get("mode") == "bank")
+                check_amt = bank_amt if bank_amt > 0 else sale_amt
+
+                if abs(check_amt - txn_amount) <= tolerance:
+                    sale_date = parse_date(s.get("date", ""))
+                    date_diff = abs((txn_date - sale_date).days) if txn_date and sale_date else 99
+                    if date_diff <= date_range:
+                        score = 100 - (date_diff * 10) - (abs(check_amt - txn_amount) * 5)
+                        if score > best_score:
+                            best_score = score
+                            best_match = {"type": "sale", "id": s["id"], "amount": check_amt, "date": s.get("date", "")[:10], "desc": s.get("description", "")[:50] or f"Sale #{s['id'][:8]}", "score": round(score)}
+
+        # Try matching against expenses (debits)
+        if not is_credit:
+            for e in expenses:
+                if abs(e["amount"] - txn_amount) <= tolerance:
+                    exp_date = parse_date(e.get("date", ""))
+                    date_diff = abs((txn_date - exp_date).days) if txn_date and exp_date else 99
+                    if date_diff <= date_range:
+                        score = 100 - (date_diff * 10) - (abs(e["amount"] - txn_amount) * 5)
+                        if score > best_score:
+                            best_score = score
+                            best_match = {"type": "expense", "id": e["id"], "amount": e["amount"], "date": e.get("date", "")[:10], "desc": e.get("description", "")[:50] or e.get("category", "Expense"), "score": round(score)}
+
+            # Try supplier payments
+            for sp in supplier_payments:
+                if abs(sp["amount"] - txn_amount) <= tolerance:
+                    sp_date = parse_date(sp.get("date", ""))
+                    date_diff = abs((txn_date - sp_date).days) if txn_date and sp_date else 99
+                    if date_diff <= date_range:
+                        score = 100 - (date_diff * 10) - (abs(sp["amount"] - txn_amount) * 5)
+                        sup_name = suppliers.get(sp.get("supplier_id", ""), "")
+                        # Boost score if supplier name appears in description
+                        if sup_name and sup_name.upper() in txn.get("description", "").upper():
+                            score += 20
+                        if score > best_score:
+                            best_score = score
+                            best_match = {"type": "supplier_payment", "id": sp["id"], "amount": sp["amount"], "date": sp.get("date", "")[:10], "desc": f"To {sup_name}" if sup_name else sp.get("description", "")[:50], "score": round(score)}
+
+        if best_match and best_score >= 60:
+            match_record = {
+                "id": str(uuid.uuid4()),
+                "statement_id": stmt_id,
+                "txn_index": idx,
+                "txn_date": txn.get("date", ""),
+                "txn_amount": txn_amount,
+                "txn_desc": txn.get("description", "")[:100],
+                "match_type": best_match["type"],
+                "match_id": best_match["id"],
+                "match_amount": best_match["amount"],
+                "match_date": best_match["date"],
+                "match_desc": best_match["desc"],
+                "confidence": best_match["score"],
+                "status": "auto",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.auto_matches.insert_one(match_record)
+            del match_record["_id"]
+            matched.append(match_record)
+            stats["auto_matched"] += 1
+        else:
+            unmatched.append({
+                "index": idx,
+                "date": txn.get("date", ""),
+                "amount": txn_amount,
+                "type": "credit" if is_credit else "debit",
+                "description": txn.get("description", "")[:100],
+                "best_score": best_score if best_match else 0
+            })
+            stats["unmatched"] += 1
+
+    return {"matched": matched, "unmatched": unmatched[:50], "stats": stats}
+
+
+@router.get("/bank-statements/{stmt_id}/matches")
+async def get_auto_matches(stmt_id: str, current_user: User = Depends(get_current_user)):
+    """Get all auto-matched transactions for a statement."""
+    matches = await db.auto_matches.find({"statement_id": stmt_id}, {"_id": 0}).to_list(50000)
+    return matches
+
+
+@router.post("/bank-statements/{stmt_id}/matches/{match_id}/confirm")
+async def confirm_match(stmt_id: str, match_id: str, current_user: User = Depends(get_current_user)):
+    """Confirm an auto-match."""
+    result = await db.auto_matches.update_one(
+        {"id": match_id, "statement_id": stmt_id},
+        {"$set": {"status": "confirmed", "confirmed_by": current_user.id, "confirmed_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Match not found")
+    return {"message": "Match confirmed"}
+
+
+@router.delete("/bank-statements/{stmt_id}/matches/{match_id}")
+async def reject_match(stmt_id: str, match_id: str, current_user: User = Depends(get_current_user)):
+    """Reject/delete an auto-match."""
+    await db.auto_matches.delete_one({"id": match_id, "statement_id": stmt_id})
+    return {"message": "Match rejected"}
