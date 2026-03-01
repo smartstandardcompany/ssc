@@ -51,6 +51,7 @@ export default function EmployeePortalPage() {
   const [requests, setRequests] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [myLoans, setMyLoans] = useState([]);
+  const [myTasks, setMyTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showLeaveForm, setShowLeaveForm] = useState(false);
   const [showRequestForm, setShowRequestForm] = useState(false);
