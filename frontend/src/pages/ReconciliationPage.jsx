@@ -358,7 +358,12 @@ export default function ReconciliationPage() {
             </button>
             <button onClick={() => setMatchTab('auto-match')}
               className={`px-4 py-1.5 text-sm rounded-lg transition-colors flex items-center gap-1.5 ${matchTab === 'auto-match' ? 'bg-white dark:bg-stone-700 shadow font-medium' : 'text-muted-foreground hover:text-foreground'}`}>
-              <Link size={13} />Transaction Matches ({autoMatches.length})
+              <Link size={13} />Matched ({autoMatches.length})
+            </button>
+            <button onClick={() => setMatchTab('unmatched')}
+              className={`px-4 py-1.5 text-sm rounded-lg transition-colors flex items-center gap-1.5 ${matchTab === 'unmatched' ? 'bg-white dark:bg-stone-700 shadow font-medium' : 'text-muted-foreground hover:text-foreground'}`}
+              data-testid="unmatched-tab">
+              <Unlink size={13} />Unmatched ({unmatchedData?.total || 0})
             </button>
           </div>
         )}
