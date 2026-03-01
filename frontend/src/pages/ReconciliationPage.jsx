@@ -102,7 +102,7 @@ export default function ReconciliationPage() {
     finally { setLoading(false); }
   };
 
-  const handleStmtChange = (val) => { setSelectedStmt(val); loadReconciliation(val); loadAutoMatches(val); };
+  const handleStmtChange = (val) => { setSelectedStmt(val); loadReconciliation(val); loadAutoMatches(val); loadUnmatched(val); };
 
   const loadAutoMatches = async (stmtId) => {
     if (!stmtId) return;
@@ -112,15 +112,39 @@ export default function ReconciliationPage() {
     } catch {}
   };
 
+  const loadUnmatched = async (stmtId) => {
+    if (!stmtId) return;
+    setUnmatchedLoading(true);
+    try {
+      const { data } = await api.get(`/bank-statements/${stmtId}/unmatched`);
+      setUnmatchedData(data);
+    } catch {}
+    finally { setUnmatchedLoading(false); }
+  };
+
   const runAutoMatch = async () => {
     if (!selectedStmt) return;
     setMatchLoading(true);
     try {
-      const { data } = await api.post(`/bank-statements/${selectedStmt}/auto-match?tolerance=5&date_range=3`);
+      const { data } = await api.post(`/bank-statements/${selectedStmt}/auto-match?tolerance=${tolerance}&date_range=${dateRange}`);
       toast.success(`Auto-matched ${data.stats.auto_matched} transactions, ${data.stats.unmatched} unmatched`);
       setAutoMatches(prev => [...prev, ...data.matched]);
+      loadUnmatched(selectedStmt);
     } catch { toast.error('Auto-match failed'); }
     finally { setMatchLoading(false); }
+  };
+
+  const manualLink = async (txnIndex, matchType, matchId) => {
+    try {
+      const { data } = await api.post(`/bank-statements/${selectedStmt}/manual-match`, {
+        txn_index: txnIndex, match_type: matchType, match_id: matchId
+      });
+      setAutoMatches(prev => [...prev, data]);
+      setUnmatchedData(prev => prev ? { ...prev, unmatched: prev.unmatched.filter(u => u.index !== txnIndex), total: prev.total - 1 } : prev);
+      toast.success('Transaction manually linked');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to link');
+    }
   };
 
   const confirmMatch = async (matchId) => {
