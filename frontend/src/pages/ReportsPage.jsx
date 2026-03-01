@@ -202,6 +202,7 @@ export default function ReportsPage() {
             <TabsTrigger value="branch" className="text-xs sm:text-sm">Compare</TabsTrigger>
             <TabsTrigger value="trend" className="text-xs sm:text-sm">Trends</TabsTrigger>
             <TabsTrigger value="item_pnl" className="text-xs sm:text-sm" data-testid="item-pnl-tab">Item P&L</TabsTrigger>
+            <TabsTrigger value="hr_analytics" className="text-xs sm:text-sm" data-testid="hr-analytics-tab">HR Analytics</TabsTrigger>
           </TabsList>
 
           {/* OVERVIEW */}
