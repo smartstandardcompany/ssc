@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Bell, Plus, Clock, Users, User, Trash2, Play, Pause, Wand2, ChefHat, History, CheckCircle } from 'lucide-react';
+import { Bell, Plus, Clock, Users, User, Trash2, Play, Pause, Wand2, ChefHat, History, CheckCircle, BarChart3 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 
