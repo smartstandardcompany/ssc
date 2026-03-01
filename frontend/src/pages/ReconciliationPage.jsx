@@ -91,7 +91,41 @@ export default function ReconciliationPage() {
 
   useEffect(() => {
     api.get('/bank-statements').then(r => setStatements(r.data)).catch(() => {});
+    loadAlertData();
   }, []);
+
+  const loadAlertData = async () => {
+    setAlertLoading(true);
+    try {
+      const [histRes, settRes] = await Promise.all([
+        api.get('/reconciliation-alerts'),
+        api.get('/reconciliation-alerts/settings'),
+      ]);
+      setAlertHistory(histRes.data);
+      setAlertSettings(settRes.data);
+    } catch {}
+    finally { setAlertLoading(false); }
+  };
+
+  const runAlertNow = async () => {
+    setRunningAlert(true);
+    try {
+      const threshold = alertSettings?.threshold || 500;
+      const { data } = await api.post('/reconciliation-alerts/run', { threshold });
+      toast.success(`Alert generated: ${data.alert?.total_flagged || 0} flagged transactions`);
+      loadAlertData();
+    } catch { toast.error('Failed to run alert'); }
+    finally { setRunningAlert(false); }
+  };
+
+  const saveAlertSettings = async (updates) => {
+    const newSettings = { ...alertSettings, ...updates };
+    try {
+      const { data } = await api.put('/reconciliation-alerts/settings', newSettings);
+      setAlertSettings(data);
+      toast.success('Alert settings saved');
+    } catch { toast.error('Failed to save settings'); }
+  };
 
   const loadReconciliation = async (stmtId) => {
     if (!stmtId) return;
