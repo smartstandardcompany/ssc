@@ -215,6 +215,231 @@ function HRAnalyticsTab() {
     </>
   );
 }
+
+function CustomReportsTab({ branches }) {
+  const [reportType, setReportType] = useState('sales');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [branchId, setBranchId] = useState('');
+  const [category, setCategory] = useState('');
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [savedViews, setSavedViews] = useState([]);
+  const [viewName, setViewName] = useState('');
+  const [visibleCols, setVisibleCols] = useState([]);
+
+  const columnDefs = {
+    sales: ['date', 'amount', 'discount', 'final_amount', 'payment_mode', 'branch_id', 'customer_name', 'description'],
+    expenses: ['date', 'amount', 'category', 'description', 'payment_mode', 'branch_id'],
+    supplier_payments: ['date', 'amount', 'supplier_name', 'payment_mode', 'branch_id', 'description'],
+    employees: ['name', 'email', 'phone', 'position', 'salary', 'branch_id', 'status'],
+    customers: ['name', 'phone', 'email', 'credit_limit', 'current_credit'],
+    stock: ['name', 'category', 'unit', 'balance', 'unit_price', 'cost_price'],
+  };
+
+  useEffect(() => { loadViews(); }, []);
+  useEffect(() => { setVisibleCols(columnDefs[reportType] || []); }, [reportType]);
+
+  const loadViews = async () => {
+    try { const { data } = await api.get('/report-views'); setSavedViews(data); } catch {}
+  };
+
+  const loadReport = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
+      if (branchId) params.append('branch_id', branchId);
+      if (category) params.append('category', category);
+      const { data } = await api.get(`/report-views/data/${reportType}?${params}`);
+      setData(data);
+    } catch { toast.error('Failed to load report'); }
+    finally { setLoading(false); }
+  };
+
+  const saveView = async () => {
+    if (!viewName.trim()) return toast.error('Enter a view name');
+    try {
+      await api.post('/report-views', { name: viewName, report_type: reportType, filters: { startDate, endDate, branchId, category }, columns: visibleCols });
+      toast.success('View saved');
+      setViewName('');
+      loadViews();
+    } catch { toast.error('Failed to save view'); }
+  };
+
+  const loadView = (view) => {
+    setReportType(view.report_type);
+    setStartDate(view.filters?.startDate || '');
+    setEndDate(view.filters?.endDate || '');
+    setBranchId(view.filters?.branchId || '');
+    setCategory(view.filters?.category || '');
+    setVisibleCols(view.columns || columnDefs[view.report_type] || []);
+    toast.success(`Loaded: ${view.name}`);
+  };
+
+  const deleteView = async (viewId) => {
+    try { await api.delete(`/report-views/${viewId}`); loadViews(); toast.success('Deleted'); } catch { toast.error('Failed'); }
+  };
+
+  const toggleCol = (col) => {
+    setVisibleCols(prev => prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col]);
+  };
+
+  const exportCSV = () => {
+    if (!data?.data?.length) return;
+    const rows = data.data.map(d => visibleCols.map(c => JSON.stringify(d[c] ?? '')).join(','));
+    const csv = [visibleCols.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `${reportType}_report.csv`; a.click();
+    URL.revokeObjectURL(url);
+    toast.success('CSV downloaded');
+  };
+
+  return (
+    <>
+      <Card>
+        <CardHeader><CardTitle className="font-outfit text-base">Custom Report Builder</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div>
+              <Label className="text-xs">Report Type</Label>
+              <Select value={reportType} onValueChange={setReportType}>
+                <SelectTrigger className="h-9" data-testid="report-type-select"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sales">Sales</SelectItem>
+                  <SelectItem value="expenses">Expenses</SelectItem>
+                  <SelectItem value="supplier_payments">Supplier Payments</SelectItem>
+                  <SelectItem value="employees">Employees</SelectItem>
+                  <SelectItem value="customers">Customers</SelectItem>
+                  <SelectItem value="stock">Stock</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Start Date</Label>
+              <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="h-9" data-testid="custom-start-date" />
+            </div>
+            <div>
+              <Label className="text-xs">End Date</Label>
+              <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="h-9" data-testid="custom-end-date" />
+            </div>
+            <div>
+              <Label className="text-xs">Branch</Label>
+              <Select value={branchId} onValueChange={setBranchId}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="All" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Branches</SelectItem>
+                  {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-end">
+              <Button onClick={loadReport} className="w-full rounded-xl h-9" disabled={loading} data-testid="generate-report-btn">
+                {loading ? 'Loading...' : 'Generate'}
+              </Button>
+            </div>
+          </div>
+
+          {/* Column Visibility */}
+          <div>
+            <Label className="text-xs mb-1 block">Visible Columns</Label>
+            <div className="flex flex-wrap gap-1">
+              {(columnDefs[reportType] || []).map(col => (
+                <Badge key={col} variant={visibleCols.includes(col) ? 'default' : 'outline'}
+                  className={`text-[10px] cursor-pointer select-none ${visibleCols.includes(col) ? 'bg-orange-500 hover:bg-orange-600' : 'hover:bg-stone-100'}`}
+                  onClick={() => toggleCol(col)} data-testid={`col-toggle-${col}`}>
+                  {col.replace(/_/g, ' ')}
+                </Badge>
+              ))}
+            </div>
+          </div>
+
+          {/* Save View */}
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <Label className="text-xs">Save as View</Label>
+              <Input placeholder="e.g. Monthly Sales Overview" value={viewName} onChange={e => setViewName(e.target.value)} className="h-9" data-testid="view-name-input" />
+            </div>
+            <Button onClick={saveView} variant="outline" className="rounded-xl h-9" data-testid="save-view-btn">Save View</Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Saved Views */}
+      {savedViews.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle className="font-outfit text-base">Saved Views</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {savedViews.map(v => (
+                <div key={v.id} className="flex items-center justify-between p-2.5 bg-stone-50 rounded-lg border" data-testid={`saved-view-${v.id}`}>
+                  <div className="min-w-0 cursor-pointer flex-1" onClick={() => loadView(v)}>
+                    <p className="text-sm font-medium truncate">{v.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{v.report_type} • {v.columns?.length || 0} cols</p>
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-400 hover:text-red-600" onClick={() => deleteView(v.id)}>×</Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Report Data */}
+      {data && (
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle className="font-outfit text-base">Results ({data.summary?.total_records || 0} records)</CardTitle>
+              <Button variant="outline" size="sm" className="rounded-xl" onClick={exportCSV} data-testid="export-csv-btn">
+                <FileSpreadsheet size={14} className="mr-1" />Export CSV
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {data.summary?.total_amount !== undefined && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                  <p className="text-xs text-emerald-600">Total Amount</p>
+                  <p className="text-lg font-bold font-outfit text-emerald-700">{fmt(data.summary.total_amount)}</p>
+                </div>
+                {data.summary.total_net && (
+                  <div className="bg-blue-50 rounded-xl p-3 text-center">
+                    <p className="text-xs text-blue-600">Net Amount</p>
+                    <p className="text-lg font-bold font-outfit text-blue-700">{fmt(data.summary.total_net)}</p>
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm" data-testid="custom-report-table">
+                <thead><tr className="border-b">
+                  {visibleCols.map(col => (
+                    <th key={col} className="text-left p-2 text-xs font-medium capitalize">{col.replace(/_/g, ' ')}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {data.data?.slice(0, 100).map((row, i) => (
+                    <tr key={i} className="border-b hover:bg-stone-50 text-xs">
+                      {visibleCols.map(col => (
+                        <td key={col} className="p-2">
+                          {typeof row[col] === 'number' ? (col.includes('amount') || col.includes('price') || col.includes('salary') || col.includes('cost') || col.includes('credit') ? fmt(row[col]) : row[col]) : String(row[col] ?? '-')}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                  {(!data.data || data.data.length === 0) && <tr><td colSpan={visibleCols.length} className="text-center py-8 text-muted-foreground">No data found</td></tr>}
+                </tbody>
+              </table>
+              {data.data?.length > 100 && <p className="text-xs text-muted-foreground text-center mt-2">Showing first 100 of {data.data.length} records</p>}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </>
+  );
+}
+
 import { BranchFilter } from '@/components/BranchFilter';
 import api from '@/lib/api';
 import { toast } from 'sonner';
