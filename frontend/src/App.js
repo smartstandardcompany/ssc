@@ -49,6 +49,7 @@ import TableManagementPage from "./pages/TableManagementPage";
 import WaiterPage from "./pages/WaiterPage";
 import LoanManagementPage from "./pages/LoanManagementPage";
 import TaskRemindersPage from "./pages/TaskRemindersPage";
+import TaskCompliancePage from "./pages/TaskCompliancePage";
 import NotificationPreferencesPage from "./pages/NotificationPreferencesPage";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/contexts/LanguageContext";
@@ -142,6 +143,7 @@ function App() {
           <Route path="/order-status" element={<OrderStatusPage />} />
           <Route path="/notification-preferences" element={isAuthenticated ? <NotificationPreferencesPage /> : <Navigate to="/login" />} />
           <Route path="/task-reminders" element={isAuthenticated ? <TaskRemindersPage /> : <Navigate to="/login" />} />
+          <Route path="/task-compliance" element={isAuthenticated ? <TaskCompliancePage /> : <Navigate to="/login" />} />
         </Routes>
         </KeyboardShortcutProvider>
       </BrowserRouter>
