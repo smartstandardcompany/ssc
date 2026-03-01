@@ -296,9 +296,100 @@ export default function ReconciliationPage() {
           </div>
         )}
 
+        {/* Tab Toggle */}
+        {reconciliation && (
+          <div className="flex gap-1 bg-stone-100 dark:bg-stone-800 p-1 rounded-xl w-fit" data-testid="recon-tabs">
+            <button onClick={() => setMatchTab('reconciliation')}
+              className={`px-4 py-1.5 text-sm rounded-lg transition-colors ${matchTab === 'reconciliation' ? 'bg-white dark:bg-stone-700 shadow font-medium' : 'text-muted-foreground hover:text-foreground'}`}>
+              POS Reconciliation ({rows.length})
+            </button>
+            <button onClick={() => setMatchTab('auto-match')}
+              className={`px-4 py-1.5 text-sm rounded-lg transition-colors flex items-center gap-1.5 ${matchTab === 'auto-match' ? 'bg-white dark:bg-stone-700 shadow font-medium' : 'text-muted-foreground hover:text-foreground'}`}>
+              <Link size={13} />Transaction Matches ({autoMatches.length})
+            </button>
+          </div>
+        )}
+
+        {/* Auto-Match Results */}
+        {matchTab === 'auto-match' && reconciliation && (
+          <Card className="dark:bg-stone-900 dark:border-stone-700">
+            <CardContent className="p-0">
+              {autoMatches.length === 0 ? (
+                <div className="p-12 text-center">
+                  <Wand2 size={40} className="mx-auto text-stone-300 mb-3" />
+                  <p className="text-muted-foreground font-medium">No Auto-Matches Yet</p>
+                  <p className="text-xs text-stone-400 mt-1">Click "Auto-Match" to match bank transactions to sales, expenses, and supplier payments</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm" data-testid="auto-match-table">
+                    <thead>
+                      <tr className="bg-stone-50 dark:bg-stone-800 border-y text-xs">
+                        <th className="text-left p-2.5 font-medium">Bank Transaction</th>
+                        <th className="text-right p-2.5 font-medium">Amount</th>
+                        <th className="text-center p-2.5 font-medium">Match</th>
+                        <th className="text-left p-2.5 font-medium">System Record</th>
+                        <th className="text-right p-2.5 font-medium">Amount</th>
+                        <th className="text-center p-2.5 font-medium">Confidence</th>
+                        <th className="text-center p-2.5 font-medium">Status</th>
+                        <th className="text-center p-2.5 font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {autoMatches.map((m, idx) => (
+                        <tr key={m.id} className={`border-b hover:bg-stone-50/50 ${m.status === 'confirmed' ? 'bg-emerald-50/30' : ''}`} data-testid={`match-row-${idx}`}>
+                          <td className="p-2.5">
+                            <p className="text-xs font-medium">{m.txn_date}</p>
+                            <p className="text-[10px] text-muted-foreground truncate max-w-[200px]">{m.txn_desc}</p>
+                          </td>
+                          <td className="p-2.5 text-right font-mono text-xs">SAR {m.txn_amount?.toLocaleString()}</td>
+                          <td className="p-2.5 text-center">
+                            <Badge className={`text-[9px] ${m.match_type === 'sale' ? 'bg-emerald-500' : m.match_type === 'expense' ? 'bg-red-500' : 'bg-blue-500'}`}>
+                              {m.match_type === 'sale' ? 'Sale' : m.match_type === 'expense' ? 'Expense' : 'Supplier'}
+                            </Badge>
+                          </td>
+                          <td className="p-2.5">
+                            <p className="text-xs font-medium">{m.match_date}</p>
+                            <p className="text-[10px] text-muted-foreground truncate max-w-[200px]">{m.match_desc}</p>
+                          </td>
+                          <td className="p-2.5 text-right font-mono text-xs">SAR {m.match_amount?.toLocaleString()}</td>
+                          <td className="p-2.5 text-center">
+                            <span className={`text-xs font-bold ${m.confidence >= 90 ? 'text-emerald-600' : m.confidence >= 70 ? 'text-amber-600' : 'text-red-600'}`}>
+                              {m.confidence}%
+                            </span>
+                          </td>
+                          <td className="p-2.5 text-center">
+                            <Badge variant="outline" className={`text-[9px] ${m.status === 'confirmed' ? 'border-emerald-300 text-emerald-600' : 'border-stone-300'}`}>
+                              {m.status === 'confirmed' ? 'Confirmed' : 'Pending'}
+                            </Badge>
+                          </td>
+                          <td className="p-2.5 text-center">
+                            {m.status !== 'confirmed' ? (
+                              <div className="flex gap-1 justify-center">
+                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-emerald-500 hover:text-emerald-700" onClick={() => confirmMatch(m.id)} data-testid={`confirm-match-${idx}`}>
+                                  <CheckCircle size={14} />
+                                </Button>
+                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400 hover:text-red-600" onClick={() => rejectMatch(m.id)} data-testid={`reject-match-${idx}`}>
+                                  <Unlink size={14} />
+                                </Button>
+                              </div>
+                            ) : (
+                              <CheckCircle size={14} className="text-emerald-500 mx-auto" />
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Reconciliation Table */}
         {loading && <div className="text-center py-8 text-muted-foreground">Loading reconciliation data...</div>}
-        {!loading && reconciliation && (
+        {matchTab === 'reconciliation' && !loading && reconciliation && (
           <Card className="dark:bg-stone-900 dark:border-stone-700">
             <CardHeader className="py-3 px-4">
               <CardTitle className="text-sm font-outfit dark:text-white">
