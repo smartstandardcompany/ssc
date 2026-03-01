@@ -1221,6 +1221,11 @@ export default function ReportsPage() {
           <TabsContent value="hr_analytics" className="space-y-6" data-testid="hr-analytics-content">
             <HRAnalyticsTab />
           </TabsContent>
+
+          {/* CUSTOM REPORTS */}
+          <TabsContent value="custom_reports" className="space-y-4" data-testid="custom-reports-content">
+            <CustomReportsTab branches={branches} />
+          </TabsContent>
         </Tabs>
       </div>
     </DashboardLayout>
