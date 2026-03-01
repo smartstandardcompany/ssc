@@ -959,6 +959,116 @@ async def trigger_ai_report(report_type: str, current_user: User = Depends(get_c
 
 
 # =====================================================
+# RECONCILIATION ALERTS
+# =====================================================
+
+@router.get("/reconciliation-alerts")
+async def get_reconciliation_alerts(current_user: User = Depends(get_current_user)):
+    """Get reconciliation alert history."""
+    alerts = await db.reconciliation_alerts.find({}, {"_id": 0}).sort("created_at", -1).to_list(20)
+    return alerts
+
+
+@router.get("/reconciliation-alerts/latest")
+async def get_latest_reconciliation_alert(current_user: User = Depends(get_current_user)):
+    """Get the most recent reconciliation alert."""
+    alert = await db.reconciliation_alerts.find_one({}, {"_id": 0}, sort=[("created_at", -1)])
+    return alert or {}
+
+
+@router.post("/reconciliation-alerts/run")
+async def run_reconciliation_alert(body: dict = {}, current_user: User = Depends(get_current_user)):
+    """Manually run the reconciliation alert and send notifications."""
+    threshold = body.get("threshold", 500)
+    report = await _build_reconciliation_alert(threshold=threshold)
+    if not report:
+        return {"message": "No bank statements found", "alert": None}
+
+    # Send via channels
+    await _send_wa(report)
+    await _send_email("SSC Track - Reconciliation Alert", report.replace("*", ""))
+
+    # Send push notification to admins
+    try:
+        from routers.push_notifications import send_push_to_admins
+        latest = await db.reconciliation_alerts.find_one({}, {"_id": 0}, sort=[("created_at", -1)])
+        total_flagged = latest.get("total_flagged", 0) if latest else 0
+        if total_flagged > 0:
+            await send_push_to_admins(
+                "Reconciliation Alert",
+                f"{total_flagged} unmatched bank transactions above SAR {threshold:,.0f} need attention",
+                {"url": "/reconciliation"}
+            )
+    except Exception:
+        pass
+
+    latest = await db.reconciliation_alerts.find_one({}, {"_id": 0}, sort=[("created_at", -1)])
+    return {"message": "Reconciliation alert generated", "alert": latest, "preview": report}
+
+
+@router.put("/reconciliation-alerts/settings")
+async def update_reconciliation_settings(body: dict, current_user: User = Depends(get_current_user)):
+    """Update reconciliation alert settings (threshold, schedule)."""
+    settings = {
+        "threshold": body.get("threshold", 500),
+        "enabled": body.get("enabled", True),
+        "day_of_week": body.get("day_of_week", "sun"),
+        "hour": int(body.get("hour", 8)),
+        "minute": int(body.get("minute", 0)),
+        "channels": body.get("channels", ["whatsapp", "push"]),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.reconciliation_alert_settings.update_one({}, {"$set": settings}, upsert=True)
+
+    # Update scheduler
+    job_id = "ssc_reconciliation_alert"
+    try:
+        scheduler.remove_job(job_id)
+    except Exception:
+        pass
+    if settings["enabled"]:
+        async def _weekly_recon_job():
+            s = await db.reconciliation_alert_settings.find_one({}, {"_id": 0})
+            t = s.get("threshold", 500) if s else 500
+            report = await _build_reconciliation_alert(threshold=t)
+            if report:
+                await _send_wa(report)
+                await _send_email("SSC Track - Reconciliation Alert", report.replace("*", ""))
+                try:
+                    from routers.push_notifications import send_push_to_admins
+                    latest = await db.reconciliation_alerts.find_one({}, {"_id": 0}, sort=[("created_at", -1)])
+                    tf = latest.get("total_flagged", 0) if latest else 0
+                    if tf > 0:
+                        await send_push_to_admins("Reconciliation Alert", f"{tf} unmatched transactions above SAR {t:,.0f}", {"url": "/reconciliation"})
+                except Exception:
+                    pass
+
+        scheduler.add_job(
+            _weekly_recon_job,
+            CronTrigger(day_of_week=settings["day_of_week"], hour=settings["hour"], minute=settings["minute"]),
+            id=job_id, replace_existing=True
+        )
+
+    return settings
+
+
+@router.get("/reconciliation-alerts/settings")
+async def get_reconciliation_settings(current_user: User = Depends(get_current_user)):
+    """Get reconciliation alert settings."""
+    settings = await db.reconciliation_alert_settings.find_one({}, {"_id": 0})
+    if not settings:
+        settings = {
+            "threshold": 500,
+            "enabled": False,
+            "day_of_week": "sun",
+            "hour": 8,
+            "minute": 0,
+            "channels": ["whatsapp", "push"],
+        }
+    return settings
+
+
+# =====================================================
 # ZATCA CSID EXPIRY CHECK (Daily at 8 AM)
 # =====================================================
 
