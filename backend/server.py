@@ -119,6 +119,14 @@ async def seed_database():
         from passlib.context import CryptContext
         pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+        # Test DB connectivity first
+        try:
+            await db.command("ping")
+            logger.info("MongoDB connection successful")
+        except Exception as e:
+            logger.error(f"MongoDB connection failed: {e}")
+            return
+
         # Always ensure admin user exists
         admin_exists = await db.users.find_one({"email": "ss@ssc.com"}, {"_id": 0})
         if not admin_exists:
@@ -144,8 +152,9 @@ async def seed_database():
             }
             await db.users.insert_one(admin_user)
             del admin_user["_id"]
-            logger.info("Default admin user created: ss@ssc.com")
+            logger.info("Default admin user created successfully: ss@ssc.com")
         else:
+            logger.info("Admin user already exists: ss@ssc.com")
             # Fix legacy: ensure password field exists (not hashed_password)
             if "hashed_password" in admin_exists and "password" not in admin_exists:
                 await db.users.update_one(
