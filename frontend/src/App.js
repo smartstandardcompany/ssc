@@ -48,6 +48,7 @@ import PartnerPLReportPage from "./pages/PartnerPLReportPage";
 import TableManagementPage from "./pages/TableManagementPage";
 import WaiterPage from "./pages/WaiterPage";
 import LoanManagementPage from "./pages/LoanManagementPage";
+import TaskRemindersPage from "./pages/TaskRemindersPage";
 import NotificationPreferencesPage from "./pages/NotificationPreferencesPage";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/contexts/LanguageContext";
