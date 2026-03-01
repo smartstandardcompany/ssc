@@ -141,7 +141,9 @@ function App() {
           <Route path="/order-status" element={<OrderStatusPage />} />
           <Route path="/notification-preferences" element={isAuthenticated ? <NotificationPreferencesPage /> : <Navigate to="/login" />} />
         </Routes>
+        </KeyboardShortcutProvider>
       </BrowserRouter>
+      <PWAInstallPrompt />
       <Toaster position="top-right" richColors />
     </div>
     </LanguageProvider>
