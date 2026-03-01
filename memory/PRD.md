@@ -89,6 +89,21 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - **Navigation**: Under Reports section, keyboard shortcut Alt+A
 - **Testing**: 100% pass rate (21/21 backend, all frontend features verified)
 
+### Feature: Scheduled Auto-Scan with Notifications (COMPLETED)
+- **Backend**: Configurable daily/weekly auto-scan scheduler job
+  - `GET /api/anomaly-detection/schedule` — settings (frequency, day, hour, period, threshold, channels)
+  - `PUT /api/anomaly-detection/schedule` — updates settings and manages APScheduler CronTrigger job
+  - `POST /api/anomaly-detection/test-scan` — manually triggers auto-scan with notifications
+  - Smart alerting: only sends notifications when anomalies meet severity threshold (critical only, warning+, any)
+  - Sends via push, WhatsApp, email channels (configurable)
+  - Auto-scan records marked with `source: "auto"` for distinguishing from manual scans
+- **Frontend**: Auto-Scan Schedule card on Anomaly Detection page
+  - Enabled toggle, Frequency (Daily/Weekly), Day (for weekly), Time, Period, Alert threshold
+  - Channel badges (push/whatsapp/email) with click-to-toggle
+  - Test Now button, Last auto-scan timestamp
+  - Scan history shows "auto" badge for scheduled scans
+- **Testing**: 100% pass rate (27/27 backend, all frontend features verified)
+
 ### Previous Session Features
 1. Enhanced Predictive Analytics (Inventory Demand, CLV, Peak Hours, Profit Decomposition)
 2. Custom Report Builder with Saved Views, Column Toggles, CSV Export
