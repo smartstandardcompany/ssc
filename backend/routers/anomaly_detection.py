@@ -436,3 +436,203 @@ async def get_anomaly_history(current_user: User = Depends(get_current_user)):
     """Get anomaly scan history."""
     scans = await db.anomaly_scans.find({}, {"_id": 0}).sort("scanned_at", -1).to_list(20)
     return scans
+
+
+# =====================================================
+# SCHEDULED AUTO-SCAN SETTINGS & JOB
+# =====================================================
+
+@router.get("/anomaly-detection/schedule")
+async def get_schedule_settings(current_user: User = Depends(get_current_user)):
+    """Get auto-scan schedule settings."""
+    settings = await db.anomaly_scan_settings.find_one({}, {"_id": 0})
+    if not settings:
+        settings = {
+            "enabled": False,
+            "frequency": "weekly",
+            "day_of_week": "mon",
+            "hour": 7,
+            "minute": 0,
+            "period_days": 90,
+            "alert_threshold": "warning",
+            "channels": ["push", "whatsapp"],
+            "last_auto_scan": None,
+        }
+    return settings
+
+
+@router.put("/anomaly-detection/schedule")
+async def update_schedule_settings(body: dict, current_user: User = Depends(get_current_user)):
+    """Update auto-scan schedule and manage the scheduler job."""
+    settings = {
+        "enabled": body.get("enabled", False),
+        "frequency": body.get("frequency", "weekly"),
+        "day_of_week": body.get("day_of_week", "mon"),
+        "hour": int(body.get("hour", 7)),
+        "minute": int(body.get("minute", 0)),
+        "period_days": int(body.get("period_days", 90)),
+        "alert_threshold": body.get("alert_threshold", "warning"),
+        "channels": body.get("channels", ["push", "whatsapp"]),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.anomaly_scan_settings.update_one({}, {"$set": settings}, upsert=True)
+
+    # Update the scheduler job
+    _register_anomaly_job(settings)
+
+    return settings
+
+
+def _register_anomaly_job(settings):
+    """Register or remove the anomaly auto-scan scheduler job."""
+    from apscheduler.triggers.cron import CronTrigger
+    from routers.scheduler import scheduler
+
+    job_id = "ssc_anomaly_autoscan"
+    try:
+        scheduler.remove_job(job_id)
+    except Exception:
+        pass
+
+    if not settings.get("enabled"):
+        return
+
+    freq = settings.get("frequency", "weekly")
+    hour = settings.get("hour", 7)
+    minute = settings.get("minute", 0)
+
+    if freq == "daily":
+        trigger = CronTrigger(hour=hour, minute=minute)
+    else:
+        dow = settings.get("day_of_week", "mon")
+        trigger = CronTrigger(day_of_week=dow, hour=hour, minute=minute)
+
+    async def _auto_scan_job():
+        await _run_auto_scan(settings)
+
+    scheduler.add_job(_auto_scan_job, trigger, id=job_id, replace_existing=True)
+
+
+async def _run_auto_scan(settings=None):
+    """Execute the auto-scan and send notifications if anomalies found."""
+    import logging
+    logger = logging.getLogger("anomaly_autoscan")
+
+    if not settings:
+        settings = await db.anomaly_scan_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return
+
+    period = settings.get("period_days", 90)
+    threshold = settings.get("alert_threshold", "warning")
+    channels = settings.get("channels", ["push", "whatsapp"])
+    now = datetime.now(timezone.utc)
+
+    # Run scan
+    sales_anomalies = await detect_sales_anomalies(period)
+    expense_anomalies = await detect_expense_anomalies(period)
+    bank_anomalies = await detect_bank_anomalies()
+
+    all_anomalies = sales_anomalies + expense_anomalies + bank_anomalies
+    all_anomalies.sort(key=lambda x: ({"critical": 0, "warning": 1, "info": 2}.get(x["severity"], 3)))
+
+    critical = len([a for a in all_anomalies if a["severity"] == "critical"])
+    warning = len([a for a in all_anomalies if a["severity"] == "warning"])
+    info = len([a for a in all_anomalies if a["severity"] == "info"])
+
+    scan_record = {
+        "id": str(uuid.uuid4()),
+        "scanned_at": now.isoformat(),
+        "period_days": period,
+        "total_anomalies": len(all_anomalies),
+        "critical": critical,
+        "warning": warning,
+        "info": info,
+        "by_category": {
+            "sales": len(sales_anomalies),
+            "expenses": len(expense_anomalies),
+            "bank": len(bank_anomalies),
+        },
+        "source": "auto",
+    }
+    await db.anomaly_scans.insert_one(scan_record)
+    await db.anomaly_scan_settings.update_one({}, {"$set": {"last_auto_scan": now.isoformat()}})
+
+    # Determine if we should alert
+    should_alert = False
+    if threshold == "critical" and critical > 0:
+        should_alert = True
+    elif threshold == "warning" and (critical > 0 or warning > 0):
+        should_alert = True
+    elif threshold == "info" and len(all_anomalies) > 0:
+        should_alert = True
+
+    if not should_alert:
+        logger.info(f"Auto-scan complete: {len(all_anomalies)} anomalies, no alert needed (threshold={threshold})")
+        return
+
+    # Build notification message
+    lines = [
+        "*SSC Track - Anomaly Alert*",
+        f"Auto-scan: {now.strftime('%d %b %Y %H:%M')}",
+        f"Period: Last {period} days",
+        "",
+    ]
+    if critical > 0:
+        lines.append(f"*CRITICAL: {critical} anomalies*")
+    if warning > 0:
+        lines.append(f"*WARNING: {warning} anomalies*")
+    if info > 0:
+        lines.append(f"Info: {info} anomalies")
+    lines.append("")
+
+    # Top anomalies
+    alert_items = [a for a in all_anomalies if a["severity"] in ("critical", "warning")][:6]
+    for a in alert_items:
+        sev_tag = "!!" if a["severity"] == "critical" else "!"
+        lines.append(f"  {sev_tag} [{a['category'].upper()}] {a['title']}")
+        lines.append(f"     {a['description'][:80]}")
+
+    if len(all_anomalies) > 6:
+        lines.append(f"  ... and {len(all_anomalies) - 6} more")
+
+    lines += ["", "View details: /anomaly-detection"]
+    message = "\n".join(lines)
+
+    # Send via channels
+    if "whatsapp" in channels:
+        try:
+            from routers.scheduler import _send_wa
+            await _send_wa(message)
+        except Exception as e:
+            logger.warning(f"WhatsApp send error: {e}")
+
+    if "email" in channels:
+        try:
+            from routers.scheduler import _send_email
+            await _send_email("SSC Track - Anomaly Alert", message.replace("*", ""))
+        except Exception as e:
+            logger.warning(f"Email send error: {e}")
+
+    if "push" in channels:
+        try:
+            from routers.push_notifications import send_push_to_admins
+            title = f"Anomaly Alert: {critical} critical, {warning} warnings" if critical else f"Anomaly Alert: {warning} warnings"
+            body = f"{len(all_anomalies)} anomalies detected across sales, expenses, and bank data"
+            await send_push_to_admins(title, body, {"url": "/anomaly-detection"})
+        except Exception as e:
+            logger.warning(f"Push send error: {e}")
+
+    logger.info(f"Auto-scan alert sent: {critical}C/{warning}W/{info}I via {channels}")
+
+
+@router.post("/anomaly-detection/test-scan")
+async def test_auto_scan(current_user: User = Depends(get_current_user)):
+    """Manually trigger an auto-scan with notifications (for testing)."""
+    settings = await db.anomaly_scan_settings.find_one({}, {"_id": 0})
+    if not settings:
+        settings = {"period_days": 90, "alert_threshold": "warning", "channels": ["push", "whatsapp"]}
+    await _run_auto_scan(settings)
+    latest = await db.anomaly_scans.find_one({}, {"_id": 0}, sort=[("scanned_at", -1)])
+    return {"message": "Auto-scan triggered", "scan": latest}
+
