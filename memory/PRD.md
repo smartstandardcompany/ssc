@@ -12,20 +12,33 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - **WhatsApp:** Twilio (config-dependent)
 - **PWA:** Full offline-capable Progressive Web App
 
-## Latest Updates (Mar 1, 2026 — Session 2)
+## Latest Updates (Mar 1, 2026 — Session 3)
 
-### Feature: Task Compliance Dashboard (COMPLETED)
-- **Backend**: `GET /api/task-reminders/compliance?days=N` — comprehensive analytics endpoint
-  - Per-role compliance % with progress bars
-  - Per-employee leaderboard with ranked scores (excellent/good/needs_attention/critical)
-  - Time-of-day x day-of-week acknowledgement heatmap
-  - 30-day compliance trend (line chart)
-  - Auto-flagged employees below 50% threshold
-  - Period selector (7/14/30/60 days)
-- **Frontend**: `/task-compliance` page with 7 overview cards, Radar chart, leaderboard, trend line, heatmap grid, flagged section
-- **Navigation**: Sidebar links for Task Reminders + Compliance under Admin, cross-links between pages
+### Feature: Bangla Language Support (COMPLETED)
+- Added full Bangla (`bn`) translations to `/frontend/src/lib/i18n.js` (lines 734-902)
+- Updated LANGUAGES array to include `{ code: 'bn', label: 'বাংলা', flag: 'বা', rtl: false }`
+- All navigation, dashboard, sales, expenses, employees, stock, invoices, reports, and UI text translated
 
-### All Features Completed (This Session)
+### Feature: Automated Performance Report (COMPLETED)
+- **Backend**: `GET /api/performance-report?period=N` — comprehensive aggregation endpoint
+  - KPI summary (sales, expenses, profit, margin, transactions, avg ticket, salary, compliance)
+  - Sales & profit daily trend
+  - Branch ranking (sales, expenses, profit, transactions, avg ticket)
+  - Employee performance table (tasks received/completed, compliance %, status)
+  - Expense breakdown by category
+  - Payment mode distribution
+  - Period comparison with growth %
+- **Frontend**: `/performance-report` page with 4 tabs (Overview, Employees, Branches, Expenses)
+  - 5 KPI cards with growth indicators
+  - Area chart for sales/expense/profit trend
+  - Pie chart for payment distribution
+  - Bar charts for branch comparison and expense breakdown
+  - Employee performance table with compliance status badges
+  - Period selector (7/14/30/60/90 days)
+- **Navigation**: Added under Reports section in sidebar
+- **Testing**: 100% pass rate (11/11 backend, all frontend features verified)
+
+### Previous Session Features
 1. Enhanced Predictive Analytics (Inventory Demand, CLV, Peak Hours, Profit Decomposition)
 2. Custom Report Builder with Saved Views, Column Toggles, CSV Export
 3. Push Notification Preferences + WhatsApp Channel
@@ -46,7 +59,7 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - Custom Report Builder with Saved Views
 - Push Notifications + WhatsApp + Daily Digest
 - Task Reminders System + Compliance Dashboard
-- ZATCA Phase 2, AI CCTV, i18n (EN/AR/UR/HI)
+- ZATCA Phase 2, AI CCTV, i18n (EN/AR/UR/HI/BN)
 - Mobile POS, Dark Mode, PWA, Keyboard Shortcuts, Advanced Export
 
 ## Credentials
@@ -55,4 +68,5 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - Cashier/Waiter/Kitchen PIN: 1234
 
 ## Backlog / Future Tasks
-- None remaining — all requested features implemented
+- Bank Reconciliation Logic — Advanced statement parsing & matching algorithms
+- Expand Keyboard Shortcuts — More shortcuts across the app
