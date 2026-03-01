@@ -52,6 +52,8 @@ export default function NotificationPreferencesPage() {
         expense_anomalies: prefs.expense_anomalies ?? true,
         document_expiry: prefs.document_expiry ?? true,
         daily_summary: prefs.daily_summary ?? false,
+        channel_push: prefs.channel_push ?? true,
+        channel_whatsapp: prefs.channel_whatsapp ?? false,
       });
       toast.success('Preferences saved');
     } catch { toast.error('Failed to save'); }
