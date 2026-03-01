@@ -412,8 +412,8 @@ export default function ReconciliationPage() {
                           </td>
                           <td className="p-2.5 text-right font-mono text-xs">SAR {m.match_amount?.toLocaleString()}</td>
                           <td className="p-2.5 text-center">
-                            <span className={`text-xs font-bold ${m.confidence >= 90 ? 'text-emerald-600' : m.confidence >= 70 ? 'text-amber-600' : 'text-red-600'}`}>
-                              {m.confidence}%
+                            <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold ${m.confidence >= 90 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : m.confidence >= 65 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'}`}>
+                              {m.confidence >= 90 ? 'Exact' : m.confidence >= 65 ? 'Probable' : 'Possible'} {m.confidence}%
                             </span>
                           </td>
                           <td className="p-2.5 text-center">
