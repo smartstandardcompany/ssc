@@ -50,6 +50,7 @@ import WaiterPage from "./pages/WaiterPage";
 import LoanManagementPage from "./pages/LoanManagementPage";
 import TaskRemindersPage from "./pages/TaskRemindersPage";
 import TaskCompliancePage from "./pages/TaskCompliancePage";
+import PerformanceReportPage from "./pages/PerformanceReportPage";
 import NotificationPreferencesPage from "./pages/NotificationPreferencesPage";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/contexts/LanguageContext";
