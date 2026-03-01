@@ -12,6 +12,20 @@ scheduler = AsyncIOScheduler()
 scheduler.start()
 
 
+async def _run_task_reminders():
+    """Periodic job to process task reminders."""
+    try:
+        from routers.task_reminders import process_task_reminders
+        await process_task_reminders()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Task reminder processing error: {e}")
+
+
+# Schedule task reminders to run every 5 minutes
+scheduler.add_job(_run_task_reminders, 'interval', minutes=5, id='task_reminders_job', replace_existing=True)
+
+
 async def _build_daily_sales_report():
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     today_end = today_start + timedelta(days=1)
