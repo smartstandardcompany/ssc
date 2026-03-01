@@ -926,6 +926,7 @@ const LANGUAGES = [
   { code: 'ar', label: 'العربية', flag: 'عر', rtl: true },
   { code: 'ur', label: 'اردو', flag: 'ار', rtl: true },
   { code: 'hi', label: 'हिन्दी', flag: 'हि', rtl: false },
+  { code: 'bn', label: 'বাংলা', flag: 'বা', rtl: false },
 ];
 
 export { translations, navLabelToKey, LANGUAGES };
