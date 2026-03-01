@@ -85,7 +85,7 @@ export default function EmployeePortalPage() {
 
   const handleTimeIn = async () => { try { await api.post('/attendance/time-in'); toast.success('Timed in!'); fetchData(); } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); } };
   const handleTimeOut = async () => { try { await api.post('/attendance/time-out'); toast.success('Timed out!'); fetchData(); } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); } };
-  const handleAcknowledge = async (reminderId) => {
+  const handleAcknowledgeTask = async (reminderId) => {
     try {
       await api.post(`/task-reminders/${reminderId}/acknowledge`);
       toast.success('Task acknowledged!');
