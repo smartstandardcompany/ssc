@@ -38,6 +38,24 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - **Navigation**: Added under Reports section in sidebar
 - **Testing**: 100% pass rate (11/11 backend, all frontend features verified)
 
+### Feature: Enhanced Bank Reconciliation (COMPLETED)
+- **Backend**: New endpoints:
+  - `GET /api/bank-statements/{id}/unmatched` — unmatched transactions with top-3 match suggestions (score, tier, amount diff)
+  - `POST /api/bank-statements/{id}/manual-match` — manually link bank transaction to sale/expense/supplier payment
+- **Frontend**: 3-tab reconciliation: POS Reconciliation, Matched, Unmatched
+  - Adjustable tolerance (SAR 1/5/10/50) and date range (1-7 days) controls
+  - Confidence tier badges (Exact/Probable/Possible) on auto-matches
+  - Manual "Link" button on each unmatched suggestion for one-click linking
+- **Testing**: 100% pass rate (12/12 backend, all frontend features verified)
+
+### Feature: Expanded Keyboard Shortcuts (COMPLETED)
+- Grew from 15 to 31 total shortcuts
+- **Single-key**: B (Reconciliation), F (Performance Report), G (Task Compliance), J (Invoices), M (Menu Items), Q (Schedule)
+- **Ctrl+Shift**: R (Reconciliation), I (Invoices), D (Documents), T (Transfers)
+- **Alt**: P (Performance Report), C (Task Compliance), V (Visualizations), S (Schedule), L (Leave Approvals), M (Menu Items)
+- **Actions**: Ctrl+F (Filter), Ctrl+Shift+E (Export)
+- Updated shortcut modal with all new entries grouped by category
+
 ### Previous Session Features
 1. Enhanced Predictive Analytics (Inventory Demand, CLV, Peak Hours, Profit Decomposition)
 2. Custom Report Builder with Saved Views, Column Toggles, CSV Export
