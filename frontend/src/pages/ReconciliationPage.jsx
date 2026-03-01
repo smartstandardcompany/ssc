@@ -237,7 +237,32 @@ export default function ReconciliationPage() {
             <p className="text-sm text-muted-foreground mt-0.5">Match bank deposits against SSC Track sales</p>
           </div>
           {reconciliation && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 bg-stone-50 dark:bg-stone-800 rounded-lg px-2 py-1">
+                <span className="text-[10px] text-muted-foreground">Tolerance:</span>
+                <Select value={tolerance} onValueChange={setTolerance}>
+                  <SelectTrigger className="h-7 w-16 text-xs border-0 bg-transparent p-0" data-testid="tolerance-select"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">SAR 1</SelectItem>
+                    <SelectItem value="5">SAR 5</SelectItem>
+                    <SelectItem value="10">SAR 10</SelectItem>
+                    <SelectItem value="50">SAR 50</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-1.5 bg-stone-50 dark:bg-stone-800 rounded-lg px-2 py-1">
+                <span className="text-[10px] text-muted-foreground">Date Range:</span>
+                <Select value={dateRange} onValueChange={setDateRange}>
+                  <SelectTrigger className="h-7 w-20 text-xs border-0 bg-transparent p-0" data-testid="daterange-select"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 day</SelectItem>
+                    <SelectItem value="2">2 days</SelectItem>
+                    <SelectItem value="3">3 days</SelectItem>
+                    <SelectItem value="5">5 days</SelectItem>
+                    <SelectItem value="7">7 days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <Button variant="outline" size="sm" onClick={runAutoMatch} disabled={matchLoading} data-testid="auto-match-btn" className="border-orange-200 text-orange-600 hover:bg-orange-50">
                 <Wand2 size={14} className="mr-1" />{matchLoading ? 'Matching...' : 'Auto-Match'}
               </Button>
