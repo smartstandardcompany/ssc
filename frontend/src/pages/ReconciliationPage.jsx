@@ -210,6 +210,9 @@ export default function ReconciliationPage() {
           </div>
           {reconciliation && (
             <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={runAutoMatch} disabled={matchLoading} data-testid="auto-match-btn" className="border-orange-200 text-orange-600 hover:bg-orange-50">
+                <Wand2 size={14} className="mr-1" />{matchLoading ? 'Matching...' : 'Auto-Match'}
+              </Button>
               <Button variant="outline" size="sm" onClick={batchVerifyMatched} data-testid="batch-verify-btn">
                 <CheckCheck size={14} className="mr-1" />Verify All Matched
               </Button>
