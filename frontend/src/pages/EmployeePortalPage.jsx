@@ -440,6 +440,36 @@ export default function EmployeePortalPage() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="tasks">
+            <Card className="dark:bg-stone-900 dark:border-stone-700">
+              <CardHeader><CardTitle className="font-outfit text-base dark:text-white">My Task Reminders ({myTasks.length})</CardTitle></CardHeader>
+              <CardContent>
+                {myTasks.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">No task reminders assigned to you</p>
+                ) : (
+                  <div className="space-y-2">
+                    {myTasks.map(task => (
+                      <div key={task.id} className="p-3 rounded-xl border dark:border-stone-700 flex items-center justify-between" data-testid={`my-task-${task.id}`}>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium dark:text-white">{task.name}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{task.message}</p>
+                          <div className="flex items-center gap-3 mt-1 text-[10px] text-stone-400">
+                            <span className="flex items-center gap-0.5"><Clock size={10} />Every {task.interval_hours}h</span>
+                            <span>{task.active_start_hour}:00–{task.active_end_hour}:00</span>
+                            {task.last_acknowledged && <span className="text-emerald-500">Acknowledged: {new Date(task.last_acknowledged).toLocaleTimeString()}</span>}
+                          </div>
+                        </div>
+                        <Button size="sm" variant="outline" className="rounded-xl border-emerald-200 text-emerald-600 hover:bg-emerald-50" onClick={() => handleAcknowledge(task.id)} data-testid={`ack-task-${task.id}`}>
+                          <CheckCircle size={14} className="mr-1" />Done
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
 
         {/* Leave Dialog */}
