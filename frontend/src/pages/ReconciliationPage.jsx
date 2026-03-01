@@ -98,7 +98,42 @@ export default function ReconciliationPage() {
     finally { setLoading(false); }
   };
 
-  const handleStmtChange = (val) => { setSelectedStmt(val); loadReconciliation(val); };
+  const handleStmtChange = (val) => { setSelectedStmt(val); loadReconciliation(val); loadAutoMatches(val); };
+
+  const loadAutoMatches = async (stmtId) => {
+    if (!stmtId) return;
+    try {
+      const { data } = await api.get(`/bank-statements/${stmtId}/matches`);
+      setAutoMatches(data);
+    } catch {}
+  };
+
+  const runAutoMatch = async () => {
+    if (!selectedStmt) return;
+    setMatchLoading(true);
+    try {
+      const { data } = await api.post(`/bank-statements/${selectedStmt}/auto-match?tolerance=5&date_range=3`);
+      toast.success(`Auto-matched ${data.stats.auto_matched} transactions, ${data.stats.unmatched} unmatched`);
+      setAutoMatches(prev => [...prev, ...data.matched]);
+    } catch { toast.error('Auto-match failed'); }
+    finally { setMatchLoading(false); }
+  };
+
+  const confirmMatch = async (matchId) => {
+    try {
+      await api.post(`/bank-statements/${selectedStmt}/matches/${matchId}/confirm`);
+      setAutoMatches(prev => prev.map(m => m.id === matchId ? { ...m, status: 'confirmed' } : m));
+      toast.success('Match confirmed');
+    } catch { toast.error('Failed to confirm'); }
+  };
+
+  const rejectMatch = async (matchId) => {
+    try {
+      await api.delete(`/bank-statements/${selectedStmt}/matches/${matchId}`);
+      setAutoMatches(prev => prev.filter(m => m.id !== matchId));
+      toast.success('Match rejected');
+    } catch { toast.error('Failed to reject'); }
+  };
 
   const saveFlag = async () => {
     if (!flagDialog || !selectedStmt) return;
