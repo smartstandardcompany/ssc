@@ -445,6 +445,75 @@ export default function ReconciliationPage() {
           </Card>
         )}
 
+        {/* Unmatched Transactions */}
+        {matchTab === 'unmatched' && reconciliation && (
+          <Card className="dark:bg-stone-900 dark:border-stone-700">
+            <CardContent className="p-0">
+              {unmatchedLoading ? (
+                <div className="p-12 text-center text-muted-foreground">Loading unmatched transactions...</div>
+              ) : !unmatchedData || unmatchedData.unmatched.length === 0 ? (
+                <div className="p-12 text-center">
+                  <CheckCircle size={40} className="mx-auto text-emerald-300 mb-3" />
+                  <p className="text-muted-foreground font-medium">All Transactions Matched</p>
+                  <p className="text-xs text-stone-400 mt-1">No unmatched bank transactions found. Try running Auto-Match first.</p>
+                </div>
+              ) : (
+                <div className="divide-y dark:divide-stone-700" data-testid="unmatched-list">
+                  {unmatchedData.unmatched.map((u, idx) => (
+                    <div key={u.index} className="p-4 hover:bg-stone-50/50 dark:hover:bg-stone-800/50" data-testid={`unmatched-row-${idx}`}>
+                      <div className="flex items-start justify-between gap-4 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-mono text-xs">{u.date}</span>
+                            <Badge variant="outline" className={`text-[9px] ${u.type === 'credit' ? 'border-emerald-300 text-emerald-600' : 'border-red-300 text-red-600'}`}>
+                              {u.type}
+                            </Badge>
+                            {u.category && <Badge variant="outline" className="text-[9px]">{u.category.replace(/_/g, ' ')}</Badge>}
+                          </div>
+                          <p className="text-sm text-muted-foreground truncate">{u.description || 'No description'}</p>
+                          {u.beneficiary && <p className="text-[10px] text-stone-400">Beneficiary: {u.beneficiary}</p>}
+                        </div>
+                        <span className={`text-lg font-bold font-mono ${u.type === 'credit' ? 'text-emerald-600' : 'text-red-500'}`}>
+                          SAR {u.amount?.toLocaleString()}
+                        </span>
+                      </div>
+                      {u.suggestions.length > 0 ? (
+                        <div className="ml-4 border-l-2 border-stone-200 dark:border-stone-700 pl-3 space-y-2 mt-3">
+                          <p className="text-[10px] font-semibold uppercase text-stone-400">Suggested Matches</p>
+                          {u.suggestions.map((s, si) => (
+                            <div key={si} className="flex items-center gap-3 bg-stone-50 dark:bg-stone-800 rounded-lg p-2.5">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-0.5">
+                                  <Badge className={`text-[8px] ${s.type === 'sale' ? 'bg-emerald-500' : s.type === 'expense' ? 'bg-red-500' : 'bg-blue-500'}`}>
+                                    {s.type === 'sale' ? 'Sale' : s.type === 'expense' ? 'Expense' : 'Supplier'}
+                                  </Badge>
+                                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${s.tier === 'exact' ? 'bg-emerald-100 text-emerald-700' : s.tier === 'probable' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600'}`}>
+                                    {s.tier} {s.score}%
+                                  </span>
+                                  <span className="text-[10px] text-stone-400">{s.date}</span>
+                                </div>
+                                <p className="text-xs truncate">{s.desc}</p>
+                                <p className="text-[10px] text-stone-400">Amount: SAR {s.amount?.toLocaleString()} (diff: SAR {s.amt_diff})</p>
+                              </div>
+                              <Button size="sm" variant="outline" className="h-7 text-xs shrink-0 border-emerald-200 text-emerald-600 hover:bg-emerald-50"
+                                onClick={() => manualLink(u.index, s.type === 'sale' ? 'sale' : s.type === 'expense' ? 'expense' : 'supplier_payment', s.id)}
+                                data-testid={`link-btn-${idx}-${si}`}>
+                                <Link size={12} className="mr-1" />Link
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-stone-400 ml-4 mt-2">No matching suggestions found</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Reconciliation Table */}
         {loading && <div className="text-center py-8 text-muted-foreground">Loading reconciliation data...</div>}
         {matchTab === 'reconciliation' && !loading && reconciliation && (
