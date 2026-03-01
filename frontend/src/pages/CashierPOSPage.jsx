@@ -359,8 +359,8 @@ export default function CashierPOSPage() {
         </div>
 
         {/* Menu Grid */}
-        <div className="flex-1 p-3 overflow-y-auto">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        <div className="flex-1 p-3 overflow-y-auto pb-20 md:pb-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
             {filteredItems.map(item => (
               <Card 
                 key={item.id}
