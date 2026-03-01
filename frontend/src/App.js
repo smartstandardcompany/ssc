@@ -48,6 +48,7 @@ import PartnerPLReportPage from "./pages/PartnerPLReportPage";
 import TableManagementPage from "./pages/TableManagementPage";
 import WaiterPage from "./pages/WaiterPage";
 import LoanManagementPage from "./pages/LoanManagementPage";
+import NotificationPreferencesPage from "./pages/NotificationPreferencesPage";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 
@@ -146,6 +147,7 @@ function App() {
           <Route path="/loans" element={isAuthenticated ? <LoanManagementPage /> : <Navigate to="/login" />} />
           <Route path="/kds" element={<KitchenDisplayPage />} />
           <Route path="/order-status" element={<OrderStatusPage />} />
+          <Route path="/notification-preferences" element={isAuthenticated ? <NotificationPreferencesPage /> : <Navigate to="/login" />} />
         </Routes>
       </BrowserRouter>
       <Toaster position="top-right" richColors />
