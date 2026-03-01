@@ -399,14 +399,22 @@ export default function CashierPOSPage() {
         </div>
       </div>
 
-      {/* Right: Cart Section */}
-      <div className="w-96 bg-white border-l flex flex-col">
+      {/* Right: Cart Section - Hidden on mobile, slide-in overlay */}
+      <div className={`${showMobilePosCart ? 'fixed inset-0 z-50 bg-black/50 md:relative md:inset-auto md:bg-transparent' : 'hidden md:flex'} md:w-80 lg:w-96`}>
+        <div className={`${showMobilePosCart ? 'absolute right-0 top-0 bottom-0 w-[85vw] max-w-96' : 'w-full'} bg-white border-l flex flex-col h-full`}>
         {/* Cart Header */}
-        <div className="p-4 border-b flex items-center justify-between">
+        <div className="p-3 sm:p-4 border-b flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ShoppingCart size={20} className="text-orange-600" />
-            <h2 className="font-bold font-outfit">Current Order</h2>
+            <h2 className="font-bold font-outfit text-sm sm:text-base">Current Order</h2>
           </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="ghost" className="md:hidden h-7 w-7 p-0" onClick={() => setShowMobilePosCart(false)}>
+              <X size={16} />
+            </Button>
+          </div>
+        </div>
+        <div className="p-3 border-b flex gap-2">
           <div className="flex gap-2">
             <Select value={orderType} onValueChange={setOrderType}>
               <SelectTrigger className="w-28 h-8 text-xs">
