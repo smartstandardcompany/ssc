@@ -86,5 +86,4 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - Cashier/Waiter/Kitchen PIN: 1234
 
 ## Backlog / Future Tasks
-- Bank Reconciliation Logic — Advanced statement parsing & matching algorithms
-- Expand Keyboard Shortcuts — More shortcuts across the app
+- None remaining — all requested features implemented
