@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, TrendingDown, Target, Calendar, BarChart3, PieChart as PieIcon, Download, Brain, Plus, Zap, Package, Users, ShieldAlert, AlertTriangle, Wallet, Clock, UserCheck, Bell, Truck } from 'lucide-react';
+import { TrendingUp, TrendingDown, Target, Calendar, BarChart3, PieChart as PieIcon, Download, Brain, Plus, Zap, Package, Users, ShieldAlert, AlertTriangle, Wallet, Clock, UserCheck, Bell, Truck, Crown, Activity, Layers } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
 import api from '@/lib/api';
 import { toast } from 'sonner';
@@ -45,6 +45,11 @@ export default function AnalyticsPage() {
   const [employeePerformance, setEmployeePerformance] = useState(null);
   const [expenseAnomalies, setExpenseAnomalies] = useState(null);
   const [supplierOptimization, setSupplierOptimization] = useState(null);
+  // New Prediction Models
+  const [inventoryDemand, setInventoryDemand] = useState(null);
+  const [customerCLV, setCustomerCLV] = useState(null);
+  const [peakHours, setPeakHours] = useState(null);
+  const [profitDecomp, setProfitDecomp] = useState(null);
 
   useEffect(() => { fetchAll(); }, []);
 
