@@ -573,6 +573,19 @@ export default function CashierPOSPage() {
           </div>
         )}
       </div>
+      </div>
+
+      {/* Mobile floating cart button */}
+      {cart.length > 0 && !showMobilePosCart && (
+        <div className="fixed bottom-4 left-4 right-4 md:hidden z-40" data-testid="pos-mobile-cart-bar">
+          <Button className="w-full h-14 bg-orange-500 hover:bg-orange-600 rounded-2xl shadow-lg" onClick={() => setShowMobilePosCart(true)}>
+            <ShoppingCart size={20} className="mr-2" />
+            <span className="font-bold">{cart.length} items</span>
+            <span className="mx-2">|</span>
+            <span className="font-bold">SAR {(cart.reduce((sum, item) => sum + item.subtotal, 0) * 1.15).toFixed(2)}</span>
+          </Button>
+        </div>
+      )}
 
       {/* Modifiers Dialog */}
       <Dialog open={showModifiers} onOpenChange={setShowModifiers}>
