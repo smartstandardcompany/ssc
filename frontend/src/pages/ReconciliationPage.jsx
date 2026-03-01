@@ -404,6 +404,11 @@ export default function ReconciliationPage() {
               data-testid="unmatched-tab">
               <Unlink size={13} />Unmatched ({unmatchedData?.total || 0})
             </button>
+            <button onClick={() => setMatchTab('alerts')}
+              className={`px-4 py-1.5 text-sm rounded-lg transition-colors flex items-center gap-1.5 ${matchTab === 'alerts' ? 'bg-white dark:bg-stone-700 shadow font-medium' : 'text-muted-foreground hover:text-foreground'}`}
+              data-testid="alerts-tab">
+              <Bell size={13} />Alerts ({alertHistory.length})
+            </button>
           </div>
         )}
 
