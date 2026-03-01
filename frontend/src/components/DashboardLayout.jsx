@@ -72,6 +72,7 @@ const NAV_GROUPS = [
       { path: '/bank-statements', icon: FileText, label: 'Bank Statements', perm: 'reports', roles: ['admin'] },
       { path: '/reconciliation', icon: ArrowDownUp, label: 'Reconciliation', perm: 'reports', roles: ['admin'] },
       { path: '/performance-report', icon: Activity, label: 'Performance Report', perm: 'reports', roles: ['admin', 'manager'] },
+      { path: '/anomaly-detection', icon: AlertTriangle, label: 'Anomaly Detection', perm: 'reports', roles: ['admin', 'manager'] },
     ]
   },
   {
