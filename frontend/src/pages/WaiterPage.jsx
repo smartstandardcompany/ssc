@@ -625,8 +625,9 @@ export default function WaiterPage() {
         </div>
       </div>
 
-      {/* Right: Cart / Order Panel */}
-      <div className="w-80 lg:w-96 bg-white border-l flex flex-col">
+      {/* Right: Cart / Order Panel - Hidden on mobile, shown as overlay */}
+      <div className={`${showMobileCart ? 'fixed inset-0 z-50 bg-black/50 md:relative md:inset-auto md:bg-transparent' : 'hidden md:flex'} md:w-80 lg:w-96`}>
+        <div className={`${showMobileCart ? 'absolute right-0 top-0 bottom-0 w-[85vw] max-w-96 animate-in slide-in-from-right' : 'w-full'} bg-white border-l flex flex-col h-full`}>
         {/* Cart Header */}
         <div className="p-4 border-b">
           <div className="flex items-center justify-between">
@@ -634,7 +635,12 @@ export default function WaiterPage() {
               <ShoppingCart size={18} className="text-orange-600" />
               <h2 className="font-bold font-outfit text-sm">Table {selectedTable?.table_number} Order</h2>
             </div>
-            <Badge className="bg-orange-100 text-orange-700 text-xs">{cart.length} items</Badge>
+            <div className="flex items-center gap-2">
+              <Badge className="bg-orange-100 text-orange-700 text-xs">{cart.length} items</Badge>
+              <Button size="sm" variant="ghost" className="md:hidden h-7 w-7 p-0" onClick={() => setShowMobileCart(false)} data-testid="close-mobile-cart">
+                <X size={16} />
+              </Button>
+            </div>
           </div>
         </div>
 
