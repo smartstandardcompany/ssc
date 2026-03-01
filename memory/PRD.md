@@ -71,6 +71,24 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - **Notifications**: Sends via WhatsApp, Push, and Email channels (WhatsApp/Email require credentials)
 - **Testing**: 100% pass rate (20/20 backend, all frontend features verified)
 
+### Feature: Automated Anomaly Detection (COMPLETED)
+- **Backend**: New router `anomaly_detection.py` with 3 statistical detectors:
+  - **Sales**: Daily spikes/drops, transaction count anomalies, payment mode shifts (15%+), branch underperformance
+  - **Expenses**: Above category average (2+ std devs), weekly spending trends, category concentration (40%+)
+  - **Bank**: Match rate drops, flagged transaction spikes, large unmatched transactions (5K+ SAR with z-score >= 3)
+  - Uses z-scores and standard deviations for anomaly scoring
+  - Endpoints: `GET /api/anomaly-detection/scan?days=N`, `GET /api/anomaly-detection/history`
+  - Scan results saved to `anomaly_scans` collection
+- **Frontend**: `/anomaly-detection` page with:
+  - 7 summary cards (Total, Critical, Warning, Info, Sales, Expenses, Bank)
+  - Category filter pills (All/Sales/Expenses/Bank)
+  - Severity filter pills (All/Critical/Warning/Info)
+  - Anomaly list with severity icons, category badges, descriptions, actual/expected/z-score values
+  - Scan history with severity badges
+  - Toast notifications on scan completion
+- **Navigation**: Under Reports section, keyboard shortcut Alt+A
+- **Testing**: 100% pass rate (21/21 backend, all frontend features verified)
+
 ### Previous Session Features
 1. Enhanced Predictive Analytics (Inventory Demand, CLV, Peak Hours, Profit Decomposition)
 2. Custom Report Builder with Saved Views, Column Toggles, CSV Export
