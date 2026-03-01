@@ -118,6 +118,111 @@ export default function AnomalyDetectionPage() {
           </div>
         </div>
 
+        {/* Schedule Settings */}
+        {schedule && (
+          <Card className="dark:bg-stone-900 dark:border-stone-700" data-testid="schedule-settings">
+            <CardHeader className="py-3 px-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-outfit flex items-center gap-2">
+                  <Settings size={14} /> Auto-Scan Schedule
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  {schedule.last_auto_scan && (
+                    <span className="text-[10px] text-muted-foreground">Last auto-scan: {new Date(schedule.last_auto_scan).toLocaleString()}</span>
+                  )}
+                  <Button size="sm" variant="outline" onClick={testAutoScan} disabled={testingAutoScan} data-testid="test-autoscan-btn"
+                    className="border-violet-200 text-violet-600 hover:bg-violet-50 h-7 text-xs">
+                    <Play size={12} className="mr-1" />{testingAutoScan ? 'Testing...' : 'Test Now'}
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pb-4">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-muted-foreground">Enabled:</Label>
+                  <button onClick={() => saveSchedule({ enabled: !schedule.enabled })} data-testid="schedule-toggle"
+                    className={`relative w-10 h-5 rounded-full transition-colors ${schedule.enabled ? 'bg-emerald-500' : 'bg-stone-300 dark:bg-stone-600'}`}>
+                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${schedule.enabled ? 'translate-x-5' : ''}`} />
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-muted-foreground">Frequency:</Label>
+                  <Select value={schedule.frequency} onValueChange={v => saveSchedule({ frequency: v })} data-testid="schedule-frequency">
+                    <SelectTrigger className="h-7 w-24 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">Daily</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {schedule.frequency === 'weekly' && (
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-muted-foreground">Day:</Label>
+                    <Select value={schedule.day_of_week} onValueChange={v => saveSchedule({ day_of_week: v })} data-testid="schedule-day">
+                      <SelectTrigger className="h-7 w-24 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {[['sun','Sunday'],['mon','Monday'],['tue','Tuesday'],['wed','Wednesday'],['thu','Thursday'],['fri','Friday'],['sat','Saturday']].map(([v,l]) => (
+                          <SelectItem key={v} value={v}>{l}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-muted-foreground">Time:</Label>
+                  <Select value={String(schedule.hour)} onValueChange={v => saveSchedule({ hour: parseInt(v) })} data-testid="schedule-hour">
+                    <SelectTrigger className="h-7 w-20 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {[5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22].map(h => (
+                        <SelectItem key={h} value={String(h)}>{String(h).padStart(2,'0')}:00</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-muted-foreground">Period:</Label>
+                  <Select value={String(schedule.period_days)} onValueChange={v => saveSchedule({ period_days: parseInt(v) })} data-testid="schedule-period">
+                    <SelectTrigger className="h-7 w-24 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="30">30 days</SelectItem>
+                      <SelectItem value="60">60 days</SelectItem>
+                      <SelectItem value="90">90 days</SelectItem>
+                      <SelectItem value="180">180 days</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-muted-foreground">Alert when:</Label>
+                  <Select value={schedule.alert_threshold} onValueChange={v => saveSchedule({ alert_threshold: v })} data-testid="schedule-threshold">
+                    <SelectTrigger className="h-7 w-28 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="critical">Critical only</SelectItem>
+                      <SelectItem value="warning">Warning+</SelectItem>
+                      <SelectItem value="info">Any anomaly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Label className="text-xs text-muted-foreground">Channels:</Label>
+                  {['push', 'whatsapp', 'email'].map(ch => (
+                    <Badge key={ch} variant="outline"
+                      className={`text-[9px] cursor-pointer transition-colors ${(schedule.channels || []).includes(ch) ? 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400' : 'opacity-40'}`}
+                      onClick={() => {
+                        const chs = schedule.channels || [];
+                        const updated = chs.includes(ch) ? chs.filter(c => c !== ch) : [...chs, ch];
+                        saveSchedule({ channels: updated });
+                      }}
+                      data-testid={`channel-${ch}`}>
+                      {ch}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* No scan yet */}
         {!data && !loading && (
           <Card className="dark:bg-stone-900 dark:border-stone-700">
