@@ -623,6 +623,7 @@ AI_REPORT_BUILDERS = {
     "employee_performance": _build_employee_performance_report,
     "expense_anomaly": _build_expense_anomaly_alert,
     "supplier_reminder": _build_supplier_payment_reminder,
+    "daily_digest": _build_daily_digest,
 }
 
 async def run_ai_report(report_type: str):
