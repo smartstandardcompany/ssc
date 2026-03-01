@@ -523,28 +523,38 @@ export default function WaiterPage() {
   }
 
   // ============ ORDER VIEW ============
+  const [showMobileCart, setShowMobileCart] = useState(false);
+
   return (
-    <div className="h-screen flex bg-stone-100 overflow-hidden" data-testid="waiter-order">
+    <div className="h-screen flex flex-col md:flex-row bg-stone-100 overflow-hidden" data-testid="waiter-order">
       {/* Left: Menu Section */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <div className="bg-white border-b p-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Button size="sm" variant="ghost" onClick={goBackToTables} data-testid="back-to-tables">
               <ArrowLeft size={18} />
             </Button>
-            <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
-              <Armchair size={20} className="text-orange-600" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+              <Armchair size={16} className="text-orange-600 sm:hidden" />
+              <Armchair size={20} className="text-orange-600 hidden sm:block" />
             </div>
             <div>
-              <h1 className="font-bold text-lg font-outfit" data-testid="order-table-title">Table {selectedTable?.table_number}</h1>
-              <p className="text-xs text-muted-foreground">{waiter?.name} &middot; {currentOrder?.order_number || 'New Order'}</p>
+              <h1 className="font-bold text-base sm:text-lg font-outfit" data-testid="order-table-title">Table {selectedTable?.table_number}</h1>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">{waiter?.name} &middot; {currentOrder?.order_number || 'New Order'}</p>
             </div>
           </div>
-          <Badge variant="outline" className="text-sm px-3 py-1">
-            <Clock size={14} className="mr-1" />
-            {currentOrder?.created_at ? new Date(currentOrder.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs sm:text-sm px-2 sm:px-3 py-1 hidden sm:flex">
+              <Clock size={14} className="mr-1" />
+              {currentOrder?.created_at ? new Date(currentOrder.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+            </Badge>
+            {/* Mobile cart toggle */}
+            <Button size="sm" className="md:hidden bg-orange-500 hover:bg-orange-600 relative" onClick={() => setShowMobileCart(true)} data-testid="mobile-cart-toggle">
+              <ShoppingCart size={16} />
+              {cart.length > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white">{cart.length}</span>}
+            </Button>
+          </div>
         </div>
 
         {/* Search */}
