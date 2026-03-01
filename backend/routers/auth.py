@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Optional
 from datetime import datetime, timezone
+import uuid
 
 from database import db, hash_password, verify_password, create_access_token, get_current_user
 from models import User, UserCreate, UserUpdate, UserLogin, Token, Category, CategoryCreate
