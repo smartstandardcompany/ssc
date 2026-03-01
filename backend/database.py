@@ -16,9 +16,9 @@ import os
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-mongo_url = os.environ['MONGO_URL']
+mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 db_name = os.environ.get('DB_NAME', 'ssc_track')
-client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=10000)
+client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=15000, connectTimeoutMS=15000)
 db = client[db_name]
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
