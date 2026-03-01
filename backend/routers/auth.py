@@ -34,7 +34,9 @@ async def login(credentials: UserLogin):
     user_doc = await db.users.find_one({"email": {"$regex": f"^{credentials.email}$", "$options": "i"}}, {"_id": 0})
     if not user_doc:
         raise HTTPException(status_code=401, detail="Invalid email or password")
-    if not verify_password(credentials.password, user_doc["password"]):
+    # Support both 'password' and legacy 'hashed_password' field names
+    stored_pw = user_doc.get("password") or user_doc.get("hashed_password", "")
+    if not stored_pw or not verify_password(credentials.password, stored_pw):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     # Check if user is linked to an employee with a job title → apply job title permissions
     employee = await db.employees.find_one({"user_id": user_doc["id"]}, {"_id": 0})
