@@ -64,6 +64,11 @@ function App() {
       setIsAuthenticated(true);
     }
     setLoading(false);
+
+    // Register Service Worker for push notifications
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
   }, []);
 
   useEffect(() => {
