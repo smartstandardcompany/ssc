@@ -10,6 +10,7 @@ from database import client, db
 
 from routers import (
     auth,
+    anomaly_detection,
     bank_statements,
     branches,
     cashier_pos,
