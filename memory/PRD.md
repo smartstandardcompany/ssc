@@ -5,51 +5,57 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 
 ## Tech Stack
 - **Backend:** FastAPI, Motor (async MongoDB), JWT auth, APScheduler
-- **Frontend:** React, TailwindCSS, Shadcn UI, Recharts (Radar/Pie/Bar/Area), react-grid-layout, date-fns
+- **Frontend:** React, TailwindCSS, Shadcn UI, Recharts, react-grid-layout, date-fns
 - **Database:** MongoDB
 - **AI:** emergentintegrations (GPT-4o Vision)
-- **Push:** pywebpush + VAPID keys for browser push notifications
+- **Push:** pywebpush + VAPID keys for browser Web Push
+- **WhatsApp:** Twilio (config-dependent, requires user to set Twilio credentials)
+- **PWA:** Full offline-capable Progressive Web App with Service Worker
 
-## Latest Updates (Mar 1, 2026)
+## Latest Updates (Mar 1, 2026 — Session 2)
 
-### Phase 1: Enhanced Predictive Analytics (COMPLETED)
-- **Inventory Demand Forecast** — Weighted moving average per item, day-of-week patterns, stockout prediction
-- **Customer Lifetime Value (CLV)** — Predicts annual value, purchase frequency, retention, segments (Platinum/Gold/Silver/Bronze)
-- **Peak Hours Analysis** — Hourly order distribution, peak/slow hours, staffing recommendations, heatmap
-- **Profit Decomposition** — Daily profit vs 7-day trend, day-of-week seasonality, monthly P&L, anomaly detection
-- New tabs added to Analytics Dashboard Predictive Hub
+### Feature Set 1: Bank Reconciliation — Full Auto-Matching Engine (COMPLETED)
+- Smart auto-matching of bank transactions to system sales/expenses/supplier payments
+- Fuzzy matching with amount tolerance (±SAR 5) and date range (±3 days)
+- Confidence scoring (60-100%) with supplier name boosting
+- Confirm/reject individual matches with status tracking
+- Frontend: Auto-Match button, tab toggle (POS Reconciliation / Transaction Matches), match results table with confirm/reject actions
+- Backend: `POST /api/bank-statements/{id}/auto-match`, `GET .../matches`, `POST .../confirm`, `DELETE .../reject`
 
-### Phase 2: Report Customization (COMPLETED)
-- **Custom Report Builder** — Select report type (Sales/Expenses/Stock/Employees/Customers), date range, branch filter
-- **Column Visibility Toggles** — Click to show/hide columns in report output
-- **Save View** — Save custom report configurations and reload them later
-- **CSV Export** — One-click CSV download of any custom report
-- Backend: `/api/report-views` CRUD, `/api/report-views/data/{type}` filtered data
+### Feature Set 2: System-wide Keyboard Shortcuts (COMPLETED)
+- `useKeyboardShortcuts` hook with 15+ shortcuts (Ctrl+1..9 for nav, Ctrl+N/E for new entries, Ctrl+K search, Ctrl+/ help)
+- `ShortcutHelpDialog` component triggered by Ctrl+/ or window event
+- Updated DashboardLayout shortcuts modal with both single-key and Ctrl+key shortcuts
+- Shortcuts disabled when focus is on input/textarea elements
 
-### Phase 3: Push Notifications (COMPLETED)
-- **Browser Push** — Service Worker registration, VAPID key-based Web Push subscription
-- **Notification Preferences** — Per-type toggles: Low Stock, Leave Requests, Order Updates, Loan Installments, Expense Anomalies, Document Expiry, Daily Summary
-- **Notification Preferences Page** — New page at `/notification-preferences` with sidebar link
-- Backend: `/api/push/` endpoints for subscribe, unsubscribe, preferences, status
+### Feature Set 3: Full Mobile PWA (COMPLETED)
+- Enhanced Service Worker (`sw.js`) with offline caching:
+  - Cache-first for static assets (JS, CSS, images)
+  - Network-first for API calls
+  - Stale-while-revalidate for asset updates
+- `PWAInstallPrompt` component with dismiss/install UX
+- Complete `manifest.json` with categories, scope, lang, orientation
+- All PWA meta tags in index.html (theme-color, apple-mobile-web-app-capable, etc.)
 
-### All Completed Features
-- Employee Self-Service Portal (profile, financials, leave balance bars, loans, letters, edit profile)
-- HR Analytics (Radar, Pie, Bar, Area charts for department/salary/leave/loan analysis)
-- Leave Calendar View (monthly grid with colored entries)
-- Bank Reconciliation (diff %, pie chart, batch verify, CSV export)
-- Dark Mode across all pages
-- Loan Management (CRUD, installments, self-service)
-- Separate Waiter & Cashier Portals (pos_role, role enforcement)
-- Table Management (20 tables, 5 sections, visual designer)
-- KDS with Table Banners, Keyboard Shortcuts
-- AI CCTV, ZATCA Phase 2, i18n (EN/AR/UR/HI)
-- Full core ERP: Sales, Expenses, Customers, Suppliers, Employees, Stock, Invoicing
-- Customer-Facing Order Display (dark theme, progress bars, estimated wait time)
-- Advanced Export (Loans, Attendance, Leaves — Excel + PDF)
-- Mobile POS/Waiter Optimizations (slide-in cart, floating action bar)
-- 14 Predictive Analytics Models (Expense Forecast, Stock Reorder, Revenue Trends, Customer Churn, Margin Optimizer, Cash Flow, Seasonal, Team Score, Expense Anomalies, Supplier Optimization, Inventory Demand, CLV, Peak Hours, Profit Decomposition)
-- Custom Report Builder with Saved Views
+### Feature Set 4: WhatsApp Notification Channel (COMPLETED)
+- Added `channel_push` and `channel_whatsapp` toggles to notification preferences
+- Backend `send_whatsapp_notification` function using existing Twilio integration
+- Notifications route through preferences: if WhatsApp enabled and Twilio configured, alerts sent via WhatsApp
+- Frontend: Delivery Channels section in Notification Preferences page
+
+### Feature Set 5: Daily Digest Email (COMPLETED)
+- Comprehensive daily business summary: sales, expenses, payments, P&L, branch breakdown, top expenses, action items
+- Registered as `daily_digest` job type in scheduler (default: 6 AM daily)
+- Can be triggered manually via `POST /api/scheduler/ai-reports/daily_digest/trigger`
+- Sent via email (if SMTP configured) and/or WhatsApp (if Twilio configured)
+
+### Previous Session Completions
+- 14 Predictive Analytics Models (Inventory Demand, CLV, Peak Hours, Profit Decomposition, + 10 existing)
+- Custom Report Builder with Saved Views, column toggles, CSV export
 - Push Notification Preferences with per-type toggles
+- Table Management, Waiter/Cashier Portals, Loan Management, HR Analytics
+- Employee Self-Service Portal, Leave Calendar, KDS, ZATCA, i18n
+- Full core ERP, Mobile POS optimizations, Dark Mode, CCTV AI
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
@@ -57,5 +63,4 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - Cashier/Waiter/Kitchen PIN: 1234
 
 ## Backlog / Future Tasks
-- Bank Reconciliation: Full statement analyzer logic
-- Expand system-wide keyboard shortcuts
+- None remaining — all requested features implemented
