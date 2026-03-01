@@ -739,6 +739,7 @@ AI_REPORT_BUILDERS = {
     "expense_anomaly": _build_expense_anomaly_alert,
     "supplier_reminder": _build_supplier_payment_reminder,
     "daily_digest": _build_daily_digest,
+    "reconciliation_alert": None,  # placeholder, set below
 }
 
 async def run_ai_report(report_type: str):
