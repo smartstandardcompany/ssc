@@ -617,6 +617,102 @@ async def _build_supplier_payment_reminder():
     return "\n".join(lines)
 
 
+async def _build_daily_digest():
+    """Build comprehensive daily digest email with all key metrics."""
+    now = datetime.now(timezone.utc)
+    yesterday = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+    today = now.strftime("%Y-%m-%d")
+
+    # Yesterday's data
+    sales = await db.sales.find({"date": {"$gte": yesterday, "$lt": today}}, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find({"date": {"$gte": yesterday, "$lt": today}}, {"_id": 0}).to_list(10000)
+    sp = await db.supplier_payments.find({"date": {"$gte": yesterday, "$lt": today}}, {"_id": 0}).to_list(5000)
+
+    total_sales = sum(s.get("final_amount", s.get("amount", 0) - s.get("discount", 0)) for s in sales)
+    total_expenses = sum(e["amount"] for e in expenses)
+    total_sp = sum(p["amount"] for p in sp)
+    net_profit = total_sales - total_expenses - total_sp
+
+    # Payment breakdown
+    cash = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "cash")
+    bank = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "bank")
+    online = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "online")
+    credit_sales = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "credit")
+
+    # Pending items
+    pending_leaves = await db.leaves.count_documents({"status": "pending"})
+    pending_loans = await db.loans.count_documents({"status": "active"})
+
+    # Low stock items
+    items = await db.items.find({}, {"_id": 0}).to_list(1000)
+    low_stock_items = [i for i in items if i.get("min_stock_level", 0) > 0 and i.get("balance", 0) <= i.get("min_stock_level", 0)]
+
+    # Loan installments due in next 7 days
+    next_week = (now + timedelta(days=7)).isoformat()
+    due_installments = await db.loan_installments.count_documents({"status": "pending", "due_date": {"$lte": next_week}})
+
+    # Expiring documents in next 30 days
+    next_month = (now + timedelta(days=30)).strftime("%Y-%m-%d")
+    exp_docs = await db.documents.count_documents({"expiry_date": {"$lte": next_month, "$gte": today}})
+
+    # Branch breakdown
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branch_lines = []
+    for b in branches:
+        bs = sum(s.get("final_amount", s.get("amount", 0)) for s in sales if s.get("branch_id") == b["id"])
+        be = sum(e["amount"] for e in expenses if e.get("branch_id") == b["id"])
+        if bs > 0 or be > 0:
+            branch_lines.append(f"  {b['name']}: Sales SAR {bs:,.0f} | Expenses SAR {be:,.0f} | Net SAR {bs - be:,.0f}")
+
+    # Expense categories
+    cats = {}
+    for e in expenses:
+        cats[e.get("category", "other")] = cats.get(e.get("category", "other"), 0) + e["amount"]
+
+    lines = [
+        f"*SSC Track - Daily Digest*",
+        f"Report Date: {yesterday}",
+        f"",
+        f"*FINANCIAL SUMMARY*",
+        f"Total Sales: SAR {total_sales:,.2f} ({len(sales)} transactions)",
+        f"Total Expenses: SAR {total_expenses:,.2f}",
+        f"Supplier Payments: SAR {total_sp:,.2f}",
+        f"Net Profit: SAR {net_profit:,.2f}",
+        f"",
+        f"*PAYMENT BREAKDOWN*",
+        f"  Cash: SAR {cash:,.2f}",
+        f"  Bank: SAR {bank:,.2f}",
+        f"  Online: SAR {online:,.2f}",
+        f"  Credit: SAR {credit_sales:,.2f}",
+    ]
+
+    if branch_lines:
+        lines += [f"", f"*BRANCH PERFORMANCE*"] + branch_lines
+
+    if cats:
+        lines += [f"", f"*TOP EXPENSES*"]
+        for cat, amt in sorted(cats.items(), key=lambda x: -x[1])[:5]:
+            lines.append(f"  {cat.replace('_', ' ').title()}: SAR {amt:,.0f}")
+
+    # Action items
+    alerts = []
+    if len(low_stock_items) > 0:
+        alerts.append(f"  {len(low_stock_items)} items below minimum stock level")
+    if pending_leaves > 0:
+        alerts.append(f"  {pending_leaves} leave requests pending approval")
+    if due_installments > 0:
+        alerts.append(f"  {due_installments} loan installments due this week")
+    if exp_docs > 0:
+        alerts.append(f"  {exp_docs} documents expiring within 30 days")
+
+    if alerts:
+        lines += [f"", f"*ACTION REQUIRED*"] + alerts
+    else:
+        lines += [f"", f"No urgent items requiring attention."]
+
+    return "\n".join(lines)
+
+
 # Register new AI report types
 AI_REPORT_BUILDERS = {
     "cashflow_alert": _build_cashflow_alert,
