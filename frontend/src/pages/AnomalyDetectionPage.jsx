@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   AlertTriangle, AlertOctagon, Info, Shield, RefreshCw, TrendingUp, TrendingDown,
-  DollarSign, CreditCard, Building2, BarChart3, Clock, Zap
+  DollarSign, CreditCard, Building2, BarChart3, Clock, Zap, Settings, Play, Bell
 } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 
