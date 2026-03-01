@@ -28,6 +28,7 @@ const SHORTCUTS = [
   { keys: ['alt', 's'], action: 'nav', path: '/schedule', label: 'Schedule' },
   { keys: ['alt', 'l'], action: 'nav', path: '/leave-approvals', label: 'Leave Approvals' },
   { keys: ['alt', 'm'], action: 'nav', path: '/menu-items', label: 'Menu Items' },
+  { keys: ['alt', 'a'], action: 'nav', path: '/anomaly-detection', label: 'Anomaly Detection' },
   // Actions
   { keys: ['ctrl', 'n'], action: 'event', event: 'shortcut:new-sale', label: 'New Sale' },
   { keys: ['ctrl', 'e'], action: 'event', event: 'shortcut:new-expense', label: 'New Expense' },
