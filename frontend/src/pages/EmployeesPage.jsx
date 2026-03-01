@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, DollarSign, AlertTriangle, Eye, Calendar, FileText, Briefcase, UserX, Calculator } from 'lucide-react';
+import ExportButton from '@/components/ExportButton';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
