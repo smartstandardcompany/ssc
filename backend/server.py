@@ -131,18 +131,19 @@ async def seed_database():
             admin_user = {
                 "id": str(uuid.uuid4()),
                 "email": "ss@ssc.com",
-                "hashed_password": hashed_password,
-                "name": "Admin",
+                "password": hashed_password,
+                "name": "SSC Admin",
                 "role": "admin",
                 "is_active": True,
-                "permissions": {
-                    "sales": True, "expenses": True, "suppliers": True,
-                    "customers": True, "employees": True, "reports": True,
-                    "settings": True, "invoices": True, "stock": True,
-                    "partners": True, "documents": True, "branches": True,
-                    "transfers": True, "credit_report": True, "supplier_report": True,
-                    "schedule": True, "leave": True, "fines": True, "loans": True
-                },
+                "permissions": [
+                    "sales", "expenses", "suppliers",
+                    "customers", "employees", "reports",
+                    "settings", "invoices", "stock",
+                    "partners", "documents", "branches",
+                    "transfers", "credit_report", "supplier_report",
+                    "schedule", "leave", "fines", "loans",
+                    "users", "kitchen", "shifts"
+                ],
                 "created_at": datetime.now(timezone.utc).isoformat()
             }
             
