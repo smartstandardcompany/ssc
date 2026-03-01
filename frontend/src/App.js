@@ -147,6 +147,7 @@ function App() {
           <Route path="/task-reminders" element={isAuthenticated ? <TaskRemindersPage /> : <Navigate to="/login" />} />
           <Route path="/task-compliance" element={isAuthenticated ? <TaskCompliancePage /> : <Navigate to="/login" />} />
           <Route path="/performance-report" element={isAuthenticated ? <PerformanceReportPage /> : <Navigate to="/login" />} />
+          <Route path="/anomaly-detection" element={isAuthenticated ? <AnomalyDetectionPage /> : <Navigate to="/login" />} />
         </Routes>
         </KeyboardShortcutProvider>
       </BrowserRouter>
