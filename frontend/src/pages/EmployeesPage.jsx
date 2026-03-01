@@ -207,6 +207,8 @@ export default function EmployeesPage() {
             <BulkSalaryPayment onComplete={fetchData} />
             <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowJobTitleManager(true)} data-testid="manage-job-titles-btn"><Briefcase size={14} className="mr-1" />Job Titles</Button>
             <Dialog open={showDialog} onOpenChange={(o) => { setShowDialog(o); if (!o) resetForm(); }}>
+              <ExportButton dataType="employees" label="Employees" />
+              <ExportButton dataType="attendance" label="Attendance" />
               <DialogTrigger asChild><Button size="sm" className="rounded-full" data-testid="add-employee-button"><Plus size={14} className="mr-1" />Add Employee</Button></DialogTrigger>
               <DialogContent className="max-w-2xl" data-testid="employee-dialog">
                 <DialogHeader><DialogTitle className="font-outfit">{editingEmp ? 'Edit' : 'Add'} Employee</DialogTitle></DialogHeader>
