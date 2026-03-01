@@ -137,6 +137,9 @@ export default function TaskRemindersPage() {
             <p className="text-sm text-muted-foreground">Automated recurring alerts for your staff</p>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" className="rounded-xl" onClick={() => navigate('/task-compliance')} data-testid="compliance-btn">
+              <BarChart3 size={14} className="mr-1" />Compliance
+            </Button>
             <Button variant="outline" className="rounded-xl" onClick={() => setShowHistory(true)} data-testid="history-btn">
               <History size={14} className="mr-1" />History
             </Button>
