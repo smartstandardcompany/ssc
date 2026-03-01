@@ -893,6 +893,237 @@ export default function AnalyticsPage() {
                   </div>
                 ) : <p className="text-center text-muted-foreground py-8">Loading supplier optimization...</p>}
               </TabsContent>
+
+              {/* Inventory Demand Forecast */}
+              <TabsContent value="inventory_demand">
+                {inventoryDemand ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-blue-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-blue-600">Items Tracked</p>
+                        <p className="text-xl font-bold font-outfit text-blue-700" data-testid="demand-tracked">{inventoryDemand.total_items_tracked}</p>
+                      </div>
+                      <div className="bg-red-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-red-600">At Risk</p>
+                        <p className="text-xl font-bold font-outfit text-red-700" data-testid="demand-risk">{inventoryDemand.items_at_risk}</p>
+                      </div>
+                      <div className="bg-purple-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-purple-600">Forecast Period</p>
+                        <p className="text-sm font-bold font-outfit text-purple-700">{inventoryDemand.forecast_period}</p>
+                      </div>
+                    </div>
+                    {inventoryDemand.items?.length > 0 ? (
+                      <div className="space-y-3">
+                        {inventoryDemand.items.slice(0, 15).map(item => (
+                          <div key={item.item_id} className={`p-3 rounded-xl border ${!item.stock_sufficient ? 'bg-red-50 border-red-200' : 'bg-white'}`} data-testid={`demand-${item.item_id}`}>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium">{item.item_name}</span>
+                                <Badge className={`text-[9px] ${item.trend === 'increasing' ? 'bg-red-500' : item.trend === 'decreasing' ? 'bg-emerald-500' : 'bg-stone-400'}`}>{item.trend} {item.trend_percent > 0 ? '+' : ''}{item.trend_percent}%</Badge>
+                              </div>
+                              <div className="flex items-center gap-3 text-xs">
+                                <span>Stock: <b>{item.current_stock}</b> {item.unit}</span>
+                                <span>Demand: <b>{item.avg_daily_demand}</b>/day</span>
+                                <span className={item.days_until_stockout <= 7 ? 'text-red-600 font-bold' : ''}>Stockout in: <b>{item.days_until_stockout}</b> days</span>
+                              </div>
+                            </div>
+                            {item.dow_pattern && (
+                              <div className="flex gap-1">
+                                {item.dow_pattern.map(d => (
+                                  <div key={d.day} className="flex-1 bg-stone-50 rounded p-1 text-center">
+                                    <p className="text-[9px] text-stone-400">{d.day}</p>
+                                    <p className="text-[10px] font-bold">{d.avg_demand}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : <p className="text-center text-muted-foreground py-6">No items with demand data to forecast.</p>}
+                  </div>
+                ) : <p className="text-center text-muted-foreground py-8">Loading inventory demand forecast...</p>}
+              </TabsContent>
+
+              {/* Customer Lifetime Value */}
+              <TabsContent value="customer_clv">
+                {customerCLV ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="bg-purple-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-purple-600">Total Customers</p>
+                        <p className="text-xl font-bold font-outfit text-purple-700" data-testid="clv-total">{customerCLV.total_customers}</p>
+                      </div>
+                      <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-emerald-600">Projected Revenue</p>
+                        <p className="text-lg font-bold font-outfit text-emerald-700" data-testid="clv-revenue">{fmt(customerCLV.total_projected_revenue)}</p>
+                      </div>
+                      <div className="bg-amber-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-amber-600">Avg CLV</p>
+                        <p className="text-lg font-bold font-outfit text-amber-700">{fmt(customerCLV.avg_clv)}</p>
+                      </div>
+                      <div className="bg-blue-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-blue-600">Segments</p>
+                        <div className="flex justify-center gap-1 mt-1">
+                          {Object.entries(customerCLV.segments || {}).map(([k, v]) => (
+                            <Badge key={k} variant="outline" className={`text-[9px] ${k === 'Platinum' ? 'border-purple-300' : k === 'Gold' ? 'border-amber-300' : k === 'Silver' ? 'border-blue-300' : 'border-stone-300'}`}>{k}: {v}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm" data-testid="clv-table">
+                        <thead><tr className="border-b text-xs text-muted-foreground">
+                          <th className="text-left p-2">Customer</th><th className="text-right p-2">Orders</th><th className="text-right p-2">Avg Order</th><th className="text-right p-2">Frequency</th><th className="text-right p-2">Retention</th><th className="text-right p-2">Annual CLV</th><th className="text-center p-2">Segment</th>
+                        </tr></thead>
+                        <tbody>
+                          {customerCLV.customers?.slice(0, 20).map(c => (
+                            <tr key={c.customer_id} className="border-b hover:bg-stone-50">
+                              <td className="p-2 font-medium">{c.name}</td>
+                              <td className="p-2 text-right">{c.order_count}</td>
+                              <td className="p-2 text-right">{fmt(c.avg_order_value)}</td>
+                              <td className="p-2 text-right">{c.purchase_frequency}/mo</td>
+                              <td className="p-2 text-right">{c.retention_probability}%</td>
+                              <td className="p-2 text-right font-bold text-emerald-600">{fmt(c.predicted_annual_clv)}</td>
+                              <td className="p-2 text-center"><Badge className={`text-[9px] ${c.segment_color === 'purple' ? 'bg-purple-500' : c.segment_color === 'amber' ? 'bg-amber-500' : c.segment_color === 'blue' ? 'bg-blue-500' : 'bg-stone-400'}`}>{c.segment}</Badge></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : <p className="text-center text-muted-foreground py-8">Loading customer lifetime value...</p>}
+              </TabsContent>
+
+              {/* Peak Hours */}
+              <TabsContent value="peak_hours">
+                {peakHours ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-emerald-50 rounded-xl p-3">
+                        <p className="text-xs text-emerald-600 font-semibold mb-2">Peak Hours</p>
+                        {peakHours.peak_hours?.map((h, i) => (
+                          <div key={i} className="flex justify-between text-xs mb-1">
+                            <span className="font-medium">{h.label}</span>
+                            <span className="text-emerald-700 font-bold">{h.avg_orders_per_day} orders/day ({h.share_percent}%)</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="bg-red-50 rounded-xl p-3">
+                        <p className="text-xs text-red-600 font-semibold mb-2">Slow Hours</p>
+                        {peakHours.slow_hours?.map((h, i) => (
+                          <div key={i} className="flex justify-between text-xs mb-1">
+                            <span className="font-medium">{h.label}</span>
+                            <span className="text-red-700 font-bold">{h.avg_orders_per_day} orders/day</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {peakHours.recommendations?.length > 0 && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                        <p className="text-sm font-semibold text-blue-700 mb-2 flex items-center gap-2"><Zap size={14} />Staffing Recommendations</p>
+                        {peakHours.recommendations.map((r, i) => (
+                          <p key={i} className="text-xs text-blue-600 mb-1">• {r}</p>
+                        ))}
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm font-semibold mb-2">Hourly Order Distribution</p>
+                      <ResponsiveContainer width="100%" height={220}>
+                        <BarChart data={peakHours.hourly_analysis?.filter(h => h.total_orders > 0)}>
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                          <XAxis dataKey="label" tick={{ fontSize: 9 }} />
+                          <YAxis tick={{ fontSize: 10 }} />
+                          <Tooltip />
+                          <Bar dataKey="avg_orders_per_day" name="Avg Orders/Day" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground text-center">{peakHours.total_transactions_analyzed} transactions analyzed • {peakHours.period}</p>
+                  </div>
+                ) : <p className="text-center text-muted-foreground py-8">Loading peak hours analysis...</p>}
+              </TabsContent>
+
+              {/* Profit Decomposition */}
+              <TabsContent value="profit_decomposition">
+                {profitDecomp ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-emerald-600">Avg Daily Profit</p>
+                        <p className="text-lg font-bold font-outfit text-emerald-700" data-testid="profit-avg">{fmt(profitDecomp.summary?.avg_daily_profit)}</p>
+                      </div>
+                      <div className={`rounded-xl p-3 text-center ${profitDecomp.summary?.profit_trend === 'improving' ? 'bg-emerald-50' : profitDecomp.summary?.profit_trend === 'declining' ? 'bg-red-50' : 'bg-stone-50'}`}>
+                        <p className="text-xs text-stone-600">Trend</p>
+                        <p className={`text-lg font-bold font-outfit capitalize ${profitDecomp.summary?.profit_trend === 'improving' ? 'text-emerald-700' : profitDecomp.summary?.profit_trend === 'declining' ? 'text-red-700' : 'text-stone-700'}`} data-testid="profit-trend">{profitDecomp.summary?.profit_trend}</p>
+                      </div>
+                      <div className="bg-blue-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-blue-600">Best Day</p>
+                        <p className="text-lg font-bold font-outfit text-blue-700">{profitDecomp.summary?.best_day}</p>
+                      </div>
+                      <div className="bg-amber-50 rounded-xl p-3 text-center">
+                        <p className="text-xs text-amber-600">Anomalies</p>
+                        <p className="text-lg font-bold font-outfit text-amber-700">{profitDecomp.summary?.total_anomalies}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold mb-2">Daily Profit vs Trend</p>
+                      <ResponsiveContainer width="100%" height={220}>
+                        <AreaChart data={profitDecomp.daily?.slice(-60)}>
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                          <XAxis dataKey="date" tick={{ fontSize: 9 }} tickFormatter={v => v.slice(5)} />
+                          <YAxis tick={{ fontSize: 10 }} />
+                          <Tooltip formatter={(v) => fmt(v)} />
+                          <Legend />
+                          <Area type="monotone" dataKey="profit" name="Actual Profit" stroke="#22C55E" fill="#22C55E" fillOpacity={0.1} strokeWidth={1.5} />
+                          <Line type="monotone" dataKey="trend" name="7-Day Trend" stroke="#F5841F" strokeWidth={2.5} dot={false} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm font-semibold mb-2">Day-of-Week Seasonality</p>
+                        <div className="space-y-1">
+                          {Object.entries(profitDecomp.seasonality || {}).map(([day, val]) => (
+                            <div key={day} className="flex items-center gap-2 text-xs">
+                              <span className="w-8 font-medium">{day}</span>
+                              <div className="flex-1 h-4 bg-stone-100 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${val >= 0 ? 'bg-emerald-400' : 'bg-red-400'}`} style={{ width: `${Math.min(100, Math.abs(val) / Math.max(...Object.values(profitDecomp.seasonality || {}).map(Math.abs), 1) * 100)}%` }} />
+                              </div>
+                              <span className={`font-bold w-20 text-right ${val >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{fmt(val)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold mb-2">Monthly P&L</p>
+                        <ResponsiveContainer width="100%" height={180}>
+                          <BarChart data={profitDecomp.monthly}>
+                            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                            <XAxis dataKey="month" tick={{ fontSize: 9 }} />
+                            <YAxis tick={{ fontSize: 10 }} />
+                            <Tooltip formatter={(v) => fmt(v)} />
+                            <Bar dataKey="profit" name="Profit" fill="#22C55E" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                    {profitDecomp.anomalies?.length > 0 && (
+                      <div>
+                        <p className="text-sm font-semibold mb-2">Profit Anomalies Detected</p>
+                        <div className="space-y-1">
+                          {profitDecomp.anomalies.map((a, i) => (
+                            <div key={i} className={`flex justify-between p-2 rounded-lg border text-xs ${a.type === 'spike' ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+                              <span className="font-medium">{a.date} — {a.type === 'spike' ? 'Unusual Spike' : 'Unusual Dip'}</span>
+                              <span>Actual: <b>{fmt(a.actual_profit)}</b> vs Expected: <b>{fmt(a.expected)}</b></span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : <p className="text-center text-muted-foreground py-8">Loading profit decomposition...</p>}
+              </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
