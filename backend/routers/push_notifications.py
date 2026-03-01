@@ -33,6 +33,8 @@ class NotificationPreferences(BaseModel):
     expense_anomalies: bool = True
     document_expiry: bool = True
     daily_summary: bool = False
+    channel_push: bool = True
+    channel_whatsapp: bool = False
 
 
 @router.get("/push/vapid-key")
