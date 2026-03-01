@@ -357,6 +357,10 @@ export default function AnalyticsPage() {
                 <TabsTrigger value="employee_performance" className="text-xs" data-testid="ai-employee-tab"><UserCheck size={12} className="mr-1" />Team Score</TabsTrigger>
                 <TabsTrigger value="expense_anomalies" className="text-xs" data-testid="ai-anomalies-tab"><Bell size={12} className="mr-1" />Alerts</TabsTrigger>
                 <TabsTrigger value="supplier_optimization" className="text-xs" data-testid="ai-supplier-tab"><Truck size={12} className="mr-1" />Suppliers</TabsTrigger>
+                <TabsTrigger value="inventory_demand" className="text-xs" data-testid="ai-demand-tab"><Package size={12} className="mr-1" />Demand</TabsTrigger>
+                <TabsTrigger value="customer_clv" className="text-xs" data-testid="ai-clv-tab"><Crown size={12} className="mr-1" />CLV</TabsTrigger>
+                <TabsTrigger value="peak_hours" className="text-xs" data-testid="ai-peak-tab"><Activity size={12} className="mr-1" />Peak Hours</TabsTrigger>
+                <TabsTrigger value="profit_decomposition" className="text-xs" data-testid="ai-profit-tab"><Layers size={12} className="mr-1" />Profit</TabsTrigger>
               </TabsList>
 
               {/* Expense Forecast */}
