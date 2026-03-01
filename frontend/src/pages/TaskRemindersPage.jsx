@@ -26,6 +26,7 @@ export default function TaskRemindersPage() {
   const [presets, setPresets] = useState({});
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   const [showCreate, setShowCreate] = useState(false);
   const [showPresets, setShowPresets] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
