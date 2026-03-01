@@ -550,19 +550,32 @@ export const DashboardLayout = ({ children }) => {
       {/* Keyboard Shortcuts Modal */}
       {showShortcuts && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={() => setShowShortcuts(false)}>
-          <div className="bg-white dark:bg-stone-800 rounded-2xl shadow-2xl max-w-sm w-full mx-4 p-5" onClick={e => e.stopPropagation()} data-testid="shortcuts-modal">
+          <div className="bg-white dark:bg-stone-800 rounded-2xl shadow-2xl max-w-md w-full mx-4 p-5 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()} data-testid="shortcuts-modal">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-bold font-outfit dark:text-white">Keyboard Shortcuts</h3>
               <button onClick={() => setShowShortcuts(false)} className="text-stone-400 hover:text-stone-600"><X size={18} /></button>
             </div>
-            <div className="space-y-2 text-sm">
+            <div className="space-y-3 text-sm">
+              <p className="text-xs text-stone-400 font-semibold uppercase">Quick Nav (Single Key)</p>
               {[
-                ['D', 'Dashboard'], ['N / P', 'POS / Quick Entry'], ['S', 'Sales'],
-                ['E', 'Expenses'], ['I', 'Inventory'], ['R', 'Reports'], ['A', 'Analytics'], ['V', 'Visualizations'],
-                ['T', 'Table Management'], ['L', 'Loans'], ['W', 'Waiter Mode'], ['C', 'Cashier POS'],
-                ['K', 'Kitchen Display'], ['H', 'Employees'], ['O', 'Order Status'], ['?', 'Show Shortcuts'],
+                ['D', 'Dashboard'], ['S', 'Sales'], ['E', 'Expenses'], ['I', 'Inventory'], ['R', 'Reports'],
+                ['A', 'Analytics'], ['V', 'Visualizations'], ['T', 'Table Management'], ['L', 'Loans'],
+                ['W', 'Waiter Mode'], ['C', 'Cashier POS'], ['K', 'Kitchen Display'], ['H', 'Employees'], ['O', 'Order Status'],
               ].map(([key, desc]) => (
-                <div key={key} className="flex items-center justify-between py-1.5 border-b border-stone-100 dark:border-stone-700 last:border-0">
+                <div key={key} className="flex items-center justify-between py-1 border-b border-stone-100 dark:border-stone-700 last:border-0">
+                  <span className="text-stone-600 dark:text-stone-300">{desc}</span>
+                  <kbd className="bg-stone-100 dark:bg-stone-700 text-stone-600 dark:text-stone-300 px-2 py-0.5 rounded text-xs font-mono font-bold">{key}</kbd>
+                </div>
+              ))}
+              <p className="text-xs text-stone-400 font-semibold uppercase pt-2">Advanced Shortcuts</p>
+              {[
+                ['Ctrl+1..9', 'Navigate to page by number'],
+                ['Ctrl+N', 'New Sale'], ['Ctrl+E', 'New Expense'],
+                ['Ctrl+K', 'Quick Search'], ['Ctrl+/', 'Shortcut Help Dialog'],
+                ['Ctrl+Shift+P', 'Open POS'], ['Ctrl+Shift+K', 'Kitchen Display'],
+                ['Ctrl+Shift+S', 'Settings'], ['Escape', 'Close Dialog'],
+              ].map(([key, desc]) => (
+                <div key={key} className="flex items-center justify-between py-1 border-b border-stone-100 dark:border-stone-700 last:border-0">
                   <span className="text-stone-600 dark:text-stone-300">{desc}</span>
                   <kbd className="bg-stone-100 dark:bg-stone-700 text-stone-600 dark:text-stone-300 px-2 py-0.5 rounded text-xs font-mono font-bold">{key}</kbd>
                 </div>
