@@ -739,6 +739,19 @@ export default function WaiterPage() {
           </div>
         </div>
       </div>
+      </div>
+
+      {/* Mobile floating cart button when cart is not visible */}
+      {cart.length > 0 && !showMobileCart && (
+        <div className="fixed bottom-4 left-4 right-4 md:hidden z-40" data-testid="mobile-cart-bar">
+          <Button className="w-full h-14 bg-orange-500 hover:bg-orange-600 rounded-2xl shadow-lg" onClick={() => setShowMobileCart(true)}>
+            <ShoppingCart size={20} className="mr-2" />
+            <span className="font-bold">{cart.length} items</span>
+            <span className="mx-2">|</span>
+            <span className="font-bold">SAR {total.toFixed(2)}</span>
+          </Button>
+        </div>
+      )}
 
       {/* Modifiers Dialog */}
       <Dialog open={showModifiers} onOpenChange={setShowModifiers}>
