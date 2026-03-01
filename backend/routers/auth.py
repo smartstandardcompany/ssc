@@ -7,6 +7,44 @@ from models import User, UserCreate, UserUpdate, UserLogin, Token, Category, Cat
 
 router = APIRouter()
 
+
+# Seed admin endpoint - creates default admin if none exists
+@router.post("/auth/seed-admin")
+async def seed_admin():
+    """Create default admin user if none exists. Safe to call multiple times."""
+    admin = await db.users.find_one({"email": "ss@ssc.com"}, {"_id": 0})
+    if admin:
+        # Fix legacy field name if needed
+        if "hashed_password" in admin and "password" not in admin:
+            await db.users.update_one(
+                {"email": "ss@ssc.com"},
+                {"$set": {"password": admin["hashed_password"]}, "$unset": {"hashed_password": ""}}
+            )
+            return {"message": "Admin user fixed (password field updated)", "email": "ss@ssc.com"}
+        return {"message": "Admin user already exists", "email": "ss@ssc.com"}
+
+    from database import hash_password as hp
+    import uuid
+    admin_user = {
+        "id": str(uuid.uuid4()),
+        "email": "ss@ssc.com",
+        "password": hp("Aa147258369Ssc@"),
+        "name": "SSC Admin",
+        "role": "admin",
+        "is_active": True,
+        "permissions": [
+            "sales", "expenses", "suppliers", "customers", "employees",
+            "reports", "settings", "invoices", "stock", "partners",
+            "documents", "branches", "transfers", "credit_report",
+            "supplier_report", "schedule", "leave", "fines", "loans",
+            "users", "kitchen", "shifts"
+        ],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.users.insert_one(admin_user)
+    del admin_user["_id"]
+    return {"message": "Admin user created successfully", "email": "ss@ssc.com"}
+
 # Auth Routes
 @router.post("/auth/register", response_model=Token)
 async def register(user_data: UserCreate):
