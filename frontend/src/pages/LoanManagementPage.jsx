@@ -161,9 +161,12 @@ export default function LoanManagementPage() {
             <h1 className="text-2xl sm:text-3xl font-bold font-outfit tracking-tight dark:text-white">Loan Management</h1>
             <p className="text-muted-foreground text-sm mt-1">Track and manage employee loans and installments</p>
           </div>
-          <Button onClick={() => setShowCreateLoan(true)} data-testid="create-loan-btn">
-            <Plus size={16} className="mr-1" /> New Loan
-          </Button>
+          <div className="flex gap-2">
+            <ExportButton dataType="loans" label="Loans" />
+            <Button onClick={() => setShowCreateLoan(true)} data-testid="create-loan-btn">
+              <Plus size={16} className="mr-1" /> New Loan
+            </Button>
+          </div>
         </div>
 
         {stats && (
