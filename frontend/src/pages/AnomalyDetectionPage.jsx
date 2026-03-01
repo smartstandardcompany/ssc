@@ -382,6 +382,7 @@ export default function AnomalyDetectionPage() {
                       <div className={`w-2 h-2 rounded-full ${s.critical > 0 ? 'bg-red-500' : s.warning > 0 ? 'bg-amber-500' : 'bg-emerald-500'}`} />
                       <span className="text-xs">{new Date(s.scanned_at).toLocaleString()}</span>
                       <span className="text-[10px] text-muted-foreground">{s.period_days} days</span>
+                      {s.source === 'auto' && <Badge variant="outline" className="text-[8px] border-violet-200 text-violet-600">auto</Badge>}
                     </div>
                     <div className="flex items-center gap-2">
                       {s.critical > 0 && <Badge className="bg-red-100 text-red-700 text-[9px] dark:bg-red-900/30 dark:text-red-400">{s.critical} critical</Badge>}
