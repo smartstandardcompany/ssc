@@ -633,3 +633,163 @@ async def reject_match(stmt_id: str, match_id: str, current_user: User = Depends
     """Reject/delete an auto-match."""
     await db.auto_matches.delete_one({"id": match_id, "statement_id": stmt_id})
     return {"message": "Match rejected"}
+
+
+# =====================================================
+# UNMATCHED TRANSACTIONS WITH SUGGESTIONS
+# =====================================================
+
+@router.get("/bank-statements/{stmt_id}/unmatched")
+async def get_unmatched_transactions(stmt_id: str, current_user: User = Depends(get_current_user)):
+    """Get unmatched bank transactions with best match suggestions."""
+    stmt = await db.bank_statements.find_one({"id": stmt_id}, {"_id": 0})
+    if not stmt:
+        raise HTTPException(status_code=404, detail="Statement not found")
+
+    txns = stmt.get("transactions", [])
+    existing_matches = await db.auto_matches.find({"statement_id": stmt_id}, {"_id": 0}).to_list(50000)
+    matched_indices = {m["txn_index"] for m in existing_matches}
+
+    sales = await db.sales.find({}, {"_id": 0}).to_list(50000)
+    expenses = await db.expenses.find({}, {"_id": 0}).to_list(20000)
+    supplier_payments = await db.supplier_payments.find({}, {"_id": 0}).to_list(20000)
+    suppliers = {s["id"]: s["name"] for s in await db.suppliers.find({}, {"_id": 0, "id": 1, "name": 1}).to_list(1000)}
+
+    def parse_date(d):
+        if not d:
+            return None
+        for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y", "%m/%d/%Y", "%Y/%m/%d"):
+            try:
+                return datetime.strptime(d[:10], fmt).date()
+            except:
+                pass
+        return None
+
+    unmatched = []
+    for idx, txn in enumerate(txns):
+        if idx in matched_indices:
+            continue
+        cat = txn.get("category", "")
+        if cat in ("bank_fees", "vat_fees", "pos_fees"):
+            continue
+        txn_amount = txn.get("credit", 0) or txn.get("debit", 0)
+        if txn_amount == 0:
+            continue
+
+        txn_date = parse_date(txn.get("date", ""))
+        is_credit = txn.get("credit", 0) > 0
+
+        # Find top 3 suggestions
+        suggestions = []
+        if is_credit:
+            for s in sales:
+                bank_amt = sum(p["amount"] for p in s.get("payment_details", []) if p.get("mode") == "bank")
+                check_amt = bank_amt if bank_amt > 0 else s.get("final_amount", s.get("amount", 0))
+                amt_diff = abs(check_amt - txn_amount)
+                if amt_diff <= max(txn_amount * 0.15, 50):
+                    sale_date = parse_date(s.get("date", ""))
+                    date_diff = abs((txn_date - sale_date).days) if txn_date and sale_date else 99
+                    score = max(0, 100 - (date_diff * 8) - (amt_diff / max(txn_amount, 1) * 100))
+                    tier = "exact" if score >= 90 else "probable" if score >= 65 else "possible"
+                    suggestions.append({"type": "sale", "id": s["id"], "amount": check_amt, "date": s.get("date", "")[:10], "desc": s.get("description", "")[:60] or f"Sale #{s['id'][:8]}", "score": round(score), "tier": tier, "amt_diff": round(amt_diff, 2)})
+        else:
+            for e in expenses:
+                amt_diff = abs(e["amount"] - txn_amount)
+                if amt_diff <= max(txn_amount * 0.15, 50):
+                    exp_date = parse_date(e.get("date", ""))
+                    date_diff = abs((txn_date - exp_date).days) if txn_date and exp_date else 99
+                    score = max(0, 100 - (date_diff * 8) - (amt_diff / max(txn_amount, 1) * 100))
+                    tier = "exact" if score >= 90 else "probable" if score >= 65 else "possible"
+                    suggestions.append({"type": "expense", "id": e["id"], "amount": e["amount"], "date": e.get("date", "")[:10], "desc": e.get("description", "")[:60] or e.get("category", "Expense"), "score": round(score), "tier": tier, "amt_diff": round(amt_diff, 2)})
+            for sp in supplier_payments:
+                amt_diff = abs(sp["amount"] - txn_amount)
+                if amt_diff <= max(txn_amount * 0.15, 50):
+                    sp_date = parse_date(sp.get("date", ""))
+                    date_diff = abs((txn_date - sp_date).days) if txn_date and sp_date else 99
+                    score = max(0, 100 - (date_diff * 8) - (amt_diff / max(txn_amount, 1) * 100))
+                    sup_name = suppliers.get(sp.get("supplier_id", ""), "")
+                    if sup_name and sup_name.upper() in txn.get("description", "").upper():
+                        score = min(score + 20, 100)
+                    tier = "exact" if score >= 90 else "probable" if score >= 65 else "possible"
+                    suggestions.append({"type": "supplier_payment", "id": sp["id"], "amount": sp["amount"], "date": sp.get("date", "")[:10], "desc": f"To {sup_name}" if sup_name else sp.get("description", "")[:60], "score": round(score), "tier": tier, "amt_diff": round(amt_diff, 2)})
+
+        suggestions.sort(key=lambda x: -x["score"])
+        unmatched.append({
+            "index": idx,
+            "date": txn.get("date", ""),
+            "amount": txn_amount,
+            "type": "credit" if is_credit else "debit",
+            "description": txn.get("description", "")[:120],
+            "category": txn.get("category", ""),
+            "beneficiary": txn.get("beneficiary", ""),
+            "suggestions": suggestions[:3],
+        })
+
+    return {"unmatched": unmatched, "total": len(unmatched)}
+
+
+# =====================================================
+# MANUAL MATCH (link bank txn to system record)
+# =====================================================
+
+@router.post("/bank-statements/{stmt_id}/manual-match")
+async def manual_match_transaction(stmt_id: str, body: dict, current_user: User = Depends(get_current_user)):
+    """Manually link a bank transaction to a system record."""
+    stmt = await db.bank_statements.find_one({"id": stmt_id}, {"_id": 0})
+    if not stmt:
+        raise HTTPException(status_code=404, detail="Statement not found")
+
+    txn_index = body.get("txn_index")
+    match_type = body.get("match_type")  # sale, expense, supplier_payment
+    match_id = body.get("match_id")
+
+    if txn_index is None or not match_type or not match_id:
+        raise HTTPException(status_code=400, detail="txn_index, match_type, and match_id required")
+
+    txns = stmt.get("transactions", [])
+    if txn_index < 0 or txn_index >= len(txns):
+        raise HTTPException(status_code=400, detail="Invalid txn_index")
+
+    # Check not already matched
+    existing = await db.auto_matches.find_one({"statement_id": stmt_id, "txn_index": txn_index}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=409, detail="Transaction already matched")
+
+    txn = txns[txn_index]
+    txn_amount = txn.get("credit", 0) or txn.get("debit", 0)
+
+    # Lookup the system record
+    coll_map = {"sale": "sales", "expense": "expenses", "supplier_payment": "supplier_payments"}
+    coll_name = coll_map.get(match_type)
+    if not coll_name:
+        raise HTTPException(status_code=400, detail="Invalid match_type")
+
+    record = await db[coll_name].find_one({"id": match_id}, {"_id": 0})
+    if not record:
+        raise HTTPException(status_code=404, detail=f"{match_type} record not found")
+
+    record_amount = record.get("amount", 0)
+    if match_type == "sale":
+        bank_amt = sum(p["amount"] for p in record.get("payment_details", []) if p.get("mode") == "bank")
+        record_amount = bank_amt if bank_amt > 0 else record.get("final_amount", record_amount)
+
+    match_record = {
+        "id": str(uuid.uuid4()),
+        "statement_id": stmt_id,
+        "txn_index": txn_index,
+        "txn_date": txn.get("date", ""),
+        "txn_amount": txn_amount,
+        "txn_desc": txn.get("description", "")[:100],
+        "match_type": match_type,
+        "match_id": match_id,
+        "match_amount": record_amount,
+        "match_date": record.get("date", "")[:10],
+        "match_desc": record.get("description", "")[:50] or f"{match_type} #{match_id[:8]}",
+        "confidence": 100,
+        "status": "manual",
+        "created_by": current_user.id,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.auto_matches.insert_one(match_record)
+    del match_record["_id"]
+    return match_record
