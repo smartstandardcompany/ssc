@@ -116,18 +116,14 @@ async def startup_event():
 async def seed_database():
     """Seed database with default admin user and essential data"""
     try:
-        # Check if any users exist
-        user_count = await db.users.count_documents({})
-        
-        if user_count == 0:
-            logger.info("No users found. Creating default admin user...")
-            
-            # Hash password
-            from passlib.context import CryptContext
-            pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        from passlib.context import CryptContext
+        pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+        # Always ensure admin user exists
+        admin_exists = await db.users.find_one({"email": "ss@ssc.com"}, {"_id": 0})
+        if not admin_exists:
+            logger.info("Admin user not found. Creating default admin user...")
             hashed_password = pwd_context.hash("Aa147258369Ssc@")
-            
-            # Create default admin user
             admin_user = {
                 "id": str(uuid.uuid4()),
                 "email": "ss@ssc.com",
@@ -146,9 +142,29 @@ async def seed_database():
                 ],
                 "created_at": datetime.now(timezone.utc).isoformat()
             }
-            
             await db.users.insert_one(admin_user)
-            logger.info("✅ Default admin user created: ss@ssc.com")
+            del admin_user["_id"]
+            logger.info("Default admin user created: ss@ssc.com")
+        else:
+            # Fix legacy: ensure password field exists (not hashed_password)
+            if "hashed_password" in admin_exists and "password" not in admin_exists:
+                await db.users.update_one(
+                    {"email": "ss@ssc.com"},
+                    {"$set": {"password": admin_exists["hashed_password"]}, "$unset": {"hashed_password": ""}}
+                )
+                logger.info("Fixed admin user password field name")
+            # Ensure permissions is a list (not dict)
+            if isinstance(admin_exists.get("permissions"), dict):
+                perm_list = [k for k, v in admin_exists["permissions"].items() if v]
+                await db.users.update_one(
+                    {"email": "ss@ssc.com"},
+                    {"$set": {"permissions": perm_list}}
+                )
+                logger.info("Fixed admin user permissions format")
+
+        # Check if any users exist for branch seeding
+        user_count = await db.users.count_documents({})
+        if user_count <= 1:
             
             # Create default branch
             branch_count = await db.branches.count_documents({})
