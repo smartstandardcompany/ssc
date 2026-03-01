@@ -217,7 +217,9 @@ export const DashboardLayout = ({ children }) => {
       'd': '/', 'n': '/pos', 'p': '/pos', 's': '/sales', 'e': '/expenses',
       'i': '/stock', 'r': '/reports', 'a': '/analytics', 'v': '/visualizations',
       't': '/table-management', 'l': '/loans', 'w': '/waiter', 'c': '/cashier',
-      'k': '/kds', 'h': '/employees', 'o': '/order-status',
+      'k': '/kds', 'h': '/employees', 'o': '/order-status', 'b': '/reconciliation',
+      'f': '/performance-report', 'g': '/task-compliance', 'j': '/invoices',
+      'm': '/menu-items', 'q': '/schedule',
       '?': 'shortcuts',
     };
     const target = shortcuts[e.key.toLowerCase()];
