@@ -612,20 +612,20 @@ async def _build_supplier_payment_reminder():
     ]
     
     if urgent:
-        lines.append(f"*🔴 URGENT ({len(urgent)} suppliers):*")
+        lines.append(f"*URGENT ({len(urgent)} suppliers):*")
         for s in urgent[:5]:
-            lines.append(f"  • {s['name']}: SAR {s['balance']:,.0f} ({s['util']:.0f}% used)")
+            lines.append(f"  - {s['name']}: SAR {s['balance']:,.0f} ({s['util']:.0f}% used)")
             lines.append(f"    Last payment: {s['last']}")
     else:
-        lines.append("✅ No urgent payments required.")
+        lines.append("No urgent payments required.")
     
     if upcoming:
         lines += [
             "",
-            f"*🟡 UPCOMING ({len(upcoming)} suppliers):*",
+            f"*UPCOMING ({len(upcoming)} suppliers):*",
         ]
         for s in upcoming[:5]:
-            lines.append(f"  • {s['name']}: SAR {s['balance']:,.0f}")
+            lines.append(f"  - {s['name']}: SAR {s['balance']:,.0f}")
     
     total_pending = sum(s.get("current_credit", 0) for s in suppliers)
     lines += [
@@ -633,6 +633,133 @@ async def _build_supplier_payment_reminder():
         f"*Total Pending:* SAR {total_pending:,.2f}",
     ]
     
+    return "\n".join(lines)
+
+
+async def _build_reconciliation_alert(threshold: float = 500):
+    """Build weekly reconciliation alert — flags unmatched bank transactions above threshold."""
+    now = datetime.now(timezone.utc)
+
+    statements = await db.bank_statements.find({}, {"_id": 0}).to_list(100)
+    if not statements:
+        return None  # nothing to reconcile
+
+    sales = await db.sales.find({}, {"_id": 0}).to_list(50000)
+    expenses = await db.expenses.find({}, {"_id": 0}).to_list(20000)
+    supplier_payments = await db.supplier_payments.find({}, {"_id": 0}).to_list(20000)
+    suppliers_list = await db.suppliers.find({}, {"_id": 0, "id": 1, "name": 1}).to_list(1000)
+    suppliers_map = {s["id"]: s["name"] for s in suppliers_list}
+
+    total_flagged = 0
+    total_unmatched = 0
+    flagged_items = []
+    stmt_summaries = []
+
+    for stmt in statements:
+        txns = stmt.get("transactions", [])
+        if not txns:
+            continue
+        matches = await db.auto_matches.find({"statement_id": stmt["id"]}, {"_id": 0}).to_list(50000)
+        matched_indices = {m["txn_index"] for m in matches}
+
+        stmt_unmatched = 0
+        stmt_flagged = 0
+        stmt_flagged_amount = 0
+
+        for idx, txn in enumerate(txns):
+            if idx in matched_indices:
+                continue
+            cat = txn.get("category", "")
+            if cat in ("bank_fees", "vat_fees", "pos_fees"):
+                continue
+            amt = txn.get("credit", 0) or txn.get("debit", 0)
+            if amt == 0:
+                continue
+            stmt_unmatched += 1
+            if amt >= threshold:
+                stmt_flagged += 1
+                stmt_flagged_amount += amt
+                flagged_items.append({
+                    "statement_id": stmt["id"],
+                    "statement_name": stmt.get("file_name", "Unknown"),
+                    "bank": stmt.get("bank_name", ""),
+                    "txn_index": idx,
+                    "date": txn.get("date", ""),
+                    "amount": round(amt, 2),
+                    "type": "credit" if txn.get("credit", 0) > 0 else "debit",
+                    "description": (txn.get("description", "") or "")[:100],
+                    "beneficiary": txn.get("beneficiary", ""),
+                })
+
+        total_unmatched += stmt_unmatched
+        total_flagged += stmt_flagged
+
+        match_rate = round(len(matched_indices) / max(len(txns), 1) * 100, 1)
+        stmt_summaries.append({
+            "statement_id": stmt["id"],
+            "file_name": stmt.get("file_name", ""),
+            "bank_name": stmt.get("bank_name", ""),
+            "total_txns": len(txns),
+            "matched": len(matched_indices),
+            "unmatched": stmt_unmatched,
+            "flagged": stmt_flagged,
+            "flagged_amount": round(stmt_flagged_amount, 2),
+            "match_rate": match_rate,
+        })
+
+    # Save alert to DB
+    alert_record = {
+        "id": str(uuid.uuid4()),
+        "type": "reconciliation_weekly",
+        "created_at": now.isoformat(),
+        "threshold": threshold,
+        "total_statements": len(statements),
+        "total_unmatched": total_unmatched,
+        "total_flagged": total_flagged,
+        "flagged_items": flagged_items[:50],
+        "statement_summaries": stmt_summaries,
+        "status": "flagged" if total_flagged > 0 else "clean",
+    }
+    await db.reconciliation_alerts.insert_one(alert_record)
+    del alert_record["_id"]
+
+    # Build WhatsApp/Email message
+    lines = [
+        "*SSC Track - Weekly Reconciliation Alert*",
+        f"Report Date: {now.strftime('%d %b %Y')}",
+        f"Threshold: SAR {threshold:,.0f}+",
+        "",
+    ]
+
+    if total_flagged > 0:
+        flagged_total_amt = sum(f["amount"] for f in flagged_items)
+        lines.append(f"*WARNING: {total_flagged} unmatched transactions above SAR {threshold:,.0f}*")
+        lines.append(f"Total flagged amount: SAR {flagged_total_amt:,.2f}")
+        lines.append("")
+        for fi in flagged_items[:8]:
+            lines.append(f"  - {fi['date']} | SAR {fi['amount']:,.2f} ({fi['type']})")
+            if fi["description"]:
+                lines.append(f"    {fi['description'][:60]}")
+        if len(flagged_items) > 8:
+            lines.append(f"  ... and {len(flagged_items) - 8} more")
+    else:
+        lines.append("All high-value bank transactions are matched.")
+
+    lines += [
+        "",
+        "*Statement Summary:*",
+    ]
+    for ss in stmt_summaries:
+        lines.append(f"  {ss['file_name']}: {ss['match_rate']}% matched ({ss['matched']}/{ss['total_txns']})")
+        if ss["flagged"] > 0:
+            lines.append(f"    {ss['flagged']} flagged (SAR {ss['flagged_amount']:,.0f})")
+
+    lines += [
+        "",
+        f"*Total Unmatched:* {total_unmatched}",
+        f"*Total Flagged:* {total_flagged}",
+    ]
+
     return "\n".join(lines)
 
 
