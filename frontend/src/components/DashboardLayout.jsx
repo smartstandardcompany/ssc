@@ -71,6 +71,7 @@ const NAV_GROUPS = [
       { path: '/category-report', icon: Tags, label: 'Category Report', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/bank-statements', icon: FileText, label: 'Bank Statements', perm: 'reports', roles: ['admin'] },
       { path: '/reconciliation', icon: ArrowDownUp, label: 'Reconciliation', perm: 'reports', roles: ['admin'] },
+      { path: '/performance-report', icon: Activity, label: 'Performance Report', perm: 'reports', roles: ['admin', 'manager'] },
     ]
   },
   {
