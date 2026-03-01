@@ -295,9 +295,12 @@ export default function LeaveApprovalsPage() {
             <h1 className="text-2xl sm:text-3xl font-bold font-outfit dark:text-white" data-testid="leave-approvals-title">Leave Management</h1>
             <p className="text-muted-foreground text-sm mt-1">{pendingCount} pending leaves &middot; {pendingReqs} pending requests</p>
           </div>
-          <Button onClick={() => setShowAnnouncement(true)} data-testid="send-announcement-btn">
-            <Send size={16} className="mr-1" />Announcement
-          </Button>
+          <div className="flex gap-2">
+            <ExportButton dataType="leaves" label="Leaves" />
+            <Button onClick={() => setShowAnnouncement(true)} data-testid="send-announcement-btn">
+              <Send size={16} className="mr-1" />Announcement
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
