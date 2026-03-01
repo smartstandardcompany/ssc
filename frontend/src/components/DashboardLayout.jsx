@@ -90,6 +90,7 @@ const NAV_GROUPS = [
       { path: '/users', icon: Shield, label: 'Users', perm: 'users', roles: ['admin'] },
       { path: '/settings', icon: Settings, label: 'Settings', perm: 'settings', roles: ['admin'] },
       { path: '/task-reminders', icon: Bell, label: 'Task Reminders', perm: 'settings', roles: ['admin'] },
+      { path: '/task-compliance', icon: Shield, label: 'Compliance', perm: 'settings', roles: ['admin'] },
       { path: '/notification-preferences', icon: Bell, label: 'Notif. Settings' },
       { path: '/help', icon: HelpCircle, label: 'Help & Guide' },
     ]
