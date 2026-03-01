@@ -69,12 +69,13 @@ export default function EmployeePortalPage() {
       const profRes = await api.get('/my/employee-profile');
       setProfile(profRes.data);
       setEditData({ phone: profRes.data.phone || '', email: profRes.data.email || '' });
-      const [payRes, leaveRes, reqRes, attRes, loanRes] = await Promise.all([
+      const [payRes, leaveRes, reqRes, attRes, loanRes, taskRes] = await Promise.all([
         api.get('/my/payments'), api.get('/my/leaves'), api.get('/my/requests'),
-        api.get('/my/attendance'), api.get('/my/loans').catch(() => ({ data: [] }))
+        api.get('/my/attendance'), api.get('/my/loans').catch(() => ({ data: [] })),
+        api.get('/task-reminders/my-reminders').catch(() => ({ data: [] }))
       ]);
       setPayments(payRes.data); setLeaves(leaveRes.data); setRequests(reqRes.data);
-      setAttendance(attRes.data); setMyLoans(loanRes.data);
+      setAttendance(attRes.data); setMyLoans(loanRes.data); setMyTasks(taskRes.data);
       const today = new Date().toISOString().split('T')[0];
       setTodayAttendance(attRes.data.find(a => a.date === today) || null);
     } catch (err) {
