@@ -84,6 +84,10 @@ export default function ReconciliationPage() {
   const [unmatchedLoading, setUnmatchedLoading] = useState(false);
   const [tolerance, setTolerance] = useState('5');
   const [dateRange, setDateRange] = useState('3');
+  const [alertHistory, setAlertHistory] = useState([]);
+  const [alertSettings, setAlertSettings] = useState(null);
+  const [alertLoading, setAlertLoading] = useState(false);
+  const [runningAlert, setRunningAlert] = useState(false);
 
   useEffect(() => {
     api.get('/bank-statements').then(r => setStatements(r.data)).catch(() => {});
