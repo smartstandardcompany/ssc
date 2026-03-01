@@ -144,6 +144,43 @@ export default function NotificationPreferencesPage() {
           </CardContent>
         </Card>
 
+        {/* Delivery Channels */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-outfit text-base">Delivery Channels</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            {[
+              { key: 'channel_push', label: 'Browser Push', desc: 'Receive alerts as browser push notifications', icon: Bell, color: 'text-orange-500' },
+              { key: 'channel_whatsapp', label: 'WhatsApp', desc: 'Receive alerts via WhatsApp (requires Twilio config)', icon: MessageSquare, color: 'text-emerald-500' },
+            ].map(item => {
+              const Icon = item.icon;
+              const enabled = prefs[item.key] ?? (item.key === 'channel_push');
+              return (
+                <div
+                  key={item.key}
+                  className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-colors ${enabled ? 'bg-white border-stone-200' : 'bg-stone-50 border-stone-100 opacity-60'}`}
+                  onClick={() => togglePref(item.key)}
+                  data-testid={`channel-${item.key}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon size={18} className={item.color} />
+                    <div>
+                      <p className="text-sm font-medium">{item.label}</p>
+                      <p className="text-[11px] text-muted-foreground">{item.desc}</p>
+                    </div>
+                  </div>
+                  <div className={`w-10 h-6 rounded-full flex items-center transition-colors ${enabled ? 'bg-orange-500 justify-end' : 'bg-stone-300 justify-start'}`}>
+                    <div className="w-5 h-5 bg-white rounded-full shadow mx-0.5 flex items-center justify-center">
+                      {enabled && <Check size={12} className="text-orange-500" />}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+
         {/* Notification Types */}
         <Card>
           <CardHeader>
