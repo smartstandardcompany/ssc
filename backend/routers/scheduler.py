@@ -941,6 +941,7 @@ async def get_ai_report_schedules(current_user: User = Depends(get_current_user)
             {"type": "employee_performance", "name": "Employee Performance", "description": "Weekly team performance summary"},
             {"type": "expense_anomaly", "name": "Expense Anomaly Alert", "description": "Daily unusual spending detection"},
             {"type": "supplier_reminder", "name": "Supplier Payment Reminder", "description": "Weekly supplier payment priorities"},
+            {"type": "reconciliation_alert", "name": "Reconciliation Alert", "description": "Weekly unmatched bank transaction alerts"},
         ]
     }
 
