@@ -85,14 +85,9 @@ function App() {
   return (
     <LanguageProvider>
     <div className="App">
-      {showInstall && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-primary text-primary-foreground p-3 flex items-center justify-center gap-4 shadow-lg" data-testid="install-banner">
-          <span className="text-sm font-medium">Install SSC Track as an app for quick access!</span>
-          <button onClick={handleInstall} className="bg-white text-primary px-4 py-1.5 rounded-full text-sm font-bold hover:bg-gray-100">Install App</button>
-          <button onClick={() => setShowInstall(false)} className="text-white/80 hover:text-white text-sm">Later</button>
-        </div>
-      )}
       <BrowserRouter>
+        <KeyboardShortcutProvider>
+        <ShortcutHelpDialog />
         <Routes>
           <Route path="/login" element={!isAuthenticated ? <LoginPage setIsAuthenticated={setIsAuthenticated} /> : <Navigate to="/" />} />
           <Route path="/register" element={!isAuthenticated ? <RegisterPage setIsAuthenticated={setIsAuthenticated} /> : <Navigate to="/" />} />
