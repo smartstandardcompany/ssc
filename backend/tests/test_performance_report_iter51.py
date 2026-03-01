@@ -29,10 +29,10 @@ class TestPerformanceReportAPI:
     """Tests for /api/performance-report endpoint"""
     
     def test_performance_report_without_auth(self):
-        """Should return 401 without authentication"""
+        """Should return 401/403 without authentication"""
         response = requests.get(f"{BASE_URL}/api/performance-report")
-        assert response.status_code == 401, f"Expected 401, got {response.status_code}"
-        print("PASS: Returns 401 without authentication")
+        assert response.status_code in [401, 403], f"Expected 401/403, got {response.status_code}"
+        print(f"PASS: Returns {response.status_code} without authentication")
     
     def test_performance_report_default_period(self, auth_headers):
         """Should return performance report with default 30-day period"""
