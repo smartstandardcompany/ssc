@@ -77,6 +77,37 @@ async def export_data(request: dict, current_user: User = Depends(get_current_us
             rows.append([emp["name"], emp.get("position", "-"), emp.get("document_id", "-"), branch_map.get(emp.get("branch_id"), "-"), emp.get("salary", 0), emp.get("pay_frequency", "monthly"), datetime.fromisoformat(emp["document_expiry"]).strftime("%Y-%m-%d") if emp.get("document_expiry") else "-"])
         headers = ["Name", "Position", "Document ID", "Branch", "Salary", "Pay Frequency", "Doc Expiry"]
         title = "Employees Report"
+    elif data_type == "loans":
+        loans = await db.loans.find({}, {"_id": 0}).sort("created_at", -1).to_list(5000)
+        rows = []
+        for l in loans:
+            rows.append([l["employee_name"], l["loan_type"].replace("_", " ").capitalize(), l["amount"], l.get("monthly_installment", 0), l.get("total_installments", 0), l.get("paid_installments", 0), l.get("remaining_balance", 0), l["status"].capitalize(), datetime.fromisoformat(l["created_at"]).strftime("%Y-%m-%d") if isinstance(l.get("created_at"), str) else "-"])
+        headers = ["Employee", "Loan Type", "Amount", "Monthly Installment", "Total Inst.", "Paid Inst.", "Remaining", "Status", "Created"]
+        title = "Loans Report"
+    elif data_type == "attendance":
+        attendance = await db.attendance.find({}, {"_id": 0}).sort("date", -1).to_list(10000)
+        emps = await db.employees.find({}, {"_id": 0}).to_list(1000)
+        emp_map = {e["id"]: e["name"] for e in emps}
+        rows = []
+        for a in attendance:
+            tin = datetime.fromisoformat(a["time_in"]).strftime("%H:%M") if a.get("time_in") else "-"
+            tout = datetime.fromisoformat(a["time_out"]).strftime("%H:%M") if a.get("time_out") else "-"
+            hours = "-"
+            if a.get("time_in") and a.get("time_out"):
+                delta = (datetime.fromisoformat(a["time_out"]) - datetime.fromisoformat(a["time_in"])).total_seconds() / 3600
+                hours = f"{delta:.1f}"
+            rows.append([a.get("date", "-"), emp_map.get(a.get("employee_id"), a.get("employee_name", "-")), tin, tout, hours])
+        headers = ["Date", "Employee", "Time In", "Time Out", "Hours"]
+        title = "Attendance Report"
+    elif data_type == "leaves":
+        leaves = await db.leaves.find({}, {"_id": 0}).sort("created_at", -1).to_list(5000)
+        rows = []
+        for l in leaves:
+            start = datetime.fromisoformat(l["start_date"]).strftime("%Y-%m-%d") if isinstance(l.get("start_date"), str) else "-"
+            end = datetime.fromisoformat(l["end_date"]).strftime("%Y-%m-%d") if isinstance(l.get("end_date"), str) else "-"
+            rows.append([l.get("employee_name", "-"), l.get("leave_type", "-").capitalize(), start, end, l.get("days", 0), l.get("status", "-").capitalize(), l.get("reason", "-")])
+        headers = ["Employee", "Type", "From", "To", "Days", "Status", "Reason"]
+        title = "Leave Report"
     else:
         raise HTTPException(status_code=400, detail="Invalid data type")
     if fmt == "excel":
