@@ -10,6 +10,7 @@ router = APIRouter()
 
 # Seed admin endpoint - creates default admin if none exists
 @router.post("/auth/seed-admin")
+@router.get("/auth/seed-admin")
 async def seed_admin():
     """Create default admin user if none exists. Safe to call multiple times."""
     admin = await db.users.find_one({"email": "ss@ssc.com"}, {"_id": 0})
