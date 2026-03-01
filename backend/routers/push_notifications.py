@@ -184,4 +184,7 @@ async def create_and_push_notification(user_id: str, notif_type: str, title: str
         should_push = prefs.get(pref_key, True)
 
     if should_push:
-        await send_push_to_user(user_id, title, message, data)
+        if prefs.get("channel_push", True):
+            await send_push_to_user(user_id, title, message, data)
+        if prefs.get("channel_whatsapp", False):
+            await send_whatsapp_notification(message)
