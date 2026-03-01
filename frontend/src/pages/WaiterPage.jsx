@@ -62,6 +62,7 @@ export default function WaiterPage() {
   const [showCustomerSelect, setShowCustomerSelect] = useState(false);
   const [customers, setCustomers] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [showMobileCart, setShowMobileCart] = useState(false);
 
   // Check stored auth
   useEffect(() => {
