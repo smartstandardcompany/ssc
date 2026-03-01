@@ -566,6 +566,8 @@ export const DashboardLayout = ({ children }) => {
                 ['D', 'Dashboard'], ['S', 'Sales'], ['E', 'Expenses'], ['I', 'Inventory'], ['R', 'Reports'],
                 ['A', 'Analytics'], ['V', 'Visualizations'], ['T', 'Table Management'], ['L', 'Loans'],
                 ['W', 'Waiter Mode'], ['C', 'Cashier POS'], ['K', 'Kitchen Display'], ['H', 'Employees'], ['O', 'Order Status'],
+                ['B', 'Reconciliation'], ['F', 'Performance Report'], ['G', 'Task Compliance'], ['J', 'Invoices'],
+                ['M', 'Menu Items'], ['Q', 'Schedule'],
               ].map(([key, desc]) => (
                 <div key={key} className="flex items-center justify-between py-1 border-b border-stone-100 dark:border-stone-700 last:border-0">
                   <span className="text-stone-600 dark:text-stone-300">{desc}</span>
@@ -576,9 +578,16 @@ export const DashboardLayout = ({ children }) => {
               {[
                 ['Ctrl+1..9', 'Navigate to page by number'],
                 ['Ctrl+N', 'New Sale'], ['Ctrl+E', 'New Expense'],
-                ['Ctrl+K', 'Quick Search'], ['Ctrl+/', 'Shortcut Help Dialog'],
+                ['Ctrl+K', 'Quick Search'], ['Ctrl+F', 'Toggle Filter'],
+                ['Ctrl+Shift+E', 'Export Data'], ['Ctrl+/', 'Shortcut Help Dialog'],
                 ['Ctrl+Shift+P', 'Open POS'], ['Ctrl+Shift+K', 'Kitchen Display'],
-                ['Ctrl+Shift+S', 'Settings'], ['Escape', 'Close Dialog'],
+                ['Ctrl+Shift+R', 'Reconciliation'], ['Ctrl+Shift+I', 'Invoices'],
+                ['Ctrl+Shift+D', 'Documents'], ['Ctrl+Shift+T', 'Transfers'],
+                ['Ctrl+Shift+S', 'Settings'],
+                ['Alt+P', 'Performance Report'], ['Alt+C', 'Task Compliance'],
+                ['Alt+V', 'Visualizations'], ['Alt+S', 'Schedule'],
+                ['Alt+L', 'Leave Approvals'], ['Alt+M', 'Menu Items'],
+                ['Escape', 'Close Dialog'],
               ].map(([key, desc]) => (
                 <div key={key} className="flex items-center justify-between py-1 border-b border-stone-100 dark:border-stone-700 last:border-0">
                   <span className="text-stone-600 dark:text-stone-300">{desc}</span>
