@@ -570,3 +570,90 @@ async def seed_default_platforms(current_user: User = Depends(get_current_user))
             created += 1
     
     return {"message": f"Created {created} platforms", "total": len(default_platforms)}
+
+
+
+@router.get("/platforms/branch-summary")
+async def get_branch_platform_summary(
+    branch_id: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get platform sales summary by branch - shows each branch's pending amounts"""
+    require_permission(current_user, "sales", "read")
+    
+    # Get all branches
+    branches = await db.branches.find({}, {"_id": 0, "id": 1, "name": 1}).to_list(100)
+    branch_map = {b["id"]: b["name"] for b in branches}
+    
+    if branch_id:
+        branches = [b for b in branches if b["id"] == branch_id]
+    
+    # Get all platforms
+    platforms = await db.delivery_platforms.find({"is_active": True}, {"_id": 0, "id": 1, "name": 1, "commission_rate": 1}).to_list(100)
+    
+    result = []
+    
+    for branch in branches:
+        branch_data = {
+            "branch_id": branch["id"],
+            "branch_name": branch["name"],
+            "platforms": [],
+            "totals": {"total_sales": 0, "total_received": 0, "total_commission": 0, "total_pending": 0}
+        }
+        
+        for platform in platforms:
+            # Get sales for this branch and platform
+            sales_query = {
+                "branch_id": branch["id"],
+                "platform_id": platform["id"],
+                "payment_mode": "online_platform"
+            }
+            if start_date:
+                sales_query["date"] = {"$gte": start_date}
+            if end_date:
+                sales_query.setdefault("date", {})["$lte"] = end_date
+            
+            sales = await db.sales.find(sales_query, {"_id": 0, "final_amount": 1, "amount": 1}).to_list(5000)
+            branch_platform_sales = sum(s.get("final_amount", s.get("amount", 0)) for s in sales)
+            
+            if branch_platform_sales == 0:
+                continue  # Skip platforms with no sales for this branch
+            
+            # Get payments that include this branch
+            payments = await db.platform_payments.find({
+                "platform_id": platform["id"],
+                "branch_breakdown.branch_id": branch["id"]
+            }, {"_id": 0, "branch_breakdown": 1}).to_list(500)
+            
+            branch_received = 0
+            branch_commission = 0
+            for payment in payments:
+                for bb in payment.get("branch_breakdown", []):
+                    if bb.get("branch_id") == branch["id"]:
+                        branch_received += bb.get("amount_received", 0)
+                        branch_commission += bb.get("commission_amount", 0)
+            
+            pending = branch_platform_sales - branch_received - branch_commission
+            
+            branch_data["platforms"].append({
+                "platform_id": platform["id"],
+                "platform_name": platform["name"],
+                "commission_rate": platform.get("commission_rate", 0),
+                "sales": branch_platform_sales,
+                "received": branch_received,
+                "commission": branch_commission,
+                "pending": pending,
+                "sales_count": len(sales)
+            })
+            
+            branch_data["totals"]["total_sales"] += branch_platform_sales
+            branch_data["totals"]["total_received"] += branch_received
+            branch_data["totals"]["total_commission"] += branch_commission
+            branch_data["totals"]["total_pending"] += pending
+        
+        if branch_data["platforms"]:  # Only include branches with platform sales
+            result.append(branch_data)
+    
+    return result
