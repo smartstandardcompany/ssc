@@ -6,7 +6,8 @@ import {
   User as UserIcon, Settings, ArrowLeftRight, FileInput, AlertTriangle,
   Handshake, HelpCircle, Building2, Package, ChefHat, CalendarClock,
   ArrowDownUp, Activity, PackageCheck, ChevronDown, Menu, X, Zap,
-  AlertCircle, Moon, Sun, Keyboard, Globe, UtensilsCrossed, Camera, Armchair, Wallet
+  AlertCircle, Moon, Sun, Keyboard, Globe, UtensilsCrossed, Camera, Armchair, Wallet,
+  CalendarDays
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -56,6 +57,7 @@ const NAV_GROUPS = [
       { path: '/transfers', icon: PackageCheck, label: 'Transfers', perm: 'stock', roles: ['admin', 'manager'] },
       { path: '/menu-items', icon: UtensilsCrossed, label: 'Menu Items', perm: 'stock', roles: ['admin', 'manager'] },
       { path: '/table-management', icon: Armchair, label: 'Tables', perm: 'stock', roles: ['admin', 'manager'] },
+      { path: '/reservations', icon: CalendarDays, label: 'Reservations', perm: 'stock', roles: ['admin', 'manager'] },
       { path: '/kitchen', icon: ChefHat, label: 'Kitchen', perm: 'kitchen' },
     ]
   },

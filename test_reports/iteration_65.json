@@ -1,0 +1,88 @@
+{
+  "summary": "Tested supplier balance bug fix (delete expense reduces credit) and Table Reservations system. Fixed ReservationUpdate model bug causing 500 error on PUT. All 20 backend tests passed. Frontend UI verified working with all features.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter65_supplier_balance_reservations.py",
+    "/app/test_reports/pytest/pytest_results_iter65.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "bugs_fixed": {
+    "reservation_update_500_error": {
+      "file": "/app/backend/routers/tables.py",
+      "issue": "PUT /api/reservations/{id} returned 500 Internal Server Error - ReservationUpdate model missing table_id field",
+      "fix": "Added table_id: Optional[str] = None to ReservationUpdate model (line 612)",
+      "root_cause": "Code at line 741 accessed data.table_id but the field was not defined in the Pydantic model"
+    }
+  },
+  "updated_files": [
+    "/app/backend/routers/tables.py",
+    "/app/backend/tests/test_iter65_supplier_balance_reservations.py"
+  ],
+  "success_rate": {
+    "backend": "100% (20/20 tests passed)",
+    "frontend": "100%"
+  },
+  "test_credentials": {
+    "admin_email": "ss@ssc.com",
+    "admin_password": "Aa147258369Ssc@"
+  },
+  "seed_data_creation": "Existing test reservation: Ahmed Al-Rashid (RES2603024B3E) for 19:00, 4 guests, Birthday occasion at Table T1. Test data prefixed with TEST_iter65 was created and cleaned up during testing.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Supplier balance bug fix verified - deleting credit expense now correctly reduces supplier's current_credit. Reservations feature fully working with endpoints: GET/POST/PUT/DELETE /api/reservations, GET /api/reservations/today, GET /api/reservations/upcoming, GET /api/reservations/stats, GET /api/reservations/available-slots, POST /api/reservations/{id}/status. UI at /reservations with Today, Upcoming, Calendar tabs. 20 tables available (T1-T8, V1-V3, O1-O4, B1-B3, P1-P2).",
+  "features_tested": {
+    "supplier_balance_recalculation": {
+      "status": "PASS",
+      "endpoints": ["POST /api/suppliers/{id}/recalculate-balance", "POST /api/suppliers/recalculate-all-balances"],
+      "details": "Both endpoints work correctly to recalculate supplier credit based on expenses and payments"
+    },
+    "expense_delete_credit_reduction": {
+      "status": "PASS",
+      "endpoint": "DELETE /api/expenses/{id}",
+      "details": "BUG FIX VERIFIED - Deleting credit expense now correctly reduces supplier's current_credit balance"
+    },
+    "reservations_crud": {
+      "status": "PASS",
+      "endpoints": ["GET /api/reservations", "POST /api/reservations", "PUT /api/reservations/{id}", "DELETE /api/reservations/{id}"],
+      "details": "Full CRUD operations working. Fixed PUT endpoint 500 error by adding table_id to ReservationUpdate model"
+    },
+    "reservations_filters": {
+      "status": "PASS",
+      "endpoints": ["GET /api/reservations/today", "GET /api/reservations/upcoming", "GET /api/reservations?date=YYYY-MM-DD"],
+      "details": "Date-based filtering working correctly"
+    },
+    "reservations_stats": {
+      "status": "PASS",
+      "endpoint": "GET /api/reservations/stats",
+      "details": "Returns today stats (total, confirmed, seated, completed, cancelled, no_show), weekly stats, and popular_times"
+    },
+    "reservations_available_slots": {
+      "status": "PASS",
+      "endpoint": "GET /api/reservations/available-slots?date=YYYY-MM-DD&party_size=N",
+      "details": "Returns available time slots with matching tables"
+    },
+    "reservations_status_lifecycle": {
+      "status": "PASS",
+      "endpoint": "POST /api/reservations/{id}/status",
+      "details": "Full lifecycle working: confirmed -> seated -> completed, cancel, no_show transitions"
+    },
+    "reservations_validation": {
+      "status": "PASS",
+      "details": "Validates party_size vs table capacity (400), conflicting slots (400), invalid table (404), invalid status (400)"
+    },
+    "reservations_page_ui": {
+      "status": "PASS",
+      "url": "/reservations",
+      "details": "Page loads with stats cards, Today/Upcoming/Calendar tabs, New Reservation dialog with all fields, reservation detail dialog with Seat/No Show/Cancel/Delete actions"
+    }
+  }
+}

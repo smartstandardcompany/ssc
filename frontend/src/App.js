@@ -58,6 +58,7 @@ import AnomalyDetectionPage from "./pages/AnomalyDetectionPage";
 import NotificationPreferencesPage from "./pages/NotificationPreferencesPage";
 import PlatformsPage from "./pages/PlatformsPage";
 import AssetsPage from "./pages/AssetsPage";
+import ReservationsPage from "./pages/ReservationsPage";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
@@ -152,6 +153,7 @@ function App() {
           <Route path="/cashier/pos" element={<CashierPOSPage />} />
           <Route path="/waiter" element={<WaiterPage />} />
           <Route path="/table-management" element={isAuthenticated ? <TableManagementPage /> : <Navigate to="/login" />} />
+          <Route path="/reservations" element={isAuthenticated ? <ReservationsPage /> : <Navigate to="/login" />} />
           <Route path="/loans" element={isAuthenticated ? <LoanManagementPage /> : <Navigate to="/login" />} />
           <Route path="/kds" element={<KitchenDisplayPage />} />
           <Route path="/order-status" element={<OrderStatusPage />} />

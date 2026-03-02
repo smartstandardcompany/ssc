@@ -588,3 +588,330 @@ async def get_table_stats(current_user: User = Depends(get_current_user)):
         "current_customers": current_customers,
         "occupancy_rate": round((occupied / total * 100) if total > 0 else 0, 1)
     }
+
+
+# =====================================================
+# TABLE RESERVATIONS
+# =====================================================
+
+class ReservationCreate(BaseModel):
+    table_id: str
+    customer_name: str
+    customer_phone: str
+    customer_email: Optional[str] = None
+    party_size: int = 2
+    date: str  # YYYY-MM-DD
+    time_slot: str  # HH:MM (24h format)
+    duration_minutes: int = 90
+    special_requests: Optional[str] = None
+    occasion: Optional[str] = None  # birthday, anniversary, business, etc.
+    branch_id: Optional[str] = None
+
+
+class ReservationUpdate(BaseModel):
+    table_id: Optional[str] = None  # Allow changing table
+    customer_name: Optional[str] = None
+    customer_phone: Optional[str] = None
+    customer_email: Optional[str] = None
+    party_size: Optional[int] = None
+    date: Optional[str] = None
+    time_slot: Optional[str] = None
+    duration_minutes: Optional[int] = None
+    special_requests: Optional[str] = None
+    occasion: Optional[str] = None
+    status: Optional[str] = None  # pending, confirmed, seated, completed, cancelled, no_show
+
+
+@router.get("/reservations")
+async def get_reservations(
+    date: Optional[str] = None,
+    status: Optional[str] = None,
+    branch_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get all reservations with optional filters"""
+    query = {}
+    if date:
+        query["date"] = date
+    if status:
+        query["status"] = status
+    if branch_id:
+        query["branch_id"] = branch_id
+    
+    reservations = await db.reservations.find(query, {"_id": 0}).sort([("date", 1), ("time_slot", 1)]).to_list(500)
+    
+    # Enrich with table info
+    tables = {t["id"]: t for t in await db.tables.find({}, {"_id": 0}).to_list(500)}
+    for res in reservations:
+        table = tables.get(res.get("table_id"))
+        if table:
+            res["table_number"] = table.get("table_number")
+            res["section"] = table.get("section")
+    
+    return reservations
+
+
+@router.get("/reservations/today")
+async def get_todays_reservations(current_user: User = Depends(get_current_user)):
+    """Get all reservations for today"""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    return await get_reservations(date=today, current_user=current_user)
+
+
+@router.get("/reservations/upcoming")
+async def get_upcoming_reservations(days: int = 7, current_user: User = Depends(get_current_user)):
+    """Get reservations for next N days"""
+    from datetime import timedelta
+    now = datetime.now(timezone.utc)
+    dates = [(now + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(days)]
+    
+    reservations = await db.reservations.find({
+        "date": {"$in": dates},
+        "status": {"$nin": ["cancelled", "no_show"]}
+    }, {"_id": 0}).sort([("date", 1), ("time_slot", 1)]).to_list(500)
+    
+    tables = {t["id"]: t for t in await db.tables.find({}, {"_id": 0}).to_list(500)}
+    for res in reservations:
+        table = tables.get(res.get("table_id"))
+        if table:
+            res["table_number"] = table.get("table_number")
+            res["section"] = table.get("section")
+    
+    return reservations
+
+
+@router.post("/reservations")
+async def create_reservation(data: ReservationCreate, current_user: User = Depends(get_current_user)):
+    """Create a new table reservation"""
+    # Validate table exists
+    table = await db.tables.find_one({"id": data.table_id}, {"_id": 0})
+    if not table:
+        raise HTTPException(status_code=404, detail="Table not found")
+    
+    # Check table capacity
+    if data.party_size > table.get("capacity", 4):
+        raise HTTPException(status_code=400, detail=f"Party size exceeds table capacity ({table.get('capacity', 4)})")
+    
+    # Check for conflicting reservations
+    existing = await db.reservations.find_one({
+        "table_id": data.table_id,
+        "date": data.date,
+        "time_slot": data.time_slot,
+        "status": {"$nin": ["cancelled", "no_show", "completed"]}
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Table already reserved for this time slot")
+    
+    reservation = {
+        "id": str(uuid.uuid4()),
+        "table_id": data.table_id,
+        "customer_name": data.customer_name,
+        "customer_phone": data.customer_phone,
+        "customer_email": data.customer_email,
+        "party_size": data.party_size,
+        "date": data.date,
+        "time_slot": data.time_slot,
+        "duration_minutes": data.duration_minutes,
+        "special_requests": data.special_requests,
+        "occasion": data.occasion,
+        "branch_id": data.branch_id or table.get("branch_id"),
+        "status": "confirmed",
+        "confirmation_code": f"RES{datetime.now().strftime('%y%m%d')}{str(uuid.uuid4())[:4].upper()}",
+        "created_by": current_user.id,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.reservations.insert_one(reservation)
+    
+    # Send confirmation (placeholder for SMS/WhatsApp)
+    # TODO: Integrate with Twilio for SMS confirmation
+    
+    return {k: v for k, v in reservation.items() if k != "_id"}
+
+
+@router.put("/reservations/{reservation_id}")
+async def update_reservation(reservation_id: str, data: ReservationUpdate, current_user: User = Depends(get_current_user)):
+    """Update a reservation"""
+    reservation = await db.reservations.find_one({"id": reservation_id}, {"_id": 0})
+    if not reservation:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+    
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    
+    # If changing table, validate new table
+    if data.table_id:
+        table = await db.tables.find_one({"id": data.table_id}, {"_id": 0})
+        if not table:
+            raise HTTPException(status_code=404, detail="Table not found")
+        if (data.party_size or reservation.get("party_size", 2)) > table.get("capacity", 4):
+            raise HTTPException(status_code=400, detail="Party size exceeds table capacity")
+    
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.reservations.update_one({"id": reservation_id}, {"$set": update_data})
+    
+    updated = await db.reservations.find_one({"id": reservation_id}, {"_id": 0})
+    return updated
+
+
+@router.delete("/reservations/{reservation_id}")
+async def delete_reservation(reservation_id: str, current_user: User = Depends(get_current_user)):
+    """Cancel/delete a reservation"""
+    result = await db.reservations.delete_one({"id": reservation_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+    return {"message": "Reservation deleted"}
+
+
+@router.post("/reservations/{reservation_id}/status")
+async def update_reservation_status(reservation_id: str, body: dict, current_user: User = Depends(get_current_user)):
+    """Update reservation status (confirm, seat, complete, cancel, no_show)"""
+    reservation = await db.reservations.find_one({"id": reservation_id}, {"_id": 0})
+    if not reservation:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+    
+    new_status = body.get("status")
+    valid_statuses = ["pending", "confirmed", "seated", "completed", "cancelled", "no_show"]
+    if new_status not in valid_statuses:
+        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
+    
+    update = {
+        "status": new_status,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # If seating, update table status
+    if new_status == "seated":
+        await db.tables.update_one(
+            {"id": reservation["table_id"]},
+            {"$set": {
+                "status": "occupied",
+                "current_reservation_id": reservation_id,
+                "customer_count": reservation.get("party_size", 2)
+            }}
+        )
+    
+    # If completed or cancelled, free up the table
+    if new_status in ["completed", "cancelled", "no_show"]:
+        await db.tables.update_one(
+            {"id": reservation["table_id"], "current_reservation_id": reservation_id},
+            {"$set": {
+                "status": "available",
+                "current_reservation_id": None,
+                "customer_count": 0
+            }}
+        )
+    
+    await db.reservations.update_one({"id": reservation_id}, {"$set": update})
+    return {"message": f"Reservation status updated to {new_status}"}
+
+
+@router.get("/reservations/available-slots")
+async def get_available_slots(
+    date: str,
+    party_size: int = 2,
+    branch_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get available time slots for a given date and party size"""
+    # Get all tables that can accommodate the party
+    query = {"capacity": {"$gte": party_size}, "is_active": True}
+    if branch_id:
+        query["branch_id"] = branch_id
+    tables = await db.tables.find(query, {"_id": 0}).to_list(100)
+    
+    if not tables:
+        return {"date": date, "available_slots": [], "message": "No tables available for this party size"}
+    
+    # Define time slots (restaurant hours: 11:00 - 23:00, 90 min slots)
+    all_slots = [
+        "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
+        "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
+        "17:00", "17:30", "18:00", "18:30", "19:00", "19:30",
+        "20:00", "20:30", "21:00", "21:30"
+    ]
+    
+    # Get existing reservations for the date
+    existing = await db.reservations.find({
+        "date": date,
+        "status": {"$nin": ["cancelled", "no_show"]}
+    }, {"_id": 0}).to_list(500)
+    
+    # Map reservations by table and time
+    reserved_slots = {}
+    for res in existing:
+        tid = res["table_id"]
+        if tid not in reserved_slots:
+            reserved_slots[tid] = set()
+        reserved_slots[tid].add(res["time_slot"])
+    
+    # Find available slots
+    available = []
+    for slot in all_slots:
+        available_tables = []
+        for table in tables:
+            tid = table["id"]
+            if tid not in reserved_slots or slot not in reserved_slots[tid]:
+                available_tables.append({
+                    "table_id": tid,
+                    "table_number": table.get("table_number"),
+                    "section": table.get("section"),
+                    "capacity": table.get("capacity")
+                })
+        if available_tables:
+            available.append({
+                "time_slot": slot,
+                "available_tables": available_tables[:5]  # Limit to 5 options
+            })
+    
+    return {
+        "date": date,
+        "party_size": party_size,
+        "available_slots": available
+    }
+
+
+@router.get("/reservations/stats")
+async def get_reservation_stats(current_user: User = Depends(get_current_user)):
+    """Get reservation statistics"""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    from datetime import timedelta
+    week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d")
+    
+    # Today's stats
+    today_reservations = await db.reservations.find({"date": today}, {"_id": 0}).to_list(500)
+    total_today = len(today_reservations)
+    confirmed_today = sum(1 for r in today_reservations if r.get("status") == "confirmed")
+    seated_today = sum(1 for r in today_reservations if r.get("status") == "seated")
+    completed_today = sum(1 for r in today_reservations if r.get("status") == "completed")
+    cancelled_today = sum(1 for r in today_reservations if r.get("status") == "cancelled")
+    no_show_today = sum(1 for r in today_reservations if r.get("status") == "no_show")
+    
+    # Weekly stats
+    weekly = await db.reservations.find({"date": {"$gte": week_ago}}, {"_id": 0}).to_list(2000)
+    total_weekly = len(weekly)
+    no_show_weekly = sum(1 for r in weekly if r.get("status") == "no_show")
+    no_show_rate = round((no_show_weekly / total_weekly * 100) if total_weekly > 0 else 0, 1)
+    
+    # Popular times
+    time_counts = {}
+    for r in weekly:
+        t = r.get("time_slot", "")
+        time_counts[t] = time_counts.get(t, 0) + 1
+    popular_times = sorted(time_counts.items(), key=lambda x: -x[1])[:5]
+    
+    return {
+        "today": {
+            "total": total_today,
+            "confirmed": confirmed_today,
+            "seated": seated_today,
+            "completed": completed_today,
+            "cancelled": cancelled_today,
+            "no_show": no_show_today
+        },
+        "weekly": {
+            "total": total_weekly,
+            "no_show_count": no_show_weekly,
+            "no_show_rate": no_show_rate
+        },
+        "popular_times": [{"time": t, "count": c} for t, c in popular_times]
+    }

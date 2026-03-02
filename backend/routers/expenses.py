@@ -47,6 +47,21 @@ async def create_expense(expense_data: ExpenseCreate, current_user: User = Depen
 @router.delete("/expenses/{expense_id}")
 async def delete_expense(expense_id: str, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "expenses", "write")
+    # First get the expense to check if it affects supplier credit
+    expense = await db.expenses.find_one({"id": expense_id}, {"_id": 0})
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    
+    # If expense was on credit with a supplier, reduce their credit balance
+    if expense.get("supplier_id") and expense.get("payment_mode") == "credit":
+        supplier = await db.suppliers.find_one({"id": expense["supplier_id"]}, {"_id": 0})
+        if supplier:
+            new_credit = max(0, supplier.get("current_credit", 0) - expense.get("amount", 0))
+            await db.suppliers.update_one(
+                {"id": expense["supplier_id"]}, 
+                {"$set": {"current_credit": new_credit}}
+            )
+    
     result = await db.expenses.delete_one({"id": expense_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Expense not found")
