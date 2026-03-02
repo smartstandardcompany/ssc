@@ -53,6 +53,10 @@ export default function POSPage() {
   const [supplierPayments, setSupplierPayments] = useState([{ supplier_id: '', amount: '', payment_mode: 'cash' }]);
   const [submittingPayments, setSubmittingPayments] = useState(false);
 
+  // Multi Expenses - array of {category, amount, payment_mode, supplier_id, description}
+  const [expenses, setExpenses] = useState([{ category: '', amount: '', payment_mode: 'cash', supplier_id: '', description: '' }]);
+  const [submittingExpenses, setSubmittingExpenses] = useState(false);
+
   // Regular sale amounts
   const [cashAmount, setCashAmount] = useState('');
   const [bankAmount, setBankAmount] = useState('');
@@ -304,6 +308,71 @@ export default function POSPage() {
 
   const totalPaymentsAmount = supplierPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
 
+  // Multi Expense Functions
+  const addExpenseRow = () => {
+    setExpenses([...expenses, { category: '', amount: '', payment_mode: 'cash', supplier_id: '', description: '' }]);
+  };
+
+  const removeExpenseRow = (index) => {
+    if (expenses.length > 1) {
+      setExpenses(expenses.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateExpenseRow = (index, field, value) => {
+    const updated = [...expenses];
+    updated[index][field] = value;
+    setExpenses(updated);
+  };
+
+  const submitMultipleExpenses = async () => {
+    if (!branch) { toast.error('Select a branch'); return; }
+    
+    const validExpenses = expenses.filter(e => parseFloat(e.amount) > 0);
+    if (validExpenses.length === 0) {
+      toast.error('Please add at least one expense with amount');
+      return;
+    }
+
+    setSubmittingExpenses(true);
+    let successCount = 0;
+    const entries = [];
+
+    for (const expense of validExpenses) {
+      try {
+        await api.post('/expenses', {
+          amount: parseFloat(expense.amount),
+          category: expense.category || 'General',
+          branch_id: branch,
+          description: expense.description || 'POS Expense',
+          date: getDateISO(),
+          payment_mode: expense.payment_mode,
+          supplier_id: expense.supplier_id || undefined,
+        });
+        const supplierName = suppliers.find(s => s.id === expense.supplier_id)?.name;
+        entries.push({ 
+          type: 'Expense', 
+          amount: parseFloat(expense.amount), 
+          mode: `${expense.category || 'General'} (${expense.payment_mode})`,
+          supplier: supplierName 
+        });
+        successCount++;
+      } catch (err) {
+        toast.error(`Failed to record expense: ${err.response?.data?.detail || 'Error'}`);
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`${successCount} expense(s) recorded successfully!`);
+      setLastEntries(entries);
+      setExpenses([{ category: '', amount: '', payment_mode: 'cash', supplier_id: '', description: '' }]);
+      refreshStats();
+    }
+    setSubmittingExpenses(false);
+  };
+
+  const totalExpensesAmount = expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+
   return (
     <DashboardLayout>
       <div className="max-w-lg mx-auto py-4 px-2 space-y-4" data-testid="pos-page">
@@ -526,74 +595,149 @@ export default function POSPage() {
           </div>
         )}
 
-        {/* EXPENSE MODE */}
+        {/* EXPENSE MODE - Multiple Expenses */}
         {entryType === 'expense' && (
-          <div className="space-y-4">
-            <div className="relative">
-              <DollarSign size={18} className="absolute left-3.5 top-3.5 text-stone-400" />
-              <Input type="number" inputMode="decimal" value={expenseAmount} onChange={e => setExpenseAmount(e.target.value)}
-                placeholder="0.00" className="h-14 pl-10 text-2xl font-bold font-outfit rounded-xl text-center" data-testid="pos-amount" />
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium text-red-700">Record Multiple Expenses</Label>
+              <Button 
+                type="button" 
+                size="sm" 
+                variant="outline"
+                onClick={addExpenseRow}
+                className="h-8 text-xs border-red-300 text-red-600 hover:bg-red-50"
+                data-testid="add-expense-row"
+              >
+                <Plus size={14} className="mr-1" /> Add More
+              </Button>
             </div>
-            
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="h-11 rounded-xl" data-testid="pos-category">
-                <SelectValue placeholder="Select Category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map(c => <SelectItem key={c.id || c.name} value={c.name}>{c.name}</SelectItem>)}
-                <SelectItem value="General">General</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            {/* Payment Mode */}
-            <div className="grid grid-cols-3 gap-2">
-              {['cash', 'bank', 'credit'].map(mode => (
-                <button key={mode} type="button" onClick={() => setPaymentMode(mode)}
-                  className={`py-2.5 rounded-xl text-xs font-medium transition-all border ${
-                    paymentMode === mode 
-                      ? mode === 'cash' ? 'bg-emerald-500 text-white border-emerald-500' 
-                        : mode === 'bank' ? 'bg-blue-500 text-white border-blue-500'
-                        : 'bg-amber-500 text-white border-amber-500'
-                      : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
-                  }`}>
-                  {mode === 'cash' && <Banknote size={14} className="inline mr-1" />}
-                  {mode === 'bank' && <CreditCard size={14} className="inline mr-1" />}
-                  {mode === 'credit' && <Users size={14} className="inline mr-1" />}
-                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
-                </button>
+
+            {/* Expense Rows */}
+            <div className="space-y-2">
+              {expenses.map((expense, index) => (
+                <div key={index} className="p-3 bg-red-50/50 rounded-xl border border-red-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-red-600">Expense #{index + 1}</span>
+                    {expenses.length > 1 && (
+                      <button 
+                        onClick={() => removeExpenseRow(index)}
+                        className="text-xs text-red-500 hover:text-red-700"
+                        data-testid={`remove-expense-${index}`}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Amount */}
+                    <Input
+                      type="number"
+                      placeholder="Amount"
+                      value={expense.amount}
+                      onChange={(e) => updateExpenseRow(index, 'amount', e.target.value)}
+                      className="h-10 rounded-lg bg-white"
+                      data-testid={`expense-amount-${index}`}
+                    />
+                    
+                    {/* Category */}
+                    <Select 
+                      value={expense.category || "general"} 
+                      onValueChange={(v) => updateExpenseRow(index, 'category', v)}
+                    >
+                      <SelectTrigger className="h-10 rounded-lg bg-white" data-testid={`expense-category-${index}`}>
+                        <SelectValue placeholder="Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map(c => <SelectItem key={c.id || c.name} value={c.name}>{c.name}</SelectItem>)}
+                        <SelectItem value="General">General</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Payment Mode */}
+                    <Select 
+                      value={expense.payment_mode} 
+                      onValueChange={(v) => updateExpenseRow(index, 'payment_mode', v)}
+                    >
+                      <SelectTrigger className="h-10 rounded-lg bg-white" data-testid={`expense-mode-${index}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cash">
+                          <div className="flex items-center gap-2">
+                            <Banknote size={14} /> Cash
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="bank">
+                          <div className="flex items-center gap-2">
+                            <CreditCard size={14} /> Bank
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="credit">
+                          <div className="flex items-center gap-2">
+                            <Users size={14} /> Credit
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    {/* Supplier Selection */}
+                    <Select 
+                      value={expense.supplier_id || "none"} 
+                      onValueChange={(v) => updateExpenseRow(index, 'supplier_id', v === "none" ? "" : v)}
+                    >
+                      <SelectTrigger className="h-10 rounded-lg bg-white" data-testid={`expense-supplier-${index}`}>
+                        <SelectValue placeholder="Supplier" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">- No Supplier -</SelectItem>
+                        {suppliers.map(s => (
+                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Description */}
+                  <Input
+                    placeholder="Description (optional)"
+                    value={expense.description}
+                    onChange={(e) => updateExpenseRow(index, 'description', e.target.value)}
+                    className="h-9 rounded-lg bg-white text-sm"
+                    data-testid={`expense-description-${index}`}
+                  />
+
+                  {/* Credit Warning */}
+                  {expense.payment_mode === 'credit' && expense.supplier_id && (
+                    <div className="p-2 bg-amber-50 rounded-lg border border-amber-200 text-xs text-amber-700">
+                      <strong>Credit:</strong> Will be added to supplier's balance
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
-            
-            {/* Supplier Selection */}
-            <Select value={supplierId || "none"} onValueChange={(v) => setSupplierId(v === "none" ? "" : v)}>
-              <SelectTrigger className="h-11 rounded-xl" data-testid="pos-supplier">
-                <Package size={14} className="mr-2 text-stone-400" />
-                <SelectValue placeholder="Select Supplier (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">- No Supplier -</SelectItem>
-                {suppliers.map(s => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name} {s.current_credit > 0 && `(Credit: SAR ${s.current_credit})`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            {/* Credit Warning */}
-            {paymentMode === 'credit' && supplierId && (
-              <div className="p-2.5 bg-amber-50 rounded-lg border border-amber-200 text-xs text-amber-700">
-                <strong>Credit Purchase:</strong> This will be added to supplier's balance.
+
+            {/* Total & Submit */}
+            <div className="p-3 bg-red-100 rounded-xl border border-red-300">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-red-700">Total Expenses</span>
+                <span className="text-lg font-bold text-red-800">SAR {totalExpensesAmount.toLocaleString()}</span>
               </div>
-            )}
+              <div className="text-xs text-red-600">
+                {expenses.filter(e => parseFloat(e.amount) > 0).length} expense(s) to record
+              </div>
+            </div>
 
-            <Input value={description} onChange={e => setDescription(e.target.value)}
-              placeholder="Description (optional)" className="h-11 rounded-xl" />
-
-            <Button onClick={submitExpense} disabled={submitting || !parseFloat(expenseAmount)}
-              className="w-full h-14 rounded-xl text-lg font-semibold bg-red-500 hover:bg-red-600">
-              {submitting ? <Loader2 className="animate-spin mr-2" /> : <Receipt size={20} className="mr-2" />}
-              Record Expense - SAR {parseFloat(expenseAmount || 0).toLocaleString()}
+            <Button 
+              onClick={submitMultipleExpenses} 
+              disabled={submittingExpenses || totalExpensesAmount === 0}
+              className="w-full h-14 rounded-xl text-lg font-semibold bg-red-500 hover:bg-red-600"
+              data-testid="submit-expenses"
+            >
+              {submittingExpenses ? <Loader2 className="animate-spin mr-2" /> : <Receipt size={20} className="mr-2" />}
+              Record Expenses - SAR {totalExpensesAmount.toLocaleString()}
             </Button>
           </div>
         )}
