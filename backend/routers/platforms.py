@@ -69,6 +69,8 @@ async def create_platform(body: dict, current_user: User = Depends(get_current_u
     }
     
     await db.delivery_platforms.insert_one(platform)
+    # Remove MongoDB _id before returning
+    platform.pop("_id", None)
     return {"message": "Platform created", "id": platform["id"], "platform": platform}
 
 
