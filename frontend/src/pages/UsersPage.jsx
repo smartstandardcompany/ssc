@@ -223,9 +223,40 @@ export default function UsersPage() {
       password: '',
       role: 'operator',
       branch_id: '',
-      permissions: getDefaultPermissions('operator')
+      permissions: getDefaultPermissions('operator'),
+      must_change_password: false
     });
     setEditingUser(null);
+  };
+
+  // Password reset functions
+  const openResetDialog = (user) => {
+    setResetUser(user);
+    setResetData({ new_password: '', confirm_password: '', must_change_on_login: true });
+    setShowResetDialog(true);
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    if (resetData.new_password !== resetData.confirm_password) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    if (resetData.new_password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    try {
+      await api.put(`/users/${resetUser.id}/reset-password`, {
+        new_password: resetData.new_password,
+        must_change_on_login: resetData.must_change_on_login
+      });
+      toast.success(`Password reset for ${resetUser.name}`);
+      setShowResetDialog(false);
+      setResetUser(null);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to reset password');
+    }
   };
 
   const getRoleBadgeClass = (role) => {
