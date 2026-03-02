@@ -103,6 +103,10 @@ function App() {
           <Route path="/change-password" element={isAuthenticated ? <ChangePasswordPage /> : <Navigate to="/login" />} />
           <Route path="/" element={isAuthenticated ? (() => {
             const user = JSON.parse(localStorage.getItem('user') || '{}');
+            // Check if user must change password first
+            if (user.must_change_password) {
+              return <Navigate to="/change-password?forced=true" />;
+            }
             return user.role === 'employee' ? <Navigate to="/my-portal" /> : <DashboardPage />;
           })() : <Navigate to="/login" />} />
           <Route path="/sales" element={isAuthenticated ? <SalesPage /> : <Navigate to="/login" />} />
