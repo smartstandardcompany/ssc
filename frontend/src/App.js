@@ -98,6 +98,9 @@ function App() {
         <Routes>
           <Route path="/login" element={!isAuthenticated ? <LoginPage setIsAuthenticated={setIsAuthenticated} /> : <Navigate to="/" />} />
           <Route path="/register" element={!isAuthenticated ? <RegisterPage setIsAuthenticated={setIsAuthenticated} /> : <Navigate to="/" />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/change-password" element={isAuthenticated ? <ChangePasswordPage /> : <Navigate to="/login" />} />
           <Route path="/" element={isAuthenticated ? (() => {
             const user = JSON.parse(localStorage.getItem('user') || '{}');
             return user.role === 'employee' ? <Navigate to="/my-portal" /> : <DashboardPage />;
