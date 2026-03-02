@@ -1,0 +1,120 @@
+{
+  "summary": "Password Management features testing complete. Backend: 21/21 tests passed covering admin reset, forgot password, change password (forced/normal), token validation. Frontend: All UI components working correctly - Login page has 'Forgot password?' link, Forgot Password page works, Users page has Reset Password button (key icon), Reset Password dialog fully functional with 'Force change on login' checkbox, 'Must Change PW' badge displays correctly. ONE ISSUE: Login redirect to /change-password?forced=true is NOT working - users with must_change_password=true land on dashboard instead of being forced to change password page.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "LoginPage.jsx",
+        "issue": "After login, users with must_change_password=true are NOT redirected to /change-password?forced=true. They land on dashboard instead. Toast 'Please change your password' shows but redirect does not work.",
+        "selector": "navigate('/change-password?forced=true')",
+        "priority": "HIGH",
+        "root_cause": "Race condition between setIsAuthenticated(true) and navigate() - React re-renders routes before navigation completes, and since isAuthenticated is now true, the '/' route takes precedence",
+        "suggested_fix": "Option 1: Check must_change_password in the '/' route component and redirect from there. Option 2: Use useEffect in App.js to check user.must_change_password and redirect. Option 3: Navigate before setting isAuthenticated state."
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Users table",
+        "issues": ["Console shows hydration warnings about <span> in <tbody> - this is from Emergent's visual editor wrapper, doesn't affect functionality"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_password_management_iter57.py",
+    "/app/test_reports/pytest/pytest_results_iter57.xml"
+  ],
+  "action_items": [
+    "FIX (HIGH): Login redirect for must_change_password users - currently they land on dashboard instead of /change-password?forced=true. The toast shows but navigation fails due to React state/route timing."
+  ],
+  "critical_code_review_comments": [
+    "backend/routers/auth.py:200-218 - admin_reset_password endpoint correctly updates password hash and must_change_password flag",
+    "backend/routers/auth.py:222-246 - change_password correctly handles forced change (no current_password required) vs normal change",
+    "backend/routers/auth.py:249-313 - forgot_password properly creates reset token, prevents email enumeration by returning same message for all emails",
+    "backend/routers/auth.py:317-341 - reset_password_with_token validates token expiry and deletes used token",
+    "backend/routers/auth.py:79-103 - login correctly returns must_change_password flag from user document",
+    "frontend/src/pages/LoginPage.jsx:28-32 - BUG: navigate('/change-password?forced=true') called after setIsAuthenticated(true), but route re-render wins the race",
+    "frontend/src/pages/UsersPage.jsx:233-260 - Reset password dialog correctly implemented with new_password, confirm_password, must_change_on_login checkbox",
+    "frontend/src/pages/UsersPage.jsx:495-499 - 'Must Change PW' badge correctly displays for users with must_change_password=true",
+    "frontend/src/pages/ChangePasswordPage.jsx:20-45 - Correctly hides current password field when ?forced=true, shows 'Password Change Required' title"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_password_management_iter57.py"
+  ],
+  "success_rate": {
+    "backend": "100% (21/21 tests passed)",
+    "frontend": "95% (all UI elements working, redirect bug found)"
+  },
+  "test_credentials": {
+    "admin": {"email": "ss@ssc.com", "password": "Aa147258369Ssc@"},
+    "limited_user_with_must_change": {"email": "test.limited@ssc.com", "password": "newpass123", "note": "Has must_change_password=true"}
+  },
+  "seed_data_creation": "Test users created and cleaned up during backend pytest run. Limited User (test.limited@ssc.com) exists with must_change_password=true.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Password management features implemented. Backend fully working. Frontend has one HIGH priority bug: login redirect for must_change_password users not working - fix in LoginPage.jsx or App.js needed. Key test data-testids: forgot-password-link, forgot-password-card, forgot-email-input, send-reset-link-button, reset-email-sent-card, reset-password-button (key icon on users page), reset-password-dialog, reset-new-password, reset-confirm-password, must-change-checkbox, submit-reset-button, change-password-card, new-password-input, confirm-password-input, change-password-button.",
+  "features_tested": {
+    "backend_api_tests": {
+      "API health": "PASS",
+      "Admin login returns must_change_password field": "PASS",
+      "Create test user": "PASS",
+      "Admin reset password with force_change=true": "PASS",
+      "User login shows must_change_password=true after reset": "PASS",
+      "User can change password when forced (no current pw required)": "PASS",
+      "After change, must_change_password=false": "PASS",
+      "Admin reset password with force_change=false": "PASS",
+      "Login without forced change shows false": "PASS",
+      "Reset password invalid user (404)": "PASS",
+      "Reset password short password (400)": "PASS",
+      "Forgot password endpoint": "PASS",
+      "Forgot password non-existent email (still 200)": "PASS",
+      "Validate invalid reset token": "PASS",
+      "Reset password with invalid token (400)": "PASS",
+      "Change password requires current for non-forced (400)": "PASS",
+      "Change password with correct current": "PASS",
+      "Change password wrong current (401)": "PASS",
+      "Non-admin cannot reset password (403)": "PASS",
+      "Cleanup test user": "PASS",
+      "Users endpoint includes must_change_password field": "PASS"
+    },
+    "frontend_ui_tests": {
+      "Login page has 'Forgot password?' link": "PASS",
+      "Forgot Password page loads": "PASS",
+      "Forgot Password form submission": "PASS",
+      "Success message after forgot password": "PASS",
+      "Users page loads": "PASS",
+      "Reset Password button (key icon) present": "PASS - 9 buttons found",
+      "Reset Password dialog opens": "PASS",
+      "Dialog has new password field": "PASS",
+      "Dialog has confirm password field": "PASS",
+      "Dialog has 'Force change on login' checkbox": "PASS",
+      "Dialog has submit button": "PASS",
+      "'Must Change PW' badge visible": "PASS - 1 user has badge",
+      "Change Password page works": "PASS",
+      "Forced change hides current password field": "PASS",
+      "Login redirect for must_change_password users": "FAIL - users land on dashboard instead of /change-password?forced=true"
+    }
+  },
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "mocked_apis_list": [],
+    "note": "Forgot password email sending requires SMTP config in Settings. Without SMTP, endpoint works but no actual email is sent."
+  },
+  "rca_of_the_issue": {
+    "issue": "Login redirect for must_change_password users not working",
+    "reproduction_steps": [
+      "1. Login as test.limited@ssc.com / newpass123 (user has must_change_password=true)",
+      "2. Expected: Redirect to /change-password?forced=true",
+      "3. Actual: Lands on / (dashboard) with toast 'Please change your password'"
+    ],
+    "root_cause": "In LoginPage.jsx lines 28-32, setIsAuthenticated(true) is called before navigate('/change-password?forced=true'). The state change triggers React re-render which evaluates routes in App.js. Since isAuthenticated is now true, the '/' route renders DashboardPage, overriding the pending navigation.",
+    "suggested_mitigations": [
+      "Option 1 (Recommended): In App.js, modify the '/' route to check user.must_change_password and redirect to /change-password?forced=true before rendering DashboardPage",
+      "Option 2: In LoginPage.jsx, call navigate() BEFORE setIsAuthenticated() and return early",
+      "Option 3: Use useEffect in App.js to monitor user.must_change_password and redirect globally"
+    ]
+  }
+}
