@@ -104,7 +104,17 @@ export default function UsersPage() {
     password: '',
     role: 'operator',
     branch_id: '',
-    permissions: {}
+    permissions: {},
+    must_change_password: false
+  });
+  
+  // Password reset dialog state
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [resetUser, setResetUser] = useState(null);
+  const [resetData, setResetData] = useState({
+    new_password: '',
+    confirm_password: '',
+    must_change_on_login: true
   });
 
   useEffect(() => {
