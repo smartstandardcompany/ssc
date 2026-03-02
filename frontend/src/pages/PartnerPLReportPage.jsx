@@ -190,7 +190,7 @@ export default function PartnerPLReportPage() {
                     <span className="text-xs text-muted-foreground">Revenue</span>
                   </div>
                   <p className="text-2xl font-bold" data-testid="total-revenue">
-                    SAR {report.company_summary?.total_revenue?.toLocaleString()}
+                    SAR {(report.company_summary?.total_revenue || 0).toLocaleString()}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {report.company_summary?.transactions_count} transactions
