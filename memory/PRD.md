@@ -461,23 +461,36 @@ Widget options added to dashboard customization dialog. All widgets have proper 
 
 ## Backlog / Future Tasks
 
-### P1: Asset & Liability Tracking Module
-Create a new section to manage company assets (e.g., equipment) and liabilities (e.g., loans, fines). Features:
-- Document management with expiry date alerts
-- Asset depreciation tracking
-- Liability payment scheduling
+### P0: High Priority (None)
+All high-priority items completed.
 
-### P1: Advanced Partner P&L Report
-Develop a specific report to calculate and display Profit & Loss for business partners:
-- Partner investment tracking
-- Revenue/expense allocation
-- Dividend calculations
+### P1: Nice to Have
+1. **Table Reservations System**
+   - Online booking links
+   - Time slot management
+   - SMS/WhatsApp confirmations
+   - No-show tracking
 
-### P2: Mobile App Bottom Tab Bar
-Implement a customizable bottom tab bar for mobile view to improve navigation:
-- Quick access to key features
-- Customizable tab options
-- Role-based tab visibility
+2. **Advanced Reporting**
+   - Custom dashboard widgets
+   - Scheduled report emails
+   - More export formats (Excel, PDF)
+
+### P2: Future Enhancements
+1. **Multi-currency Support**
+2. **Franchise Management**
+3. **Customer Loyalty Program**
+4. **Delivery Route Optimization**
+
+## Completed Features Summary
+- ✅ Asset & Liability Tracking (Session 10)
+- ✅ Partner P&L Report (Pre-existing, NaN bug fixed in Session 10)
+- ✅ Mobile Bottom Tab Bar (Pre-existing, verified in Session 10)
+- ✅ Online Platform Sales & Commission Tracking (Session 9)
+- ✅ Dashboard Quick Tour (Session 8)
+- ✅ PDF Bank Statement Parsing (Session 8)
+- ✅ WhatsApp Chatbot (Session 8)
+- ✅ AI Shift Scheduling (Session 8)
 
 ---
 
