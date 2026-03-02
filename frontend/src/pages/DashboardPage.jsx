@@ -178,6 +178,21 @@ export default function DashboardPage() {
           profit: days.map(d => (d.sales || 0) - (d.expenses || 0)),
         });
       } catch {}
+      // Fetch predictive analytics data for widgets
+      try {
+        const [lowStockRes, peakHoursRes, clvRes, profitRes] = await Promise.all([
+          api.get('/predictions/inventory-demand').catch(() => ({ data: { items_at_risk: 0, forecasts: [] } })),
+          api.get('/predictions/peak-hours').catch(() => ({ data: { peak_hours: [], total_transactions_analyzed: 0 } })),
+          api.get('/predictions/customer-clv').catch(() => ({ data: { high_value_customers: [], total_projected_revenue: 0 } })),
+          api.get('/predictions/profit-decomposition').catch(() => ({ data: { summary: {}, daily_breakdown: [] } })),
+        ]);
+        setPredictiveData({
+          lowStock: lowStockRes.data,
+          peakHours: peakHoursRes.data,
+          customerCLV: clvRes.data,
+          profitTrend: profitRes.data,
+        });
+      } catch {}
     } catch (error) {
       toast.error('Failed to fetch dashboard stats');
     } finally {
