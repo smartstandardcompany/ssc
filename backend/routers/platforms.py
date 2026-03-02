@@ -187,7 +187,7 @@ async def get_platform_payments(
 
 @router.post("/platform-payments")
 async def record_platform_payment(body: dict, current_user: User = Depends(get_current_user)):
-    """Record a payment received from a delivery platform"""
+    """Record a payment received from a delivery platform with automatic branch distribution"""
     require_permission(current_user, "sales", "write")
     
     platform_id = body.get("platform_id")
@@ -199,25 +199,79 @@ async def record_platform_payment(body: dict, current_user: User = Depends(get_c
     if not platform:
         raise HTTPException(status_code=404, detail="Platform not found")
     
+    period_start = body.get("period_start")
+    period_end = body.get("period_end")
+    total_sales = float(body.get("total_sales", 0))
+    amount_received = float(body.get("amount_received", 0))
+    
+    # Auto-calculate commission if not provided
+    commission_rate = platform.get("commission_rate", 0)
+    commission_paid = body.get("commission_paid")
+    if commission_paid is None or commission_paid == '':
+        # Calculate commission from total sales
+        commission_paid = round(total_sales * (commission_rate / 100), 2)
+    else:
+        commission_paid = float(commission_paid)
+    
+    # Calculate branch distribution if period dates provided
+    branch_breakdown = []
+    if period_start and period_end:
+        # Get sales grouped by branch for this platform and period
+        sales = await db.sales.find({
+            "platform_id": platform_id,
+            "payment_mode": "online_platform",
+            "date": {"$gte": period_start, "$lte": period_end}
+        }, {"_id": 0, "branch_id": 1, "final_amount": 1, "amount": 1}).to_list(10000)
+        
+        # Group by branch
+        branch_sales = {}
+        for sale in sales:
+            bid = sale.get("branch_id") or "unknown"
+            amt = sale.get("final_amount", sale.get("amount", 0))
+            branch_sales[bid] = branch_sales.get(bid, 0) + amt
+        
+        # Calculate each branch's share
+        total_from_db = sum(branch_sales.values())
+        if total_from_db > 0:
+            for branch_id, branch_total in branch_sales.items():
+                share_percent = (branch_total / total_from_db) * 100
+                branch_received = round((branch_total / total_from_db) * amount_received, 2)
+                branch_commission = round((branch_total / total_from_db) * commission_paid, 2)
+                
+                # Get branch name
+                branch = await db.branches.find_one({"id": branch_id}, {"_id": 0, "name": 1})
+                branch_name = branch.get("name") if branch else "Unknown Branch"
+                
+                branch_breakdown.append({
+                    "branch_id": branch_id,
+                    "branch_name": branch_name,
+                    "sales_amount": branch_total,
+                    "share_percent": round(share_percent, 2),
+                    "commission_amount": branch_commission,
+                    "amount_received": branch_received
+                })
+    
     payment = {
         "id": str(uuid.uuid4()),
         "platform_id": platform_id,
         "platform_name": platform.get("name"),
+        "commission_rate": commission_rate,
         "payment_date": body.get("payment_date", datetime.now(timezone.utc).isoformat()[:10]),
-        "period_start": body.get("period_start"),  # Settlement period start
-        "period_end": body.get("period_end"),      # Settlement period end
-        "total_sales": body.get("total_sales", 0),        # Total sales in this period
-        "commission_paid": body.get("commission_paid", 0), # Commission deducted
-        "amount_received": body.get("amount_received", 0), # Net amount received
+        "period_start": period_start,
+        "period_end": period_end,
+        "total_sales": total_sales,
+        "commission_paid": commission_paid,
+        "amount_received": amount_received,
+        "branch_breakdown": branch_breakdown,
         "payment_method": body.get("payment_method", "bank_transfer"),
         "reference_number": body.get("reference_number", ""),
         "notes": body.get("notes", ""),
-        "branch_id": body.get("branch_id"),
         "created_at": datetime.now(timezone.utc).isoformat(),
         "created_by": current_user.id
     }
     
     await db.platform_payments.insert_one(payment)
+    payment.pop('_id', None)
     
     # Update related sales as settled (if period dates provided)
     if body.get("period_start") and body.get("period_end"):
