@@ -12,7 +12,64 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - **WhatsApp:** Twilio (config-dependent) with Chatbot
 - **PWA:** Full offline-capable Progressive Web App with shortcuts
 
-## Latest Updates (Mar 2, 2026 — Session 9)
+## Latest Updates (Mar 2, 2026 — Session 10)
+
+### Assets & Liabilities Module COMPLETE & VERIFIED ✅
+
+#### New Feature: Company Asset Tracking
+Full asset management with depreciation calculation:
+
+**Asset Types:**
+- Equipment (general machinery)
+- Vehicle (delivery vans, cars)
+- Property (buildings, land)
+- Furniture (office furniture)
+- Electronics (computers, phones)
+- Kitchen Equipment (restaurant equipment)
+- Other (custom)
+
+**Features:**
+- **Asset CRUD:** Add/edit/delete company assets
+- **Depreciation Tracking:** Automatic depreciation calculation by year
+- **Warranty Alerts:** Track warranty expiry dates
+- **Maintenance Log:** Record maintenance, repairs, inspections per asset
+- **Book Value:** Real-time calculated value after depreciation
+- **Branch Assignment:** Assign assets to specific branches
+- **File Attachments:** Upload purchase receipts, photos
+
+#### Unified Liabilities Dashboard
+Single view of all company financial obligations:
+- **Company Loans:** Outstanding balances, monthly payments
+- **Unpaid Fines:** Traffic, government, regulatory fines
+- **Supplier Dues:** Outstanding supplier payments
+- **Document Alerts:** Expired and expiring documents
+
+**API Endpoints:**
+- `GET/POST/PUT/DELETE /api/assets` - Asset CRUD
+- `GET /api/assets/stats` - Asset statistics
+- `GET /api/assets/types` - Asset type definitions
+- `GET /api/assets/depreciation-report` - Depreciation report
+- `POST/GET /api/assets/{id}/maintenance` - Maintenance logs
+- `GET /api/liabilities/summary` - Unified liabilities view
+
+**Frontend:**
+- **AssetsPage:** `/assets` with Assets, Liabilities, Depreciation tabs
+- **Navigation:** Added "Assets & Liabilities" to sidebar under Assets section
+
+### Partner P&L Report - NaN Bug Fixed ✅
+Fixed display of "SAR NaN" when no data available in summary cards.
+
+### Mobile Bottom Tab Bar - VERIFIED WORKING ✅
+Customizable bottom navigation for mobile devices already implemented.
+
+### Testing Results (Iteration 64)
+- **Backend:** 14/14 tests passed (100%)
+- **Frontend:** 100%
+- **Bug Fixed:** Empty SelectItem value crash in Add Asset dialog
+
+---
+
+## Previous Session Updates (Mar 2, 2026 — Session 9)
 
 ### Online Delivery Platforms Feature COMPLETE & VERIFIED
 
