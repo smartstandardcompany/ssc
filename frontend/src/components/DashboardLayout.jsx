@@ -31,6 +31,7 @@ const NAV_GROUPS = [
     label: 'Finance',
     items: [
       { path: '/sales', icon: ShoppingCart, label: 'Sales', perm: 'sales' },
+      { path: '/platforms', icon: Truck, label: 'Online Platforms', perm: 'sales' },
       { path: '/invoices', icon: FileInput, label: 'Invoices', perm: 'invoices' },
       { path: '/expenses', icon: Receipt, label: 'Expenses', perm: 'expenses' },
       { path: '/supplier-payments', icon: Receipt, label: 'Supplier Payments', perm: 'supplier_payments', roles: ['admin', 'manager'] },
