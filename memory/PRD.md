@@ -14,6 +14,46 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 
 ## Latest Updates (Mar 2, 2026 — Session 10)
 
+### Supplier Balance Bug Fix ✅
+- **Issue:** Deleting credit expenses linked to suppliers didn't reduce the supplier's credit balance
+- **Fix:** `DELETE /api/expenses/{id}` now checks if expense was on credit and reduces supplier's `current_credit`
+- **New Endpoints:**
+  - `POST /api/suppliers/{id}/recalculate-balance` - Recalculate single supplier's balance
+  - `POST /api/suppliers/recalculate-all-balances` - Recalculate all suppliers' balances
+
+### Table Reservations System - IMPLEMENTED ✅
+Full reservation management for restaurant tables:
+
+**Features:**
+- Create/edit/delete reservations with customer details
+- Table capacity validation
+- Conflict detection (no double-booking)
+- Status lifecycle: pending → confirmed → seated → completed
+- No-show and cancellation tracking
+- Available slots finder for party size
+- Confirmation codes (e.g., RES2603024B3E)
+- Occasion tracking (birthday, anniversary, business, celebration)
+- Special requests notes
+
+**API Endpoints:**
+- `GET/POST/PUT/DELETE /api/reservations` - CRUD operations
+- `GET /api/reservations/today` - Today's reservations
+- `GET /api/reservations/upcoming?days=N` - Next N days
+- `GET /api/reservations/available-slots?date=X&party_size=N` - Find availability
+- `GET /api/reservations/stats` - Booking statistics
+- `POST /api/reservations/{id}/status` - Update status
+
+**Frontend:**
+- **ReservationsPage:** `/reservations` with Today, Upcoming, Calendar tabs
+- **Stats cards:** Today's bookings, seated, completed, cancelled, no-shows
+- **New Reservation dialog:** Table selection, party size, time slots, occasions
+- **Reservation detail:** Full lifecycle actions (Seat, Complete, Cancel, No Show)
+
+### Testing Results (Iteration 65)
+- **Backend:** 20/20 tests passed (100%)
+- **Frontend:** 100%
+- **Bug Fixed:** ReservationUpdate model missing table_id field
+
 ### Assets & Liabilities Module COMPLETE & VERIFIED ✅
 
 #### New Feature: Company Asset Tracking
@@ -465,11 +505,10 @@ Widget options added to dashboard customization dialog. All widgets have proper 
 All high-priority items completed.
 
 ### P1: Nice to Have
-1. **Table Reservations System**
-   - Online booking links
-   - Time slot management
-   - SMS/WhatsApp confirmations
-   - No-show tracking
+1. **SMS/WhatsApp Confirmation for Reservations**
+   - Send booking confirmation via Twilio
+   - Reminder messages before reservation
+   - Easy cancellation via text
 
 2. **Advanced Reporting**
    - Custom dashboard widgets
@@ -477,12 +516,17 @@ All high-priority items completed.
    - More export formats (Excel, PDF)
 
 ### P2: Future Enhancements
-1. **Multi-currency Support**
-2. **Franchise Management**
-3. **Customer Loyalty Program**
-4. **Delivery Route Optimization**
+1. **Online Booking Widget**
+   - Public URL for customer self-booking
+   - Integration with website/social media
+2. **Multi-currency Support**
+3. **Franchise Management**
+4. **Customer Loyalty Program**
+5. **Delivery Route Optimization**
 
 ## Completed Features Summary
+- ✅ Supplier Balance Bug Fix (Session 10)
+- ✅ Table Reservations System (Session 10)
 - ✅ Asset & Liability Tracking (Session 10)
 - ✅ Partner P&L Report (Pre-existing, NaN bug fixed in Session 10)
 - ✅ Mobile Bottom Tab Bar (Pre-existing, verified in Session 10)
