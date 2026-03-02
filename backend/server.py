@@ -26,6 +26,7 @@ from routers import (
     loans,
     partners,
     performance_report,
+    platforms,
     predictions,
     push_notifications,
     reports,
