@@ -295,3 +295,146 @@ async def send_supplier_report_wa(current_user: User = Depends(get_current_user)
     ok, err = await send_whatsapp_message("\n".join(lines))
     if ok: return {"message": "Supplier report sent"}
     raise HTTPException(status_code=500, detail=err)
+
+
+# Send Low Stock Alert via WhatsApp
+@router.post("/whatsapp/send-low-stock-alert")
+async def send_low_stock_alert_wa(current_user: User = Depends(get_current_user)):
+    """Send low stock alert notification via WhatsApp"""
+    items = await db.stock_items.find({}, {"_id": 0}).to_list(1000)
+    low_stock_items = [i for i in items if i.get("current_stock", 0) <= i.get("min_stock", 0) and i.get("min_stock", 0) > 0]
+    
+    if not low_stock_items:
+        return {"message": "No low stock items to report"}
+    
+    lines = [f"⚠️ SSC Track - Low Stock Alert\n\n{len(low_stock_items)} item(s) below minimum stock:\n"]
+    for item in low_stock_items[:15]:
+        lines.append(f"• {item['name']}: {item.get('current_stock', 0)} (min: {item.get('min_stock', 0)})")
+    
+    ok, err = await send_whatsapp_message("\n".join(lines))
+    if ok: return {"message": f"Low stock alert sent for {len(low_stock_items)} items"}
+    raise HTTPException(status_code=500, detail=err)
+
+# Send Leave Approval Notification via WhatsApp
+@router.post("/whatsapp/send-leave-notification")
+async def send_leave_notification_wa(body: dict, current_user: User = Depends(get_current_user)):
+    """Send leave approval/rejection notification via WhatsApp"""
+    leave_id = body.get("leave_id")
+    status = body.get("status", "approved")  # approved/rejected
+    
+    leave = await db.leave_requests.find_one({"id": leave_id}, {"_id": 0})
+    if not leave:
+        raise HTTPException(status_code=404, detail="Leave request not found")
+    
+    employee = await db.employees.find_one({"id": leave.get("employee_id")}, {"_id": 0})
+    emp_name = employee.get("name", "Employee") if employee else "Employee"
+    emp_phone = employee.get("phone") if employee else None
+    
+    status_emoji = "✅" if status == "approved" else "❌"
+    msg = f"{status_emoji} SSC Track - Leave {status.upper()}\n\nEmployee: {emp_name}\nType: {leave.get('leave_type', 'Leave')}\nFrom: {leave.get('start_date', 'N/A')}\nTo: {leave.get('end_date', 'N/A')}\nDays: {leave.get('days', 1)}\n\nStatus: {status.upper()}"
+    
+    if leave.get("admin_notes"):
+        msg += f"\nNotes: {leave['admin_notes']}"
+    
+    # Send to employee if phone available
+    if emp_phone:
+        config = await db.whatsapp_config.find_one({}, {"_id": 0})
+        if config and config.get("account_sid"):
+            try:
+                client = Client(config["account_sid"], config["auth_token"])
+                client.messages.create(from_=f'whatsapp:{config["phone_number"]}', body=msg, to=f'whatsapp:{emp_phone}')
+                return {"message": f"Leave notification sent to {emp_name}"}
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
+    
+    # Fallback: send to admin numbers
+    ok, err = await send_whatsapp_message(msg)
+    if ok: return {"message": "Leave notification sent"}
+    raise HTTPException(status_code=500, detail=err)
+
+# Send Salary Payment Notification via WhatsApp
+@router.post("/whatsapp/send-salary-notification")
+async def send_salary_notification_wa(body: dict, current_user: User = Depends(get_current_user)):
+    """Send salary payment notification to employee via WhatsApp"""
+    employee_id = body.get("employee_id")
+    amount = body.get("amount", 0)
+    period = body.get("period", "")
+    
+    employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    emp_name = employee.get("name", "Employee")
+    emp_phone = employee.get("phone")
+    
+    msg = f"💰 SSC Track - Salary Payment\n\nDear {emp_name},\n\nYour salary for {period} has been processed.\n\nAmount: SAR {amount:,.2f}\n\nPlease acknowledge receipt.\n\nThank you!"
+    
+    if emp_phone:
+        config = await db.whatsapp_config.find_one({}, {"_id": 0})
+        if config and config.get("account_sid"):
+            try:
+                client = Client(config["account_sid"], config["auth_token"])
+                client.messages.create(from_=f'whatsapp:{config["phone_number"]}', body=msg, to=f'whatsapp:{emp_phone}')
+                return {"message": f"Salary notification sent to {emp_name}"}
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
+    
+    return {"message": "Employee phone not available, notification not sent"}
+
+# Send Bulk Salary Notification via WhatsApp
+@router.post("/whatsapp/send-bulk-salary-notification")
+async def send_bulk_salary_notification_wa(body: dict, current_user: User = Depends(get_current_user)):
+    """Send salary payment notifications to multiple employees"""
+    employee_ids = body.get("employee_ids", [])
+    period = body.get("period", "")
+    
+    if not employee_ids:
+        raise HTTPException(status_code=400, detail="No employees specified")
+    
+    employees = await db.employees.find({"id": {"$in": employee_ids}}, {"_id": 0}).to_list(500)
+    
+    config = await db.whatsapp_config.find_one({}, {"_id": 0})
+    if not config or not config.get("account_sid"):
+        raise HTTPException(status_code=400, detail="WhatsApp not configured")
+    
+    client = Client(config["account_sid"], config["auth_token"])
+    sent = 0
+    failed = 0
+    
+    for emp in employees:
+        if emp.get("phone"):
+            try:
+                msg = f"💰 SSC Track - Salary Payment\n\nDear {emp.get('name', 'Employee')},\n\nYour salary for {period} has been processed.\n\nAmount: SAR {emp.get('salary', 0):,.2f}\n\nPlease acknowledge receipt."
+                client.messages.create(from_=f'whatsapp:{config["phone_number"]}', body=msg, to=f'whatsapp:{emp["phone"]}')
+                sent += 1
+            except:
+                failed += 1
+        else:
+            failed += 1
+    
+    return {"message": f"Notifications sent: {sent} success, {failed} failed"}
+
+# Send Custom WhatsApp Message
+@router.post("/whatsapp/send-custom")
+async def send_custom_wa(body: dict, current_user: User = Depends(get_current_user)):
+    """Send a custom WhatsApp message"""
+    message = body.get("message", "")
+    phone = body.get("phone")  # Optional: specific phone, otherwise uses configured recipients
+    
+    if not message:
+        raise HTTPException(status_code=400, detail="Message is required")
+    
+    if phone:
+        config = await db.whatsapp_config.find_one({}, {"_id": 0})
+        if not config or not config.get("account_sid"):
+            raise HTTPException(status_code=400, detail="WhatsApp not configured")
+        try:
+            client = Client(config["account_sid"], config["auth_token"])
+            client.messages.create(from_=f'whatsapp:{config["phone_number"]}', body=message, to=f'whatsapp:{phone}')
+            return {"message": f"Message sent to {phone}"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    else:
+        ok, err = await send_whatsapp_message(message)
+        if ok: return {"message": "Message sent to configured recipients"}
+        raise HTTPException(status_code=500, detail=err)
