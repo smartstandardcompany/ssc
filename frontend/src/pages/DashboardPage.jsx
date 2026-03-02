@@ -39,11 +39,12 @@ const THEMES = {
 };
 const PIE_COLORS = ['#F5841F', '#22C55E', '#0EA5E9', '#EF4444', '#F59E0B', '#8B5CF6'];
 
-const DEFAULT_WIDGETS = { stats: true, charts: true, cashBank: true, paymentMode: true, spending: true, dues: true, branchDues: true, vatSummary: true, lowStock: true, peakHours: true, customerInsights: true, profitTrend: true };
+const DEFAULT_WIDGETS = { stats: true, charts: true, quickActions: true, cashBank: true, paymentMode: true, spending: true, dues: true, branchDues: true, vatSummary: true, lowStock: true, peakHours: true, customerInsights: true, profitTrend: true };
 
 const WIDGET_OPTIONS = [
   { key: 'stats', labelKey: 'widget_stats', descKey: 'widget_desc_stats' },
   { key: 'charts', labelKey: 'widget_charts', descKey: 'widget_desc_charts' },
+  { key: 'quickActions', labelKey: 'Quick Actions', descKey: 'Role-based shortcuts' },
   { key: 'cashBank', labelKey: 'widget_cash_bank', descKey: 'widget_desc_cash' },
   { key: 'paymentMode', labelKey: 'widget_payment_mode', descKey: 'widget_desc_payment' },
   { key: 'spending', labelKey: 'widget_spending', descKey: 'widget_desc_spending' },
@@ -54,6 +55,20 @@ const WIDGET_OPTIONS = [
   { key: 'peakHours', labelKey: 'AI: Peak Hours', descKey: 'Optimal staffing insights' },
   { key: 'customerInsights', labelKey: 'AI: Customer CLV', descKey: 'Top value customers' },
   { key: 'profitTrend', labelKey: 'AI: Profit Analysis', descKey: 'Daily profit decomposition' },
+];
+
+// Quick Actions configuration - role-based shortcuts
+const QUICK_ACTIONS = [
+  { id: 'add_sale', label: 'Record Sale', labelAr: 'تسجيل بيع', icon: ShoppingCart, path: '/quick-entry', color: 'bg-emerald-500 hover:bg-emerald-600', perm: 'sales' },
+  { id: 'add_expense', label: 'Add Expense', labelAr: 'إضافة مصروف', icon: Receipt, path: '/quick-entry', color: 'bg-red-500 hover:bg-red-600', perm: 'expenses' },
+  { id: 'pay_supplier', label: 'Pay Supplier', labelAr: 'دفع مورد', icon: Building2, path: '/suppliers', color: 'bg-blue-500 hover:bg-blue-600', perm: 'suppliers' },
+  { id: 'new_invoice', label: 'New Invoice', labelAr: 'فاتورة جديدة', icon: FileText, path: '/invoices/new', color: 'bg-orange-500 hover:bg-orange-600', perm: 'invoices' },
+  { id: 'approve_leave', label: 'Approve Leave', labelAr: 'اعتماد إجازة', icon: CalendarCheck, path: '/leave-approvals', color: 'bg-purple-500 hover:bg-purple-600', perm: 'employees' },
+  { id: 'pay_salary', label: 'Pay Salary', labelAr: 'دفع راتب', icon: Banknote, path: '/employees', color: 'bg-teal-500 hover:bg-teal-600', perm: 'employees' },
+  { id: 'add_customer', label: 'Add Customer', labelAr: 'إضافة عميل', icon: UserPlus, path: '/customers', color: 'bg-indigo-500 hover:bg-indigo-600', perm: 'customers' },
+  { id: 'view_reports', label: 'View Reports', labelAr: 'عرض التقارير', icon: FileSpreadsheet, path: '/reports', color: 'bg-amber-500 hover:bg-amber-600', perm: 'reports' },
+  { id: 'stock_entry', label: 'Stock Entry', labelAr: 'إدخال مخزون', icon: Package, path: '/stock', color: 'bg-cyan-500 hover:bg-cyan-600', perm: 'stock' },
+  { id: 'cctv_view', label: 'CCTV Live', labelAr: 'كاميرات مباشر', icon: Camera, path: '/cctv', color: 'bg-stone-600 hover:bg-stone-700', perm: 'branches' },
 ];
 
 const DEFAULT_LAYOUT = [
