@@ -85,20 +85,21 @@ export default function SalesPage() {
   };
 
   const calculateTotals = () => {
-    let cash = 0, bank = 0, credit = 0;
+    let cash = 0, bank = 0, credit = 0, online = 0;
     
     formData.payment_details.forEach(p => {
       const amount = parseFloat(p.amount) || 0;
       if (p.mode === 'cash') cash += amount;
       else if (p.mode === 'bank') bank += amount;
       else if (p.mode === 'credit') credit += amount;
+      else if (p.mode === 'online_platform') online += amount;
     });
 
-    const subtotal = cash + bank + credit;
+    const subtotal = cash + bank + credit + online;
     const discount = parseFloat(formData.discount) || 0;
     const total = subtotal - discount;
     
-    return { cash, bank, credit, subtotal, discount, total };
+    return { cash, bank, credit, online, subtotal, discount, total };
   };
 
   const handleSubmit = async (e) => {
