@@ -1034,6 +1034,14 @@ export default function DashboardPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Dashboard Tour */}
+        {showTour && (
+          <DashboardTour 
+            onComplete={handleTourComplete} 
+            language={language}
+          />
+        )}
       </div>
     </DashboardLayout>
   );
