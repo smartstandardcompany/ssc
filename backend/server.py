@@ -73,6 +73,7 @@ for module in [
     loans,
     partners,
     performance_report,
+    platforms,
     predictions,
     push_notifications,
     reports,
