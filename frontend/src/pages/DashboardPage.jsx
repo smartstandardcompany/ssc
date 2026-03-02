@@ -382,8 +382,11 @@ export default function DashboardPage() {
                 {tr('reset_layout')}
               </Button>
             )}
-            <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowWidgetSettings(true)} data-testid="customize-dashboard-btn">
+            <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowWidgetSettings(true)} data-testid="widget-settings-btn">
               <Settings2 size={14} className="mr-1" />{tr('customize_widgets')}
+            </Button>
+            <Button size="sm" variant="outline" className="rounded-xl text-orange-600 border-orange-200 hover:bg-orange-50" onClick={startTour} data-testid="start-tour-btn">
+              <HelpCircle size={14} className="mr-1" />{tr('take_tour') || 'Take Tour'}
             </Button>
             {Object.keys(THEMES).map(th => (
               <button key={th} onClick={() => changeTheme(th)} className={`px-3 py-1 rounded-lg text-xs font-medium border transition-all capitalize ${theme === th ? 'bg-primary text-white border-primary' : 'bg-white border-stone-200 hover:border-primary'}`}>{th}</button>
