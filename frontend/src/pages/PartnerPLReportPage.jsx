@@ -223,8 +223,8 @@ export default function PartnerPLReportPage() {
                     </div>
                     <span className="text-xs text-muted-foreground">Net Profit</span>
                   </div>
-                  <p className={`text-2xl font-bold ${report.company_summary?.net_profit >= 0 ? 'text-success' : 'text-error'}`} data-testid="net-profit">
-                    SAR {report.company_summary?.net_profit?.toLocaleString()}
+                  <p className={`text-2xl font-bold ${(report.company_summary?.net_profit || 0) >= 0 ? 'text-success' : 'text-error'}`} data-testid="net-profit">
+                    SAR {(report.company_summary?.net_profit || 0).toLocaleString()}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {report.company_summary?.net_margin}% margin
