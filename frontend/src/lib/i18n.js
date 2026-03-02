@@ -561,6 +561,25 @@ const translations = {
     widget_desc_spending: 'اخراجات کی اقسام اور خرچ', widget_desc_dues: 'سپلائر واجبات، جرمانے، الرٹس',
     widget_desc_branch: 'برانچوں کے درمیان بیلنس', widget_desc_vat: 'ٹیکس کے حسابات',
     show_all: 'سب دکھائیں', minimize: 'کم کریں', done: 'ہو گیا',
+    // AI Widget translations
+    ai_low_stock: 'AI: سٹاک الرٹس', ai_low_stock_desc: 'ختم ہونے والی اشیاء',
+    ai_peak_hours: 'AI: مصروف اوقات', ai_peak_hours_desc: 'عملے کی منصوبہ بندی',
+    ai_customer_clv: 'AI: گاہک کی قدر', ai_customer_clv_desc: 'گاہک کی عمر بھر کی قیمت',
+    ai_profit_analysis: 'AI: منافع تجزیہ', ai_profit_analysis_desc: 'روزانہ منافع کے رجحانات',
+    items_at_risk: 'خطرے میں اشیاء', all_stock_healthy: 'تمام سٹاک ٹھیک',
+    days_left: 'دن باقی', stock_level: 'سٹاک', reorder_point: 'ری آرڈر',
+    based_on_transactions: '{count} ٹرانزیکشنز کی بنیاد پر', peak_hours_staff: 'ان اوقات میں اضافی عملہ رکھیں',
+    of_traffic: 'ٹریفک', projected_revenue: '12 ماہ کی متوقع آمدنی',
+    lifetime_value: 'عمر بھر کی قیمت', orders_active: 'آرڈرز', days_active: 'دن فعال',
+    add_customers_clv: 'CLV دیکھنے کے لیے گاہک شامل کریں', avg_daily_profit: 'اوسط روزانہ منافع',
+    trend: 'رجحان', improving: 'بہتری', declining: 'کمی', stable: 'مستحکم',
+    best_day: 'بہترین', worst_day: 'بدترین', not_enough_data: 'تجزیے کے لیے کافی ڈیٹا نہیں',
+    // Quick Actions
+    quick_actions: 'فوری اقدامات', qa_record_sale: 'فروخت درج کریں', qa_add_expense: 'خرچ شامل کریں',
+    qa_pay_supplier: 'سپلائر ادائیگی', qa_new_invoice: 'نئی انوائس', qa_approve_leave: 'چھٹی منظور کریں',
+    qa_pay_salary: 'تنخواہ ادا کریں', qa_add_customer: 'گاہک شامل کریں', qa_view_reports: 'رپورٹس دیکھیں',
+    qa_stock_entry: 'سٹاک انٹری', qa_cctv_live: 'لائیو کیمرے', qa_available: 'دستیاب',
+    qa_no_actions: 'آپ کے کردار کے لیے کوئی فوری اقدام دستیاب نہیں',
     // Menu Items
     menu_items: 'مینو آئٹمز', nav_menu_items: 'مینو آئٹمز',
     // Order Status
