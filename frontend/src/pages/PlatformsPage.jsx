@@ -485,8 +485,8 @@ export default function PlatformsPage() {
         </Dialog>
 
         {/* Record Payment Dialog */}
-        <Dialog open={showPaymentForm} onOpenChange={setShowPaymentForm}>
-          <DialogContent className="sm:max-w-lg">
+        <Dialog open={showPaymentForm} onOpenChange={(open) => { setShowPaymentForm(open); if (!open) setCalculatedPayment(null); }}>
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Record Platform Payment</DialogTitle>
             </DialogHeader>
@@ -495,7 +495,7 @@ export default function PlatformsPage() {
                 <Label>Platform *</Label>
                 <Select
                   value={paymentForm.platform_id}
-                  onValueChange={(val) => setPaymentForm({...paymentForm, platform_id: val})}
+                  onValueChange={(val) => { setPaymentForm({...paymentForm, platform_id: val}); setCalculatedPayment(null); }}
                   required
                 >
                   <SelectTrigger>
@@ -503,7 +503,7 @@ export default function PlatformsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {platforms.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      <SelectItem key={p.id} value={p.id}>{p.name} ({p.commission_rate || 0}%)</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -518,22 +518,60 @@ export default function PlatformsPage() {
                   />
                 </div>
                 <div>
-                  <Label>Period Start</Label>
+                  <Label>Period Start *</Label>
                   <Input
                     type="date"
                     value={paymentForm.period_start}
-                    onChange={(e) => setPaymentForm({...paymentForm, period_start: e.target.value})}
+                    onChange={(e) => { setPaymentForm({...paymentForm, period_start: e.target.value}); setCalculatedPayment(null); }}
+                    required
                   />
                 </div>
                 <div>
-                  <Label>Period End</Label>
+                  <Label>Period End *</Label>
                   <Input
                     type="date"
                     value={paymentForm.period_end}
-                    onChange={(e) => setPaymentForm({...paymentForm, period_end: e.target.value})}
+                    onChange={(e) => { setPaymentForm({...paymentForm, period_end: e.target.value}); setCalculatedPayment(null); }}
+                    required
                   />
                 </div>
               </div>
+              
+              {/* Auto Calculate Button */}
+              <div className="flex justify-center">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={calculateExpected}
+                  disabled={calculating || !paymentForm.platform_id || !paymentForm.period_start || !paymentForm.period_end}
+                  className="gap-2"
+                >
+                  <Calculator size={16} />
+                  {calculating ? 'Calculating...' : 'Auto-Calculate from Sales'}
+                </Button>
+              </div>
+              
+              {/* Branch Breakdown (if calculated) */}
+              {calculatedPayment && calculatedPayment.branch_breakdown?.length > 0 && (
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200">
+                  <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                    <Building2 size={14} />
+                    Branch Distribution ({calculatedPayment.sales_count} sales)
+                  </h4>
+                  <div className="space-y-2">
+                    {calculatedPayment.branch_breakdown.map((branch, idx) => (
+                      <div key={idx} className="flex justify-between items-center text-sm p-2 bg-white dark:bg-stone-800 rounded">
+                        <span className="font-medium">{branch.branch_name}</span>
+                        <div className="text-right">
+                          <div className="text-muted-foreground text-xs">Sales: SAR {branch.sales_amount.toLocaleString()}</div>
+                          <div className="text-emerald-600 font-medium">Receives: SAR {branch.expected_amount.toLocaleString()}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <Label>Total Sales</Label>
@@ -543,6 +581,7 @@ export default function PlatformsPage() {
                     value={paymentForm.total_sales}
                     onChange={(e) => setPaymentForm({...paymentForm, total_sales: e.target.value})}
                     placeholder="0.00"
+                    className={calculatedPayment ? 'bg-emerald-50 border-emerald-300' : ''}
                   />
                 </div>
                 <div>
