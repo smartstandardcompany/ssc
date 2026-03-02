@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Trash2, DollarSign, X } from 'lucide-react';
+import { Plus, Trash2, DollarSign, X, Truck } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -21,6 +21,7 @@ export default function SalesPage() {
   const [sales, setSales] = useState([]);
   const [branches, setBranches] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const [platforms, setPlatforms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showReceiveDialog, setShowReceiveDialog] = useState(false);
@@ -31,6 +32,7 @@ export default function SalesPage() {
     sale_type: 'branch',
     branch_id: '',
     customer_id: '',
+    platform_id: '',
     payment_details: [{ mode: 'cash', amount: '' }],
     discount: '',
     date: new Date().toISOString().split('T')[0],
@@ -47,14 +49,16 @@ export default function SalesPage() {
 
   const fetchData = async () => {
     try {
-      const [salesRes, branchesRes, customersRes] = await Promise.all([
+      const [salesRes, branchesRes, customersRes, platformsRes] = await Promise.all([
         api.get('/sales'),
         api.get('/branches'),
         api.get('/customers'),
+        api.get('/platforms').catch(() => ({ data: [] })),
       ]);
       setSales(salesRes.data);
       setBranches(branchesRes.data);
       setCustomers(customersRes.data);
+      setPlatforms(platformsRes.data || []);
     } catch (error) {
       toast.error('Failed to fetch data');
     } finally {
