@@ -151,6 +151,11 @@ const translations = {
     cat_electricity: 'Electricity', cat_water: 'Water', cat_internet: 'Internet', cat_phone: 'Phone',
     cat_fuel: 'Fuel', cat_insurance: 'Insurance', cat_office_maintenance: 'Office Maintenance',
     cat_equipment_repair: 'Equipment Repair',
+    // Dashboard Tour
+    take_tour: 'Take Tour', tour_completed: 'Tour completed! Explore your dashboard.',
+    tour_welcome: 'Welcome to SSC Track!', tour_welcome_desc: 'Let us show you around your new business management dashboard.',
+    tour_skip: 'Skip Tour', tour_next: 'Next', tour_back: 'Back', tour_finish: 'Finish',
+    tour_step: 'Step {current} of {total}',
     // Widget names
     widget_stats: 'Main Statistics', widget_charts: 'Quick Charts', widget_cash_bank: 'Cash & Bank',
     widget_payment_mode: 'Payment Modes', widget_spending: 'Spending Details', 
