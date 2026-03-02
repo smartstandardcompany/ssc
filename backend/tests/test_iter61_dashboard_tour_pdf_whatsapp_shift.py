@@ -221,7 +221,7 @@ class TestAIShiftScheduling(TestAuthentication):
 class TestPDFBankStatementParsing(TestAuthentication):
     """Test PDF bank statement parsing"""
     
-    def test_bank_reconciliation_upload_pdf(self, auth_headers):
+    def test_bank_statements_upload_pdf(self, auth_headers):
         """Test bank statement upload endpoint with PDF file"""
         # Create a minimal PDF-like file for testing
         # Note: This tests if the endpoint accepts PDF files
@@ -230,27 +230,30 @@ class TestPDFBankStatementParsing(TestAuthentication):
         files = {
             'file': ('test_statement.pdf', pdf_content, 'application/pdf')
         }
+        data = {
+            'bank_name': 'Test Bank',
+            'branch_id': ''
+        }
         
         response = requests.post(
-            f"{BASE_URL}/api/bank-reconciliation/upload",
+            f"{BASE_URL}/api/bank-statements/upload",
             files=files,
+            data=data,
             headers=auth_headers
         )
-        # Should either process successfully or return error about invalid PDF
+        # Should either process successfully or return error about invalid PDF/no transactions
         # Both are acceptable - we're testing endpoint accepts PDF files
         assert response.status_code in [200, 400, 422], f"Unexpected status: {response.status_code}, {response.text}"
     
-    def test_bank_formats_endpoint(self, auth_headers):
-        """Test bank formats info endpoint"""
+    def test_bank_statements_list(self, auth_headers):
+        """Test GET /api/bank-statements endpoint"""
         response = requests.get(
-            f"{BASE_URL}/api/bank-reconciliation/formats",
+            f"{BASE_URL}/api/bank-statements",
             headers=auth_headers
         )
-        # If endpoint exists
-        if response.status_code == 200:
-            data = response.json()
-            # Should include PDF info
-            assert isinstance(data, (list, dict))
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
 
 
 class TestScheduleRetrieval(TestAuthentication):
