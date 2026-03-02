@@ -71,3 +71,37 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         else:
             raise HTTPException(status_code=401, detail="User not found")
     return User(**user)
+
+
+
+def normalize_permissions(perms):
+    """Convert old list format to new dict format for backward compatibility."""
+    if isinstance(perms, list):
+        return {p: "write" for p in perms}
+    if isinstance(perms, dict):
+        return perms
+    return {}
+
+
+def has_permission(user, module, level="read"):
+    """Check if user has permission for a module at the given level."""
+    if user.role == "admin":
+        return True
+    perms = normalize_permissions(user.permissions)
+    user_level = perms.get(module, "none")
+    if user_level == "none":
+        return False
+    if level == "read":
+        return user_level in ("read", "write")
+    if level == "write":
+        return user_level == "write"
+    return False
+
+
+def get_branch_filter(user):
+    """Return a MongoDB query filter for branch-restricted users."""
+    if user.role == "admin":
+        return {}
+    if user.branch_id:
+        return {"branch_id": user.branch_id}
+    return {}
