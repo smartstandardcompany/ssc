@@ -1,12 +1,12 @@
 {
   "name": "SSC Track - Business Management",
   "short_name": "SSC Track",
-  "description": "Smart Standard Company - Complete Business Management ERP",
+  "description": "Smart Standard Company - Complete Business Management ERP with AI-powered analytics, inventory management, and ZATCA compliance",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#FFF8F0",
-  "theme_color": "#F5841F",
+  "background_color": "#1c1917",
+  "theme_color": "#f97316",
   "orientation": "any",
   "categories": ["business", "finance", "productivity"],
   "lang": "en",
@@ -26,5 +26,33 @@
     }
   ],
   "screenshots": [],
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Quick Entry",
+      "short_name": "Quick Entry",
+      "description": "Record sales and expenses quickly",
+      "url": "/quick-entry",
+      "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]
+    },
+    {
+      "name": "POS",
+      "short_name": "POS",
+      "description": "Point of Sale",
+      "url": "/cashier-pos",
+      "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]
+    },
+    {
+      "name": "Reports",
+      "short_name": "Reports",
+      "description": "View business reports",
+      "url": "/reports",
+      "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]
+    }
+  ],
+  "related_applications": [],
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": ["navigate-existing", "auto"]
+  }
 }
