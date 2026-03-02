@@ -9,6 +9,13 @@ from typing import List, Dict, Any, Optional, Tuple
 from io import BytesIO
 import pandas as pd
 
+# PDF parsing imports
+try:
+    import pdfplumber
+    PDF_SUPPORT = True
+except ImportError:
+    PDF_SUPPORT = False
+
 
 class BankStatementParser:
     """Base parser class with common utilities"""
