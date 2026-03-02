@@ -196,12 +196,42 @@ export default function ExpensesPage() {
                       </Select>
                     </div>
                     <div>
+                      <Label>Supplier</Label>
+                      <Select value={formData.supplier_id || "none"} onValueChange={(v) => setFormData({ ...formData, supplier_id: v === "none" ? "" : v })}>
+                        <SelectTrigger className="h-10" data-testid="expense-supplier"><SelectValue placeholder="Select supplier..." /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">- No Supplier -</SelectItem>
+                          {suppliers.map(s => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.name} {s.current_credit > 0 && `(Credit: SAR ${s.current_credit})`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
                       <Label>{t('branch')}</Label>
                       <Select value={formData.branch_id || "none"} onValueChange={(v) => setFormData({ ...formData, branch_id: v === "none" ? "" : v })}>
                         <SelectTrigger className="h-10" data-testid="expense-paid-from-branch"><SelectValue /></SelectTrigger>
                         <SelectContent><SelectItem value="none">-</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
+                  </div>
+                  
+                  {/* Credit warning for supplier */}
+                  {formData.supplier_id && formData.payment_mode === 'credit' && (
+                    <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg flex items-start gap-2">
+                      <AlertTriangle size={16} className="text-amber-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm">
+                        <p className="font-medium text-amber-700 dark:text-amber-300">Credit Purchase</p>
+                        <p className="text-amber-600 dark:text-amber-400 text-xs">
+                          This expense will be added to supplier's credit balance. Pay later via Supplier Payments.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
                       <Label>Expense For</Label>
                       <Select value={formData.expense_for_branch_id || "none"} onValueChange={(v) => setFormData({ ...formData, expense_for_branch_id: v === "none" ? "" : v })}>

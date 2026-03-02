@@ -230,14 +230,51 @@ export default function SalesPage() {
               <CardTitle className="font-outfit">Add New Sale</CardTitle>
             </CardHeader>
             <CardContent>
-              <Tabs value={activeTab} onValueChange={(val) => { setActiveTab(val); setFormData({ ...formData, sale_type: val }); }}>
+              <Tabs value={activeTab} onValueChange={(val) => { 
+                setActiveTab(val); 
+                // When switching to online, preset the payment mode to online_platform
+                if (val === 'online') {
+                  setFormData({ ...formData, sale_type: val, payment_details: [{ mode: 'online_platform', amount: '' }] });
+                } else {
+                  setFormData({ ...formData, sale_type: val, payment_details: [{ mode: 'cash', amount: '' }] });
+                }
+              }}>
                 <TabsList className="mb-6">
                   <TabsTrigger value="branch" data-testid="branch-sale-tab">Branch Sale</TabsTrigger>
-                  <TabsTrigger value="online" data-testid="online-sale-tab">Online Sale</TabsTrigger>
+                  <TabsTrigger value="online" data-testid="online-sale-tab" className="bg-purple-100 data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+                    <Truck size={14} className="mr-1" /> Online Sale
+                  </TabsTrigger>
                 </TabsList>
 
                 <form onSubmit={handleSubmit}>
                   <div className="space-y-6">
+                    {/* Online Platform Selection - Show first for online sales */}
+                    <TabsContent value="online" className="mt-0 space-y-4">
+                      <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-700">
+                        <Label className="text-purple-700 dark:text-purple-300 mb-3 block text-sm font-medium">
+                          <Truck size={16} className="inline mr-2" />
+                          Select Delivery Platform *
+                        </Label>
+                        <div className="flex gap-2 flex-wrap">
+                          {platforms.filter(p => p.is_active !== false).map((platform, i) => {
+                            const colors = ['bg-red-100 border-red-300 text-red-700', 'bg-green-100 border-green-300 text-green-700', 'bg-blue-100 border-blue-300 text-blue-700', 'bg-yellow-100 border-yellow-300 text-yellow-700', 'bg-pink-100 border-pink-300 text-pink-700'];
+                            return (
+                              <button key={platform.id} type="button" onClick={() => setFormData({...formData, platform_id: platform.id})}
+                                className={`px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all ${colors[i % colors.length]} ${formData.platform_id === platform.id ? 'ring-2 ring-purple-500 ring-offset-1 scale-105 shadow-md' : 'opacity-80 hover:opacity-100 hover:scale-105'}`}>
+                                {platform.name}
+                                {platform.commission_rate > 0 && <span className="text-xs ml-1 opacity-70">({platform.commission_rate}%)</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {platforms.length === 0 && (
+                          <p className="text-sm text-purple-600 mt-2">
+                            No platforms configured. <a href="/platforms" className="underline">Add platforms</a> first.
+                          </p>
+                        )}
+                      </div>
+                    </TabsContent>
+
                     {/* Branch Selection - Color Coded */}
                     <div>
                       <Label>Branch *</Label>
@@ -257,8 +294,12 @@ export default function SalesPage() {
                     {/* Customer Selection for Online Sales */}
                     <TabsContent value="online" className="mt-0">
                       <div>
-                        <Label>Customer *</Label>
+                        <Label>Customer (Optional - for credit)</Label>
                         <div className="flex gap-2 flex-wrap mt-2">
+                          <button type="button" onClick={() => setFormData({...formData, customer_id: ''})}
+                            className={`px-3 py-1.5 rounded-xl border-2 text-xs font-medium transition-all bg-stone-100 border-stone-300 text-stone-700 ${!formData.customer_id ? 'ring-2 ring-primary ring-offset-1' : 'opacity-80 hover:opacity-100'}`}>
+                            Walk-in
+                          </button>
                           {customers.map((customer, i) => {
                             const colors = ['bg-amber-100 border-amber-300 text-amber-700', 'bg-teal-100 border-teal-300 text-teal-700', 'bg-rose-100 border-rose-300 text-rose-700', 'bg-indigo-100 border-indigo-300 text-indigo-700', 'bg-lime-100 border-lime-300 text-lime-700'];
                             return (

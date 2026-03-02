@@ -14,6 +14,20 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 
 ## Latest Updates (Mar 2, 2026 — Session 10)
 
+### Quick Entry Improvements ✅
+
+#### Online Sale Quick Entry
+- **Purple "Online Sale" tab** in Sales page for easy access
+- **Platform selection** with colorful buttons showing all platforms with commission rates
+- **Auto-sets payment mode** to "Online Platform" when clicking the tab
+- **Customer optional** - defaults to "Walk-in" for online orders
+
+#### Expense Supplier Selection
+- **New "Supplier" dropdown** in Expenses form
+- Shows all suppliers with their current credit balance
+- **Credit warning** displayed when selecting Credit payment mode with a supplier
+- Links expense directly to supplier for balance tracking
+
 ### Supplier Balance Bug Fix ✅
 - **Issue:** Deleting credit expenses linked to suppliers didn't reduce the supplier's credit balance
 - **Fix:** `DELETE /api/expenses/{id}` now checks if expense was on credit and reduces supplier's `current_credit`
