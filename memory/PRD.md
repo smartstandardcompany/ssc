@@ -12,7 +12,54 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - **WhatsApp:** Twilio (config-dependent) with Chatbot
 - **PWA:** Full offline-capable Progressive Web App with shortcuts
 
-## Latest Updates (Mar 2, 2026 — Session 11)
+## Latest Updates (Mar 2, 2026 — Session 12)
+
+### New Features Implemented ✅
+
+#### 1. Customer Loyalty Program (P2 → DONE)
+- **Route:** `/loyalty`
+- **Backend:** `backend/routers/customers.py` (lines 156-370)
+- **Frontend:** `frontend/src/pages/LoyaltyProgramPage.jsx`
+- **Features:**
+  - Tier System: Bronze (0pts) → Silver (500pts, 1.25x) → Gold (1000pts, 1.5x) → Platinum (2500pts, 2x)
+  - Points Configuration: 1 point per SAR spent, each point worth SAR 0.1
+  - Minimum 100 points to redeem
+  - Leaderboard with top customers ranked by points
+  - Individual customer loyalty view with earn/redeem actions
+  - Settings panel for admins to configure program
+- **API Endpoints:**
+  - `GET /api/loyalty/settings` - Get program configuration
+  - `POST /api/loyalty/settings` - Update program configuration
+  - `GET /api/loyalty/leaderboard` - Top customers by points
+  - `GET /api/customers/{id}/loyalty` - Customer's points/tier info
+  - `POST /api/customers/{id}/loyalty/earn` - Award points for purchase
+  - `POST /api/customers/{id}/loyalty/redeem` - Redeem points for discount
+
+#### 2. Smart Stock Alerts (P1 → DONE)
+- **Route:** `/stock` (Smart Alerts tab)
+- **Backend:** `backend/routers/stock.py` - `get_smart_stock_alerts` endpoint
+- **Features:**
+  - Velocity-based predictions using 30-day consumption analysis
+  - 7-day forecast for stock depletion
+  - Alert levels: Critical (out of stock or ≤3 days), Warning (≤7 days), Info (≤14 days)
+  - Suggested order quantity based on 2-week runway
+  - Summary cards showing Critical/Warning/Info/Total counts
+- **API Endpoint:**
+  - `GET /api/stock/smart-alerts?branch_id=&days_lookback=30&days_forecast=7`
+
+### Bug Fixes ✅
+
+#### Supplier Payment Deletion Bug (P0 → FIXED)
+- **Issue:** When deleting a cash/bank payment that paid down supplier credit, the balance wasn't updating correctly
+- **Root Cause:** Delete logic only handled "credit" mode payments, not cash/bank payments
+- **Fix:** `backend/routers/suppliers.py` lines 104-138 now properly:
+  - Cash/Bank payment deletion → Increases supplier credit (you owe them again)
+  - Credit payment deletion → Decreases supplier credit
+- **Verification:** Testing agent confirmed fix works correctly
+
+---
+
+## Previous Updates (Mar 2, 2026 — Session 11)
 
 ### P0/P1 Items Verified ✅
 
