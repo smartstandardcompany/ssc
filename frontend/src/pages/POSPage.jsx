@@ -7,10 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { DollarSign, ShoppingCart, Receipt, CreditCard, Banknote, CheckCircle, Users, Truck, Package, Plus, Loader2 } from 'lucide-react';
+import { DollarSign, ShoppingCart, Receipt, CreditCard, Banknote, CheckCircle, Users, Truck, Package, Plus, Loader2, Calendar } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { format } from 'date-fns';
 
 // Platform colors for visual distinction
 const PLATFORM_COLORS = {
@@ -43,6 +44,9 @@ export default function POSPage() {
   const [lastEntries, setLastEntries] = useState([]);
   const [todayStats, setTodayStats] = useState({ sales: 0, expenses: 0, count: 0 });
   const [paymentMode, setPaymentMode] = useState('cash');
+  
+  // Date selection
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   // Regular sale amounts
   const [cashAmount, setCashAmount] = useState('');
@@ -87,6 +91,13 @@ export default function POSPage() {
     setPlatformAmounts(prev => ({ ...prev, [platformId]: amount }));
   };
 
+  const getDateISO = () => {
+    // Use selected date with current time
+    const now = new Date();
+    const [year, month, day] = selectedDate.split('-');
+    return new Date(year, month - 1, day, now.getHours(), now.getMinutes()).toISOString();
+  };
+
   const submitRegularSale = async () => {
     if (!branch) { toast.error('Select a branch'); return; }
     if (totalRegularAmount <= 0) { toast.error('Enter at least one payment amount'); return; }
@@ -107,7 +118,7 @@ export default function POSPage() {
         amount: totalRegularAmount,
         branch_id: branch,
         notes: description || 'POS Sale',
-        date: new Date().toISOString(),
+        date: getDateISO(),
         payment_details: paymentDetails,
       };
       if (credit > 0 && customerId) payload.customer_id = customerId;
@@ -151,7 +162,7 @@ export default function POSPage() {
             amount: sale.amount,
             branch_id: branch,
             notes: `${sale.platform.name} Sale`,
-            date: new Date().toISOString(),
+            date: getDateISO(),
             payment_details: [{ mode: 'online_platform', amount: sale.amount, discount: 0 }],
             platform_id: sale.platform.id,
             platform_status: 'pending',
@@ -202,7 +213,7 @@ export default function POSPage() {
         category: category || 'General',
         branch_id: branch, 
         description: description || 'POS Expense',
-        date: new Date().toISOString(),
+        date: getDateISO(),
         payment_mode: paymentMode,
         supplier_id: supplierId || undefined,
       });
@@ -261,14 +272,28 @@ export default function POSPage() {
         </div>
 
         {/* Branch Selection */}
-        <Select value={branch} onValueChange={setBranch}>
-          <SelectTrigger className="h-12 rounded-xl" data-testid="pos-branch">
-            <SelectValue placeholder="Select Branch" />
-          </SelectTrigger>
-          <SelectContent>
-            {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <div className="grid grid-cols-2 gap-2">
+          <Select value={branch} onValueChange={setBranch}>
+            <SelectTrigger className="h-12 rounded-xl" data-testid="pos-branch">
+              <SelectValue placeholder="Select Branch" />
+            </SelectTrigger>
+            <SelectContent>
+              {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          
+          {/* Date Selection */}
+          <div className="relative">
+            <Calendar size={16} className="absolute left-3 top-4 text-stone-400 z-10" />
+            <Input 
+              type="date" 
+              value={selectedDate} 
+              onChange={e => setSelectedDate(e.target.value)}
+              className="h-12 pl-9 rounded-xl"
+              data-testid="pos-date"
+            />
+          </div>
+        </div>
 
         {/* SALES MODE */}
         {entryType === 'sale' && (
