@@ -160,6 +160,25 @@ const translations = {
     widget_desc_spending: 'Expense categories & spending', widget_desc_dues: 'Supplier dues, fines, alerts',
     widget_desc_branch: 'Inter-branch balances', widget_desc_vat: 'VAT calculations',
     show_all: 'Show All', minimize: 'Minimize', done: 'Done',
+    // AI Widget translations
+    ai_low_stock: 'AI: Low Stock Alerts', ai_low_stock_desc: 'Items predicted to run low',
+    ai_peak_hours: 'AI: Peak Hours', ai_peak_hours_desc: 'Optimal staffing insights',
+    ai_customer_clv: 'AI: Customer Value', ai_customer_clv_desc: 'Customer lifetime value predictions',
+    ai_profit_analysis: 'AI: Profit Analysis', ai_profit_analysis_desc: 'Daily profit trends',
+    items_at_risk: 'Items at risk of running low', all_stock_healthy: 'All stock levels healthy',
+    days_left: 'days left', stock_level: 'Stock', reorder_point: 'Reorder',
+    based_on_transactions: 'Based on {count} transactions', peak_hours_staff: 'Consider extra staff during these hours',
+    of_traffic: 'of traffic', projected_revenue: 'Projected 12-month revenue',
+    lifetime_value: 'lifetime value', orders_active: 'orders', days_active: 'days active',
+    add_customers_clv: 'Add customers to see CLV insights', avg_daily_profit: 'Avg Daily Profit',
+    trend: 'Trend', improving: 'Improving', declining: 'Declining', stable: 'Stable',
+    best_day: 'Best', worst_day: 'Worst', not_enough_data: 'Not enough data for analysis',
+    // Quick Actions
+    quick_actions: 'Quick Actions', qa_record_sale: 'Record Sale', qa_add_expense: 'Add Expense',
+    qa_pay_supplier: 'Pay Supplier', qa_new_invoice: 'New Invoice', qa_approve_leave: 'Approve Leave',
+    qa_pay_salary: 'Pay Salary', qa_add_customer: 'Add Customer', qa_view_reports: 'View Reports',
+    qa_stock_entry: 'Stock Entry', qa_cctv_live: 'CCTV Live', qa_available: 'available',
+    qa_no_actions: 'No quick actions available for your role',
     // Menu Items
     menu_items: 'Menu Items', nav_menu_items: 'Menu Items',
     // Order Status
