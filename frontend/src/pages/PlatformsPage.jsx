@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Truck, DollarSign, Receipt, CheckCircle, Clock, TrendingUp, Edit, Trash2, RefreshCw, Download } from 'lucide-react';
+import { Plus, Truck, DollarSign, Receipt, CheckCircle, Clock, TrendingUp, Edit, Trash2, RefreshCw, Download, Calculator, Building2 } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -18,11 +18,14 @@ export default function PlatformsPage() {
   const [platforms, setPlatforms] = useState([]);
   const [payments, setPayments] = useState([]);
   const [summary, setSummary] = useState({ platforms: [], totals: {} });
+  const [branchSummary, setBranchSummary] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showPlatformForm, setShowPlatformForm] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [editingPlatform, setEditingPlatform] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [calculatedPayment, setCalculatedPayment] = useState(null);
+  const [calculating, setCalculating] = useState(false);
 
   const [platformForm, setPlatformForm] = useState({
     name: '',
@@ -53,18 +56,49 @@ export default function PlatformsPage() {
 
   const fetchData = async () => {
     try {
-      const [platformsRes, paymentsRes, summaryRes] = await Promise.all([
+      const [platformsRes, paymentsRes, summaryRes, branchRes] = await Promise.all([
         api.get('/platforms'),
         api.get('/platform-payments'),
-        api.get('/platforms/summary')
+        api.get('/platforms/summary'),
+        api.get('/platforms/branch-summary').catch(() => ({ data: [] }))
       ]);
       setPlatforms(platformsRes.data);
       setPayments(paymentsRes.data);
       setSummary(summaryRes.data);
+      setBranchSummary(branchRes.data || []);
     } catch (error) {
       console.error('Fetch error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Auto-calculate commission when platform and dates change
+  const calculateExpected = async () => {
+    if (!paymentForm.platform_id || !paymentForm.period_start || !paymentForm.period_end) {
+      toast.error('Please select platform and date range first');
+      return;
+    }
+    
+    setCalculating(true);
+    try {
+      const res = await api.get(`/platform-payments/calculate?platform_id=${paymentForm.platform_id}&period_start=${paymentForm.period_start}&period_end=${paymentForm.period_end}`);
+      const calc = res.data;
+      setCalculatedPayment(calc);
+      
+      // Auto-fill the form
+      setPaymentForm({
+        ...paymentForm,
+        total_sales: calc.total_sales.toString(),
+        commission_paid: calc.calculated_commission.toString(),
+        amount_received: calc.expected_amount.toString()
+      });
+      
+      toast.success(`Found ${calc.sales_count} sales totaling SAR ${calc.total_sales.toLocaleString()}`);
+    } catch (error) {
+      toast.error('Failed to calculate');
+    } finally {
+      setCalculating(false);
     }
   };
 
