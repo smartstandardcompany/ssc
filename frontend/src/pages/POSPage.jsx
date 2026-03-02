@@ -6,11 +6,24 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { DollarSign, ShoppingCart, Receipt, CreditCard, Banknote, Smartphone, CheckCircle, Users, Truck, Package } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { DollarSign, ShoppingCart, Receipt, CreditCard, Banknote, CheckCircle, Users, Truck, Package, Plus, Loader2 } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
+
+// Platform colors for visual distinction
+const PLATFORM_COLORS = {
+  'HungerStation': 'bg-red-50 border-red-200 focus:border-red-400',
+  'Hunger': 'bg-orange-50 border-orange-200 focus:border-orange-400',
+  'Jahez': 'bg-green-50 border-green-200 focus:border-green-400',
+  'ToYou': 'bg-blue-50 border-blue-200 focus:border-blue-400',
+  'Keta': 'bg-purple-50 border-purple-200 focus:border-purple-400',
+  'Ninja': 'bg-yellow-50 border-yellow-200 focus:border-yellow-400',
+  'Careem Food': 'bg-teal-50 border-teal-200 focus:border-teal-400',
+  'Talabat': 'bg-pink-50 border-pink-200 focus:border-pink-400',
+  'Marsool': 'bg-indigo-50 border-indigo-200 focus:border-indigo-400',
+};
 
 export default function POSPage() {
   const { t } = useLanguage();
@@ -21,21 +34,23 @@ export default function POSPage() {
   const [branch, setBranch] = useState('');
   const [description, setDescription] = useState('');
   const [customerId, setCustomerId] = useState('');
-  const [platformId, setPlatformId] = useState('');
   const [supplierId, setSupplierId] = useState('');
   const [entryType, setEntryType] = useState('sale');
+  const [saleMode, setSaleMode] = useState('regular'); // 'regular' or 'online'
   const [category, setCategory] = useState('');
   const [categories, setCategories] = useState([]);
   const [submitting, setSubmitting] = useState(false);
-  const [lastEntry, setLastEntry] = useState(null);
+  const [lastEntries, setLastEntries] = useState([]);
   const [todayStats, setTodayStats] = useState({ sales: 0, expenses: 0, count: 0 });
-  const [paymentMode, setPaymentMode] = useState('cash'); // For expenses
+  const [paymentMode, setPaymentMode] = useState('cash');
 
-  // Multi-payment amounts
+  // Regular sale amounts
   const [cashAmount, setCashAmount] = useState('');
   const [bankAmount, setBankAmount] = useState('');
-  const [onlineAmount, setOnlineAmount] = useState('');
   const [creditAmount, setCreditAmount] = useState('');
+
+  // Online platform amounts - object with platform_id as key
+  const [platformAmounts, setPlatformAmounts] = useState({});
 
   // For expense mode
   const [expenseAmount, setExpenseAmount] = useState('');
@@ -65,227 +80,349 @@ export default function POSPage() {
     } catch {}
   };
 
-  const totalSaleAmount = parseFloat(cashAmount || 0) + parseFloat(bankAmount || 0) + parseFloat(onlineAmount || 0) + parseFloat(creditAmount || 0);
+  const totalRegularAmount = parseFloat(cashAmount || 0) + parseFloat(bankAmount || 0) + parseFloat(creditAmount || 0);
+  const totalOnlineAmount = Object.values(platformAmounts).reduce((sum, amt) => sum + parseFloat(amt || 0), 0);
 
-  const submit = async () => {
+  const updatePlatformAmount = (platformId, amount) => {
+    setPlatformAmounts(prev => ({ ...prev, [platformId]: amount }));
+  };
+
+  const submitRegularSale = async () => {
     if (!branch) { toast.error('Select a branch'); return; }
+    if (totalRegularAmount <= 0) { toast.error('Enter at least one payment amount'); return; }
 
-    if (entryType === 'sale') {
-      if (totalSaleAmount <= 0) { toast.error('Enter at least one payment amount'); return; }
-      
-      // If online amount entered, require platform
-      if (parseFloat(onlineAmount || 0) > 0 && !platformId) {
-        toast.error('Select a delivery platform for online sales');
-        return;
+    setSubmitting(true);
+    try {
+      const paymentDetails = [];
+      const cash = parseFloat(cashAmount || 0);
+      const bank = parseFloat(bankAmount || 0);
+      const credit = parseFloat(creditAmount || 0);
+
+      if (cash > 0) paymentDetails.push({ mode: 'cash', amount: cash, discount: 0 });
+      if (bank > 0) paymentDetails.push({ mode: 'bank', amount: bank, discount: 0 });
+      if (credit > 0) paymentDetails.push({ mode: 'credit', amount: credit, discount: 0 });
+
+      const payload = {
+        sale_type: 'pos',
+        amount: totalRegularAmount,
+        branch_id: branch,
+        notes: description || 'POS Sale',
+        date: new Date().toISOString(),
+        payment_details: paymentDetails,
+      };
+      if (credit > 0 && customerId) payload.customer_id = customerId;
+      await api.post('/sales', payload);
+
+      const modes = paymentDetails.map(p => p.mode).join(', ');
+      toast.success(`Sale SAR ${totalRegularAmount.toLocaleString()} recorded (${modes})`);
+      setLastEntries([{ type: 'Sale', amount: totalRegularAmount, mode: modes }]);
+
+      setCashAmount(''); setBankAmount(''); setCreditAmount('');
+      setDescription(''); setCustomerId('');
+      refreshStats();
+    } catch (err) { toast.error(err.response?.data?.detail || 'Failed to submit'); }
+    finally { setSubmitting(false); }
+  };
+
+  const submitOnlineSales = async () => {
+    if (!branch) { toast.error('Select a branch'); return; }
+    
+    // Get platforms with amounts > 0
+    const salesData = platforms
+      .filter(p => parseFloat(platformAmounts[p.id] || 0) > 0)
+      .map(p => ({
+        platform: p,
+        amount: parseFloat(platformAmounts[p.id])
+      }));
+
+    if (salesData.length === 0) {
+      toast.error('Enter amount for at least one platform');
+      return;
+    }
+
+    setSubmitting(true);
+    const results = [];
+
+    try {
+      for (const sale of salesData) {
+        try {
+          await api.post('/sales', {
+            sale_type: 'online',
+            amount: sale.amount,
+            branch_id: branch,
+            notes: `${sale.platform.name} Sale`,
+            date: new Date().toISOString(),
+            payment_details: [{ mode: 'online_platform', amount: sale.amount, discount: 0 }],
+            platform_id: sale.platform.id,
+            platform_status: 'pending',
+          });
+          results.push({ platform: sale.platform.name, amount: sale.amount, success: true });
+        } catch (err) {
+          results.push({ platform: sale.platform.name, amount: sale.amount, success: false, error: err.response?.data?.detail });
+        }
       }
 
-      setSubmitting(true);
-      try {
-        const paymentDetails = [];
-        const cash = parseFloat(cashAmount || 0);
-        const bank = parseFloat(bankAmount || 0);
-        const online = parseFloat(onlineAmount || 0);
-        const credit = parseFloat(creditAmount || 0);
+      const successful = results.filter(r => r.success);
+      const failed = results.filter(r => !r.success);
 
-        if (cash > 0) paymentDetails.push({ mode: 'cash', amount: cash, discount: 0 });
-        if (bank > 0) paymentDetails.push({ mode: 'bank', amount: bank, discount: 0 });
-        if (online > 0) paymentDetails.push({ mode: 'online_platform', amount: online, discount: 0 });
-        if (credit > 0) paymentDetails.push({ mode: 'credit', amount: credit, discount: 0 });
+      if (successful.length > 0) {
+        const total = successful.reduce((s, r) => s + r.amount, 0);
+        toast.success(`${successful.length} online sales recorded (SAR ${total.toLocaleString()})`);
+      }
+      if (failed.length > 0) {
+        toast.error(`${failed.length} sales failed`);
+      }
 
-        const payload = {
-          sale_type: online > 0 ? 'online' : 'pos',
-          amount: totalSaleAmount,
-          branch_id: branch,
-          notes: description || 'POS Sale',
-          date: new Date().toISOString(),
-          payment_details: paymentDetails,
-          platform_id: online > 0 ? platformId : undefined,
-          platform_status: online > 0 ? 'pending' : undefined,
-        };
-        if (credit > 0 && customerId) payload.customer_id = customerId;
-        await api.post('/sales', payload);
+      setLastEntries(results.map(r => ({
+        type: 'Online Sale',
+        platform: r.platform,
+        amount: r.amount,
+        success: r.success
+      })));
 
-        const modes = paymentDetails.map(p => p.mode === 'online_platform' ? 'Online' : p.mode).join(', ');
-        const platformName = platforms.find(p => p.id === platformId)?.name;
-        toast.success(`Sale SAR ${totalSaleAmount.toLocaleString()} recorded${platformName ? ` via ${platformName}` : ''}`);
-        setLastEntry({ type: 'Sale', amount: totalSaleAmount, mode: modes, platform: platformName });
-
-        setCashAmount(''); setBankAmount(''); setOnlineAmount(''); setCreditAmount('');
-        setDescription(''); setCustomerId(''); setPlatformId('');
-        refreshStats();
-      } catch (err) { toast.error(err.response?.data?.detail || 'Failed to submit'); }
-      finally { setSubmitting(false); }
-    } else {
-      const amt = parseFloat(expenseAmount);
-      if (!amt || amt <= 0) { toast.error('Enter a valid amount'); return; }
-
-      setSubmitting(true);
-      try {
-        await api.post('/expenses', {
-          amount: amt, 
-          category: category || 'General',
-          branch_id: branch, 
-          description: description || 'POS Expense',
-          date: new Date().toISOString(),
-          payment_mode: paymentMode,
-          supplier_id: supplierId || undefined,
-        });
-        const supplierName = suppliers.find(s => s.id === supplierId)?.name;
-        toast.success(`Expense SAR ${amt.toLocaleString()} recorded${supplierName ? ` - ${supplierName}` : ''}`);
-        setLastEntry({ type: 'Expense', amount: amt, mode: `${category || 'General'} (${paymentMode})`, supplier: supplierName });
-        setExpenseAmount(''); setDescription(''); setSupplierId(''); setPaymentMode('cash');
-        refreshStats();
-      } catch (err) { toast.error(err.response?.data?.detail || 'Failed to submit'); }
-      finally { setSubmitting(false); }
+      // Clear amounts
+      setPlatformAmounts({});
+      refreshStats();
+    } catch (err) {
+      toast.error('Failed to record sales');
+    } finally {
+      setSubmitting(false);
     }
+  };
+
+  const submitExpense = async () => {
+    if (!branch) { toast.error('Select a branch'); return; }
+    const amt = parseFloat(expenseAmount);
+    if (!amt || amt <= 0) { toast.error('Enter a valid amount'); return; }
+
+    setSubmitting(true);
+    try {
+      await api.post('/expenses', {
+        amount: amt, 
+        category: category || 'General',
+        branch_id: branch, 
+        description: description || 'POS Expense',
+        date: new Date().toISOString(),
+        payment_mode: paymentMode,
+        supplier_id: supplierId || undefined,
+      });
+      const supplierName = suppliers.find(s => s.id === supplierId)?.name;
+      toast.success(`Expense SAR ${amt.toLocaleString()} recorded${supplierName ? ` - ${supplierName}` : ''}`);
+      setLastEntries([{ type: 'Expense', amount: amt, mode: `${category || 'General'} (${paymentMode})`, supplier: supplierName }]);
+      setExpenseAmount(''); setDescription(''); setSupplierId(''); setPaymentMode('cash');
+      refreshStats();
+    } catch (err) { toast.error(err.response?.data?.detail || 'Failed to submit'); }
+    finally { setSubmitting(false); }
   };
 
   return (
     <DashboardLayout>
-      <div className="max-w-lg mx-auto space-y-4 pb-8" data-testid="pos-page">
+      <div className="max-w-lg mx-auto py-4 px-2 space-y-4" data-testid="pos-page">
         {/* Header */}
-        <div className="text-center pt-2">
-          <h1 className="text-xl font-bold font-outfit" data-testid="pos-title">{t('pos_title')}</h1>
-          <p className="text-xs text-muted-foreground">{t('nav_sales')} & {t('expenses_title')}</p>
+        <div className="text-center">
+          <h1 className="text-2xl font-bold font-outfit">Quick Entry</h1>
+          <p className="text-sm text-muted-foreground">Sales & Expenses</p>
         </div>
 
-        {/* Today Stats */}
+        {/* Stats */}
         <div className="grid grid-cols-3 gap-2">
-          <Card className="border-emerald-100 bg-emerald-50/50"><CardContent className="p-3 text-center">
-            <p className="text-[10px] text-emerald-600 font-medium">{t('nav_sales')}</p>
-            <p className="text-sm font-bold font-outfit text-emerald-700" data-testid="pos-stat-sales">SAR {todayStats.sales.toLocaleString()}</p>
-          </CardContent></Card>
-          <Card className="border-red-100 bg-red-50/50"><CardContent className="p-3 text-center">
-            <p className="text-[10px] text-red-600 font-medium">{t('expenses_title')}</p>
-            <p className="text-sm font-bold font-outfit text-red-700" data-testid="pos-stat-expenses">SAR {todayStats.expenses.toLocaleString()}</p>
-          </CardContent></Card>
-          <Card className="border-blue-100 bg-blue-50/50"><CardContent className="p-3 text-center">
-            <p className="text-[10px] text-blue-600 font-medium">{t('net_profit')}</p>
-            <p className="text-sm font-bold font-outfit text-blue-700">SAR {(todayStats.sales - todayStats.expenses).toLocaleString()}</p>
-          </CardContent></Card>
+          <Card className="border-0 shadow-sm bg-emerald-50">
+            <CardContent className="p-3 text-center">
+              <p className="text-xs text-emerald-600">Sales</p>
+              <p className="text-lg font-bold font-outfit text-emerald-700">SAR {todayStats.sales.toLocaleString()}</p>
+            </CardContent>
+          </Card>
+          <Card className="border-0 shadow-sm bg-red-50">
+            <CardContent className="p-3 text-center">
+              <p className="text-xs text-red-600">Expenses</p>
+              <p className="text-lg font-bold font-outfit text-red-700">SAR {todayStats.expenses.toLocaleString()}</p>
+            </CardContent>
+          </Card>
+          <Card className="border-0 shadow-sm bg-blue-50">
+            <CardContent className="p-3 text-center">
+              <p className="text-xs text-blue-600">Net Profit</p>
+              <p className="text-lg font-bold font-outfit text-blue-700">SAR {(todayStats.sales - todayStats.expenses).toLocaleString()}</p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Entry Type Toggle */}
-        <div className="flex rounded-xl border overflow-hidden">
-          <button onClick={() => setEntryType('sale')} data-testid="pos-sale-btn"
-            className={`flex-1 py-3 text-sm font-medium transition-all flex items-center justify-center gap-2 ${entryType === 'sale' ? 'bg-emerald-500 text-white' : 'bg-white text-stone-500'}`}>
-            <ShoppingCart size={16} />{t('nav_sales')}
+        <div className="flex rounded-xl overflow-hidden border">
+          <button onClick={() => setEntryType('sale')}
+            className={`flex-1 py-3 font-medium transition-all flex items-center justify-center gap-2 ${entryType === 'sale' ? 'bg-emerald-500 text-white' : 'bg-white text-stone-600'}`}
+            data-testid="pos-sale-btn">
+            <ShoppingCart size={18} /> Sales
           </button>
-          <button onClick={() => setEntryType('expense')} data-testid="pos-expense-btn"
-            className={`flex-1 py-3 text-sm font-medium transition-all flex items-center justify-center gap-2 ${entryType === 'expense' ? 'bg-red-500 text-white' : 'bg-white text-stone-500'}`}>
-            <Receipt size={16} />{t('expenses_title')}
+          <button onClick={() => setEntryType('expense')}
+            className={`flex-1 py-3 font-medium transition-all flex items-center justify-center gap-2 ${entryType === 'expense' ? 'bg-red-500 text-white' : 'bg-white text-stone-600'}`}
+            data-testid="pos-expense-btn">
+            <Receipt size={18} /> Expenses
           </button>
         </div>
 
-        {/* Branch */}
+        {/* Branch Selection */}
         <Select value={branch} onValueChange={setBranch}>
-          <SelectTrigger className="h-12 rounded-xl text-sm" data-testid="pos-branch"><SelectValue placeholder={t('branch')} /></SelectTrigger>
-          <SelectContent>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+          <SelectTrigger className="h-12 rounded-xl" data-testid="pos-branch">
+            <SelectValue placeholder="Select Branch" />
+          </SelectTrigger>
+          <SelectContent>
+            {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+          </SelectContent>
         </Select>
 
-        {/* SALE: Multi-payment entry */}
+        {/* SALES MODE */}
         {entryType === 'sale' && (
-          <Card className="border-stone-200" data-testid="pos-multi-payment">
-            <CardContent className="p-4 space-y-3">
-              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">{t('payment_details')}</p>
+          <div className="space-y-4">
+            {/* Sale Type Tabs */}
+            <Tabs value={saleMode} onValueChange={setSaleMode}>
+              <TabsList className="w-full">
+                <TabsTrigger value="regular" className="flex-1" data-testid="regular-sale-tab">
+                  <Banknote size={16} className="mr-1" /> Regular Sale
+                </TabsTrigger>
+                <TabsTrigger value="online" className="flex-1 data-[state=active]:bg-purple-500 data-[state=active]:text-white" data-testid="online-sale-tab">
+                  <Truck size={16} className="mr-1" /> Online Sales
+                </TabsTrigger>
+              </TabsList>
 
-              <div className="grid grid-cols-2 gap-3">
-                {/* Cash */}
-                <div className="space-y-1">
-                  <Label className="text-xs text-stone-500 flex items-center gap-1.5">
-                    <Banknote size={13} className="text-emerald-500" /> {t('pos_cash')}
-                  </Label>
-                  <Input type="number" inputMode="decimal" value={cashAmount}
-                    onChange={e => setCashAmount(e.target.value)} placeholder="0.00"
-                    className="h-11 rounded-lg text-base font-semibold font-outfit" data-testid="pos-cash" />
-                </div>
+              {/* Regular Sale */}
+              <TabsContent value="regular" className="space-y-4 mt-4">
+                <Card className="border-0 shadow-sm">
+                  <CardContent className="p-4 space-y-4">
+                    <Label className="text-xs text-stone-500 font-medium">PAYMENT AMOUNTS</Label>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-emerald-600 flex items-center gap-1">
+                          <Banknote size={12} /> Cash
+                        </Label>
+                        <Input type="number" inputMode="decimal" value={cashAmount}
+                          onChange={e => setCashAmount(e.target.value)} placeholder="0"
+                          className="h-11 text-center font-semibold bg-emerald-50 border-emerald-200" data-testid="pos-cash" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-blue-600 flex items-center gap-1">
+                          <CreditCard size={12} /> Bank
+                        </Label>
+                        <Input type="number" inputMode="decimal" value={bankAmount}
+                          onChange={e => setBankAmount(e.target.value)} placeholder="0"
+                          className="h-11 text-center font-semibold bg-blue-50 border-blue-200" data-testid="pos-bank" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-amber-600 flex items-center gap-1">
+                          <Users size={12} /> Credit
+                        </Label>
+                        <Input type="number" inputMode="decimal" value={creditAmount}
+                          onChange={e => setCreditAmount(e.target.value)} placeholder="0"
+                          className="h-11 text-center font-semibold bg-amber-50 border-amber-200" data-testid="pos-credit" />
+                      </div>
+                    </div>
 
-                {/* Bank */}
-                <div className="space-y-1">
-                  <Label className="text-xs text-stone-500 flex items-center gap-1.5">
-                    <CreditCard size={13} className="text-blue-500" /> {t('pos_bank')}
-                  </Label>
-                  <Input type="number" inputMode="decimal" value={bankAmount}
-                    onChange={e => setBankAmount(e.target.value)} placeholder="0.00"
-                    className="h-11 rounded-lg text-base font-semibold font-outfit" data-testid="pos-bank" />
-                </div>
+                    {/* Customer for Credit */}
+                    {parseFloat(creditAmount || 0) > 0 && (
+                      <Select value={customerId} onValueChange={setCustomerId}>
+                        <SelectTrigger className="h-10 rounded-lg">
+                          <SelectValue placeholder="Select Customer for Credit" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    )}
 
-                {/* Online */}
-                <div className="space-y-1">
-                  <Label className="text-xs text-stone-500 flex items-center gap-1.5">
-                    <Truck size={13} className="text-purple-500" /> Online Platform
-                  </Label>
-                  <Input type="number" inputMode="decimal" value={onlineAmount}
-                    onChange={e => setOnlineAmount(e.target.value)} placeholder="0.00"
-                    className="h-11 rounded-lg text-base font-semibold font-outfit border-purple-200 focus:border-purple-400" data-testid="pos-online" />
-                </div>
+                    {/* Total */}
+                    {totalRegularAmount > 0 && (
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <span className="text-sm font-medium">Total</span>
+                        <span className="text-2xl font-bold text-emerald-600">SAR {totalRegularAmount.toLocaleString()}</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
-                {/* Credit */}
-                <div className="space-y-1">
-                  <Label className="text-xs text-stone-500 flex items-center gap-1.5">
-                    <Users size={13} className="text-amber-500" /> {t('pos_credit')}
-                  </Label>
-                  <Input type="number" inputMode="decimal" value={creditAmount}
-                    onChange={e => setCreditAmount(e.target.value)} placeholder="0.00"
-                    className="h-11 rounded-lg text-base font-semibold font-outfit" data-testid="pos-credit" />
-                </div>
-              </div>
+                <Input value={description} onChange={e => setDescription(e.target.value)}
+                  placeholder="Description (optional)" className="h-11 rounded-xl" />
 
-              {/* Total */}
-              {totalSaleAmount > 0 && (
-                <div className="flex items-center justify-between pt-2 border-t border-dashed border-stone-200">
-                  <span className="text-sm font-medium text-stone-600">{t('pos_total')}</span>
-                  <span className="text-xl font-bold font-outfit text-emerald-600" data-testid="pos-total">SAR {totalSaleAmount.toLocaleString()}</span>
-                </div>
-              )}
-              
-              {/* Platform Selection - Show when online amount > 0 */}
-              {parseFloat(onlineAmount || 0) > 0 && (
-                <div className="p-3 bg-purple-50 rounded-xl border border-purple-200 space-y-2">
-                  <Label className="text-xs text-purple-700 font-medium flex items-center gap-1.5">
-                    <Truck size={13} /> Select Delivery Platform *
-                  </Label>
-                  <div className="flex flex-wrap gap-2">
-                    {platforms.filter(p => p.is_active !== false).map(p => (
-                      <button key={p.id} type="button" onClick={() => setPlatformId(p.id)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
-                          platformId === p.id 
-                            ? 'bg-purple-600 text-white border-purple-600' 
-                            : 'bg-white text-purple-700 border-purple-300 hover:bg-purple-100'
-                        }`}>
-                        {p.name} {p.commission_rate > 0 && <span className="opacity-70">({p.commission_rate}%)</span>}
-                      </button>
-                    ))}
-                  </div>
-                  {platforms.length === 0 && (
-                    <p className="text-xs text-purple-600">No platforms configured. <a href="/platforms" className="underline">Add platforms</a></p>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                <Button onClick={submitRegularSale} disabled={submitting || totalRegularAmount <= 0}
+                  className="w-full h-14 rounded-xl text-lg font-semibold bg-emerald-500 hover:bg-emerald-600">
+                  {submitting ? <Loader2 className="animate-spin mr-2" /> : <Plus size={20} className="mr-2" />}
+                  Record Sale - SAR {totalRegularAmount.toLocaleString()}
+                </Button>
+              </TabsContent>
+
+              {/* Online Sales - Multiple Platforms */}
+              <TabsContent value="online" className="space-y-4 mt-4">
+                <Card className="border-0 shadow-sm border-l-4 border-l-purple-500">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Truck size={18} className="text-purple-600" />
+                      <Label className="text-sm font-medium text-purple-700">Enter amounts for each platform</Label>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {platforms.filter(p => p.is_active !== false).map(platform => (
+                        <div key={platform.id} className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <Label className="text-xs text-stone-600 mb-1 block">
+                              {platform.name} 
+                              <span className="text-purple-500 ml-1">({platform.commission_rate}%)</span>
+                            </Label>
+                            <Input
+                              type="number"
+                              inputMode="decimal"
+                              value={platformAmounts[platform.id] || ''}
+                              onChange={e => updatePlatformAmount(platform.id, e.target.value)}
+                              placeholder="0.00"
+                              className={`h-10 text-center font-semibold ${PLATFORM_COLORS[platform.name] || 'bg-purple-50 border-purple-200'}`}
+                              data-testid={`platform-${platform.id}`}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {platforms.length === 0 && (
+                      <p className="text-sm text-stone-500 text-center py-4">
+                        No platforms configured. <a href="/platforms" className="text-purple-600 underline">Add platforms</a>
+                      </p>
+                    )}
+
+                    {/* Total Online */}
+                    {totalOnlineAmount > 0 && (
+                      <div className="flex items-center justify-between pt-3 border-t border-purple-200">
+                        <div>
+                          <span className="text-sm font-medium text-purple-700">Total Online Sales</span>
+                          <p className="text-xs text-purple-500">
+                            {Object.entries(platformAmounts).filter(([_, amt]) => parseFloat(amt || 0) > 0).length} platforms
+                          </p>
+                        </div>
+                        <span className="text-2xl font-bold text-purple-600">SAR {totalOnlineAmount.toLocaleString()}</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Button onClick={submitOnlineSales} disabled={submitting || totalOnlineAmount <= 0}
+                  className="w-full h-14 rounded-xl text-lg font-semibold bg-purple-500 hover:bg-purple-600">
+                  {submitting ? <Loader2 className="animate-spin mr-2" /> : <Truck size={20} className="mr-2" />}
+                  Record {Object.values(platformAmounts).filter(a => parseFloat(a || 0) > 0).length} Online Sales
+                </Button>
+              </TabsContent>
+            </Tabs>
+          </div>
         )}
 
-        {/* Credit: Customer select */}
-        {entryType === 'sale' && parseFloat(creditAmount || 0) > 0 && (
-          <Select value={customerId} onValueChange={setCustomerId}>
-            <SelectTrigger className="h-11 rounded-xl text-sm" data-testid="pos-customer"><SelectValue placeholder={t('pos_customer')} /></SelectTrigger>
-            <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-          </Select>
-        )}
-
-        {/* EXPENSE: Amount */}
+        {/* EXPENSE MODE */}
         {entryType === 'expense' && (
-          <>
+          <div className="space-y-4">
             <div className="relative">
               <DollarSign size={18} className="absolute left-3.5 top-3.5 text-stone-400" />
               <Input type="number" inputMode="decimal" value={expenseAmount} onChange={e => setExpenseAmount(e.target.value)}
                 placeholder="0.00" className="h-14 pl-10 text-2xl font-bold font-outfit rounded-xl text-center" data-testid="pos-amount" />
             </div>
             
-            {/* Category */}
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="h-11 rounded-xl text-sm" data-testid="pos-category"><SelectValue placeholder={t('expense_category')} /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-xl" data-testid="pos-category">
+                <SelectValue placeholder="Select Category" />
+              </SelectTrigger>
               <SelectContent>
                 {categories.map(c => <SelectItem key={c.id || c.name} value={c.name}>{c.name}</SelectItem>)}
                 <SelectItem value="General">General</SelectItem>
@@ -313,7 +450,7 @@ export default function POSPage() {
             
             {/* Supplier Selection */}
             <Select value={supplierId || "none"} onValueChange={(v) => setSupplierId(v === "none" ? "" : v)}>
-              <SelectTrigger className="h-11 rounded-xl text-sm" data-testid="pos-supplier">
+              <SelectTrigger className="h-11 rounded-xl" data-testid="pos-supplier">
                 <Package size={14} className="mr-2 text-stone-400" />
                 <SelectValue placeholder="Select Supplier (optional)" />
               </SelectTrigger>
@@ -330,35 +467,41 @@ export default function POSPage() {
             {/* Credit Warning */}
             {paymentMode === 'credit' && supplierId && (
               <div className="p-2.5 bg-amber-50 rounded-lg border border-amber-200 text-xs text-amber-700">
-                <strong>Credit Purchase:</strong> This will be added to supplier's balance. Pay later via Supplier Payments.
+                <strong>Credit Purchase:</strong> This will be added to supplier's balance.
               </div>
             )}
-          </>
+
+            <Input value={description} onChange={e => setDescription(e.target.value)}
+              placeholder="Description (optional)" className="h-11 rounded-xl" />
+
+            <Button onClick={submitExpense} disabled={submitting || !parseFloat(expenseAmount)}
+              className="w-full h-14 rounded-xl text-lg font-semibold bg-red-500 hover:bg-red-600">
+              {submitting ? <Loader2 className="animate-spin mr-2" /> : <Receipt size={20} className="mr-2" />}
+              Record Expense - SAR {parseFloat(expenseAmount || 0).toLocaleString()}
+            </Button>
+          </div>
         )}
 
-        {/* Description */}
-        <Input value={description} onChange={e => setDescription(e.target.value)}
-          placeholder={t('description')} className="h-11 rounded-xl text-sm" data-testid="pos-desc" />
-
-        {/* Submit */}
-        <Button disabled={submitting || (entryType === 'sale' ? totalSaleAmount <= 0 : !expenseAmount || parseFloat(expenseAmount) <= 0)} onClick={submit} data-testid="pos-submit"
-          className={`w-full h-14 rounded-xl text-base font-bold transition-all ${entryType === 'sale' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600'}`}>
-          {submitting ? 'Recording...' : entryType === 'sale'
-            ? `Record Sale - SAR ${totalSaleAmount > 0 ? totalSaleAmount.toLocaleString() : '0'}`
-            : `Record Expense - SAR ${expenseAmount || '0'}`
-          }
-        </Button>
-
-        {/* Last Entry Confirmation */}
-        {lastEntry && (
-          <Card className="border-emerald-200 bg-emerald-50" data-testid="last-entry">
-            <CardContent className="p-3 flex items-center gap-3">
-              <CheckCircle size={20} className="text-emerald-500 flex-shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-emerald-800">{lastEntry.type} Recorded</p>
-                <p className="text-xs text-emerald-600">SAR {lastEntry.amount.toLocaleString()} via {lastEntry.mode}</p>
+        {/* Last Entries */}
+        {lastEntries.length > 0 && (
+          <Card className="border-0 shadow-sm bg-stone-50">
+            <CardContent className="p-3">
+              <Label className="text-xs text-stone-500 mb-2 block">Last Recorded</Label>
+              <div className="space-y-1">
+                {lastEntries.map((entry, i) => (
+                  <div key={i} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      {entry.success === false ? (
+                        <Badge variant="destructive" className="text-xs">Failed</Badge>
+                      ) : (
+                        <CheckCircle size={14} className="text-emerald-500" />
+                      )}
+                      <span>{entry.platform || entry.type}</span>
+                    </div>
+                    <span className="font-semibold">SAR {entry.amount?.toLocaleString()}</span>
+                  </div>
+                ))}
               </div>
-              <Badge variant="outline" className="border-emerald-300 text-emerald-600 text-[10px]">Just Now</Badge>
             </CardContent>
           </Card>
         )}
