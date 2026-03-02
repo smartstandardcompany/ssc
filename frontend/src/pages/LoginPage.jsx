@@ -107,11 +107,18 @@ export default function LoginPage({ setIsAuthenticated }) {
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
-          <div className="mt-6 text-center text-sm">
-            <span className="text-stone-400">Don't have an account? </span>
-            <Link to="/register" className="text-orange-600 hover:underline font-medium" data-testid="register-link">
-              Sign up
-            </Link>
+          <div className="mt-6 text-center text-sm space-y-2">
+            <div>
+              <Link to="/forgot-password" className="text-orange-600 hover:underline font-medium" data-testid="forgot-password-link">
+                Forgot password?
+              </Link>
+            </div>
+            <div>
+              <span className="text-stone-400">Don't have an account? </span>
+              <Link to="/register" className="text-orange-600 hover:underline font-medium" data-testid="register-link">
+                Sign up
+              </Link>
+            </div>
           </div>
         </CardContent>
       </Card>
