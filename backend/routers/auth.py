@@ -192,3 +192,166 @@ async def delete_category(category_id: str, current_user: User = Depends(get_cur
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Category not found")
     return {"message": "Category deleted successfully"}
+
+
+# ============== PASSWORD MANAGEMENT ==============
+
+# Admin resets user password
+@router.put("/users/{user_id}/reset-password")
+async def admin_reset_password(user_id: str, data: PasswordReset, current_user: User = Depends(get_current_user)):
+    """Admin endpoint to reset a user's password."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
+    hashed = hash_password(data.new_password)
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"password": hashed, "must_change_password": data.must_change_on_login}}
+    )
+    return {"message": f"Password reset successfully. User {'must' if data.must_change_on_login else 'does not need to'} change password on next login."}
+
+
+# User changes their own password
+@router.post("/auth/change-password")
+async def change_password(data: ChangePassword, current_user: User = Depends(get_current_user)):
+    """Endpoint for users to change their own password."""
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # If forced change, current password is optional
+    must_change = user_doc.get("must_change_password", False)
+    if not must_change and data.current_password:
+        stored_pw = user_doc.get("password") or user_doc.get("hashed_password", "")
+        if not verify_password(data.current_password, stored_pw):
+            raise HTTPException(status_code=401, detail="Current password is incorrect")
+    elif not must_change and not data.current_password:
+        raise HTTPException(status_code=400, detail="Current password is required")
+    
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters")
+    
+    hashed = hash_password(data.new_password)
+    await db.users.update_one(
+        {"id": current_user.id},
+        {"$set": {"password": hashed, "must_change_password": False}}
+    )
+    return {"message": "Password changed successfully"}
+
+
+# Forgot password - send reset email
+@router.post("/auth/forgot-password")
+async def forgot_password(data: ForgotPasswordRequest):
+    """Send password reset email to user."""
+    user = await db.users.find_one({"email": {"$regex": f"^{data.email}$", "$options": "i"}}, {"_id": 0})
+    # Always return success to prevent email enumeration
+    if not user:
+        return {"message": "If an account exists with this email, a reset link has been sent."}
+    
+    # Generate reset token (valid for 1 hour)
+    token = secrets.token_urlsafe(32)
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+    
+    await db.password_reset_tokens.delete_many({"user_id": user["id"]})  # Remove old tokens
+    await db.password_reset_tokens.insert_one({
+        "token": token,
+        "user_id": user["id"],
+        "email": user["email"],
+        "expires_at": expires_at.isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    # Send email
+    try:
+        import aiosmtplib
+        from email.mime.text import MIMEText
+        settings = await db.email_settings.find_one({}, {"_id": 0})
+        if settings and settings.get("smtp_host") and settings.get("password"):
+            # Get frontend URL from environment or use default
+            import os
+            frontend_url = os.environ.get("FRONTEND_URL", "https://ssc-track-rbac.preview.emergentagent.com")
+            reset_link = f"{frontend_url}/reset-password?token={token}"
+            
+            body = f"""Hello {user['name']},
+
+You requested to reset your password for SSC Track.
+
+Click the link below to reset your password:
+{reset_link}
+
+This link will expire in 1 hour.
+
+If you did not request this, please ignore this email.
+
+Best regards,
+SSC Track Team"""
+            
+            msg = MIMEText(body)
+            msg["Subject"] = "SSC Track - Password Reset Request"
+            msg["From"] = settings.get("from_email", settings["username"])
+            msg["To"] = user["email"]
+            
+            await aiosmtplib.send(
+                msg,
+                hostname=settings["smtp_host"],
+                port=settings["smtp_port"],
+                username=settings["username"],
+                password=settings["password"],
+                use_tls=settings.get("use_tls", True)
+            )
+    except Exception as e:
+        # Log error but don't expose to user
+        print(f"Failed to send reset email: {e}")
+    
+    return {"message": "If an account exists with this email, a reset link has been sent."}
+
+
+# Reset password with token
+@router.post("/auth/reset-password")
+async def reset_password_with_token(data: ResetPasswordWithToken):
+    """Reset password using token from email."""
+    token_doc = await db.password_reset_tokens.find_one({"token": data.token}, {"_id": 0})
+    if not token_doc:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    
+    expires_at = datetime.fromisoformat(token_doc["expires_at"])
+    if datetime.now(timezone.utc) > expires_at:
+        await db.password_reset_tokens.delete_one({"token": data.token})
+        raise HTTPException(status_code=400, detail="Reset token has expired")
+    
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
+    hashed = hash_password(data.new_password)
+    await db.users.update_one(
+        {"id": token_doc["user_id"]},
+        {"$set": {"password": hashed, "must_change_password": False}}
+    )
+    
+    # Delete used token
+    await db.password_reset_tokens.delete_one({"token": data.token})
+    
+    return {"message": "Password has been reset successfully. You can now login with your new password."}
+
+
+# Validate reset token (for frontend)
+@router.get("/auth/validate-reset-token/{token}")
+async def validate_reset_token(token: str):
+    """Check if a reset token is valid."""
+    token_doc = await db.password_reset_tokens.find_one({"token": token}, {"_id": 0})
+    if not token_doc:
+        return {"valid": False, "message": "Invalid token"}
+    
+    expires_at = datetime.fromisoformat(token_doc["expires_at"])
+    if datetime.now(timezone.utc) > expires_at:
+        await db.password_reset_tokens.delete_one({"token": token})
+        return {"valid": False, "message": "Token has expired"}
+    
+    return {"valid": True, "email": token_doc["email"]}
