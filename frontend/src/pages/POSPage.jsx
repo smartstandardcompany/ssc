@@ -42,7 +42,7 @@ export default function POSPage() {
   const [categories, setCategories] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [lastEntries, setLastEntries] = useState([]);
-  const [todayStats, setTodayStats] = useState({ sales: 0, expenses: 0, count: 0 });
+  const [todayStats, setTodayStats] = useState({ sales: 0, expenses: 0, count: 0, onlineSales: 0 });
   const [paymentMode, setPaymentMode] = useState('cash');
   
   // Date selection
@@ -80,7 +80,25 @@ export default function POSPage() {
   const refreshStats = async () => {
     try {
       const { data } = await api.get('/dashboard/stats');
-      setTodayStats({ sales: data.total_sales || 0, expenses: data.total_expenses || 0, count: (data.total_sales_count || 0) + (data.total_expenses_count || 0) });
+      // Get online sales from platforms summary
+      let onlineSales = 0;
+      try {
+        const platformsRes = await api.get('/platforms/summary/by-branch');
+        if (platformsRes.data) {
+          // Sum up all platform sales
+          Object.values(platformsRes.data).forEach(branch => {
+            Object.values(branch.platforms || {}).forEach(platform => {
+              onlineSales += platform.total_sales || 0;
+            });
+          });
+        }
+      } catch {}
+      setTodayStats({ 
+        sales: data.total_sales || 0, 
+        expenses: data.total_expenses || 0, 
+        count: (data.total_sales_count || 0) + (data.total_expenses_count || 0),
+        onlineSales: onlineSales
+      });
     } catch {}
   };
 
@@ -236,11 +254,19 @@ export default function POSPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <Card className="border-0 shadow-sm bg-emerald-50">
             <CardContent className="p-3 text-center">
-              <p className="text-xs text-emerald-600">Sales</p>
+              <p className="text-xs text-emerald-600">Total Sales</p>
               <p className="text-lg font-bold font-outfit text-emerald-700">SAR {todayStats.sales.toLocaleString()}</p>
+            </CardContent>
+          </Card>
+          <Card className="border-0 shadow-sm bg-purple-50">
+            <CardContent className="p-3 text-center">
+              <p className="text-xs text-purple-600 flex items-center justify-center gap-1">
+                <Truck size={12} /> Online Sales
+              </p>
+              <p className="text-lg font-bold font-outfit text-purple-700">SAR {todayStats.onlineSales.toLocaleString()}</p>
             </CardContent>
           </Card>
           <Card className="border-0 shadow-sm bg-red-50">
