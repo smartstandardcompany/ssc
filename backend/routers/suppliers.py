@@ -104,6 +104,22 @@ async def create_supplier_payment(payment_data: SupplierPaymentCreate, current_u
 @router.delete("/supplier-payments/{payment_id}")
 async def delete_supplier_payment(payment_id: str, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "supplier_payments", "write")
+    
+    # First get the payment to check if it was a credit payment
+    payment = await db.supplier_payments.find_one({"id": payment_id}, {"_id": 0})
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    
+    # If it was a credit payment, reduce the supplier's current_credit
+    if payment.get("payment_mode") == "credit" and payment.get("supplier_id"):
+        supplier = await db.suppliers.find_one({"id": payment["supplier_id"]}, {"_id": 0})
+        if supplier:
+            new_credit = max(0, supplier.get("current_credit", 0) - payment.get("amount", 0))
+            await db.suppliers.update_one(
+                {"id": payment["supplier_id"]},
+                {"$set": {"current_credit": new_credit}}
+            )
+    
     result = await db.supplier_payments.delete_one({"id": payment_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Payment not found")
