@@ -161,6 +161,7 @@ function App() {
           <Route path="/performance-report" element={isAuthenticated ? <PerformanceReportPage /> : <Navigate to="/login" />} />
           <Route path="/anomaly-detection" element={isAuthenticated ? <AnomalyDetectionPage /> : <Navigate to="/login" />} />
           <Route path="/platforms" element={isAuthenticated ? <PlatformsPage /> : <Navigate to="/login" />} />
+          <Route path="/assets" element={isAuthenticated ? <AssetsPage /> : <Navigate to="/login" />} />
         </Routes>
         </KeyboardShortcutProvider>
       </BrowserRouter>
