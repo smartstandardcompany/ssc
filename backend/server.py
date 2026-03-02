@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from database import client, db
 
 from routers import (
+    assets,
     auth,
     anomaly_detection,
     bank_statements,
