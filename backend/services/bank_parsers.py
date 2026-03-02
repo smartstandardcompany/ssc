@@ -781,6 +781,7 @@ class DubaiIslamicBankParser(BankStatementParser):
 def get_parser(bank_format: str) -> BankStatementParser:
     """Get appropriate parser for bank format"""
     parsers = {
+        # Saudi Banks
         'alrajhi': AlRajhiParser(),
         'snb': SNBParser(),
         'riyad': RiyadBankParser(),
@@ -788,6 +789,13 @@ def get_parser(bank_format: str) -> BankStatementParser:
         'sabb': SABBParser(),
         'anb': ANBParser(),
         'albilad': AlBiladParser(),
+        # UAE Banks
+        'enbd': EmiratesNBDParser(),
+        'rakbank': RAKBankParser(),
+        'dib': DubaiIslamicBankParser(),
+        'mashreq': EmiratesNBDParser(),  # Similar format
+        'adcb': EmiratesNBDParser(),  # Similar format
+        # Generic
         'generic': GenericCSVParser(),
     }
     return parsers.get(bank_format, GenericCSVParser())
