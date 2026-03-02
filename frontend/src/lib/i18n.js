@@ -361,6 +361,25 @@ const translations = {
     widget_desc_spending: 'فئات المصروفات والإنفاق', widget_desc_dues: 'مستحقات الموردين والغرامات والتنبيهات',
     widget_desc_branch: 'الأرصدة بين الفروع', widget_desc_vat: 'حسابات الضريبة',
     show_all: 'إظهار الكل', minimize: 'تصغير', done: 'تم',
+    // AI Widget translations
+    ai_low_stock: 'الذكاء الاصطناعي: تنبيهات المخزون', ai_low_stock_desc: 'المنتجات المتوقع نفادها',
+    ai_peak_hours: 'الذكاء الاصطناعي: ساعات الذروة', ai_peak_hours_desc: 'رؤى التوظيف المثالي',
+    ai_customer_clv: 'الذكاء الاصطناعي: قيمة العملاء', ai_customer_clv_desc: 'توقعات قيمة العميل مدى الحياة',
+    ai_profit_analysis: 'الذكاء الاصطناعي: تحليل الأرباح', ai_profit_analysis_desc: 'اتجاهات الربح اليومية',
+    items_at_risk: 'منتجات معرضة للنفاد', all_stock_healthy: 'جميع مستويات المخزون سليمة',
+    days_left: 'أيام متبقية', stock_level: 'المخزون', reorder_point: 'نقطة إعادة الطلب',
+    based_on_transactions: 'بناءً على {count} معاملة', peak_hours_staff: 'فكر في موظفين إضافيين خلال هذه الساعات',
+    of_traffic: 'من حركة المرور', projected_revenue: 'الإيرادات المتوقعة لـ 12 شهر',
+    lifetime_value: 'قيمة مدى الحياة', orders_active: 'طلبات', days_active: 'أيام نشاط',
+    add_customers_clv: 'أضف عملاء لرؤية تحليلات CLV', avg_daily_profit: 'متوسط الربح اليومي',
+    trend: 'الاتجاه', improving: 'تحسن', declining: 'تراجع', stable: 'مستقر',
+    best_day: 'الأفضل', worst_day: 'الأسوأ', not_enough_data: 'بيانات غير كافية للتحليل',
+    // Quick Actions
+    quick_actions: 'إجراءات سريعة', qa_record_sale: 'تسجيل بيع', qa_add_expense: 'إضافة مصروف',
+    qa_pay_supplier: 'دفع مورد', qa_new_invoice: 'فاتورة جديدة', qa_approve_leave: 'اعتماد إجازة',
+    qa_pay_salary: 'دفع راتب', qa_add_customer: 'إضافة عميل', qa_view_reports: 'عرض التقارير',
+    qa_stock_entry: 'إدخال مخزون', qa_cctv_live: 'كاميرات مباشر', qa_available: 'متاح',
+    qa_no_actions: 'لا توجد إجراءات سريعة متاحة لدورك',
     // Menu Items
     menu_items: 'عناصر القائمة', nav_menu_items: 'عناصر القائمة',
     // Order Status
