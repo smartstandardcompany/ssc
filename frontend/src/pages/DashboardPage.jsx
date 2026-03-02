@@ -432,6 +432,50 @@ export default function DashboardPage() {
           </Card>
         )}
 
+        {/* Quick Actions Widget */}
+        {widgets.quickActions && (
+        <Card className="border-border bg-gradient-to-r from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-900" data-testid="quick-actions-widget">
+          <CardHeader className="pb-3">
+            <CardTitle className="font-outfit text-base flex items-center gap-2">
+              <div className="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                <Zap size={16} className="text-orange-600 dark:text-orange-400" />
+              </div>
+              <span>{tr('quick_actions') || 'Quick Actions'}</span>
+              <Badge className="ml-auto bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300 text-xs">
+                {QUICK_ACTIONS.filter(a => hasPermission(a.perm)).length} available
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
+              {QUICK_ACTIONS.filter(action => hasPermission(action.perm)).map(action => {
+                const Icon = action.icon;
+                return (
+                  <Button
+                    key={action.id}
+                    variant="ghost"
+                    className={`h-auto py-3 px-2 flex flex-col items-center gap-2 ${action.color} text-white rounded-xl transition-all hover:scale-105 shadow-sm`}
+                    onClick={() => navigate(action.path)}
+                    data-testid={`quick-action-${action.id}`}
+                  >
+                    <Icon size={20} />
+                    <span className="text-xs font-medium text-center leading-tight">
+                      {language === 'ar' ? action.labelAr : action.label}
+                    </span>
+                  </Button>
+                );
+              })}
+            </div>
+            {QUICK_ACTIONS.filter(a => hasPermission(a.perm)).length === 0 && (
+              <div className="text-center py-4 text-muted-foreground">
+                <Lock size={24} className="mx-auto mb-2 opacity-30" />
+                <p className="text-sm">No quick actions available for your role</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        )}
+
         {/* Quick Charts */}
         {widgets.charts && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
