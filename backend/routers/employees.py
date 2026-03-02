@@ -1010,3 +1010,96 @@ async def update_item(item_id: str, data: dict, current_user: User = Depends(get
 async def delete_item(item_id: str, current_user: User = Depends(get_current_user)):
     await db.items.delete_one({"id": item_id})
     return {"message": "Item deleted"}
+
+
+# =====================================================
+# AI SHIFT SCHEDULING
+# =====================================================
+
+from services.shift_scheduler import ShiftScheduler
+
+@router.post("/schedules/generate")
+async def generate_ai_schedule(body: dict, current_user: User = Depends(get_current_user)):
+    """Generate AI-optimized shift schedule based on peak hours and availability"""
+    require_permission(current_user, "employees", "write")
+    
+    scheduler = ShiftScheduler(db)
+    result = await scheduler.generate_schedule(
+        branch_id=body.get("branch_id"),
+        start_date=body.get("start_date"),
+        days=body.get("days", 7),
+        shift_duration=body.get("shift_duration", 8),
+        min_staff_per_shift=body.get("min_staff", 2),
+        max_staff_per_shift=body.get("max_staff", 5)
+    )
+    
+    if result.get("success"):
+        # Auto-save the generated schedule
+        schedule_id = await scheduler.save_schedule(result, current_user.id)
+        result["schedule_id"] = schedule_id
+    
+    return result
+
+@router.get("/schedules")
+async def get_schedules(
+    status: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get all saved schedules"""
+    require_permission(current_user, "employees", "read")
+    
+    query = {}
+    if status:
+        query["status"] = status
+    
+    schedules = await db.shift_schedules.find(query, {"_id": 0}).sort("created_at", -1).to_list(50)
+    return schedules
+
+@router.get("/schedules/{schedule_id}")
+async def get_schedule(schedule_id: str, current_user: User = Depends(get_current_user)):
+    """Get a specific schedule"""
+    require_permission(current_user, "employees", "read")
+    
+    scheduler = ShiftScheduler(db)
+    schedule = await scheduler.get_schedule(schedule_id)
+    if not schedule:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+    return schedule
+
+@router.post("/schedules/{schedule_id}/publish")
+async def publish_schedule(schedule_id: str, current_user: User = Depends(get_current_user)):
+    """Publish a schedule (make it active)"""
+    require_permission(current_user, "employees", "write")
+    
+    scheduler = ShiftScheduler(db)
+    success = await scheduler.publish_schedule(schedule_id, current_user.id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Schedule not found or already published")
+    return {"message": "Schedule published successfully"}
+
+@router.get("/schedules/peak-hours/analysis")
+async def get_peak_hours_analysis(
+    days: int = 30,
+    current_user: User = Depends(get_current_user)
+):
+    """Get peak hours analysis for scheduling decisions"""
+    require_permission(current_user, "employees", "read")
+    
+    scheduler = ShiftScheduler(db)
+    peak_hours = await scheduler.get_peak_hours_data(days)
+    
+    # Format for frontend
+    hourly_data = [
+        {"hour": h, "label": f"{h:02d}:00", "score": round(score, 3)}
+        for h, score in sorted(peak_hours.items())
+    ]
+    
+    busiest = sorted(peak_hours.items(), key=lambda x: x[1], reverse=True)[:5]
+    slowest = sorted(peak_hours.items(), key=lambda x: x[1])[:5]
+    
+    return {
+        "hourly_data": hourly_data,
+        "busiest_hours": [{"hour": h, "label": f"{h:02d}:00", "score": round(s, 3)} for h, s in busiest],
+        "slowest_hours": [{"hour": h, "label": f"{h:02d}:00", "score": round(s, 3)} for h, s in slowest],
+        "analysis_period_days": days
+    }
