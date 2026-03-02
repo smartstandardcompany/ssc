@@ -6,12 +6,88 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Edit, Trash2, Shield, User as UserIcon } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Edit, Trash2, Shield, Eye, EyeOff, Pencil } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { BranchFilter } from '@/components/BranchFilter';
 import { useLanguage } from '@/contexts/LanguageContext';
+
+// All modules that can have permissions
+const ALL_MODULES = [
+  { value: 'dashboard', label: 'Dashboard', group: 'Core' },
+  { value: 'sales', label: 'Sales', group: 'Core' },
+  { value: 'invoices', label: 'Invoices', group: 'Core' },
+  { value: 'branches', label: 'Branches', group: 'Core' },
+  { value: 'customers', label: 'Customers', group: 'Core' },
+  { value: 'suppliers', label: 'Suppliers', group: 'Finance' },
+  { value: 'supplier_payments', label: 'Supplier Payments', group: 'Finance' },
+  { value: 'expenses', label: 'Expenses', group: 'Finance' },
+  { value: 'cash_transfers', label: 'Cash Transfers', group: 'Finance' },
+  { value: 'employees', label: 'Employees', group: 'HR' },
+  { value: 'documents', label: 'Documents', group: 'HR' },
+  { value: 'leave', label: 'Leave Approvals', group: 'HR' },
+  { value: 'loans', label: 'Loans', group: 'HR' },
+  { value: 'shifts', label: 'Shifts & Schedule', group: 'HR' },
+  { value: 'stock', label: 'Inventory', group: 'Stock' },
+  { value: 'kitchen', label: 'Kitchen', group: 'Stock' },
+  { value: 'pos', label: 'POS', group: 'Operations' },
+  { value: 'reports', label: 'Reports', group: 'Reports' },
+  { value: 'credit_report', label: 'Credit Report', group: 'Reports' },
+  { value: 'supplier_report', label: 'Supplier Report', group: 'Reports' },
+  { value: 'analytics', label: 'Analytics', group: 'Reports' },
+  { value: 'settings', label: 'Settings', group: 'Admin' },
+  { value: 'users', label: 'User Management', group: 'Admin' },
+  { value: 'partners', label: 'Partners', group: 'Admin' },
+  { value: 'fines', label: 'Fines', group: 'Admin' },
+];
+
+const PERMISSION_GROUPS = [...new Set(ALL_MODULES.map(m => m.group))];
+
+// Permission level colors
+const PERMISSION_COLORS = {
+  write: 'bg-green-100 text-green-700 border-green-200',
+  read: 'bg-blue-100 text-blue-700 border-blue-200',
+  none: 'bg-stone-100 text-stone-400 border-stone-200',
+};
+
+// Convert old list format to new dict format
+function normalizePermissions(perms) {
+  if (Array.isArray(perms)) {
+    const dict = {};
+    perms.forEach(p => { dict[p] = 'write'; });
+    return dict;
+  }
+  if (typeof perms === 'object' && perms !== null) {
+    return perms;
+  }
+  return {};
+}
+
+// Get default permissions for a role
+function getDefaultPermissions(role) {
+  const defaults = {};
+  ALL_MODULES.forEach(m => {
+    if (role === 'admin') {
+      defaults[m.value] = 'write';
+    } else if (role === 'manager') {
+      // Managers get write access to most modules except admin-only ones
+      if (['users', 'settings', 'partners'].includes(m.value)) {
+        defaults[m.value] = 'read';
+      } else {
+        defaults[m.value] = 'write';
+      }
+    } else {
+      // Operators get basic access
+      if (['sales', 'expenses', 'customers', 'dashboard', 'pos'].includes(m.value)) {
+        defaults[m.value] = 'write';
+      } else {
+        defaults[m.value] = 'none';
+      }
+    }
+  });
+  return defaults;
+}
 
 export default function UsersPage() {
   const { t } = useLanguage();
@@ -27,30 +103,8 @@ export default function UsersPage() {
     password: '',
     role: 'operator',
     branch_id: '',
-    permissions: []
+    permissions: {}
   });
-
-  const allPermissions = [
-    { value: 'dashboard', label: 'Dashboard', group: 'Core' },
-    { value: 'sales', label: 'Sales', group: 'Core' },
-    { value: 'invoices', label: 'Invoices', group: 'Core' },
-    { value: 'branches', label: 'Branches', group: 'Core' },
-    { value: 'customers', label: 'Customers', group: 'Core' },
-    { value: 'suppliers', label: 'Suppliers', group: 'Finance' },
-    { value: 'supplier_payments', label: 'Supplier Payments', group: 'Finance' },
-    { value: 'expenses', label: 'Expenses', group: 'Finance' },
-    { value: 'cash_transfers', label: 'Cash Transfers', group: 'Finance' },
-    { value: 'employees', label: 'Employees', group: 'HR' },
-    { value: 'documents', label: 'Documents', group: 'HR' },
-    { value: 'leave_approvals', label: 'Leave Approvals', group: 'HR' },
-    { value: 'reports', label: 'Reports', group: 'Reports' },
-    { value: 'credit_report', label: 'Credit Report', group: 'Reports' },
-    { value: 'supplier_report', label: 'Supplier Report', group: 'Reports' },
-    { value: 'settings', label: 'Settings', group: 'Admin' },
-    { value: 'users', label: 'User Management', group: 'Admin' },
-  ];
-
-  const permissionGroups = [...new Set(allPermissions.map(p => p.group))];
 
   useEffect(() => {
     fetchData();
@@ -74,14 +128,20 @@ export default function UsersPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Prepare data - ensure permissions is a dict
+      const submitData = {
+        ...formData,
+        permissions: formData.permissions || {}
+      };
+      
       if (editingUser) {
-        const updateData = { ...formData };
+        const updateData = { ...submitData };
         delete updateData.password;
         delete updateData.email;
         await api.put(`/users/${editingUser.id}`, updateData);
         toast.success('User updated successfully');
       } else {
-        await api.post('/users', formData);
+        await api.post('/users', submitData);
         toast.success('User created successfully');
       }
       setShowDialog(false);
@@ -100,7 +160,7 @@ export default function UsersPage() {
       password: '',
       role: user.role,
       branch_id: user.branch_id || '',
-      permissions: user.permissions || []
+      permissions: normalizePermissions(user.permissions)
     });
     setShowDialog(true);
   };
@@ -117,18 +177,32 @@ export default function UsersPage() {
     }
   };
 
-  const togglePermission = (permission) => {
-    if (formData.permissions.includes(permission)) {
-      setFormData({
-        ...formData,
-        permissions: formData.permissions.filter((p) => p !== permission)
-      });
-    } else {
-      setFormData({
-        ...formData,
-        permissions: [...formData.permissions, permission]
-      });
-    }
+  const handleRoleChange = (newRole) => {
+    // When role changes, update default permissions
+    const newPerms = getDefaultPermissions(newRole);
+    setFormData({
+      ...formData,
+      role: newRole,
+      permissions: newPerms
+    });
+  };
+
+  const setPermissionLevel = (module, level) => {
+    setFormData({
+      ...formData,
+      permissions: {
+        ...formData.permissions,
+        [module]: level
+      }
+    });
+  };
+
+  const setAllPermissions = (level) => {
+    const newPerms = {};
+    ALL_MODULES.forEach(m => {
+      newPerms[m.value] = level;
+    });
+    setFormData({ ...formData, permissions: newPerms });
   };
 
   const resetForm = () => {
@@ -138,7 +212,7 @@ export default function UsersPage() {
       password: '',
       role: 'operator',
       branch_id: '',
-      permissions: []
+      permissions: getDefaultPermissions('operator')
     });
     setEditingUser(null);
   };
@@ -152,6 +226,13 @@ export default function UsersPage() {
       default:
         return 'bg-secondary text-secondary-foreground';
     }
+  };
+
+  const getPermissionSummary = (permissions) => {
+    const perms = normalizePermissions(permissions);
+    const write = Object.values(perms).filter(v => v === 'write').length;
+    const read = Object.values(perms).filter(v => v === 'read').length;
+    return { write, read, total: ALL_MODULES.length };
   };
 
   if (loading) {
@@ -168,127 +249,166 @@ export default function UsersPage() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="users-page-title">User Management</h1>
-            <p className="text-muted-foreground">Manage users and access control</p>
+            <p className="text-muted-foreground">Manage users and granular access control</p>
           </div>
           <div className="flex gap-3 items-center flex-wrap">
             <BranchFilter onChange={setBranchFilter} />
-          <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button className="rounded-full" data-testid="add-user-button">
-                <Plus size={18} className="mr-2" />
-                Add User
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl" data-testid="user-dialog" aria-describedby="user-dialog-description">
-              <DialogHeader>
-                <DialogTitle className="font-outfit">{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Name *</Label>
-                    <Input
-                      value={formData.name}
-                      data-testid="user-name-input"
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label>Email *</Label>
-                    <Input
-                      type="email"
-                      value={formData.email}
-                      data-testid="user-email-input"
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      required
-                      disabled={editingUser}
-                    />
-                  </div>
-                </div>
-
-                {!editingUser && (
-                  <div>
-                    <Label>Password *</Label>
-                    <Input
-                      type="password"
-                      value={formData.password}
-                      data-testid="user-password-input"
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      required={!editingUser}
-                      minLength={6}
-                    />
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Role *</Label>
-                    <Select value={formData.role} onValueChange={(val) => setFormData({ ...formData, role: val })}>
-                      <SelectTrigger data-testid="user-role-select">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="manager">Manager</SelectItem>
-                        <SelectItem value="operator">Operator</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Assigned Branch</Label>
-                    <Select value={formData.branch_id || "all"} onValueChange={(val) => setFormData({ ...formData, branch_id: val === "all" ? "" : val })}>
-                      <SelectTrigger data-testid="user-branch-select">
-                        <SelectValue placeholder="All branches" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Branches</SelectItem>
-                        {branches.map((branch) => (
-                          <SelectItem key={branch.id} value={branch.id}>
-                            {branch.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between items-center mb-3">
-                    <Label>Permissions</Label>
-                    <div className="flex gap-2">
-                      <Button type="button" size="sm" variant="ghost" className="text-xs h-7" onClick={() => setFormData({ ...formData, permissions: allPermissions.map(p => p.value) })}>Select All</Button>
-                      <Button type="button" size="sm" variant="ghost" className="text-xs h-7" onClick={() => setFormData({ ...formData, permissions: [] })}>Clear All</Button>
+            <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button className="rounded-full" data-testid="add-user-button">
+                  <Plus size={18} className="mr-2" />
+                  Add User
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="user-dialog" aria-describedby="user-dialog-description">
+                <DialogHeader>
+                  <DialogTitle className="font-outfit">{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Name *</Label>
+                      <Input
+                        value={formData.name}
+                        data-testid="user-name-input"
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>Email *</Label>
+                      <Input
+                        type="email"
+                        value={formData.email}
+                        data-testid="user-email-input"
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        required
+                        disabled={editingUser}
+                      />
                     </div>
                   </div>
-                  <div className="border rounded-xl p-4 bg-stone-50 space-y-4 max-h-64 overflow-y-auto">
-                    {permissionGroups.map(group => (
-                      <div key={group}>
-                        <p className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{group}</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          {allPermissions.filter(p => p.group === group).map((perm) => (
-                            <div key={perm.value} className="flex items-center space-x-2 p-1.5 rounded-lg hover:bg-white transition-all">
-                              <Checkbox id={perm.value} checked={formData.permissions.includes(perm.value)} onCheckedChange={() => togglePermission(perm.value)} data-testid={`permission-SAR {perm.value}`} />
-                              <label htmlFor={perm.value} className="text-sm cursor-pointer">{perm.label}</label>
-                            </div>
+
+                  {!editingUser && (
+                    <div>
+                      <Label>Password *</Label>
+                      <Input
+                        type="password"
+                        value={formData.password}
+                        data-testid="user-password-input"
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        required={!editingUser}
+                        minLength={6}
+                      />
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Role *</Label>
+                      <Select value={formData.role} onValueChange={handleRoleChange}>
+                        <SelectTrigger data-testid="user-role-select">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin (Full Access)</SelectItem>
+                          <SelectItem value="manager">Manager</SelectItem>
+                          <SelectItem value="operator">Operator</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Assigned Branch</Label>
+                      <Select value={formData.branch_id || "all"} onValueChange={(val) => setFormData({ ...formData, branch_id: val === "all" ? "" : val })}>
+                        <SelectTrigger data-testid="user-branch-select">
+                          <SelectValue placeholder="All branches" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Branches (No Restriction)</SelectItem>
+                          {branches.map((branch) => (
+                            <SelectItem key={branch.id} value={branch.id}>
+                              {branch.name}
+                            </SelectItem>
                           ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">Restrict user to see only data from this branch</p>
+                    </div>
+                  </div>
+
+                  {formData.role !== 'admin' && (
+                    <div>
+                      <div className="flex justify-between items-center mb-3">
+                        <Label className="text-base font-semibold">Module Permissions</Label>
+                        <div className="flex gap-2">
+                          <Button type="button" size="sm" variant="outline" className="text-xs h-7 gap-1" onClick={() => setAllPermissions('write')}>
+                            <Pencil size={12} /> All Write
+                          </Button>
+                          <Button type="button" size="sm" variant="outline" className="text-xs h-7 gap-1" onClick={() => setAllPermissions('read')}>
+                            <Eye size={12} /> All Read
+                          </Button>
+                          <Button type="button" size="sm" variant="outline" className="text-xs h-7 gap-1" onClick={() => setAllPermissions('none')}>
+                            <EyeOff size={12} /> All None
+                          </Button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
+                      <div className="border rounded-xl p-4 bg-stone-50 dark:bg-stone-900 space-y-4 max-h-72 overflow-y-auto">
+                        {PERMISSION_GROUPS.map(group => (
+                          <div key={group}>
+                            <p className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">{group}</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {ALL_MODULES.filter(m => m.group === group).map((module) => {
+                                const currentLevel = formData.permissions[module.value] || 'none';
+                                return (
+                                  <div key={module.value} className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700">
+                                    <span className="text-sm font-medium">{module.label}</span>
+                                    <Select value={currentLevel} onValueChange={(val) => setPermissionLevel(module.value, val)}>
+                                      <SelectTrigger className={`w-24 h-7 text-xs ${PERMISSION_COLORS[currentLevel]}`} data-testid={`permission-${module.value}`}>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="write">
+                                          <span className="flex items-center gap-1"><Pencil size={12} /> Write</span>
+                                        </SelectItem>
+                                        <SelectItem value="read">
+                                          <span className="flex items-center gap-1"><Eye size={12} /> Read</span>
+                                        </SelectItem>
+                                        <SelectItem value="none">
+                                          <span className="flex items-center gap-1"><EyeOff size={12} /> None</span>
+                                        </SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        <strong>Write:</strong> Can view and modify • <strong>Read:</strong> Can only view • <strong>None:</strong> No access
+                      </p>
+                    </div>
+                  )}
 
-                <div className="flex gap-3">
-                  <Button type="submit" data-testid="submit-user-button" className="rounded-full">
-                    {editingUser ? 'Update' : 'Create'} User
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => setShowDialog(false)} className="rounded-full">
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  {formData.role === 'admin' && (
+                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-700">
+                      <p className="text-sm text-green-700 dark:text-green-300 flex items-center gap-2">
+                        <Shield size={16} /> Admins have full access to all modules. No permission configuration needed.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 pt-2">
+                    <Button type="submit" data-testid="submit-user-button" className="rounded-full">
+                      {editingUser ? 'Update' : 'Create'} User
+                    </Button>
+                    <Button type="button" variant="outline" onClick={() => setShowDialog(false)} className="rounded-full">
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
@@ -312,6 +432,7 @@ export default function UsersPage() {
                 <tbody>
                   {users.filter(u => branchFilter.length === 0 || branchFilter.includes(u.branch_id) || !u.branch_id).map((user) => {
                     const branchName = branches.find((b) => b.id === user.branch_id)?.name || 'All Branches';
+                    const permSummary = getPermissionSummary(user.permissions);
                     return (
                       <tr key={user.id} className="border-b border-border hover:bg-secondary/50" data-testid="user-row">
                         <td className="p-3 text-sm font-medium">{user.name}</td>
@@ -323,16 +444,14 @@ export default function UsersPage() {
                         </td>
                         <td className="p-3 text-sm">{branchName}</td>
                         <td className="p-3 text-sm">
-                          <div className="flex gap-1 flex-wrap">
-                            {user.permissions?.slice(0, 3).map((perm) => (
-                              <span key={perm} className="inline-block px-2 py-0.5 rounded text-xs bg-primary/10 text-primary">
-                                {perm}
-                              </span>
-                            ))}
-                            {user.permissions?.length > 3 && (
-                              <span className="text-xs text-muted-foreground">+{user.permissions.length - 3}</span>
-                            )}
-                          </div>
+                          {user.role === 'admin' ? (
+                            <Badge className="bg-green-100 text-green-700 border-green-200">Full Access</Badge>
+                          ) : (
+                            <div className="flex gap-1 items-center">
+                              <Badge className="bg-green-100 text-green-700 border-green-200">{permSummary.write} write</Badge>
+                              <Badge className="bg-blue-100 text-blue-700 border-blue-200">{permSummary.read} read</Badge>
+                            </div>
+                          )}
                         </td>
                         <td className="p-3 text-right">
                           <div className="flex gap-2 justify-end">
