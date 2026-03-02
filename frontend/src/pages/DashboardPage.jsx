@@ -38,7 +38,7 @@ const THEMES = {
 };
 const PIE_COLORS = ['#F5841F', '#22C55E', '#0EA5E9', '#EF4444', '#F59E0B', '#8B5CF6'];
 
-const DEFAULT_WIDGETS = { stats: true, charts: true, cashBank: true, paymentMode: true, spending: true, dues: true, branchDues: true, vatSummary: true };
+const DEFAULT_WIDGETS = { stats: true, charts: true, cashBank: true, paymentMode: true, spending: true, dues: true, branchDues: true, vatSummary: true, lowStock: true, peakHours: true, customerInsights: true, profitTrend: true };
 
 const WIDGET_OPTIONS = [
   { key: 'stats', labelKey: 'widget_stats', descKey: 'widget_desc_stats' },
@@ -49,6 +49,10 @@ const WIDGET_OPTIONS = [
   { key: 'dues', labelKey: 'widget_dues', descKey: 'widget_desc_dues' },
   { key: 'branchDues', labelKey: 'widget_branch_dues', descKey: 'widget_desc_branch' },
   { key: 'vatSummary', labelKey: 'widget_vat', descKey: 'widget_desc_vat' },
+  { key: 'lowStock', labelKey: 'AI: Low Stock Alerts', descKey: 'Items predicted to run low' },
+  { key: 'peakHours', labelKey: 'AI: Peak Hours', descKey: 'Optimal staffing insights' },
+  { key: 'customerInsights', labelKey: 'AI: Customer CLV', descKey: 'Top value customers' },
+  { key: 'profitTrend', labelKey: 'AI: Profit Analysis', descKey: 'Daily profit decomposition' },
 ];
 
 const DEFAULT_LAYOUT = [
