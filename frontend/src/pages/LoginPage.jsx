@@ -23,6 +23,15 @@ export default function LoginPage({ setIsAuthenticated }) {
       const response = await api.post('/auth/login', { email, password });
       localStorage.setItem('token', response.data.access_token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
+      
+      // Check if password change is required
+      if (response.data.must_change_password) {
+        toast.info('Please change your password');
+        setIsAuthenticated(true);
+        navigate('/change-password?forced=true');
+        return;
+      }
+      
       toast.success('Login successful!');
       setIsAuthenticated(true);
       navigate('/');
