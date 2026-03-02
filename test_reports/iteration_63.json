@@ -1,0 +1,77 @@
+{
+  "summary": "Tested platform auto-calculation and branch distribution features for SSC Track ERP. All 13 backend API tests passed. Frontend features verified: By Branch tab, Auto-Calculate button, branch distribution display. Fixed missing platform_id field in Sale/SaleCreate models.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "By Branch tab",
+        "issues": ["Minor React hydration warning about span inside tbody - cosmetic only, functionality not affected"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter63_platform_autocalc.py",
+    "/app/test_reports/pytest/pytest_results_iter63.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Fixed bug: Sale and SaleCreate models were missing platform_id and payment_mode fields, preventing auto-calculation from working"
+  ],
+  "updated_files": [
+    "/app/backend/models.py",
+    "/app/backend/tests/test_iter63_platform_autocalc.py"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13 tests passed)",
+    "frontend": "100%"
+  },
+  "test_credentials": {
+    "admin_email": "ss@ssc.com",
+    "admin_password": "Aa147258369Ssc@"
+  },
+  "seed_data_creation": "Created 6 test sales with platform_id for HungerStation: 4 settled (Feb 2026), 2 unsettled (March 2026) across Test Branch and Branch A",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Platform auto-calculation feature fully working. Key endpoints: GET /api/platform-payments/calculate (returns commission and branch breakdown), GET /api/platforms/branch-summary (shows per-branch platform pending amounts). Note: calculate endpoint only considers UNSETTLED sales (platform_status != 'settled'). When a payment is recorded, related sales are marked as settled.",
+  "features_tested": {
+    "auto_calculate_endpoint": {
+      "status": "PASS",
+      "endpoint": "GET /api/platform-payments/calculate",
+      "details": "Returns total_sales, calculated_commission (based on platform rate), expected_amount, branch_breakdown with share percentages"
+    },
+    "branch_summary_endpoint": {
+      "status": "PASS",
+      "endpoint": "GET /api/platforms/branch-summary",
+      "details": "Returns per-branch pending amounts for each platform with sales, commission, received, and pending breakdowns"
+    },
+    "record_payment_with_branch_breakdown": {
+      "status": "PASS",
+      "endpoint": "POST /api/platform-payments",
+      "details": "Auto-calculates commission if not provided, includes branch_breakdown in response based on sales data"
+    },
+    "by_branch_tab_ui": {
+      "status": "PASS",
+      "details": "Shows branch-level platform breakdown with sales, commission, received, pending columns"
+    },
+    "auto_calculate_button_ui": {
+      "status": "PASS",
+      "details": "Button in Record Payment dialog fetches and fills total_sales, commission_paid, amount_received"
+    },
+    "branch_distribution_ui": {
+      "status": "PASS",
+      "details": "Shows branch breakdown with sales amount and receives amount after auto-calculation"
+    }
+  },
+  "bugs_fixed": {
+    "missing_platform_id_in_models": {
+      "file": "/app/backend/models.py",
+      "issue": "Sale and SaleCreate Pydantic models were missing platform_id and payment_mode fields, causing platform sales to not be stored properly",
+      "fix": "Added platform_id: Optional[str] = None and payment_mode: Optional[str] = None fields to both Sale and SaleCreate models"
+    }
+  }
+}
