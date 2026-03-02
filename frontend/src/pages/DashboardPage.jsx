@@ -126,6 +126,27 @@ export default function DashboardPage() {
   });
   const t = THEMES[theme] || THEMES.default;
   const { t: tr, language } = useLanguage();
+  const [showTour, setShowTour] = useState(false);
+
+  // Check if should show tour on mount
+  useEffect(() => {
+    const tourCompleted = localStorage.getItem('ssc_dashboard_tour_completed');
+    if (!tourCompleted) {
+      // Delay tour start to let dashboard load
+      const timer = setTimeout(() => setShowTour(true), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  const handleTourComplete = () => {
+    setShowTour(false);
+    toast.success(tr('tour_completed') || 'Tour completed! Explore your dashboard.');
+  };
+
+  const startTour = () => {
+    resetDashboardTour();
+    setShowTour(true);
+  };
 
   const toggleWidget = (key) => {
     const updated = { ...widgets, [key]: !widgets[key] };
