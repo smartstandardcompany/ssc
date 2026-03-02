@@ -159,6 +159,92 @@ async def get_platform_sales(
 # PLATFORM PAYMENTS (Settlement from platforms)
 # =====================================================
 
+@router.get("/platform-payments/calculate")
+async def calculate_platform_payment(
+    platform_id: str,
+    period_start: str,
+    period_end: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Calculate expected payment based on sales in period - auto-calculates commission and branch breakdown"""
+    require_permission(current_user, "sales", "read")
+    
+    # Get platform
+    platform = await db.delivery_platforms.find_one({"id": platform_id}, {"_id": 0})
+    if not platform:
+        raise HTTPException(status_code=404, detail="Platform not found")
+    
+    commission_rate = platform.get("commission_rate", 0)
+    
+    # Get sales for this platform and period
+    sales = await db.sales.find({
+        "platform_id": platform_id,
+        "payment_mode": "online_platform",
+        "date": {"$gte": period_start, "$lte": period_end},
+        "platform_status": {"$ne": "settled"}  # Only unsettled sales
+    }, {"_id": 0, "branch_id": 1, "final_amount": 1, "amount": 1, "date": 1}).to_list(10000)
+    
+    if not sales:
+        return {
+            "platform_id": platform_id,
+            "platform_name": platform.get("name"),
+            "commission_rate": commission_rate,
+            "period_start": period_start,
+            "period_end": period_end,
+            "total_sales": 0,
+            "calculated_commission": 0,
+            "expected_amount": 0,
+            "sales_count": 0,
+            "branch_breakdown": [],
+            "message": "No unsettled sales found for this period"
+        }
+    
+    # Calculate totals by branch
+    branch_sales = {}
+    for sale in sales:
+        bid = sale.get("branch_id") or "unknown"
+        amt = sale.get("final_amount", sale.get("amount", 0))
+        branch_sales[bid] = branch_sales.get(bid, 0) + amt
+    
+    total_sales = sum(branch_sales.values())
+    calculated_commission = round(total_sales * (commission_rate / 100), 2)
+    expected_amount = round(total_sales - calculated_commission, 2)
+    
+    # Build branch breakdown
+    branch_breakdown = []
+    for branch_id, branch_total in branch_sales.items():
+        branch = await db.branches.find_one({"id": branch_id}, {"_id": 0, "name": 1})
+        branch_name = branch.get("name") if branch else "Unknown Branch"
+        share_percent = (branch_total / total_sales) * 100 if total_sales > 0 else 0
+        branch_commission = round((branch_total / total_sales) * calculated_commission, 2) if total_sales > 0 else 0
+        branch_expected = round(branch_total - branch_commission, 2)
+        
+        branch_breakdown.append({
+            "branch_id": branch_id,
+            "branch_name": branch_name,
+            "sales_amount": branch_total,
+            "share_percent": round(share_percent, 2),
+            "commission_amount": branch_commission,
+            "expected_amount": branch_expected
+        })
+    
+    # Sort by sales amount descending
+    branch_breakdown.sort(key=lambda x: x["sales_amount"], reverse=True)
+    
+    return {
+        "platform_id": platform_id,
+        "platform_name": platform.get("name"),
+        "commission_rate": commission_rate,
+        "period_start": period_start,
+        "period_end": period_end,
+        "total_sales": total_sales,
+        "calculated_commission": calculated_commission,
+        "expected_amount": expected_amount,
+        "sales_count": len(sales),
+        "branch_breakdown": branch_breakdown
+    }
+
+
 @router.get("/platform-payments")
 async def get_platform_payments(
     platform_id: Optional[str] = None,
