@@ -12,7 +12,32 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - **WhatsApp:** Twilio (config-dependent)
 - **PWA:** Full offline-capable Progressive Web App
 
-## Latest Updates (Mar 1, 2026 — Session 3)
+## Latest Updates (Mar 2, 2026 — Session 4)
+
+### Feature: Granular Role-Based Access Control (RBAC) (COMPLETED)
+- **Backend**: New permission system with module-level access control
+  - `has_permission(user, module, level)` — checks if user has read/write access
+  - `require_permission(user, module, level)` — raises HTTPException 403 if denied
+  - `get_branch_filter(user)` — returns MongoDB query filter for branch-restricted users
+  - `normalize_permissions(perms)` — backward compatibility: converts old list format to dict
+  - Updated routers: sales, expenses, customers, suppliers, employees with permission checks
+  - User model updated with `Dict[str, str]` permissions and field_validator
+- **Frontend**: New User Management UI
+  - Module Permissions section with read/write/none dropdowns for each module
+  - 25 modules organized by groups: Core, Finance, HR, Stock, Operations, Reports, Admin
+  - Quick action buttons: "All Write", "All Read", "All None"
+  - Permission summary badges in users table showing "X write, Y read"
+  - Branch assignment dropdown for restricting users to specific branch data
+  - Admin users show "Full Access" badge (no permission config needed)
+- **Navigation**: DashboardLayout updated with `hasPermission()` for filtering navigation
+- **Backward Compatibility**: Old list-based permissions auto-converted to new dict format
+- **Testing**: 100% pass rate (16/16 backend, all frontend features verified)
+  - Admin can access all modules
+  - Limited user with sales:read can view but not create sales
+  - Limited user with expenses:none blocked from expenses page
+  - Limited user with customers:write can create customers
+
+## Previous Updates (Mar 1, 2026 — Session 3)
 
 ### Feature: Bangla Language Support (COMPLETED)
 - Added full Bangla (`bn`) translations to `/frontend/src/lib/i18n.js` (lines 734-902)
