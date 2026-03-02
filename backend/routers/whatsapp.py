@@ -438,3 +438,234 @@ async def send_custom_wa(body: dict, current_user: User = Depends(get_current_us
         ok, err = await send_whatsapp_message(message)
         if ok: return {"message": "Message sent to configured recipients"}
         raise HTTPException(status_code=500, detail=err)
+
+
+# =====================================================
+# WHATSAPP CHATBOT - Incoming Message Handler
+# =====================================================
+
+# Chatbot command handlers
+async def handle_chatbot_command(message: str, from_number: str) -> str:
+    """Process incoming WhatsApp message and return response"""
+    message = message.lower().strip()
+    
+    # Help command
+    if message in ['help', 'مساعدة', '?']:
+        return """📋 SSC Track Chatbot Commands:
+
+💰 *Sales*
+• sales today - Today's sales summary
+• sales week - This week's sales
+• sales [branch] - Sales for specific branch
+
+📊 *Stock*
+• stock low - Low stock items
+• stock [item] - Check item stock
+
+💵 *Expenses*
+• expenses today - Today's expenses
+• expenses week - This week's expenses
+
+👥 *Customers*
+• dues - Customer dues summary
+• credit [customer] - Customer credit balance
+
+📈 *Reports*
+• summary - Daily business summary
+• profit - Today's profit/loss
+
+Type any command to get started!"""
+
+    # Sales commands
+    if message.startswith('sales'):
+        parts = message.split()
+        period = parts[1] if len(parts) > 1 else 'today'
+        
+        if period == 'today':
+            today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+            sales = await db.sales.find({"date": {"$gte": today_start.isoformat()}}, {"_id": 0}).to_list(1000)
+            total = sum(s.get("final_amount", s.get("amount", 0)) for s in sales)
+            return f"💰 *Today's Sales*\n\nTotal: SAR {total:,.2f}\nTransactions: {len(sales)}"
+        
+        elif period == 'week':
+            week_start = datetime.now(timezone.utc) - timedelta(days=7)
+            sales = await db.sales.find({"date": {"$gte": week_start.isoformat()}}, {"_id": 0}).to_list(5000)
+            total = sum(s.get("final_amount", s.get("amount", 0)) for s in sales)
+            return f"💰 *This Week's Sales*\n\nTotal: SAR {total:,.2f}\nTransactions: {len(sales)}\nDaily Avg: SAR {total/7:,.2f}"
+        
+        else:
+            # Search by branch name
+            branches = await db.branches.find({"name": {"$regex": period, "$options": "i"}}, {"_id": 0}).to_list(10)
+            if branches:
+                branch = branches[0]
+                sales = await db.sales.find({"branch_id": branch["id"]}, {"_id": 0}).to_list(1000)
+                total = sum(s.get("final_amount", s.get("amount", 0)) for s in sales)
+                return f"💰 *{branch['name']} Sales*\n\nTotal: SAR {total:,.2f}\nTransactions: {len(sales)}"
+            return "❌ Branch not found. Try: sales today, sales week, or sales [branch name]"
+    
+    # Stock commands
+    if message.startswith('stock'):
+        parts = message.split(maxsplit=1)
+        if len(parts) == 1 or parts[1] == 'low':
+            items = await db.stock_items.find({}, {"_id": 0}).to_list(1000)
+            low_stock = [i for i in items if i.get("current_stock", 0) <= i.get("min_stock", 0) and i.get("min_stock", 0) > 0]
+            if not low_stock:
+                return "✅ *Stock Status*\n\nAll items are well-stocked!"
+            response = "⚠️ *Low Stock Items*\n\n"
+            for item in low_stock[:10]:
+                response += f"• {item['name']}: {item.get('current_stock', 0)} (min: {item.get('min_stock', 0)})\n"
+            return response
+        else:
+            item_name = parts[1]
+            items = await db.stock_items.find({"name": {"$regex": item_name, "$options": "i"}}, {"_id": 0}).to_list(10)
+            if items:
+                item = items[0]
+                return f"📦 *{item['name']}*\n\nCurrent Stock: {item.get('current_stock', 0)}\nMin Stock: {item.get('min_stock', 0)}\nUnit: {item.get('unit', 'pcs')}"
+            return f"❌ Item '{item_name}' not found"
+    
+    # Expense commands
+    if message.startswith('expense'):
+        parts = message.split()
+        period = parts[1] if len(parts) > 1 else 'today'
+        
+        if period == 'today':
+            today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+            expenses = await db.expenses.find({"date": {"$gte": today_start.isoformat()}}, {"_id": 0}).to_list(1000)
+            total = sum(e.get("amount", 0) for e in expenses)
+            return f"💸 *Today's Expenses*\n\nTotal: SAR {total:,.2f}\nTransactions: {len(expenses)}"
+        
+        elif period == 'week':
+            week_start = datetime.now(timezone.utc) - timedelta(days=7)
+            expenses = await db.expenses.find({"date": {"$gte": week_start.isoformat()}}, {"_id": 0}).to_list(5000)
+            total = sum(e.get("amount", 0) for e in expenses)
+            return f"💸 *This Week's Expenses*\n\nTotal: SAR {total:,.2f}\nTransactions: {len(expenses)}"
+    
+    # Customer dues
+    if message in ['dues', 'credit', 'customers']:
+        customers = await db.customers.find({}, {"_id": 0}).to_list(500)
+        total_credit = sum(c.get("current_credit", 0) for c in customers)
+        with_dues = [c for c in customers if c.get("current_credit", 0) > 0]
+        response = f"👥 *Customer Dues*\n\nTotal Credit: SAR {total_credit:,.2f}\nCustomers with dues: {len(with_dues)}\n\n"
+        for c in with_dues[:5]:
+            response += f"• {c['name']}: SAR {c.get('current_credit', 0):,.2f}\n"
+        return response
+    
+    # Summary command
+    if message in ['summary', 'report', 'daily']:
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        sales = await db.sales.find({"date": {"$gte": today_start.isoformat()}}, {"_id": 0}).to_list(1000)
+        expenses = await db.expenses.find({"date": {"$gte": today_start.isoformat()}}, {"_id": 0}).to_list(1000)
+        total_sales = sum(s.get("final_amount", s.get("amount", 0)) for s in sales)
+        total_expenses = sum(e.get("amount", 0) for e in expenses)
+        profit = total_sales - total_expenses
+        
+        return f"""📊 *Daily Summary*
+{datetime.now().strftime('%d %b %Y')}
+
+💰 Sales: SAR {total_sales:,.2f}
+💸 Expenses: SAR {total_expenses:,.2f}
+{'📈' if profit >= 0 else '📉'} Net: SAR {profit:,.2f}
+
+Transactions: {len(sales)} sales, {len(expenses)} expenses"""
+    
+    # Profit command
+    if message in ['profit', 'p&l', 'pnl']:
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        sales = await db.sales.find({"date": {"$gte": today_start.isoformat()}}, {"_id": 0}).to_list(1000)
+        expenses = await db.expenses.find({"date": {"$gte": today_start.isoformat()}}, {"_id": 0}).to_list(1000)
+        total_sales = sum(s.get("final_amount", s.get("amount", 0)) for s in sales)
+        total_expenses = sum(e.get("amount", 0) for e in expenses)
+        profit = total_sales - total_expenses
+        margin = (profit / total_sales * 100) if total_sales > 0 else 0
+        
+        return f"""{'📈' if profit >= 0 else '📉'} *Today's Profit*
+
+Revenue: SAR {total_sales:,.2f}
+Costs: SAR {total_expenses:,.2f}
+Net Profit: SAR {profit:,.2f}
+Margin: {margin:.1f}%"""
+    
+    # Default response
+    return "🤖 I didn't understand that. Type *help* to see available commands."
+
+
+# Twilio Webhook for incoming WhatsApp messages
+@router.post("/whatsapp/webhook")
+async def whatsapp_webhook(
+    Body: str = Form(default=""),
+    From: str = Form(default=""),
+    To: str = Form(default=""),
+    MessageSid: str = Form(default="")
+):
+    """Handle incoming WhatsApp messages from Twilio webhook"""
+    
+    # Extract phone number from Twilio format (whatsapp:+1234567890)
+    from_number = From.replace("whatsapp:", "").strip()
+    
+    # Log the incoming message
+    await db.whatsapp_messages.insert_one({
+        "id": str(uuid.uuid4()),
+        "direction": "incoming",
+        "from": from_number,
+        "to": To,
+        "body": Body,
+        "message_sid": MessageSid,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
+    
+    # Process the command and get response
+    response_text = await handle_chatbot_command(Body, from_number)
+    
+    # Send response via WhatsApp
+    config = await db.whatsapp_config.find_one({}, {"_id": 0})
+    if config and config.get("account_sid") and config.get("auth_token"):
+        try:
+            client = Client(config["account_sid"], config["auth_token"])
+            message = client.messages.create(
+                from_=To,  # Use the same number that received the message
+                body=response_text,
+                to=From
+            )
+            
+            # Log the outgoing message
+            await db.whatsapp_messages.insert_one({
+                "id": str(uuid.uuid4()),
+                "direction": "outgoing",
+                "from": To,
+                "to": From,
+                "body": response_text,
+                "message_sid": message.sid,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "in_reply_to": MessageSid
+            })
+            
+        except Exception as e:
+            print(f"WhatsApp send error: {e}")
+    
+    # Return TwiML response (empty response to acknowledge receipt)
+    return {"status": "processed"}
+
+
+# Get chatbot message history
+@router.get("/whatsapp/messages")
+async def get_whatsapp_messages(
+    phone: Optional[str] = None,
+    limit: int = 50,
+    current_user: User = Depends(get_current_user)
+):
+    """Get WhatsApp message history"""
+    query = {}
+    if phone:
+        query["$or"] = [{"from": {"$regex": phone}}, {"to": {"$regex": phone}}]
+    
+    messages = await db.whatsapp_messages.find(query, {"_id": 0}).sort("timestamp", -1).limit(limit).to_list(limit)
+    return messages
+
+
+# Test chatbot command (for debugging)
+@router.post("/whatsapp/test-command")
+async def test_chatbot_command(body: dict, current_user: User = Depends(get_current_user)):
+    """Test a chatbot command without sending via WhatsApp"""
+    command = body.get("command", "help")
+    response = await handle_chatbot_command(command, "test")
+    return {"command": command, "response": response}
