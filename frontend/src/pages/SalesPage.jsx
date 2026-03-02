@@ -112,11 +112,20 @@ export default function SalesPage() {
       return;
     }
 
+    // If online platform payment, require platform selection
+    const hasOnlinePayment = formData.payment_details.some(p => p.mode === 'online_platform' && parseFloat(p.amount) > 0);
+    if (hasOnlinePayment && !formData.platform_id) {
+      toast.error('Please select a delivery platform for online sales');
+      return;
+    }
+
     try {
       const payload = {
         ...formData,
         amount: totals.subtotal,
         discount: totals.discount,
+        payment_mode: hasOnlinePayment ? 'online_platform' : (totals.credit > 0 ? 'credit' : (totals.bank > 0 ? 'bank' : 'cash')),
+        platform_status: hasOnlinePayment ? 'pending' : undefined,
         payment_details: formData.payment_details
           .filter(p => parseFloat(p.amount) > 0)
           .map(p => ({
