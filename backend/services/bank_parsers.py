@@ -570,6 +570,200 @@ class MT940Parser(BankStatementParser):
         return transactions
 
 
+class PDFStatementParser(BankStatementParser):
+    """Parser for PDF bank statements using pdfplumber"""
+    
+    BANK_NAME = "PDF Import"
+    
+    def parse(self, content: bytes) -> List[Dict[str, Any]]:
+        """Parse PDF bank statement"""
+        if not PDF_SUPPORT:
+            raise ValueError("PDF parsing not available. Install pdfplumber.")
+        
+        transactions = []
+        
+        with pdfplumber.open(BytesIO(content)) as pdf:
+            all_text = ""
+            all_tables = []
+            
+            for page in pdf.pages:
+                # Extract text
+                text = page.extract_text() or ""
+                all_text += text + "\n"
+                
+                # Extract tables
+                tables = page.extract_tables()
+                for table in tables:
+                    if table:
+                        all_tables.extend(table)
+            
+            # Try to detect bank from text
+            self.BANK_NAME = self._detect_bank_from_text(all_text)
+            
+            # First try parsing tables
+            if all_tables:
+                transactions = self._parse_tables(all_tables)
+            
+            # If no transactions from tables, try text parsing
+            if not transactions:
+                transactions = self._parse_text(all_text)
+        
+        return transactions
+    
+    def _detect_bank_from_text(self, text: str) -> str:
+        """Detect bank name from PDF text content"""
+        text_lower = text.lower()
+        
+        if 'al rajhi' in text_lower or 'الراجحي' in text:
+            return 'Al Rajhi Bank'
+        if 'saudi national' in text_lower or 'snb' in text_lower:
+            return 'Saudi National Bank'
+        if 'riyad bank' in text_lower:
+            return 'Riyad Bank'
+        if 'alinma' in text_lower or 'الإنماء' in text:
+            return 'Alinma Bank'
+        if 'sabb' in text_lower:
+            return 'SABB'
+        if 'emirates nbd' in text_lower:
+            return 'Emirates NBD'
+        if 'rak bank' in text_lower:
+            return 'RAK Bank'
+        if 'dubai islamic' in text_lower:
+            return 'Dubai Islamic Bank'
+        
+        return 'PDF Import'
+    
+    def _parse_tables(self, tables: List[List]) -> List[Dict[str, Any]]:
+        """Parse transactions from extracted tables"""
+        transactions = []
+        
+        for row in tables:
+            if not row or len(row) < 3:
+                continue
+            
+            # Try to identify date, description, and amounts
+            date = None
+            description = None
+            debit = 0
+            credit = 0
+            balance = 0
+            
+            for i, cell in enumerate(row):
+                if not cell:
+                    continue
+                cell_str = str(cell).strip()
+                
+                # Try to parse as date
+                if not date:
+                    parsed_date = self.parse_date(cell_str)
+                    if parsed_date and len(parsed_date) == 10:
+                        date = parsed_date
+                        continue
+                
+                # Try to parse as amount
+                amount = self.clean_amount(cell_str)
+                if amount != 0:
+                    # Heuristic: first amount might be debit, second credit, third balance
+                    if debit == 0 and credit == 0:
+                        if amount < 0 or (i > 0 and 'debit' in str(row[0] if row[0] else '').lower()):
+                            debit = abs(amount)
+                        else:
+                            credit = amount
+                    elif credit == 0 and debit > 0:
+                        credit = amount
+                    else:
+                        balance = amount
+                    continue
+                
+                # Otherwise, it's likely description
+                if len(cell_str) > 5 and not description:
+                    description = cell_str[:200]
+            
+            if date and (debit > 0 or credit > 0):
+                transactions.append({
+                    'date': date,
+                    'description': description or 'Transaction',
+                    'debit': debit,
+                    'credit': credit,
+                    'balance': balance,
+                    'bank': self.BANK_NAME,
+                    'category': self._categorize(description or '')
+                })
+        
+        return transactions
+    
+    def _parse_text(self, text: str) -> List[Dict[str, Any]]:
+        """Parse transactions from raw text (fallback method)"""
+        transactions = []
+        lines = text.split('\n')
+        
+        # Pattern to match date and amounts
+        date_pattern = r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}[/-]\d{1,2}[/-]\d{1,2})'
+        amount_pattern = r'[\d,]+\.?\d*'
+        
+        for line in lines:
+            line = line.strip()
+            if len(line) < 10:
+                continue
+            
+            # Find date
+            date_match = re.search(date_pattern, line)
+            if not date_match:
+                continue
+            
+            date = self.parse_date(date_match.group(1))
+            if not date:
+                continue
+            
+            # Find amounts
+            amounts = re.findall(amount_pattern, line)
+            amounts = [self.clean_amount(a) for a in amounts if self.clean_amount(a) != 0]
+            
+            if not amounts:
+                continue
+            
+            # Extract description (text between date and amounts)
+            desc_start = date_match.end()
+            desc = line[desc_start:].strip()
+            desc = re.sub(amount_pattern, '', desc).strip()[:200]
+            
+            # Assign amounts (heuristic)
+            debit = credit = balance = 0
+            if len(amounts) >= 3:
+                debit, credit, balance = amounts[0], amounts[1], amounts[2]
+            elif len(amounts) == 2:
+                debit, credit = amounts[0], amounts[1]
+            elif len(amounts) == 1:
+                credit = amounts[0]
+            
+            transactions.append({
+                'date': date,
+                'description': desc or 'Transaction',
+                'debit': debit,
+                'credit': credit,
+                'balance': balance,
+                'bank': self.BANK_NAME,
+                'category': self._categorize(desc)
+            })
+        
+        return transactions
+    
+    def _categorize(self, desc: str) -> str:
+        """Categorize transaction based on description"""
+        desc_lower = desc.lower()
+        if any(w in desc_lower for w in ['salary', 'payroll', 'راتب']):
+            return 'salary'
+        if any(w in desc_lower for w in ['transfer', 'trf', 'تحويل']):
+            return 'transfer'
+        if any(w in desc_lower for w in ['pos', 'purchase', 'shop', 'مشتريات']):
+            return 'purchase'
+        if any(w in desc_lower for w in ['atm', 'withdrawal', 'cash', 'سحب']):
+            return 'cash'
+        if any(w in desc_lower for w in ['fee', 'charge', 'رسوم']):
+            return 'fee'
+        return 'other'
+
+
 def detect_bank_format(df: pd.DataFrame, filename: str = '') -> str:
     """Auto-detect bank format from content and filename"""
     
