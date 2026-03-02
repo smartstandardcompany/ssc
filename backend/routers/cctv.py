@@ -883,6 +883,115 @@ async def register_employee_face(body: dict, current_user: User = Depends(get_cu
     }
 
 
+@router.post("/cctv/faces/register-multiple")
+async def register_multiple_faces(body: dict, current_user: User = Depends(get_current_user)):
+    """Register multiple face images for an employee (improves recognition accuracy)
+    
+    Expected body: {
+        employee_id: str,
+        images: [str] (array of base64 encoded face images)
+    }
+    """
+    employee_id = body.get("employee_id")
+    images = body.get("images", [])
+    
+    if not employee_id or not images:
+        raise HTTPException(status_code=400, detail="employee_id and images array required")
+    
+    if len(images) > 5:
+        raise HTTPException(status_code=400, detail="Maximum 5 images allowed per employee")
+    
+    # Get employee info
+    employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    saved_images = []
+    
+    for idx, image_data in enumerate(images):
+        # Save face image
+        face_filename = f"face_{employee_id}_{idx}_{datetime.now().strftime('%Y%m%d%H%M%S')}.jpg"
+        face_path = os.path.join(ROOT_DIR, "uploads", "faces", face_filename)
+        os.makedirs(os.path.dirname(face_path), exist_ok=True)
+        
+        try:
+            with open(face_path, "wb") as f:
+                f.write(base64.b64decode(image_data))
+            saved_images.append({
+                "image_path": f"/uploads/faces/{face_filename}",
+                "image_data": image_data
+            })
+        except Exception as e:
+            continue  # Skip failed images
+    
+    if not saved_images:
+        raise HTTPException(status_code=500, detail="Failed to save any images")
+    
+    # Update or create face registration with multiple images
+    face_data = {
+        "employee_id": employee_id,
+        "name": employee.get("name"),
+        "branch_id": employee.get("branch_id"),
+        "images": saved_images,
+        "image_path": saved_images[0]["image_path"],  # Primary image for display
+        "image_data": saved_images[0]["image_data"],  # Primary image for AI
+        "training_images_count": len(saved_images),
+        "training_status": "trained" if len(saved_images) >= 3 else "partial",
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    existing = await db.cctv_faces.find_one({"employee_id": employee_id})
+    if existing:
+        await db.cctv_faces.update_one({"employee_id": employee_id}, {"$set": face_data})
+    else:
+        face_data["id"] = f"face_{employee_id}"
+        face_data["created_at"] = datetime.now(timezone.utc).isoformat()
+        face_data["created_by"] = current_user.id
+        await db.cctv_faces.insert_one(face_data)
+    
+    return {
+        "success": True,
+        "message": f"Registered {len(saved_images)} face images for {employee.get('name')}",
+        "employee_id": employee_id,
+        "images_saved": len(saved_images),
+        "training_status": face_data["training_status"]
+    }
+
+
+@router.get("/cctv/faces/training-status")
+async def get_faces_training_status(
+    branch_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get training status for all registered faces"""
+    query = {}
+    if branch_id:
+        query["branch_id"] = branch_id
+    
+    faces = await db.cctv_faces.find(query, {"_id": 0}).to_list(500)
+    
+    total = len(faces)
+    fully_trained = len([f for f in faces if f.get("training_status") == "trained"])
+    partial = len([f for f in faces if f.get("training_status") == "partial"])
+    untrained = total - fully_trained - partial
+    
+    return {
+        "total_faces": total,
+        "fully_trained": fully_trained,
+        "partially_trained": partial,
+        "untrained": untrained,
+        "training_percentage": round((fully_trained / total) * 100, 1) if total > 0 else 0,
+        "faces": [{
+            "employee_id": f.get("employee_id"),
+            "name": f.get("name"),
+            "branch_id": f.get("branch_id"),
+            "training_status": f.get("training_status", "single"),
+            "images_count": f.get("training_images_count", 1),
+            "updated_at": f.get("updated_at")
+        } for f in faces]
+    }
+
+
 @router.delete("/cctv/faces/{employee_id}")
 async def delete_employee_face(employee_id: str, current_user: User = Depends(get_current_user)):
     """Remove registered face for an employee"""
