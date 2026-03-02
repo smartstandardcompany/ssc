@@ -68,6 +68,7 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     user: User
+    must_change_password: bool = False
 
 class Branch(BaseModel):
     model_config = ConfigDict(extra="ignore")
