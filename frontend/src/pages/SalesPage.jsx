@@ -308,7 +308,8 @@ export default function SalesPage() {
                                 <SelectContent>
                                   <SelectItem value="cash">Cash</SelectItem>
                                   <SelectItem value="bank">Bank</SelectItem>
-                                  <SelectItem value="credit">Credit</SelectItem>
+                                  <SelectItem value="credit">Credit (Customer)</SelectItem>
+                                  <SelectItem value="online_platform">Online Platform</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
