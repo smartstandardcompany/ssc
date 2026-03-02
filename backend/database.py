@@ -75,7 +75,11 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 
 
 def normalize_permissions(perms):
-    """Convert old list format to new dict format for backward compatibility."""
+    """Convert old list format to new dict format for backward compatibility.
+    
+    Old format: ["sales", "expenses", "reports"]
+    New format: {"sales": "write", "expenses": "read", "reports": "none"}
+    """
     if isinstance(perms, list):
         return {p: "write" for p in perms}
     if isinstance(perms, dict):
@@ -84,11 +88,23 @@ def normalize_permissions(perms):
 
 
 def has_permission(user, module, level="read"):
-    """Check if user has permission for a module at the given level."""
+    """Check if user has permission for a module at the given level.
+    
+    Args:
+        user: User object with role and permissions
+        module: Module name (e.g., "sales", "expenses")
+        level: Required access level ("read" or "write")
+    
+    Returns:
+        bool: True if user has the required permission level
+    """
+    # Admins have full access to everything
     if user.role == "admin":
         return True
+    
     perms = normalize_permissions(user.permissions)
     user_level = perms.get(module, "none")
+    
     if user_level == "none":
         return False
     if level == "read":
@@ -98,10 +114,38 @@ def has_permission(user, module, level="read"):
     return False
 
 
-def get_branch_filter(user):
-    """Return a MongoDB query filter for branch-restricted users."""
+def get_branch_filter(user, branch_field="branch_id"):
+    """Return a MongoDB query filter for branch-restricted users.
+    
+    Args:
+        user: User object with role and branch_id
+        branch_field: The field name to filter on (default: "branch_id")
+    
+    Returns:
+        dict: MongoDB query filter, empty dict for admins/unrestricted users
+    """
     if user.role == "admin":
         return {}
     if user.branch_id:
-        return {"branch_id": user.branch_id}
+        return {branch_field: user.branch_id}
     return {}
+
+
+def require_permission(user, module, level="read"):
+    """Raise HTTPException if user lacks the required permission.
+    
+    Args:
+        user: User object
+        module: Module name
+        level: Required access level
+    
+    Raises:
+        HTTPException: 403 if permission denied
+    """
+    if not has_permission(user, module, level):
+        from fastapi import HTTPException
+        action = "modify" if level == "write" else "access"
+        raise HTTPException(
+            status_code=403, 
+            detail=f"Permission denied: You don't have {level} access to {module}"
+        )
