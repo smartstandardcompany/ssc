@@ -4,15 +4,72 @@
 A comprehensive business management ERP system named "SSC Track" for Smart Standard Company.
 
 ## Tech Stack
-- **Backend:** FastAPI, Motor (async MongoDB), JWT auth, APScheduler, pywebpush, aiosmtplib
+- **Backend:** FastAPI, Motor (async MongoDB), JWT auth, APScheduler, pywebpush, aiosmtplib, pdfplumber
 - **Frontend:** React, TailwindCSS, Shadcn UI, Recharts, react-grid-layout, date-fns
 - **Database:** MongoDB
-- **AI:** emergentintegrations (GPT-4o Vision)
+- **AI:** emergentintegrations (GPT-4o Vision), AI Shift Scheduler
 - **Push:** VAPID-based Web Push, Service Worker
-- **WhatsApp:** Twilio (config-dependent)
-- **PWA:** Full offline-capable Progressive Web App
+- **WhatsApp:** Twilio (config-dependent) with Chatbot
+- **PWA:** Full offline-capable Progressive Web App with shortcuts
 
-## Latest Updates (Mar 2, 2026 — Session 7)
+## Latest Updates (Mar 2, 2026 — Session 8)
+
+### All Future/Backlog Items COMPLETE & VERIFIED
+
+#### 1. Dashboard Quick Tour (NEW)
+Interactive 9-step onboarding guide for new users:
+- **Steps:** Welcome, Quick Actions, AI Widgets (Low Stock, Peak Hours, CLV, Profit), Customize, Complete
+- Auto-shows on first login, can be restarted via "Take Tour" button
+- Multi-language support (EN, AR)
+- Progress bar, skip option, localStorage persistence
+- Component: `frontend/src/components/DashboardTour.jsx`
+
+#### 2. PDF Bank Statement Parsing (NEW)
+Parse transactions from PDF bank statements using pdfplumber:
+- Table extraction for structured PDFs
+- Text extraction fallback for unstructured PDFs
+- Auto-detects bank from content (Saudi & UAE banks)
+- Categorizes transactions automatically
+- Service: `backend/services/bank_parsers.py` - `PDFStatementParser` class
+
+#### 3. WhatsApp Chatbot Integration (NEW)
+Full chatbot with natural language commands:
+- **Commands:** help, sales today/week, stock low, expenses today/week, dues, summary, profit
+- Webhook endpoint: `POST /api/whatsapp/webhook` (for Twilio)
+- Test endpoint: `POST /api/whatsapp/test-command`
+- Message history: `GET /api/whatsapp/messages`
+- Arabic command support: مساعدة (help)
+- Logs all incoming/outgoing messages
+
+#### 4. AI-Powered Shift Scheduling (NEW)
+Optimizes staff schedules based on historical data:
+- **Peak Hours Analysis:** Analyzes 30 days of sales data
+- **Smart Scheduling:** Assigns more staff during peak hours
+- **Fairness:** Distributes hours evenly among employees
+- **Leave Awareness:** Excludes employees on approved leave
+- Endpoints:
+  - `POST /api/schedules/generate` - Generate optimized schedule
+  - `GET /api/schedules/peak-hours/analysis` - View peak hour data
+  - `GET /api/schedules` - List saved schedules
+  - `POST /api/schedules/{id}/publish` - Publish schedule
+- Service: `backend/services/shift_scheduler.py`
+
+#### 5. Enhanced PWA (NEW)
+Improved Progressive Web App capabilities:
+- **Offline Support:** offline.html page with reconnect button
+- **Service Worker:** API caching, background sync, stale-while-revalidate
+- **App Shortcuts:** Quick Entry, POS, Reports (long-press app icon)
+- **Manifest:** Updated with shortcuts, dark theme colors
+- Files: `frontend/public/sw.js`, `offline.html`, `manifest.json`
+
+### Testing Results (Iteration 61)
+- **Backend:** 22/22 tests passed (100%)
+- **Frontend:** 95% (minor tour positioning issue on scroll)
+- **Files:** `backend/tests/test_iter61_dashboard_tour_pdf_whatsapp_shift.py`
+
+---
+
+## Previous Session Updates (Mar 2, 2026 — Session 7)
 
 ### All Backlog Items COMPLETE & VERIFIED
 
