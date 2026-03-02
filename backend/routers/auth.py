@@ -96,9 +96,11 @@ async def login(credentials: UserLogin):
             if set(merged) != existing_perms:
                 await db.users.update_one({"id": user_doc["id"]}, {"$set": {"permissions": merged}})
                 user_doc["permissions"] = merged
+    # Check if password change is required
+    must_change = user_doc.get("must_change_password", False)
     user = User(**{k: v for k, v in user_doc.items() if k != "password"})
     access_token = create_access_token(data={"sub": user.id})
-    return Token(access_token=access_token, token_type="bearer", user=user)
+    return Token(access_token=access_token, token_type="bearer", user=user, must_change_password=must_change)
 
 @router.get("/auth/me", response_model=User)
 async def get_me(current_user: User = Depends(get_current_user)):
