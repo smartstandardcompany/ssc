@@ -55,6 +55,132 @@ class AssetUpdate(BaseModel):
 
 
 # =====================================================
+# ASSET TYPES & STATS (must be before {asset_id} routes)
+# =====================================================
+
+@router.get("/assets/types")
+async def get_asset_types(current_user: User = Depends(get_current_user)):
+    """Get predefined asset types"""
+    return [
+        {"id": "equipment", "name": "Equipment", "name_ar": "معدات", "icon": "wrench"},
+        {"id": "vehicle", "name": "Vehicle", "name_ar": "مركبة", "icon": "car"},
+        {"id": "property", "name": "Property", "name_ar": "عقار", "icon": "building"},
+        {"id": "furniture", "name": "Furniture", "name_ar": "أثاث", "icon": "sofa"},
+        {"id": "electronics", "name": "Electronics", "name_ar": "إلكترونيات", "icon": "monitor"},
+        {"id": "kitchen", "name": "Kitchen Equipment", "name_ar": "معدات مطبخ", "icon": "chef-hat"},
+        {"id": "other", "name": "Other", "name_ar": "أخرى", "icon": "box"},
+    ]
+
+
+@router.get("/assets/stats")
+async def get_asset_stats(current_user: User = Depends(get_current_user)):
+    """Get asset statistics"""
+    assets = await db.assets.find({}, {"_id": 0}).to_list(1000)
+    now = datetime.now(timezone.utc)
+    
+    total_purchase_value = sum(a.get("purchase_price", 0) for a in assets)
+    total_current_value = 0
+    total_depreciation = 0
+    
+    by_type = {}
+    by_status = {"active": 0, "maintenance": 0, "disposed": 0, "sold": 0}
+    warranty_expiring = 0
+    
+    for asset in assets:
+        # Calculate depreciated value
+        calc_value = asset.get("current_value", asset.get("purchase_price", 0))
+        if asset.get("purchase_date") and asset.get("depreciation_rate", 0) > 0:
+            try:
+                purchase_date = datetime.fromisoformat(asset["purchase_date"].replace("Z", "+00:00"))
+                if purchase_date.tzinfo is None:
+                    purchase_date = purchase_date.replace(tzinfo=timezone.utc)
+                years = (now - purchase_date).days / 365
+                depreciation = asset.get("purchase_price", 0) * (asset.get("depreciation_rate", 0) / 100) * years
+                calc_value = max(0, asset.get("purchase_price", 0) - depreciation)
+                total_depreciation += min(depreciation, asset.get("purchase_price", 0))
+            except:
+                pass
+        
+        total_current_value += calc_value
+        
+        # By type
+        atype = asset.get("asset_type", "other")
+        by_type[atype] = by_type.get(atype, 0) + 1
+        
+        # By status
+        status = asset.get("status", "active")
+        if status in by_status:
+            by_status[status] += 1
+        
+        # Warranty expiring
+        if asset.get("warranty_expiry"):
+            try:
+                warranty_date = datetime.fromisoformat(asset["warranty_expiry"].replace("Z", "+00:00"))
+                if warranty_date.tzinfo is None:
+                    warranty_date = warranty_date.replace(tzinfo=timezone.utc)
+                if 0 <= (warranty_date - now).days <= 30:
+                    warranty_expiring += 1
+            except:
+                pass
+    
+    return {
+        "total_assets": len(assets),
+        "total_purchase_value": round(total_purchase_value, 2),
+        "total_current_value": round(total_current_value, 2),
+        "total_depreciation": round(total_depreciation, 2),
+        "by_type": [{"type": k, "count": v} for k, v in sorted(by_type.items(), key=lambda x: -x[1])],
+        "by_status": by_status,
+        "warranty_expiring_soon": warranty_expiring
+    }
+
+
+@router.get("/assets/depreciation-report")
+async def get_depreciation_report(current_user: User = Depends(get_current_user)):
+    """Get detailed depreciation report for all assets"""
+    assets = await db.assets.find({}, {"_id": 0}).to_list(1000)
+    now = datetime.now(timezone.utc)
+    
+    report = []
+    for asset in assets:
+        if asset.get("purchase_date") and asset.get("depreciation_rate", 0) > 0:
+            try:
+                purchase_date = datetime.fromisoformat(asset["purchase_date"].replace("Z", "+00:00"))
+                if purchase_date.tzinfo is None:
+                    purchase_date = purchase_date.replace(tzinfo=timezone.utc)
+                
+                years = (now - purchase_date).days / 365
+                annual_depreciation = asset.get("purchase_price", 0) * (asset.get("depreciation_rate", 0) / 100)
+                total_depreciation = min(annual_depreciation * years, asset.get("purchase_price", 0))
+                book_value = max(0, asset.get("purchase_price", 0) - total_depreciation)
+                
+                report.append({
+                    "id": asset["id"],
+                    "name": asset["name"],
+                    "asset_type": asset.get("asset_type", "other"),
+                    "purchase_date": asset["purchase_date"],
+                    "purchase_price": asset.get("purchase_price", 0),
+                    "depreciation_rate": asset.get("depreciation_rate", 0),
+                    "years_owned": round(years, 2),
+                    "annual_depreciation": round(annual_depreciation, 2),
+                    "total_depreciation": round(total_depreciation, 2),
+                    "book_value": round(book_value, 2),
+                    "status": asset.get("status", "active")
+                })
+            except:
+                pass
+    
+    return {
+        "assets": sorted(report, key=lambda x: -x["total_depreciation"]),
+        "summary": {
+            "total_assets": len(report),
+            "total_purchase_value": round(sum(a["purchase_price"] for a in report), 2),
+            "total_depreciation": round(sum(a["total_depreciation"] for a in report), 2),
+            "total_book_value": round(sum(a["book_value"] for a in report), 2)
+        }
+    }
+
+
+# =====================================================
 # ASSET CRUD
 # =====================================================
 
