@@ -1,18 +1,35 @@
 /* eslint-disable no-restricted-globals */
 
-const CACHE_NAME = 'ssc-track-v1';
+const CACHE_NAME = 'ssc-track-v2';
+const OFFLINE_CACHE = 'ssc-track-offline-v2';
+const API_CACHE = 'ssc-track-api-v2';
+
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/offline.html',
+];
+
+// API endpoints to cache for offline use
+const CACHEABLE_API = [
+  '/api/branches',
+  '/api/stock-items',
+  '/api/menu-items',
+  '/api/customers',
+  '/api/suppliers',
+  '/api/employees',
 ];
 
 // Install: cache static assets
 self.addEventListener('install', function(event) {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(function(cache) {
-      return cache.addAll(STATIC_ASSETS).catch(() => {});
-    })
+    Promise.all([
+      caches.open(CACHE_NAME).then(function(cache) {
+        return cache.addAll(STATIC_ASSETS).catch(() => {});
+      }),
+      caches.open(OFFLINE_CACHE)
+    ])
   );
   self.skipWaiting();
 });
@@ -22,7 +39,7 @@ self.addEventListener('activate', function(event) {
   event.waitUntil(
     caches.keys().then(function(names) {
       return Promise.all(
-        names.filter(n => n !== CACHE_NAME).map(n => caches.delete(n))
+        names.filter(n => !n.includes('ssc-track')).map(n => caches.delete(n))
       );
     })
   );
@@ -36,21 +53,56 @@ self.addEventListener('fetch', function(event) {
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
 
-  // Skip API calls — always go to network
-  if (url.pathname.startsWith('/api')) return;
+  // Handle API calls with network-first, fallback to cache
+  if (url.pathname.startsWith('/api')) {
+    // Check if this is a cacheable API endpoint
+    const isCacheable = CACHEABLE_API.some(endpoint => url.pathname.includes(endpoint));
+    
+    if (isCacheable) {
+      event.respondWith(
+        fetch(event.request)
+          .then(function(response) {
+            if (response && response.status === 200) {
+              const clone = response.clone();
+              caches.open(API_CACHE).then(function(cache) {
+                cache.put(event.request, clone);
+              });
+            }
+            return response;
+          })
+          .catch(function() {
+            return caches.match(event.request);
+          })
+      );
+      return;
+    }
+    // Non-cacheable API - just go to network
+    return;
+  }
 
   // For navigation requests (HTML pages), use network-first
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(function() {
-        return caches.match('/index.html');
-      })
+      fetch(event.request)
+        .then(function(response) {
+          // Cache successful navigation for offline
+          const clone = response.clone();
+          caches.open(OFFLINE_CACHE).then(function(cache) {
+            cache.put(event.request, clone);
+          });
+          return response;
+        })
+        .catch(function() {
+          return caches.match(event.request).then(function(cached) {
+            return cached || caches.match('/offline.html') || caches.match('/index.html');
+          });
+        })
     );
     return;
   }
 
   // For static assets (JS, CSS, images), use stale-while-revalidate
-  if (url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|ico|woff2?)$/)) {
+  if (url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|ico|woff2?|ttf|eot)$/)) {
     event.respondWith(
       caches.match(event.request).then(function(cached) {
         const fetchPromise = fetch(event.request).then(function(response) {
@@ -71,6 +123,19 @@ self.addEventListener('fetch', function(event) {
   }
 });
 
+// Background sync for offline actions
+self.addEventListener('sync', function(event) {
+  if (event.tag === 'sync-offline-data') {
+    event.waitUntil(syncOfflineData());
+  }
+});
+
+async function syncOfflineData() {
+  // Get pending offline actions from IndexedDB
+  // This would sync sales, expenses, etc. that were recorded offline
+  console.log('Background sync: syncing offline data');
+}
+
 // Push notifications
 self.addEventListener('push', function(event) {
   let data = { title: 'SSC Track', body: 'New notification' };
@@ -89,6 +154,9 @@ self.addEventListener('push', function(event) {
     badge: '/logo192.png',
     vibrate: [100, 50, 100],
     data: data.data || {},
+    tag: data.tag || 'default',
+    renotify: true,
+    requireInteraction: data.priority === 'high',
     actions: [
       { action: 'open', title: 'Open' },
       { action: 'dismiss', title: 'Dismiss' }
@@ -105,16 +173,42 @@ self.addEventListener('notificationclick', function(event) {
 
   if (event.action === 'dismiss') return;
 
+  const urlToOpen = event.notification.data?.url || '/notifications';
+
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.navigate(urlToOpen);
           return client.focus();
         }
       }
       if (self.clients.openWindow) {
-        return self.clients.openWindow('/notifications');
+        return self.clients.openWindow(urlToOpen);
       }
     })
   );
 });
+
+// Periodic background sync (for newer browsers)
+self.addEventListener('periodicsync', function(event) {
+  if (event.tag === 'update-dashboard-data') {
+    event.waitUntil(updateDashboardCache());
+  }
+});
+
+async function updateDashboardCache() {
+  // Pre-fetch dashboard data in background
+  const endpoints = ['/api/dashboard/stats', '/api/branches'];
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint);
+      if (response.ok) {
+        const cache = await caches.open(API_CACHE);
+        await cache.put(endpoint, response);
+      }
+    } catch (e) {
+      console.log('Background fetch failed:', endpoint);
+    }
+  }
+}
