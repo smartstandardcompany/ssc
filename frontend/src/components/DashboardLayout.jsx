@@ -99,11 +99,35 @@ const NAV_GROUPS = [
   },
 ];
 
+// Normalize permissions - support both old list format and new dict format
+function normalizePermissions(perms) {
+  if (Array.isArray(perms)) {
+    // Old format: ["sales", "expenses"] -> {"sales": "write", "expenses": "write"}
+    const dict = {};
+    perms.forEach(p => { dict[p] = 'write'; });
+    return dict;
+  }
+  if (typeof perms === 'object' && perms !== null) {
+    return perms;
+  }
+  return {};
+}
+
+// Check if user has permission (at least read access)
+function hasPermission(perms, module) {
+  const normalizedPerms = normalizePermissions(perms);
+  const level = normalizedPerms[module];
+  return level === 'read' || level === 'write';
+}
+
 function NavGroup({ group, userRole, userPerms, currentPath, onNavigate, t }) {
   const filteredItems = group.items.filter(item => {
     if (userRole === 'admin') return true;
     if (item.roles && !item.roles.includes(userRole || 'operator')) return false;
-    if (userPerms.length > 0 && item.perm) return userPerms.includes(item.perm);
+    // Check permission using the new dict-based format
+    if (item.perm) {
+      return hasPermission(userPerms, item.perm);
+    }
     return true;
   });
 
