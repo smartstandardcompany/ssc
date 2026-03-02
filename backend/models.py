@@ -102,6 +102,8 @@ class Sale(BaseModel):
     sale_type: str
     branch_id: Optional[str] = None
     customer_id: Optional[str] = None
+    platform_id: Optional[str] = None  # For online delivery platform sales
+    payment_mode: Optional[str] = None  # cash, card, online_platform, etc.
     amount: float
     discount: float = 0
     final_amount: float = 0
@@ -112,7 +114,7 @@ class Sale(BaseModel):
     notes: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     created_by: str
-    payment_mode: Optional[str] = None
+    platform_status: Optional[str] = None  # pending/settled - for tracking platform payment status
     payment_status: Optional[str] = None
     received_mode: Optional[str] = None
 
@@ -120,6 +122,8 @@ class SaleCreate(BaseModel):
     sale_type: str
     branch_id: Optional[str] = None
     customer_id: Optional[str] = None
+    platform_id: Optional[str] = None  # For online delivery platform sales
+    payment_mode: Optional[str] = None  # cash, card, online_platform, etc.
     amount: float
     discount: Optional[float] = 0
     payment_details: List[dict]
