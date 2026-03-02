@@ -85,13 +85,14 @@ export default function SupplierPaymentsPage() {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this payment?')) {
+    if (window.confirm('Are you sure you want to delete this payment? This will update the supplier balance.')) {
       try {
-        await api.delete(`/supplier-payments/${id}`);
-        toast.success('Payment deleted successfully');
+        const response = await api.delete(`/supplier-payments/${id}`);
+        toast.success('Payment deleted and supplier balance updated');
         fetchData();
       } catch (error) {
-        toast.error('Failed to delete payment');
+        console.error('Delete error:', error);
+        toast.error(error.response?.data?.detail || 'Failed to delete payment');
       }
     }
   };

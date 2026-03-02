@@ -105,25 +105,39 @@ async def create_supplier_payment(payment_data: SupplierPaymentCreate, current_u
 async def delete_supplier_payment(payment_id: str, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "supplier_payments", "write")
     
-    # First get the payment to check if it was a credit payment
+    # First get the payment to check payment mode and update supplier balance
     payment = await db.supplier_payments.find_one({"id": payment_id}, {"_id": 0})
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
     
-    # If it was a credit payment, reduce the supplier's current_credit
-    if payment.get("payment_mode") == "credit" and payment.get("supplier_id"):
-        supplier = await db.suppliers.find_one({"id": payment["supplier_id"]}, {"_id": 0})
+    supplier_id = payment.get("supplier_id")
+    payment_mode = payment.get("payment_mode")
+    amount = payment.get("amount", 0)
+    
+    if supplier_id:
+        supplier = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
         if supplier:
-            new_credit = max(0, supplier.get("current_credit", 0) - payment.get("amount", 0))
+            current_credit = supplier.get("current_credit", 0)
+            
+            if payment_mode == "credit":
+                # Credit payment was adding to supplier credit - reverse by reducing
+                new_credit = max(0, current_credit - amount)
+            elif payment_mode in ["cash", "bank"]:
+                # Cash/Bank payment was reducing supplier credit (paying them back)
+                # Reverse by increasing credit (you now owe them again)
+                new_credit = current_credit + amount
+            else:
+                new_credit = current_credit
+            
             await db.suppliers.update_one(
-                {"id": payment["supplier_id"]},
+                {"id": supplier_id},
                 {"$set": {"current_credit": new_credit}}
             )
     
     result = await db.supplier_payments.delete_one({"id": payment_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Payment not found")
-    return {"message": "Payment deleted successfully"}
+    return {"message": "Payment deleted successfully", "supplier_balance_updated": True}
 
 @router.get("/suppliers/{supplier_id}/payment-breakdown")
 async def get_supplier_payment_breakdown(supplier_id: str, current_user: User = Depends(get_current_user)):

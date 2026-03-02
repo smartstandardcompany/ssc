@@ -36,12 +36,14 @@ export default function StockPage() {
   const [profitReport, setProfitReport] = useState(null);
   const [wastageReport, setWastageReport] = useState(null);
   const [reportDays, setReportDays] = useState(30);
+  const [smartAlerts, setSmartAlerts] = useState({ alerts: [], summary: {} });
+  const [alertsLoading, setAlertsLoading] = useState(false);
 
   const [newItem, setNewItem] = useState({ name: '', cost_price: '', unit_price: '', unit: 'piece', category: '', min_stock_level: '' });
   const [stockInData, setStockInData] = useState({ item_id: '', branch_id: '', quantity: '', unit_cost: '', supplier_id: '', date: new Date().toISOString().split('T')[0], notes: '' });
 
-  useEffect(() => { fetchAll(); }, []);
-  useEffect(() => { fetchBalance(); }, [branchFilter]);
+  useEffect(() => { fetchAll(); fetchSmartAlerts(); }, []);
+  useEffect(() => { fetchBalance(); fetchSmartAlerts(); }, [branchFilter]);
 
   const fetchAll = async () => {
     try {
@@ -61,6 +63,21 @@ export default function StockPage() {
       const res = await api.get(url);
       setBalance(res.data);
     } catch {}
+  };
+
+  const fetchSmartAlerts = async () => {
+    setAlertsLoading(true);
+    try {
+      const url = branchFilter 
+        ? `/stock/smart-alerts?branch_id=${branchFilter}&days_lookback=30&days_forecast=7` 
+        : '/stock/smart-alerts?days_lookback=30&days_forecast=7';
+      const res = await api.get(url);
+      setSmartAlerts(res.data);
+    } catch (err) {
+      console.error('Failed to fetch smart alerts:', err);
+    } finally {
+      setAlertsLoading(false);
+    }
   };
 
   const handleAddItem = async () => {
@@ -211,6 +228,10 @@ export default function StockPage() {
         <Tabs defaultValue="balance">
           <TabsList>
             <TabsTrigger value="balance">Current Stock</TabsTrigger>
+            <TabsTrigger value="alerts" className="data-[state=active]:bg-red-500 data-[state=active]:text-white">
+              <AlertTriangle size={14} className="mr-1" />
+              Smart Alerts {smartAlerts.summary?.critical > 0 && `(${smartAlerts.summary.critical})`}
+            </TabsTrigger>
             <TabsTrigger value="entries">Stock In Log ({entries.length})</TabsTrigger>
             <TabsTrigger value="usage">Usage Log ({usage.length})</TabsTrigger>
             <TabsTrigger value="items">Item Master ({items.length})</TabsTrigger>
@@ -226,6 +247,112 @@ export default function StockPage() {
               } catch { toast.error('Failed to load reports'); }
             }}>Reports</TabsTrigger>
           </TabsList>
+
+          {/* SMART ALERTS */}
+          <TabsContent value="alerts">
+            <Card className="border-stone-100">
+              <CardContent className="pt-4">
+                {alertsLoading ? (
+                  <div className="flex items-center justify-center p-8">
+                    <Loader2 className="animate-spin mr-2" />
+                    Analyzing stock velocity...
+                  </div>
+                ) : (
+                  <>
+                    {/* Alert Summary */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                      <div className="p-3 bg-red-50 rounded-xl text-center border border-red-200">
+                        <p className="text-xs text-red-600">Critical</p>
+                        <p className="text-2xl font-bold text-red-600">{smartAlerts.summary?.critical || 0}</p>
+                      </div>
+                      <div className="p-3 bg-amber-50 rounded-xl text-center border border-amber-200">
+                        <p className="text-xs text-amber-600">Warning</p>
+                        <p className="text-2xl font-bold text-amber-600">{smartAlerts.summary?.warning || 0}</p>
+                      </div>
+                      <div className="p-3 bg-blue-50 rounded-xl text-center border border-blue-200">
+                        <p className="text-xs text-blue-600">Info</p>
+                        <p className="text-2xl font-bold text-blue-600">{smartAlerts.summary?.info || 0}</p>
+                      </div>
+                      <div className="p-3 bg-stone-50 rounded-xl text-center border border-stone-200">
+                        <p className="text-xs text-stone-600">Total Alerts</p>
+                        <p className="text-2xl font-bold text-stone-700">{smartAlerts.summary?.total_alerts || 0}</p>
+                      </div>
+                    </div>
+                    
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Based on {smartAlerts.summary?.lookback_days || 30} days consumption, forecasting {smartAlerts.summary?.forecast_days || 7} days ahead
+                    </p>
+
+                    {/* Alert List */}
+                    <div className="space-y-2">
+                      {smartAlerts.alerts?.map(alert => (
+                        <div 
+                          key={alert.item_id} 
+                          className={`p-3 rounded-xl border ${
+                            alert.alert_level === 'critical' ? 'bg-red-50/70 border-red-300' :
+                            alert.alert_level === 'warning' ? 'bg-amber-50/70 border-amber-300' :
+                            'bg-blue-50/70 border-blue-300'
+                          }`}
+                          data-testid={`alert-${alert.item_id}`}
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <p className="font-semibold text-sm">{alert.item_name}</p>
+                              <p className="text-xs text-muted-foreground">{alert.category} • {alert.unit}</p>
+                            </div>
+                            <Badge 
+                              variant={alert.alert_level === 'critical' ? 'destructive' : alert.alert_level === 'warning' ? 'warning' : 'secondary'}
+                              className={`text-xs ${
+                                alert.alert_level === 'critical' ? 'bg-red-500' :
+                                alert.alert_level === 'warning' ? 'bg-amber-500 text-white' :
+                                'bg-blue-500 text-white'
+                              }`}
+                            >
+                              {alert.alert_level.toUpperCase()}
+                            </Badge>
+                          </div>
+                          
+                          <p className={`text-xs font-medium mb-2 ${
+                            alert.alert_level === 'critical' ? 'text-red-700' :
+                            alert.alert_level === 'warning' ? 'text-amber-700' :
+                            'text-blue-700'
+                          }`}>
+                            {alert.alert_reason}
+                          </p>
+                          
+                          <div className="grid grid-cols-4 gap-2 text-center text-[10px]">
+                            <div className="p-1.5 bg-white/70 rounded border">
+                              <p className="text-muted-foreground">Current</p>
+                              <p className="font-bold">{alert.current_balance}</p>
+                            </div>
+                            <div className="p-1.5 bg-white/70 rounded border">
+                              <p className="text-muted-foreground">Daily Avg</p>
+                              <p className="font-bold">{alert.avg_daily_usage}</p>
+                            </div>
+                            <div className="p-1.5 bg-white/70 rounded border">
+                              <p className="text-muted-foreground">Days Left</p>
+                              <p className="font-bold">{alert.days_until_stockout || '∞'}</p>
+                            </div>
+                            <div className="p-1.5 bg-emerald-50 rounded border border-emerald-200">
+                              <p className="text-muted-foreground">Suggest Order</p>
+                              <p className="font-bold text-emerald-600">{alert.suggested_order_qty}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      {smartAlerts.alerts?.length === 0 && (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <Package size={48} className="mx-auto mb-2 opacity-30" />
+                          <p>No stock alerts - all items are well stocked!</p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* CURRENT STOCK BALANCE */}
           <TabsContent value="balance">

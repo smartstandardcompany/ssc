@@ -59,6 +59,7 @@ import NotificationPreferencesPage from "./pages/NotificationPreferencesPage";
 import PlatformsPage from "./pages/PlatformsPage";
 import AssetsPage from "./pages/AssetsPage";
 import ReservationsPage from "./pages/ReservationsPage";
+import LoyaltyProgramPage from "./pages/LoyaltyProgramPage";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
@@ -154,6 +155,7 @@ function App() {
           <Route path="/waiter" element={<WaiterPage />} />
           <Route path="/table-management" element={isAuthenticated ? <TableManagementPage /> : <Navigate to="/login" />} />
           <Route path="/reservations" element={isAuthenticated ? <ReservationsPage /> : <Navigate to="/login" />} />
+          <Route path="/loyalty" element={isAuthenticated ? <LoyaltyProgramPage /> : <Navigate to="/login" />} />
           <Route path="/loans" element={isAuthenticated ? <LoanManagementPage /> : <Navigate to="/login" />} />
           <Route path="/kds" element={<KitchenDisplayPage />} />
           <Route path="/order-status" element={<OrderStatusPage />} />

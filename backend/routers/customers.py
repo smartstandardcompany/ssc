@@ -152,3 +152,287 @@ async def get_all_customers_balance(current_user: User = Depends(get_current_use
         total_received = sum(s.get("credit_received", 0) for s in cust_sales)
         result.append({"id": cid, "name": customer["name"], "phone": customer.get("phone", ""), "branch_id": customer.get("branch_id"), "total_sales": total_sales, "cash": total_cash, "bank": total_bank, "credit_given": total_credit, "credit_received": total_received, "credit_balance": total_credit - total_received, "sales_count": len(cust_sales)})
     return result
+
+
+# ===========================
+# CUSTOMER LOYALTY PROGRAM
+# ===========================
+
+@router.get("/loyalty/settings")
+async def get_loyalty_settings(current_user: User = Depends(get_current_user)):
+    """Get loyalty program settings."""
+    settings = await db.loyalty_settings.find_one({}, {"_id": 0})
+    if not settings:
+        # Default settings
+        settings = {
+            "id": "default",
+            "enabled": False,
+            "points_per_sar": 1,  # 1 point per 1 SAR spent
+            "sar_per_point": 0.1,  # Each point worth 0.1 SAR
+            "min_redeem_points": 100,
+            "max_redeem_per_transaction": 50,  # Max % of bill payable with points
+            "welcome_bonus": 0,
+            "birthday_bonus": 0,
+            "tier_levels": [
+                {"name": "Bronze", "min_points": 0, "multiplier": 1.0},
+                {"name": "Silver", "min_points": 500, "multiplier": 1.25},
+                {"name": "Gold", "min_points": 1000, "multiplier": 1.5},
+                {"name": "Platinum", "min_points": 2500, "multiplier": 2.0}
+            ]
+        }
+    return settings
+
+
+@router.post("/loyalty/settings")
+async def update_loyalty_settings(settings: dict, current_user: User = Depends(get_current_user)):
+    """Update loyalty program settings. Admin only."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    settings["id"] = "default"
+    settings["updated_at"] = datetime.now(timezone.utc).isoformat()
+    settings["updated_by"] = current_user.id
+    
+    await db.loyalty_settings.update_one(
+        {"id": "default"},
+        {"$set": settings},
+        upsert=True
+    )
+    return {"message": "Loyalty settings updated", "settings": settings}
+
+
+@router.get("/customers/{customer_id}/loyalty")
+async def get_customer_loyalty(customer_id: str, current_user: User = Depends(get_current_user)):
+    """Get customer's loyalty points and history."""
+    customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    # Get loyalty settings
+    settings = await db.loyalty_settings.find_one({}, {"_id": 0}) or {
+        "points_per_sar": 1, "sar_per_point": 0.1, "tier_levels": [
+            {"name": "Bronze", "min_points": 0, "multiplier": 1.0},
+            {"name": "Silver", "min_points": 500, "multiplier": 1.25},
+            {"name": "Gold", "min_points": 1000, "multiplier": 1.5},
+            {"name": "Platinum", "min_points": 2500, "multiplier": 2.0}
+        ]
+    }
+    
+    # Get customer's points transactions
+    transactions = await db.loyalty_transactions.find(
+        {"customer_id": customer_id}, {"_id": 0}
+    ).sort("created_at", -1).to_list(1000)
+    
+    # Calculate current balance
+    points_earned = sum(t.get("points", 0) for t in transactions if t.get("type") == "earn")
+    points_redeemed = sum(abs(t.get("points", 0)) for t in transactions if t.get("type") == "redeem")
+    points_balance = points_earned - points_redeemed
+    
+    # Determine tier
+    current_tier = settings["tier_levels"][0]
+    for tier in settings["tier_levels"]:
+        if points_earned >= tier["min_points"]:
+            current_tier = tier
+    
+    # Points to next tier
+    next_tier = None
+    for i, tier in enumerate(settings["tier_levels"]):
+        if tier["name"] == current_tier["name"] and i < len(settings["tier_levels"]) - 1:
+            next_tier = settings["tier_levels"][i + 1]
+            break
+    
+    points_to_next_tier = next_tier["min_points"] - points_earned if next_tier else 0
+    
+    return {
+        "customer_id": customer_id,
+        "customer_name": customer["name"],
+        "points_balance": points_balance,
+        "points_earned_total": points_earned,
+        "points_redeemed_total": points_redeemed,
+        "current_tier": current_tier,
+        "next_tier": next_tier,
+        "points_to_next_tier": max(0, points_to_next_tier),
+        "points_value_sar": round(points_balance * settings["sar_per_point"], 2),
+        "recent_transactions": transactions[:10]
+    }
+
+
+@router.post("/customers/{customer_id}/loyalty/earn")
+async def earn_loyalty_points(customer_id: str, body: dict, current_user: User = Depends(get_current_user)):
+    """Add loyalty points for a purchase."""
+    customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    settings = await db.loyalty_settings.find_one({}, {"_id": 0}) or {"points_per_sar": 1, "enabled": False}
+    
+    if not settings.get("enabled", False):
+        return {"message": "Loyalty program is not enabled", "points_earned": 0}
+    
+    purchase_amount = float(body.get("amount", 0))
+    sale_id = body.get("sale_id")
+    notes = body.get("notes", "")
+    
+    # Calculate points (with tier multiplier)
+    base_points = int(purchase_amount * settings["points_per_sar"])
+    
+    # Get customer's current tier for multiplier
+    transactions = await db.loyalty_transactions.find({"customer_id": customer_id}, {"_id": 0}).to_list(10000)
+    points_earned_total = sum(t.get("points", 0) for t in transactions if t.get("type") == "earn")
+    
+    tier_levels = settings.get("tier_levels", [{"multiplier": 1.0}])
+    multiplier = 1.0
+    for tier in tier_levels:
+        if points_earned_total >= tier.get("min_points", 0):
+            multiplier = tier.get("multiplier", 1.0)
+    
+    final_points = int(base_points * multiplier)
+    
+    # Record transaction
+    import uuid
+    transaction = {
+        "id": str(uuid.uuid4()),
+        "customer_id": customer_id,
+        "type": "earn",
+        "points": final_points,
+        "purchase_amount": purchase_amount,
+        "sale_id": sale_id,
+        "notes": notes or f"Points earned from purchase of SAR {purchase_amount}",
+        "multiplier_applied": multiplier,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": current_user.id
+    }
+    await db.loyalty_transactions.insert_one(transaction)
+    
+    return {
+        "message": f"Earned {final_points} points",
+        "points_earned": final_points,
+        "base_points": base_points,
+        "multiplier": multiplier,
+        "new_balance": points_earned_total + final_points - sum(abs(t.get("points", 0)) for t in transactions if t.get("type") == "redeem")
+    }
+
+
+@router.post("/customers/{customer_id}/loyalty/redeem")
+async def redeem_loyalty_points(customer_id: str, body: dict, current_user: User = Depends(get_current_user)):
+    """Redeem loyalty points for discount."""
+    customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    settings = await db.loyalty_settings.find_one({}, {"_id": 0}) or {
+        "sar_per_point": 0.1, "min_redeem_points": 100, "enabled": False
+    }
+    
+    if not settings.get("enabled", False):
+        raise HTTPException(status_code=400, detail="Loyalty program is not enabled")
+    
+    points_to_redeem = int(body.get("points", 0))
+    sale_id = body.get("sale_id")
+    notes = body.get("notes", "")
+    
+    if points_to_redeem < settings.get("min_redeem_points", 100):
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Minimum {settings['min_redeem_points']} points required to redeem"
+        )
+    
+    # Check balance
+    transactions = await db.loyalty_transactions.find({"customer_id": customer_id}, {"_id": 0}).to_list(10000)
+    points_earned = sum(t.get("points", 0) for t in transactions if t.get("type") == "earn")
+    points_redeemed = sum(abs(t.get("points", 0)) for t in transactions if t.get("type") == "redeem")
+    balance = points_earned - points_redeemed
+    
+    if points_to_redeem > balance:
+        raise HTTPException(status_code=400, detail=f"Insufficient points. Balance: {balance}")
+    
+    # Calculate discount value
+    discount_value = round(points_to_redeem * settings["sar_per_point"], 2)
+    
+    # Record redemption
+    import uuid
+    transaction = {
+        "id": str(uuid.uuid4()),
+        "customer_id": customer_id,
+        "type": "redeem",
+        "points": -points_to_redeem,
+        "discount_value": discount_value,
+        "sale_id": sale_id,
+        "notes": notes or f"Redeemed {points_to_redeem} points for SAR {discount_value} discount",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": current_user.id
+    }
+    await db.loyalty_transactions.insert_one(transaction)
+    
+    return {
+        "message": f"Redeemed {points_to_redeem} points for SAR {discount_value} discount",
+        "points_redeemed": points_to_redeem,
+        "discount_value": discount_value,
+        "new_balance": balance - points_to_redeem
+    }
+
+
+@router.get("/loyalty/leaderboard")
+async def get_loyalty_leaderboard(current_user: User = Depends(get_current_user)):
+    """Get top customers by loyalty points."""
+    customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
+    transactions = await db.loyalty_transactions.find({}, {"_id": 0}).to_list(50000)
+    
+    settings = await db.loyalty_settings.find_one({}, {"_id": 0}) or {
+        "sar_per_point": 0.1, 
+        "tier_levels": [
+            {"name": "Bronze", "min_points": 0},
+            {"name": "Silver", "min_points": 500},
+            {"name": "Gold", "min_points": 1000},
+            {"name": "Platinum", "min_points": 2500}
+        ]
+    }
+    
+    # Calculate points per customer
+    customer_points = {}
+    for t in transactions:
+        cid = t.get("customer_id")
+        if cid not in customer_points:
+            customer_points[cid] = {"earned": 0, "redeemed": 0}
+        if t.get("type") == "earn":
+            customer_points[cid]["earned"] += t.get("points", 0)
+        elif t.get("type") == "redeem":
+            customer_points[cid]["redeemed"] += abs(t.get("points", 0))
+    
+    # Build leaderboard
+    leaderboard = []
+    customer_map = {c["id"]: c for c in customers}
+    
+    for cid, points in customer_points.items():
+        customer = customer_map.get(cid)
+        if not customer:
+            continue
+        
+        balance = points["earned"] - points["redeemed"]
+        
+        # Determine tier
+        tier = "Bronze"
+        for t in settings["tier_levels"]:
+            if points["earned"] >= t["min_points"]:
+                tier = t["name"]
+        
+        leaderboard.append({
+            "customer_id": cid,
+            "customer_name": customer["name"],
+            "phone": customer.get("phone", ""),
+            "points_earned": points["earned"],
+            "points_redeemed": points["redeemed"],
+            "points_balance": balance,
+            "tier": tier,
+            "value_sar": round(balance * settings["sar_per_point"], 2)
+        })
+    
+    # Sort by points earned (descending)
+    leaderboard.sort(key=lambda x: x["points_earned"], reverse=True)
+    
+    return {
+        "leaderboard": leaderboard[:50],
+        "total_customers_with_points": len(leaderboard),
+        "total_points_issued": sum(p["points_earned"] for p in leaderboard),
+        "total_points_redeemed": sum(p["points_redeemed"] for p in leaderboard)
+    }

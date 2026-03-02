@@ -42,6 +42,136 @@ async def get_stock_alerts(branch_id: Optional[str] = None, current_user: User =
     return alerts
 
 
+@router.get("/stock/smart-alerts")
+async def get_smart_stock_alerts(
+    branch_id: Optional[str] = None,
+    days_lookback: int = 30,
+    days_forecast: int = 7,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Advanced stock alerts based on sales velocity.
+    Predicts when items will run out based on consumption patterns.
+    """
+    from datetime import timedelta
+    
+    items = await db.items.find({}, {"_id": 0}).to_list(1000)
+    if not items:
+        return {"alerts": [], "summary": {}}
+    
+    # Get stock entries and usage
+    e_query = {"branch_id": branch_id} if branch_id else {}
+    u_query = {"branch_id": branch_id} if branch_id else {}
+    
+    entries = await db.stock_entries.find(e_query, {"_id": 0}).to_list(10000)
+    usage = await db.stock_usage.find(u_query, {"_id": 0}).to_list(10000)
+    
+    # Calculate current stock
+    stock_in = {}
+    for e in entries:
+        stock_in[e["item_id"]] = stock_in.get(e["item_id"], 0) + e["quantity"]
+    stock_out = {}
+    for u in usage:
+        stock_out[u["item_id"]] = stock_out.get(u["item_id"], 0) + u["quantity"]
+    
+    # Calculate daily usage rate for each item (last N days)
+    now = datetime.now(timezone.utc)
+    lookback_start = now - timedelta(days=days_lookback)
+    
+    daily_usage = {}
+    for u in usage:
+        date = u.get("date")
+        if isinstance(date, str):
+            date = datetime.fromisoformat(date)
+        if date and date.tzinfo is None:
+            date = date.replace(tzinfo=timezone.utc)
+        if date and date >= lookback_start:
+            item_id = u["item_id"]
+            if item_id not in daily_usage:
+                daily_usage[item_id] = []
+            daily_usage[item_id].append(u["quantity"])
+    
+    # Build alerts
+    alerts = []
+    for item in items:
+        item_id = item["id"]
+        current_balance = stock_in.get(item_id, 0) - stock_out.get(item_id, 0)
+        min_level = item.get("min_stock_level", 0)
+        
+        # Calculate velocity (avg daily usage)
+        usage_records = daily_usage.get(item_id, [])
+        total_used = sum(usage_records)
+        avg_daily_usage = total_used / days_lookback if days_lookback > 0 else 0
+        
+        # Calculate days until stockout
+        days_until_stockout = None
+        if avg_daily_usage > 0:
+            days_until_stockout = round(current_balance / avg_daily_usage, 1)
+        
+        # Calculate forecasted balance after N days
+        forecasted_balance = current_balance - (avg_daily_usage * days_forecast)
+        
+        # Determine alert level
+        alert_level = None
+        alert_reason = None
+        
+        if current_balance <= 0:
+            alert_level = "critical"
+            alert_reason = "Out of stock"
+        elif current_balance <= min_level:
+            alert_level = "critical"
+            alert_reason = "Below minimum level"
+        elif days_until_stockout is not None and days_until_stockout <= 3:
+            alert_level = "critical"
+            alert_reason = f"Will run out in ~{days_until_stockout} days"
+        elif days_until_stockout is not None and days_until_stockout <= 7:
+            alert_level = "warning"
+            alert_reason = f"Will run out in ~{days_until_stockout} days"
+        elif forecasted_balance <= min_level and min_level > 0:
+            alert_level = "warning"
+            alert_reason = f"Will fall below min in {days_forecast} days"
+        elif days_until_stockout is not None and days_until_stockout <= 14:
+            alert_level = "info"
+            alert_reason = f"Monitor: ~{days_until_stockout} days of stock"
+        
+        if alert_level:
+            # Calculate suggested reorder quantity (enough for 2 weeks at current velocity)
+            suggested_order = 0
+            if avg_daily_usage > 0:
+                suggested_order = max(min_level, round(avg_daily_usage * 14 - current_balance, 0))
+            
+            alerts.append({
+                "item_id": item_id,
+                "item_name": item["name"],
+                "unit": item.get("unit", "piece"),
+                "category": item.get("category", ""),
+                "current_balance": round(current_balance, 2),
+                "min_level": min_level,
+                "avg_daily_usage": round(avg_daily_usage, 2),
+                "days_until_stockout": days_until_stockout,
+                "forecasted_balance_7d": round(forecasted_balance, 2),
+                "alert_level": alert_level,
+                "alert_reason": alert_reason,
+                "suggested_order_qty": suggested_order,
+                "usage_trend": "high" if avg_daily_usage > 0 and len(usage_records) > days_lookback * 0.7 else "normal"
+            })
+    
+    # Sort by priority (critical > warning > info) and then by days until stockout
+    priority_map = {"critical": 0, "warning": 1, "info": 2}
+    alerts.sort(key=lambda x: (priority_map.get(x["alert_level"], 3), x.get("days_until_stockout") or 999))
+    
+    # Summary
+    summary = {
+        "total_alerts": len(alerts),
+        "critical": len([a for a in alerts if a["alert_level"] == "critical"]),
+        "warning": len([a for a in alerts if a["alert_level"] == "warning"]),
+        "info": len([a for a in alerts if a["alert_level"] == "info"]),
+        "lookback_days": days_lookback,
+        "forecast_days": days_forecast
+    }
+    
+    return {"alerts": alerts, "summary": summary}
+
 
 @router.get("/stock/entries")
 async def get_stock_entries(branch_id: Optional[str] = None, current_user: User = Depends(get_current_user)):

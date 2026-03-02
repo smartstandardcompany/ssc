@@ -7,7 +7,7 @@ import {
   Handshake, HelpCircle, Building2, Package, ChefHat, CalendarClock,
   ArrowDownUp, Activity, PackageCheck, ChevronDown, Menu, X, Zap,
   AlertCircle, Moon, Sun, Keyboard, Globe, UtensilsCrossed, Camera, Armchair, Wallet,
-  CalendarDays
+  CalendarDays, Gift
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -43,6 +43,7 @@ const NAV_GROUPS = [
     label: 'People',
     items: [
       { path: '/customers', icon: Users, label: 'Customers', perm: 'customers' },
+      { path: '/loyalty', icon: Gift, label: 'Loyalty Program', perm: 'customers' },
       { path: '/suppliers', icon: Truck, label: 'Suppliers', perm: 'suppliers', roles: ['admin', 'manager'] },
       { path: '/employees', icon: UserCheck, label: 'Employees', perm: 'employees', roles: ['admin', 'manager'] },
       { path: '/loans', icon: Wallet, label: 'Loans', perm: 'employees', roles: ['admin', 'manager'] },
