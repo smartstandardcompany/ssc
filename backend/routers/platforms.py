@@ -6,7 +6,8 @@ Manage sales from HungerStation, Jahez, ToYou, Keta, Ninja, etc.
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional, List
 from datetime import datetime, timezone, timedelta
-from database import db, get_current_user, User, require_permission
+from database import db, get_current_user, require_permission
+from models import User
 import uuid
 
 router = APIRouter(tags=["Online Platforms"])
