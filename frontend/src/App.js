@@ -57,6 +57,7 @@ import PerformanceReportPage from "./pages/PerformanceReportPage";
 import AnomalyDetectionPage from "./pages/AnomalyDetectionPage";
 import NotificationPreferencesPage from "./pages/NotificationPreferencesPage";
 import PlatformsPage from "./pages/PlatformsPage";
+import AssetsPage from "./pages/AssetsPage";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
