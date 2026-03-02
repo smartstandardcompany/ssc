@@ -10,7 +10,7 @@ class User(BaseModel):
     name: str
     role: str = "operator"
     branch_id: Optional[str] = None
-    permissions: List[str] = []
+    permissions: dict = {}  # {"sales": "write", "expenses": "read", ...}
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class UserCreate(BaseModel):
@@ -19,13 +19,13 @@ class UserCreate(BaseModel):
     name: str
     role: Optional[str] = "operator"
     branch_id: Optional[str] = None
-    permissions: Optional[List[str]] = []
+    permissions: Optional[dict] = {}
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     role: Optional[str] = None
     branch_id: Optional[str] = None
-    permissions: Optional[List[str]] = None
+    permissions: Optional[dict] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
