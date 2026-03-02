@@ -97,6 +97,7 @@ function getLayoutPrefs() {
 function saveLayoutPrefs(layout) { localStorage.setItem('dashboard_layout', JSON.stringify(layout)); }
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [branchDues, setBranchDues] = useState(null);
@@ -115,6 +116,7 @@ export default function DashboardPage() {
   const [dailyTrend, setDailyTrend] = useState({ sales: [], expenses: [], profit: [] });
   const [isEditMode, setIsEditMode] = useState(false);
   const [layout, setLayout] = useState(getLayoutPrefs());
+  const [userPermissions, setUserPermissions] = useState({});
   const [predictiveData, setPredictiveData] = useState({
     lowStock: { items_at_risk: 0, forecasts: [] },
     peakHours: { peak_hours: [], total_transactions_analyzed: 0 },
@@ -122,7 +124,7 @@ export default function DashboardPage() {
     profitTrend: { summary: {}, daily_breakdown: [] }
   });
   const t = THEMES[theme] || THEMES.default;
-  const { t: tr } = useLanguage();
+  const { t: tr, language } = useLanguage();
 
   const toggleWidget = (key) => {
     const updated = { ...widgets, [key]: !widgets[key] };
