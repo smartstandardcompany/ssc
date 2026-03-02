@@ -1007,6 +1007,14 @@ def parse_bank_statement(content: bytes, filename: str) -> Tuple[List[Dict[str, 
     
     filename_lower = filename.lower()
     
+    # Handle PDF files
+    if filename_lower.endswith('.pdf'):
+        if not PDF_SUPPORT:
+            raise ValueError("PDF parsing not available. Please upload CSV or Excel files.")
+        parser = PDFStatementParser()
+        transactions = parser.parse(content)
+        return transactions, parser.BANK_NAME
+    
     # Handle OFX/QFX
     if filename_lower.endswith(('.ofx', '.qfx')):
         parser = OFXParser()
