@@ -1,7 +1,17 @@
-from pydantic import BaseModel, Field, ConfigDict, EmailStr
-from typing import List, Optional
+from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
+from typing import List, Optional, Union, Dict, Any
 from datetime import datetime, timezone
 import uuid
+
+
+def normalize_permissions(v):
+    """Convert list permissions to dict format."""
+    if isinstance(v, list):
+        return {p: "write" for p in v}
+    if isinstance(v, dict):
+        return v
+    return {}
+
 
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -10,8 +20,13 @@ class User(BaseModel):
     name: str
     role: str = "operator"
     branch_id: Optional[str] = None
-    permissions: dict = {}  # {"sales": "write", "expenses": "read", ...}
+    permissions: Dict[str, str] = {}  # {"sales": "write", "expenses": "read", ...}
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @field_validator('permissions', mode='before')
+    @classmethod
+    def normalize_perms(cls, v):
+        return normalize_permissions(v)
 
 class UserCreate(BaseModel):
     email: EmailStr
