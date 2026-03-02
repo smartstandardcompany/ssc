@@ -611,6 +611,181 @@ export default function DashboardPage() {
         </>
         )}
 
+        {/* AI Predictive Analytics Widgets */}
+        {widgets.lowStock && (
+        <Card className="border-border border-purple-200 bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 dark:border-purple-700" data-testid="low-stock-widget">
+          <CardHeader className="pb-2">
+            <CardTitle className="font-outfit text-base flex items-center gap-2">
+              <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                <Package size={16} className="text-purple-600 dark:text-purple-400" />
+              </div>
+              <span>AI: Low Stock Alerts</span>
+              <Badge className="ml-auto bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300">
+                <Brain size={10} className="mr-1" />Predictive
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {predictiveData.lowStock.items_at_risk > 0 ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm text-muted-foreground">Items at risk of running low</span>
+                  <span className="text-2xl font-bold text-purple-600">{predictiveData.lowStock.items_at_risk}</span>
+                </div>
+                {(predictiveData.lowStock.forecasts || []).slice(0, 3).map((item, i) => (
+                  <div key={i} className="flex justify-between items-center p-2 bg-white/60 dark:bg-stone-800/60 rounded-lg border border-purple-100 dark:border-purple-800" data-testid="low-stock-item">
+                    <div>
+                      <span className="font-medium text-sm">{item.item_name}</span>
+                      <p className="text-xs text-muted-foreground">Stock: {item.current_stock} | Reorder: {item.reorder_point}</p>
+                    </div>
+                    <Badge className={item.days_until_stockout <= 7 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}>
+                      {item.days_until_stockout}d left
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                <Package size={32} className="mx-auto mb-2 opacity-30" />
+                <p className="text-sm">All stock levels healthy</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        )}
+
+        {widgets.peakHours && (
+        <Card className="border-border border-cyan-200 bg-gradient-to-br from-cyan-50 to-sky-50 dark:from-cyan-900/20 dark:to-sky-900/20 dark:border-cyan-700" data-testid="peak-hours-widget">
+          <CardHeader className="pb-2">
+            <CardTitle className="font-outfit text-base flex items-center gap-2">
+              <div className="w-8 h-8 bg-cyan-500/20 rounded-lg flex items-center justify-center">
+                <Clock size={16} className="text-cyan-600 dark:text-cyan-400" />
+              </div>
+              <span>AI: Peak Hours</span>
+              <Badge className="ml-auto bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-300">
+                <Brain size={10} className="mr-1" />Staffing
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(predictiveData.peakHours.peak_hours || []).length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground mb-3">Based on {predictiveData.peakHours.total_transactions_analyzed} transactions</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {(predictiveData.peakHours.peak_hours || []).slice(0, 3).map((h, i) => (
+                    <div key={i} className="text-center p-3 bg-white/60 dark:bg-stone-800/60 rounded-lg border border-cyan-100 dark:border-cyan-800" data-testid="peak-hour-item">
+                      <div className="text-xl font-bold text-cyan-600 dark:text-cyan-400">{h.label}</div>
+                      <p className="text-xs text-muted-foreground mt-1">{h.total_transactions} orders</p>
+                      <p className="text-xs font-medium text-cyan-700">{h.share_percent?.toFixed(1)}% of traffic</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-center text-muted-foreground mt-2">Consider extra staff during these hours</p>
+              </div>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                <Clock size={32} className="mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Not enough data for analysis</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        )}
+
+        {widgets.customerInsights && (
+        <Card className="border-border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 dark:border-emerald-700" data-testid="customer-clv-widget">
+          <CardHeader className="pb-2">
+            <CardTitle className="font-outfit text-base flex items-center gap-2">
+              <div className="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center">
+                <Users size={16} className="text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <span>AI: Customer Value</span>
+              <Badge className="ml-auto bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
+                <Sparkles size={10} className="mr-1" />CLV
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(predictiveData.customerCLV.high_value_customers || []).length > 0 ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm text-muted-foreground">Projected 12-month revenue</span>
+                  <span className="text-lg font-bold text-emerald-600">SAR {(predictiveData.customerCLV.total_projected_revenue || 0).toLocaleString()}</span>
+                </div>
+                {(predictiveData.customerCLV.high_value_customers || []).slice(0, 3).map((c, i) => (
+                  <div key={i} className="flex justify-between items-center p-2 bg-white/60 dark:bg-stone-800/60 rounded-lg border border-emerald-100 dark:border-emerald-800" data-testid="clv-customer-item">
+                    <div>
+                      <span className="font-medium text-sm">{c.customer_name}</span>
+                      <p className="text-xs text-muted-foreground">{c.total_orders} orders | {c.days_as_customer}d active</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-bold text-emerald-600">SAR {(c.predicted_clv || 0).toLocaleString()}</span>
+                      <p className="text-xs text-muted-foreground">lifetime value</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                <Users size={32} className="mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Add customers to see CLV insights</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        )}
+
+        {widgets.profitTrend && (
+        <Card className="border-border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 dark:border-amber-700" data-testid="profit-trend-widget">
+          <CardHeader className="pb-2">
+            <CardTitle className="font-outfit text-base flex items-center gap-2">
+              <div className="w-8 h-8 bg-amber-500/20 rounded-lg flex items-center justify-center">
+                <TrendingUp size={16} className="text-amber-600 dark:text-amber-400" />
+              </div>
+              <span>AI: Profit Analysis</span>
+              <Badge className="ml-auto bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
+                <Brain size={10} className="mr-1" />Trend
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {predictiveData.profitTrend.summary ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-white/60 dark:bg-stone-800/60 rounded-lg border border-amber-100 dark:border-amber-800 text-center">
+                    <p className="text-xs text-muted-foreground">Avg Daily Profit</p>
+                    <span className={`text-lg font-bold ${(predictiveData.profitTrend.summary.avg_daily_profit || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      SAR {(predictiveData.profitTrend.summary.avg_daily_profit || 0).toFixed(0)}
+                    </span>
+                  </div>
+                  <div className="p-3 bg-white/60 dark:bg-stone-800/60 rounded-lg border border-amber-100 dark:border-amber-800 text-center">
+                    <p className="text-xs text-muted-foreground">Trend</p>
+                    <span className={`text-lg font-bold capitalize ${predictiveData.profitTrend.summary.profit_trend === 'improving' ? 'text-emerald-600' : predictiveData.profitTrend.summary.profit_trend === 'declining' ? 'text-red-600' : 'text-amber-600'}`}>
+                      {predictiveData.profitTrend.summary.profit_trend || 'Stable'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center p-2 bg-white/60 dark:bg-stone-800/60 rounded-lg border border-amber-100 dark:border-amber-800">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-emerald-100 text-emerald-700">Best</Badge>
+                    <span className="text-sm font-medium">{predictiveData.profitTrend.summary.best_day || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-red-100 text-red-700">Worst</Badge>
+                    <span className="text-sm font-medium">{predictiveData.profitTrend.summary.worst_day || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                <TrendingUp size={32} className="mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Not enough data for profit analysis</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        )}
+
         {/* Upcoming Recurring Expenses */}
         {stats?.upcoming_expenses?.length > 0 && (
           <Card className="border-border border-error/30 bg-error/5">
