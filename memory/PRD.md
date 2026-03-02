@@ -12,7 +12,47 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - **WhatsApp:** Twilio (config-dependent) with Chatbot
 - **PWA:** Full offline-capable Progressive Web App with shortcuts
 
-## Latest Updates (Mar 2, 2026 — Session 10)
+## Latest Updates (Mar 2, 2026 — Session 11)
+
+### P0/P1 Items Verified ✅
+
+#### Password Reset Functionality
+- **Admin Password Reset API:** `PUT /api/users/{user_id}/reset-password` working correctly
+- **Test:** Successfully reset password for user Ahmed (ahmed@test.com) to `ahmed@123`
+- **Feature:** Admin can reset any user's password with optional "must change on login" flag
+
+#### Employee Portal Access
+- **Route:** `/my-portal` (employees are auto-redirected after login)
+- **Features Available to Employees:**
+  - Profile overview (name, position, salary)
+  - Financial info (loan balance, due balance, active loans)
+  - Leave balance (annual, sick, ticket entitlement)
+  - Payments awaiting confirmation with "Confirm" button
+  - Tabs: Attendance, Payments, Leaves, Loans, Requests, Letters, My Tasks
+- **Test Credentials:**
+  - Email: `ahmed@test.com`
+  - Password: `ahmed@123`
+
+#### Quick Entry (POS) Page Verification
+- **Online Sales Stat Card:** ✅ Working - Shows "SAR 3,000" from platforms summary API
+- **Date Picker:** ✅ Working - Shows date selection input
+- **Branch Selection:** ✅ Working
+- **Regular/Online Sale Tabs:** ✅ Working
+- **Supplier Selection for Expenses:** ✅ Working
+
+#### Sales Page Branch-wise Monthly Summary
+- **Feature:** ✅ Working - Shows "March 2026 - Branch Sales" with per-branch breakdown
+- **Data:** Branch A: SAR 400, Test Branch: SAR 600, Online Total: SAR 1,000, Total: SAR 1,000
+- **Payment Mode Breakdown:** Cash, Bank, Credit, Online per branch
+
+#### Supplier Balance Bug Fixes
+- **Credit Expense Deletion:** ✅ Fixed in `backend/routers/expenses.py` - reduces supplier credit
+- **Supplier Payment Deletion:** ✅ Fixed in `backend/routers/suppliers.py` - reduces supplier credit
+- **Recalculation Endpoints:** Available for manual correction if needed
+
+---
+
+## Previous Updates (Mar 2, 2026 — Session 10)
 
 ### Quick Entry Improvements ✅
 

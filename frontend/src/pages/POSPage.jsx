@@ -83,13 +83,11 @@ export default function POSPage() {
       // Get online sales from platforms summary
       let onlineSales = 0;
       try {
-        const platformsRes = await api.get('/platforms/summary/by-branch');
-        if (platformsRes.data) {
-          // Sum up all platform sales
-          Object.values(platformsRes.data).forEach(branch => {
-            Object.values(branch.platforms || {}).forEach(platform => {
-              onlineSales += platform.total_sales || 0;
-            });
+        const platformsRes = await api.get('/platforms/summary');
+        if (platformsRes.data && platformsRes.data.platforms) {
+          // Sum up all platform total_sales
+          platformsRes.data.platforms.forEach(platform => {
+            onlineSales += platform.total_sales || 0;
           });
         }
       } catch {}

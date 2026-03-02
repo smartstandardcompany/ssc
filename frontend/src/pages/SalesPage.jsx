@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,11 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Trash2, DollarSign, X, Truck } from 'lucide-react';
+import { Plus, Trash2, DollarSign, X, Truck, Store, TrendingUp } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
 import { DateFilter } from '@/components/DateFilter';
 import { BranchFilter } from '@/components/BranchFilter';
@@ -42,6 +42,52 @@ export default function SalesPage() {
   const [receivePayment, setReceivePayment] = useState({ payment_mode: 'cash', amount: '' });
   const [dateFilter, setDateFilter] = useState({ start: null, end: null, period: 'all' });
   const [branchFilter, setBranchFilter] = useState([]);
+
+  // Calculate branch-wise monthly sales
+  const branchMonthlySales = useMemo(() => {
+    const now = new Date();
+    const monthStart = startOfMonth(now);
+    const monthEnd = endOfMonth(now);
+    
+    const monthlySales = sales.filter(s => {
+      try {
+        const saleDate = parseISO(s.date);
+        return saleDate >= monthStart && saleDate <= monthEnd;
+      } catch { return false; }
+    });
+
+    // Group by branch
+    const byBranch = {};
+    let totalOnline = 0;
+    let totalAll = 0;
+
+    monthlySales.forEach(sale => {
+      const branchId = sale.branch_id;
+      const branch = branches.find(b => b.id === branchId);
+      const branchName = branch?.name || 'Unknown';
+      
+      if (!byBranch[branchName]) {
+        byBranch[branchName] = { cash: 0, bank: 0, credit: 0, online: 0, total: 0 };
+      }
+      
+      // Sum by payment mode
+      (sale.payment_details || []).forEach(p => {
+        const amt = p.amount || 0;
+        if (p.mode === 'cash') byBranch[branchName].cash += amt;
+        else if (p.mode === 'bank') byBranch[branchName].bank += amt;
+        else if (p.mode === 'credit') byBranch[branchName].credit += amt;
+        else if (p.mode === 'online_platform' || p.mode === 'online') {
+          byBranch[branchName].online += amt;
+          totalOnline += amt;
+        }
+      });
+      
+      byBranch[branchName].total += sale.amount || 0;
+      totalAll += sale.amount || 0;
+    });
+
+    return { byBranch, totalOnline, totalAll, month: format(now, 'MMMM yyyy') };
+  }, [sales, branches]);
 
   useEffect(() => {
     fetchData();
@@ -203,6 +249,51 @@ export default function SalesPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* Branch-wise Monthly Sales Summary */}
+        <Card className="border-0 shadow-sm bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <TrendingUp size={18} className="text-emerald-600" />
+                <h3 className="font-semibold text-sm">{branchMonthlySales.month} - Branch Sales</h3>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">Total This Month</p>
+                <p className="text-xl font-bold text-emerald-600">SAR {branchMonthlySales.totalAll.toLocaleString()}</p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+              {Object.entries(branchMonthlySales.byBranch).map(([branchName, data]) => (
+                <div key={branchName} className="bg-white dark:bg-stone-800 rounded-xl p-3 border">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Store size={14} className="text-blue-500" />
+                    <span className="text-xs font-medium truncate">{branchName}</span>
+                  </div>
+                  <p className="text-lg font-bold text-emerald-600">SAR {data.total.toLocaleString()}</p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {data.cash > 0 && <span className="text-[10px] px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded">Cash: {data.cash.toLocaleString()}</span>}
+                    {data.bank > 0 && <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">Bank: {data.bank.toLocaleString()}</span>}
+                    {data.credit > 0 && <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded">Credit: {data.credit.toLocaleString()}</span>}
+                    {data.online > 0 && <span className="text-[10px] px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">Online: {data.online.toLocaleString()}</span>}
+                  </div>
+                </div>
+              ))}
+              
+              {/* Online Sales Total */}
+              {branchMonthlySales.totalOnline > 0 && (
+                <div className="bg-purple-50 dark:bg-purple-900/30 rounded-xl p-3 border border-purple-200">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Truck size={14} className="text-purple-500" />
+                    <span className="text-xs font-medium">Online Total</span>
+                  </div>
+                  <p className="text-lg font-bold text-purple-600">SAR {branchMonthlySales.totalOnline.toLocaleString()}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-1" data-testid="sales-page-title">Sales Management</h1>
