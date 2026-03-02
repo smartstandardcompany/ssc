@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { DollarSign, TrendingUp, TrendingDown, AlertCircle, Wallet, Building2, CreditCard, AlertTriangle, ArrowLeftRight, MessageCircle, Settings2, Eye, EyeOff, GripVertical, Lock, Unlock, Package, Clock, Users, Brain, Sparkles, Zap, Plus, Receipt, FileText, CalendarCheck, Banknote, ShoppingCart, UserPlus, FileSpreadsheet, Camera } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, AlertCircle, Wallet, Building2, CreditCard, AlertTriangle, ArrowLeftRight, MessageCircle, Settings2, Eye, EyeOff, GripVertical, Lock, Unlock, Package, Clock, Users, Brain, Sparkles, Zap, Plus, Receipt, FileText, CalendarCheck, Banknote, ShoppingCart, UserPlus, FileSpreadsheet, Camera, HelpCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -21,6 +21,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import GridLayout from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
+import DashboardTour, { resetDashboardTour } from '@/components/DashboardTour';
 
 const Sparkline = ({ data = [], color = '#22C55E', width = 60, height = 24 }) => {
   if (!data || data.length < 2) return null;
