@@ -58,10 +58,14 @@ const WIDGET_OPTIONS = [
 const DEFAULT_LAYOUT = [
   { i: 'stats', x: 0, y: 0, w: 12, h: 4, minW: 6 },
   { i: 'charts', x: 0, y: 4, w: 12, h: 5, minW: 6 },
-  { i: 'cashBank', x: 0, y: 9, w: 12, h: 4, minW: 6 },
-  { i: 'paymentMode', x: 0, y: 13, w: 12, h: 4, minW: 6 },
-  { i: 'spending', x: 0, y: 17, w: 12, h: 5, minW: 6 },
-  { i: 'dues', x: 0, y: 22, w: 12, h: 5, minW: 6 },
+  { i: 'lowStock', x: 0, y: 9, w: 6, h: 4, minW: 4 },
+  { i: 'peakHours', x: 6, y: 9, w: 6, h: 4, minW: 4 },
+  { i: 'customerInsights', x: 0, y: 13, w: 6, h: 4, minW: 4 },
+  { i: 'profitTrend', x: 6, y: 13, w: 6, h: 4, minW: 4 },
+  { i: 'cashBank', x: 0, y: 17, w: 12, h: 4, minW: 6 },
+  { i: 'paymentMode', x: 0, y: 21, w: 12, h: 4, minW: 6 },
+  { i: 'spending', x: 0, y: 25, w: 12, h: 5, minW: 6 },
+  { i: 'dues', x: 0, y: 30, w: 12, h: 5, minW: 6 },
 ];
 
 function getWidgetPrefs() {
