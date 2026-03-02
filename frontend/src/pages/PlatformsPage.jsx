@@ -267,6 +267,7 @@ export default function PlatformsPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="rounded-xl">
             <TabsTrigger value="overview" className="rounded-lg">Overview</TabsTrigger>
+            <TabsTrigger value="branches" className="rounded-lg">By Branch</TabsTrigger>
             <TabsTrigger value="platforms" className="rounded-lg">Platforms</TabsTrigger>
             <TabsTrigger value="payments" className="rounded-lg">Payments</TabsTrigger>
           </TabsList>
