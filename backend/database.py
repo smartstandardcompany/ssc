@@ -65,7 +65,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
                 "name": employee.get("name", "Cashier"),
                 "role": "cashier",
                 "branch_id": employee.get("branch_id"),
-                "permissions": ["cashier", "pos", "sales"],
+                "permissions": {"cashier": "write", "pos": "write", "sales": "write"},
                 "created_at": employee.get("created_at", datetime.now(timezone.utc).isoformat())
             }
         else:
