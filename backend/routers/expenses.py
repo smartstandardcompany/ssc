@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
 from datetime import datetime, timezone
 
-from database import db, get_current_user
+from database import db, get_current_user, require_permission, get_branch_filter
 from models import User, Expense, ExpenseCreate, RecurringExpense, RecurringExpenseCreate
 
 import uuid
@@ -11,7 +11,9 @@ router = APIRouter()
 
 @router.get("/expenses", response_model=list)
 async def get_expenses(current_user: User = Depends(get_current_user)):
-    expenses = await db.expenses.find({}, {"_id": 0}).sort("date", -1).to_list(1000)
+    require_permission(current_user, "expenses", "read")
+    query = get_branch_filter(current_user)
+    expenses = await db.expenses.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
     for expense in expenses:
         if isinstance(expense.get('date'), str): expense['date'] = datetime.fromisoformat(expense['date'])
         if isinstance(expense.get('created_at'), str): expense['created_at'] = datetime.fromisoformat(expense['created_at'])
@@ -19,6 +21,7 @@ async def get_expenses(current_user: User = Depends(get_current_user)):
 
 @router.post("/expenses", response_model=Expense)
 async def create_expense(expense_data: ExpenseCreate, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "expenses", "write")
     data = expense_data.model_dump()
     for f in ['branch_id', 'supplier_id', 'sub_category', 'expense_for_branch_id']:
         if data.get(f) == '': data[f] = None
@@ -43,6 +46,7 @@ async def create_expense(expense_data: ExpenseCreate, current_user: User = Depen
 
 @router.delete("/expenses/{expense_id}")
 async def delete_expense(expense_id: str, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "expenses", "write")
     result = await db.expenses.delete_one({"id": expense_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Expense not found")
