@@ -36,6 +36,10 @@ export default function ChangePasswordPage() {
         current_password: isForced ? null : currentPassword,
         new_password: newPassword
       });
+      // Update local user to clear must_change_password flag
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      user.must_change_password = false;
+      localStorage.setItem('user', JSON.stringify(user));
       toast.success('Password changed successfully');
       navigate('/');
     } catch (err) {
