@@ -541,6 +541,74 @@ export default function UsersPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Password Reset Dialog */}
+        <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+          <DialogContent className="max-w-md" data-testid="reset-password-dialog" aria-describedby="reset-password-description">
+            <DialogHeader>
+              <DialogTitle className="font-outfit flex items-center gap-2">
+                <Key size={20} /> Reset Password
+              </DialogTitle>
+            </DialogHeader>
+            {resetUser && (
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                <div className="p-3 bg-stone-100 dark:bg-stone-800 rounded-lg">
+                  <p className="text-sm text-muted-foreground">Resetting password for:</p>
+                  <p className="font-medium">{resetUser.name}</p>
+                  <p className="text-sm text-muted-foreground">{resetUser.email}</p>
+                </div>
+
+                <div>
+                  <Label>New Password *</Label>
+                  <Input
+                    type="password"
+                    value={resetData.new_password}
+                    onChange={(e) => setResetData({ ...resetData, new_password: e.target.value })}
+                    data-testid="reset-new-password"
+                    placeholder="Enter new password (min 6 characters)"
+                    required
+                    minLength={6}
+                  />
+                </div>
+
+                <div>
+                  <Label>Confirm Password *</Label>
+                  <Input
+                    type="password"
+                    value={resetData.confirm_password}
+                    onChange={(e) => setResetData({ ...resetData, confirm_password: e.target.value })}
+                    data-testid="reset-confirm-password"
+                    placeholder="Confirm new password"
+                    required
+                    minLength={6}
+                  />
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                  <Checkbox
+                    id="must-change"
+                    checked={resetData.must_change_on_login}
+                    onCheckedChange={(checked) => setResetData({ ...resetData, must_change_on_login: checked })}
+                    data-testid="must-change-checkbox"
+                  />
+                  <label htmlFor="must-change" className="text-sm cursor-pointer">
+                    <span className="font-medium">Force password change on next login</span>
+                    <p className="text-xs text-muted-foreground">User will be required to set a new password after logging in</p>
+                  </label>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <Button type="submit" data-testid="submit-reset-button" className="rounded-full">
+                    Reset Password
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setShowResetDialog(false)} className="rounded-full">
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
