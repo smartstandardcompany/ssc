@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { DollarSign, ShoppingCart, Receipt, CreditCard, Banknote, CheckCircle, Users, Truck, Package, Plus, Loader2, Calendar } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { DollarSign, ShoppingCart, Receipt, CreditCard, Banknote, CheckCircle, Users, Truck, Package, Plus, Loader2, Calendar, UserPlus } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -47,6 +48,10 @@ export default function POSPage() {
   
   // Date selection
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+
+  // Multi Supplier Payments - array of {supplier_id, amount, payment_mode}
+  const [supplierPayments, setSupplierPayments] = useState([{ supplier_id: '', amount: '', payment_mode: 'cash' }]);
+  const [submittingPayments, setSubmittingPayments] = useState(false);
 
   // Regular sale amounts
   const [cashAmount, setCashAmount] = useState('');
@@ -242,6 +247,63 @@ export default function POSPage() {
     finally { setSubmitting(false); }
   };
 
+  // Multi Supplier Payment Functions
+  const addPaymentRow = () => {
+    setSupplierPayments([...supplierPayments, { supplier_id: '', amount: '', payment_mode: 'cash' }]);
+  };
+
+  const removePaymentRow = (index) => {
+    if (supplierPayments.length > 1) {
+      setSupplierPayments(supplierPayments.filter((_, i) => i !== index));
+    }
+  };
+
+  const updatePaymentRow = (index, field, value) => {
+    const updated = [...supplierPayments];
+    updated[index][field] = value;
+    setSupplierPayments(updated);
+  };
+
+  const submitMultiplePayments = async () => {
+    const validPayments = supplierPayments.filter(p => p.supplier_id && parseFloat(p.amount) > 0);
+    if (validPayments.length === 0) {
+      toast.error('Please add at least one payment with supplier and amount');
+      return;
+    }
+
+    setSubmittingPayments(true);
+    let successCount = 0;
+    const entries = [];
+
+    for (const payment of validPayments) {
+      try {
+        await api.post(`/suppliers/${payment.supplier_id}/pay-credit`, {
+          amount: parseFloat(payment.amount),
+          payment_mode: payment.payment_mode,
+          branch_id: branch || '',
+          date: getDateISO(),
+        });
+        const supplierName = suppliers.find(s => s.id === payment.supplier_id)?.name;
+        entries.push({ type: 'Supplier Payment', amount: parseFloat(payment.amount), mode: payment.payment_mode, supplier: supplierName });
+        successCount++;
+      } catch (err) {
+        const supplierName = suppliers.find(s => s.id === payment.supplier_id)?.name;
+        toast.error(`Failed to pay ${supplierName}: ${err.response?.data?.detail || 'Error'}`);
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`${successCount} supplier payment(s) recorded successfully!`);
+      setLastEntries(entries);
+      setSupplierPayments([{ supplier_id: '', amount: '', payment_mode: 'cash' }]);
+      // Refresh supplier list to get updated balances
+      api.get('/suppliers/names').then(res => setSuppliers(res.data || [])).catch(() => {});
+    }
+    setSubmittingPayments(false);
+  };
+
+  const totalPaymentsAmount = supplierPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+
   return (
     <DashboardLayout>
       <div className="max-w-lg mx-auto py-4 px-2 space-y-4" data-testid="pos-page">
@@ -292,6 +354,11 @@ export default function POSPage() {
             className={`flex-1 py-3 font-medium transition-all flex items-center justify-center gap-2 ${entryType === 'expense' ? 'bg-red-500 text-white' : 'bg-white text-stone-600'}`}
             data-testid="pos-expense-btn">
             <Receipt size={18} /> Expenses
+          </button>
+          <button onClick={() => setEntryType('supplier_payment')}
+            className={`flex-1 py-3 font-medium transition-all flex items-center justify-center gap-2 ${entryType === 'supplier_payment' ? 'bg-orange-500 text-white' : 'bg-white text-stone-600'}`}
+            data-testid="pos-supplier-payment-btn">
+            <Truck size={18} /> Pay Suppliers
           </button>
         </div>
 
@@ -527,6 +594,116 @@ export default function POSPage() {
               className="w-full h-14 rounded-xl text-lg font-semibold bg-red-500 hover:bg-red-600">
               {submitting ? <Loader2 className="animate-spin mr-2" /> : <Receipt size={20} className="mr-2" />}
               Record Expense - SAR {parseFloat(expenseAmount || 0).toLocaleString()}
+            </Button>
+          </div>
+        )}
+
+        {/* SUPPLIER PAYMENTS SECTION */}
+        {entryType === 'supplier_payment' && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium text-orange-700">Pay Multiple Suppliers</Label>
+              <Button 
+                type="button" 
+                size="sm" 
+                variant="outline"
+                onClick={addPaymentRow}
+                className="h-8 text-xs border-orange-300 text-orange-600 hover:bg-orange-50"
+                data-testid="add-payment-row"
+              >
+                <Plus size={14} className="mr-1" /> Add More
+              </Button>
+            </div>
+
+            {/* Payment Rows */}
+            <div className="space-y-2">
+              {supplierPayments.map((payment, index) => (
+                <div key={index} className="p-3 bg-orange-50/50 rounded-xl border border-orange-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-orange-600">Payment #{index + 1}</span>
+                    {supplierPayments.length > 1 && (
+                      <button 
+                        onClick={() => removePaymentRow(index)}
+                        className="text-xs text-red-500 hover:text-red-700"
+                        data-testid={`remove-payment-${index}`}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Supplier Selection */}
+                  <Select 
+                    value={payment.supplier_id || "none"} 
+                    onValueChange={(v) => updatePaymentRow(index, 'supplier_id', v === "none" ? "" : v)}
+                  >
+                    <SelectTrigger className="h-10 rounded-lg bg-white" data-testid={`payment-supplier-${index}`}>
+                      <SelectValue placeholder="Select Supplier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">- Select Supplier -</SelectItem>
+                      {suppliers.map(s => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Amount */}
+                    <Input
+                      type="number"
+                      placeholder="Amount"
+                      value={payment.amount}
+                      onChange={(e) => updatePaymentRow(index, 'amount', e.target.value)}
+                      className="h-10 rounded-lg bg-white"
+                      data-testid={`payment-amount-${index}`}
+                    />
+                    
+                    {/* Payment Mode */}
+                    <Select 
+                      value={payment.payment_mode} 
+                      onValueChange={(v) => updatePaymentRow(index, 'payment_mode', v)}
+                    >
+                      <SelectTrigger className="h-10 rounded-lg bg-white" data-testid={`payment-mode-${index}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cash">
+                          <div className="flex items-center gap-2">
+                            <Banknote size={14} /> Cash
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="bank">
+                          <div className="flex items-center gap-2">
+                            <CreditCard size={14} /> Bank
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Total & Submit */}
+            <div className="p-3 bg-orange-100 rounded-xl border border-orange-300">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-orange-700">Total Payments</span>
+                <span className="text-lg font-bold text-orange-800">SAR {totalPaymentsAmount.toLocaleString()}</span>
+              </div>
+              <div className="text-xs text-orange-600 mb-2">
+                {supplierPayments.filter(p => p.supplier_id && parseFloat(p.amount) > 0).length} valid payment(s)
+              </div>
+            </div>
+
+            <Button 
+              onClick={submitMultiplePayments} 
+              disabled={submittingPayments || totalPaymentsAmount === 0}
+              className="w-full h-14 rounded-xl text-lg font-semibold bg-orange-500 hover:bg-orange-600"
+              data-testid="submit-supplier-payments"
+            >
+              {submittingPayments ? <Loader2 className="animate-spin mr-2" /> : <Truck size={20} className="mr-2" />}
+              Pay Suppliers - SAR {totalPaymentsAmount.toLocaleString()}
             </Button>
           </div>
         )}
