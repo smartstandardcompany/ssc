@@ -9,16 +9,18 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
 from reportlab.lib.units import inch
 
-from database import db, get_current_user, ROOT_DIR
+from database import db, get_current_user, ROOT_DIR, require_permission, get_branch_filter
 from models import User, Customer, CustomerCreate
 
 router = APIRouter()
 
 @router.get("/customers", response_model=List[Customer])
 async def get_customers(current_user: User = Depends(get_current_user)):
-    query = {}
-    if current_user.branch_id and current_user.role != "admin":
-        query["$or"] = [{"branch_id": current_user.branch_id}, {"branch_id": None}]
+    require_permission(current_user, "customers", "read")
+    query = get_branch_filter(current_user)
+    if query:
+        # Include customers with no branch or matching user's branch
+        query = {"$or": [query, {"branch_id": None}]}
     customers = await db.customers.find(query, {"_id": 0}).to_list(1000)
     for customer in customers:
         if isinstance(customer.get('created_at'), str):
@@ -27,6 +29,7 @@ async def get_customers(current_user: User = Depends(get_current_user)):
 
 @router.post("/customers", response_model=Customer)
 async def create_customer(customer_data: CustomerCreate, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "customers", "write")
     customer = Customer(**customer_data.model_dump())
     customer_dict = customer.model_dump()
     customer_dict["created_at"] = customer_dict["created_at"].isoformat()
@@ -35,6 +38,7 @@ async def create_customer(customer_data: CustomerCreate, current_user: User = De
 
 @router.put("/customers/{customer_id}", response_model=Customer)
 async def update_customer(customer_id: str, customer_data: CustomerCreate, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "customers", "write")
     result = await db.customers.find_one({"id": customer_id}, {"_id": 0})
     if not result:
         raise HTTPException(status_code=404, detail="Customer not found")
@@ -46,6 +50,7 @@ async def update_customer(customer_id: str, customer_data: CustomerCreate, curre
 
 @router.delete("/customers/{customer_id}")
 async def delete_customer(customer_id: str, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "customers", "write")
     result = await db.customers.delete_one({"id": customer_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Customer not found")
