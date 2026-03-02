@@ -320,6 +320,69 @@ export default function PlatformsPage() {
             </div>
           </TabsContent>
 
+          {/* Branch-wise Tab */}
+          <TabsContent value="branches" className="space-y-4 mt-4">
+            <div className="space-y-4">
+              {branchSummary.map(branch => (
+                <Card key={branch.branch_id}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Building2 size={18} className="text-blue-600" />
+                        <span className="font-outfit">{branch.branch_name}</span>
+                      </div>
+                      <div className="flex gap-4 text-sm">
+                        <span className="text-purple-600">Sales: SAR {branch.totals.total_sales.toLocaleString()}</span>
+                        <span className="text-emerald-600">Received: SAR {branch.totals.total_received.toLocaleString()}</span>
+                        <Badge variant={branch.totals.total_pending > 0 ? 'destructive' : 'secondary'}>
+                          Pending: SAR {branch.totals.total_pending.toLocaleString()}
+                        </Badge>
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted/50">
+                          <tr>
+                            <th className="text-left p-2">Platform</th>
+                            <th className="text-right p-2">Commission %</th>
+                            <th className="text-right p-2">Sales</th>
+                            <th className="text-right p-2">Commission</th>
+                            <th className="text-right p-2">Received</th>
+                            <th className="text-right p-2">Pending</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {branch.platforms.map((p, idx) => (
+                            <tr key={idx} className="border-t">
+                              <td className="p-2 font-medium">{p.platform_name}</td>
+                              <td className="p-2 text-right text-muted-foreground">{p.commission_rate}%</td>
+                              <td className="p-2 text-right text-purple-600">SAR {p.sales.toLocaleString()}</td>
+                              <td className="p-2 text-right text-amber-600">SAR {p.commission.toLocaleString()}</td>
+                              <td className="p-2 text-right text-emerald-600">SAR {p.received.toLocaleString()}</td>
+                              <td className="p-2 text-right font-bold text-red-600">
+                                {p.pending > 0 ? `SAR ${p.pending.toLocaleString()}` : '-'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {branchSummary.length === 0 && (
+                <Card>
+                  <CardContent className="py-8 text-center text-muted-foreground">
+                    <Building2 size={48} className="mx-auto mb-3 opacity-30" />
+                    <p>No branch platform sales yet. Record online sales with a branch to see breakdown.</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+
           <TabsContent value="platforms" className="space-y-4 mt-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {platforms.map(platform => (
