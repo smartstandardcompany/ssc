@@ -36,12 +36,29 @@ class UserCreate(BaseModel):
     role: Optional[str] = "operator"
     branch_id: Optional[str] = None
     permissions: Optional[dict] = {}
+    must_change_password: Optional[bool] = False
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     role: Optional[str] = None
     branch_id: Optional[str] = None
     permissions: Optional[dict] = None
+    must_change_password: Optional[bool] = None
+
+class PasswordReset(BaseModel):
+    new_password: str
+    must_change_on_login: bool = True
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordWithToken(BaseModel):
+    token: str
+    new_password: str
+
+class ChangePassword(BaseModel):
+    current_password: Optional[str] = None  # Optional for forced change
+    new_password: str
 
 class UserLogin(BaseModel):
     email: EmailStr
