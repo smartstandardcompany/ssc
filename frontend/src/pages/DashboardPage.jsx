@@ -164,7 +164,19 @@ export default function DashboardPage() {
         saveLayoutPrefs(res.data.layout);
       }
     }).catch(() => {});
+    // Load user permissions for quick actions
+    try {
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      setUserPermissions(userData.permissions || {});
+    } catch {}
   }, [branchFilter, dateFilter]);
+
+  // Check if user has permission for a quick action
+  const hasPermission = (perm) => {
+    if (!perm) return true;
+    const level = userPermissions[perm];
+    return level === 'read' || level === 'write';
+  };
 
   const fetchStats = async () => {
     try {
