@@ -489,14 +489,29 @@ export default function UsersPage() {
                           {user.role === 'admin' ? (
                             <Badge className="bg-green-100 text-green-700 border-green-200">Full Access</Badge>
                           ) : (
-                            <div className="flex gap-1 items-center">
+                            <div className="flex gap-1 items-center flex-wrap">
                               <Badge className="bg-green-100 text-green-700 border-green-200">{permSummary.write} write</Badge>
                               <Badge className="bg-blue-100 text-blue-700 border-blue-200">{permSummary.read} read</Badge>
+                              {user.must_change_password && (
+                                <Badge className="bg-amber-100 text-amber-700 border-amber-200 flex items-center gap-1">
+                                  <AlertTriangle size={10} /> Must Change PW
+                                </Badge>
+                              )}
                             </div>
                           )}
                         </td>
                         <td className="p-3 text-right">
                           <div className="flex gap-2 justify-end">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openResetDialog(user)}
+                              data-testid="reset-password-button"
+                              className="h-8"
+                              title="Reset Password"
+                            >
+                              <Key size={14} />
+                            </Button>
                             <Button
                               size="sm"
                               variant="outline"
