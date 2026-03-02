@@ -21,6 +21,7 @@ class User(BaseModel):
     role: str = "operator"
     branch_id: Optional[str] = None
     permissions: Dict[str, str] = {}  # {"sales": "write", "expenses": "read", ...}
+    must_change_password: bool = False  # Force password change on next login
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     @field_validator('permissions', mode='before')
