@@ -9,7 +9,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
 from reportlab.lib.units import inch
 
-from database import db, hash_password, get_current_user, ROOT_DIR
+from database import db, hash_password, get_current_user, ROOT_DIR, require_permission, get_branch_filter
 from models import (User, Employee, EmployeeCreate, SalaryPayment, SalaryPaymentCreate,
                     Leave, LeaveCreate, Notification, Attendance, EmployeeDocument,
                     EmployeeDocumentCreate, EmployeeRequest, EmployeeRequestCreate,
@@ -21,7 +21,9 @@ router = APIRouter()
 # Employee CRUD
 @router.get("/employees")
 async def get_employees(current_user: User = Depends(get_current_user)):
-    employees = await db.employees.find({}, {"_id": 0}).to_list(1000)
+    require_permission(current_user, "employees", "read")
+    query = get_branch_filter(current_user)
+    employees = await db.employees.find(query, {"_id": 0}).to_list(1000)
     for emp in employees:
         for f in ['created_at', 'join_date', 'document_expiry']:
             if isinstance(emp.get(f), str): emp[f] = datetime.fromisoformat(emp[f])
@@ -29,6 +31,7 @@ async def get_employees(current_user: User = Depends(get_current_user)):
 
 @router.post("/employees")
 async def create_employee(data: EmployeeCreate, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "employees", "write")
     emp = Employee(**data.model_dump())
     emp_dict = emp.model_dump()
     if data.email:
@@ -76,6 +79,7 @@ async def link_employee_user(emp_id: str, body: dict, current_user: User = Depen
 
 @router.put("/employees/{emp_id}")
 async def update_employee(emp_id: str, data: EmployeeCreate, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "employees", "write")
     result = await db.employees.find_one({"id": emp_id})
     if not result: raise HTTPException(status_code=404, detail="Employee not found")
     update = data.model_dump()
@@ -86,6 +90,7 @@ async def update_employee(emp_id: str, data: EmployeeCreate, current_user: User 
 
 @router.delete("/employees/{emp_id}")
 async def delete_employee(emp_id: str, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "employees", "write")
     result = await db.employees.delete_one({"id": emp_id})
     if result.deleted_count == 0: raise HTTPException(status_code=404, detail="Employee not found")
     return {"message": "Employee deleted"}
