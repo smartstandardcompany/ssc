@@ -150,6 +150,7 @@ export default function SalesPage() {
       sale_type: activeTab,
       branch_id: '',
       customer_id: '',
+      platform_id: '',
       payment_details: [{ mode: 'cash', amount: '' }],
       discount: '',
       date: new Date().toISOString().split('T')[0],
