@@ -73,15 +73,16 @@ const QUICK_ACTIONS = [
 
 const DEFAULT_LAYOUT = [
   { i: 'stats', x: 0, y: 0, w: 12, h: 4, minW: 6 },
-  { i: 'charts', x: 0, y: 4, w: 12, h: 5, minW: 6 },
-  { i: 'lowStock', x: 0, y: 9, w: 6, h: 4, minW: 4 },
-  { i: 'peakHours', x: 6, y: 9, w: 6, h: 4, minW: 4 },
-  { i: 'customerInsights', x: 0, y: 13, w: 6, h: 4, minW: 4 },
-  { i: 'profitTrend', x: 6, y: 13, w: 6, h: 4, minW: 4 },
-  { i: 'cashBank', x: 0, y: 17, w: 12, h: 4, minW: 6 },
-  { i: 'paymentMode', x: 0, y: 21, w: 12, h: 4, minW: 6 },
-  { i: 'spending', x: 0, y: 25, w: 12, h: 5, minW: 6 },
-  { i: 'dues', x: 0, y: 30, w: 12, h: 5, minW: 6 },
+  { i: 'quickActions', x: 0, y: 4, w: 12, h: 3, minW: 6 },
+  { i: 'charts', x: 0, y: 7, w: 12, h: 5, minW: 6 },
+  { i: 'lowStock', x: 0, y: 12, w: 6, h: 4, minW: 4 },
+  { i: 'peakHours', x: 6, y: 12, w: 6, h: 4, minW: 4 },
+  { i: 'customerInsights', x: 0, y: 16, w: 6, h: 4, minW: 4 },
+  { i: 'profitTrend', x: 6, y: 16, w: 6, h: 4, minW: 4 },
+  { i: 'cashBank', x: 0, y: 20, w: 12, h: 4, minW: 6 },
+  { i: 'paymentMode', x: 0, y: 24, w: 12, h: 4, minW: 6 },
+  { i: 'spending', x: 0, y: 28, w: 12, h: 5, minW: 6 },
+  { i: 'dues', x: 0, y: 33, w: 12, h: 5, minW: 6 },
 ];
 
 function getWidgetPrefs() {
