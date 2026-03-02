@@ -4,7 +4,7 @@
 A comprehensive business management ERP system named "SSC Track" for Smart Standard Company.
 
 ## Tech Stack
-- **Backend:** FastAPI, Motor (async MongoDB), JWT auth, APScheduler, pywebpush
+- **Backend:** FastAPI, Motor (async MongoDB), JWT auth, APScheduler, pywebpush, aiosmtplib
 - **Frontend:** React, TailwindCSS, Shadcn UI, Recharts, react-grid-layout, date-fns
 - **Database:** MongoDB
 - **AI:** emergentintegrations (GPT-4o Vision)
@@ -13,6 +13,28 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - **PWA:** Full offline-capable Progressive Web App
 
 ## Latest Updates (Mar 2, 2026 — Session 4)
+
+### Feature: Password Management System (COMPLETED)
+- **Backend**: New password management endpoints in `auth.py`
+  - `PUT /api/users/{id}/reset-password` — Admin resets user password with optional force-change flag
+  - `POST /api/auth/forgot-password` — Self-service forgot password (sends email reset link)
+  - `POST /api/auth/reset-password` — Reset password using token from email
+  - `GET /api/auth/validate-reset-token/{token}` — Validate reset token before displaying form
+  - `POST /api/auth/change-password` — User changes own password (supports forced change)
+  - New models: `PasswordReset`, `ForgotPasswordRequest`, `ResetPasswordWithToken`, `ChangePassword`
+  - User model updated with `must_change_password: bool` field
+  - Login endpoint returns `must_change_password` flag for frontend redirect
+- **Frontend**: Complete password management UI
+  - **Login page**: Added "Forgot password?" link
+  - **ForgotPasswordPage**: Email input form, sends reset link, shows success message
+  - **ResetPasswordPage**: Token validation, new password form, error handling for expired tokens
+  - **ChangePasswordPage**: For both voluntary and forced password changes
+  - **UsersPage**: Reset Password button (key icon), Reset Password dialog with "Force change on login" checkbox
+  - **"Must Change PW"** badge displays on users with pending forced password change
+  - App.js updated to redirect users with `must_change_password=true` to change-password page
+- **Email**: Uses SMTP via aiosmtplib (requires email settings configuration)
+- **Security**: Tokens expire after 1 hour, prevents email enumeration, clears flag after successful change
+- **Testing**: 100% pass rate (21/21 backend, all frontend features verified)
 
 ### Feature: Granular Role-Based Access Control (RBAC) (COMPLETED)
 - **Backend**: New permission system with module-level access control
@@ -32,10 +54,6 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - **Navigation**: DashboardLayout updated with `hasPermission()` for filtering navigation
 - **Backward Compatibility**: Old list-based permissions auto-converted to new dict format
 - **Testing**: 100% pass rate (16/16 backend, all frontend features verified)
-  - Admin can access all modules
-  - Limited user with sales:read can view but not create sales
-  - Limited user with expenses:none blocked from expenses page
-  - Limited user with customers:write can create customers
 
 ## Previous Updates (Mar 1, 2026 — Session 3)
 
