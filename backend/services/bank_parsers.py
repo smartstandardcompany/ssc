@@ -568,7 +568,7 @@ def detect_bank_format(df: pd.DataFrame, filename: str = '') -> str:
     
     filename_lower = filename.lower()
     
-    # Check filename hints
+    # Check filename hints - Saudi Banks
     if 'rajhi' in filename_lower:
         return 'alrajhi'
     if 'snb' in filename_lower or 'ncb' in filename_lower or 'national' in filename_lower:
@@ -584,6 +584,18 @@ def detect_bank_format(df: pd.DataFrame, filename: str = '') -> str:
     if 'bilad' in filename_lower:
         return 'albilad'
     
+    # Check filename hints - UAE Banks
+    if 'enbd' in filename_lower or 'emirates' in filename_lower:
+        return 'enbd'
+    if 'rak' in filename_lower:
+        return 'rakbank'
+    if 'dib' in filename_lower or 'dubai islamic' in filename_lower:
+        return 'dib'
+    if 'mashreq' in filename_lower:
+        return 'mashreq'
+    if 'adcb' in filename_lower:
+        return 'adcb'
+    
     # Check content
     content_str = ' '.join([str(v) for v in df.values.flatten() if pd.notna(v)])
     content_lower = content_str.lower()
@@ -598,8 +610,172 @@ def detect_bank_format(df: pd.DataFrame, filename: str = '') -> str:
         return 'alinma'
     if 'sabb' in content_lower or 'ساب' in content_str:
         return 'sabb'
+    if 'emirates nbd' in content_lower:
+        return 'enbd'
+    if 'rak bank' in content_lower:
+        return 'rakbank'
+    if 'dubai islamic' in content_lower:
+        return 'dib'
     
     return 'generic'
+
+
+class EmiratesNBDParser(BankStatementParser):
+    """Parser for Emirates NBD statements"""
+    
+    BANK_NAME = "Emirates NBD"
+    
+    def parse(self, df: pd.DataFrame) -> List[Dict[str, Any]]:
+        transactions = []
+        
+        # Find columns
+        cols = [str(c).lower().strip() for c in df.columns]
+        date_col = next((c for c in df.columns if 'date' in str(c).lower()), df.columns[0])
+        desc_col = next((c for c in df.columns if 'desc' in str(c).lower() or 'narr' in str(c).lower()), df.columns[1])
+        debit_col = next((c for c in df.columns if 'debit' in str(c).lower() or 'withdrawal' in str(c).lower()), None)
+        credit_col = next((c for c in df.columns if 'credit' in str(c).lower() or 'deposit' in str(c).lower()), None)
+        balance_col = next((c for c in df.columns if 'balance' in str(c).lower()), None)
+        
+        for _, row in df.iterrows():
+            date = self.parse_date(str(row[date_col]))
+            if not date:
+                continue
+            
+            desc = str(row[desc_col]) if pd.notna(row[desc_col]) else ''
+            debit = self.clean_amount(str(row[debit_col])) if debit_col and pd.notna(row[debit_col]) else 0
+            credit = self.clean_amount(str(row[credit_col])) if credit_col and pd.notna(row[credit_col]) else 0
+            balance = self.clean_amount(str(row[balance_col])) if balance_col and pd.notna(row[balance_col]) else 0
+            
+            if debit == 0 and credit == 0:
+                continue
+            
+            transactions.append({
+                'date': date,
+                'description': desc[:200],
+                'debit': debit,
+                'credit': credit,
+                'balance': balance,
+                'bank': self.BANK_NAME,
+                'category': self._categorize(desc)
+            })
+        
+        return transactions
+    
+    def _categorize(self, desc: str) -> str:
+        desc_lower = desc.lower()
+        if any(w in desc_lower for w in ['salary', 'payroll']):
+            return 'salary'
+        if any(w in desc_lower for w in ['transfer', 'trf']):
+            return 'transfer'
+        if any(w in desc_lower for w in ['pos', 'purchase', 'shop']):
+            return 'purchase'
+        if any(w in desc_lower for w in ['atm', 'withdrawal', 'cash']):
+            return 'cash'
+        return 'other'
+
+
+class RAKBankParser(BankStatementParser):
+    """Parser for RAK Bank statements"""
+    
+    BANK_NAME = "RAK Bank"
+    
+    def parse(self, df: pd.DataFrame) -> List[Dict[str, Any]]:
+        transactions = []
+        
+        cols = [str(c).lower().strip() for c in df.columns]
+        
+        for _, row in df.iterrows():
+            # Try to find date
+            date = None
+            for col in df.columns:
+                val = str(row[col])
+                date = self.parse_date(val)
+                if date:
+                    break
+            
+            if not date:
+                continue
+            
+            # Find description
+            desc = ''
+            for col in df.columns:
+                if 'desc' in str(col).lower() or 'narr' in str(col).lower() or 'particular' in str(col).lower():
+                    desc = str(row[col]) if pd.notna(row[col]) else ''
+                    break
+            
+            # Find amounts
+            debit = credit = balance = 0
+            for col in df.columns:
+                col_lower = str(col).lower()
+                val = self.clean_amount(str(row[col])) if pd.notna(row[col]) else 0
+                if 'debit' in col_lower or 'dr' == col_lower:
+                    debit = val
+                elif 'credit' in col_lower or 'cr' == col_lower:
+                    credit = val
+                elif 'balance' in col_lower:
+                    balance = val
+            
+            if debit == 0 and credit == 0:
+                continue
+            
+            transactions.append({
+                'date': date,
+                'description': desc[:200],
+                'debit': debit,
+                'credit': credit,
+                'balance': balance,
+                'bank': self.BANK_NAME,
+                'category': 'other'
+            })
+        
+        return transactions
+
+
+class DubaiIslamicBankParser(BankStatementParser):
+    """Parser for Dubai Islamic Bank statements"""
+    
+    BANK_NAME = "Dubai Islamic Bank"
+    
+    def parse(self, df: pd.DataFrame) -> List[Dict[str, Any]]:
+        transactions = []
+        
+        # Similar to EmiratesNBD structure
+        date_col = next((c for c in df.columns if 'date' in str(c).lower()), df.columns[0])
+        desc_col = next((c for c in df.columns if 'desc' in str(c).lower() or 'particular' in str(c).lower()), df.columns[1])
+        
+        for _, row in df.iterrows():
+            date = self.parse_date(str(row[date_col]))
+            if not date:
+                continue
+            
+            desc = str(row[desc_col]) if pd.notna(row[desc_col]) else ''
+            
+            # Find debit/credit
+            debit = credit = balance = 0
+            for col in df.columns:
+                col_lower = str(col).lower()
+                val = self.clean_amount(str(row[col])) if pd.notna(row[col]) else 0
+                if 'debit' in col_lower or 'withdrawal' in col_lower:
+                    debit = val
+                elif 'credit' in col_lower or 'deposit' in col_lower:
+                    credit = val
+                elif 'balance' in col_lower:
+                    balance = val
+            
+            if debit == 0 and credit == 0:
+                continue
+            
+            transactions.append({
+                'date': date,
+                'description': desc[:200],
+                'debit': debit,
+                'credit': credit,
+                'balance': balance,
+                'bank': self.BANK_NAME,
+                'category': 'other'
+            })
+        
+        return transactions
 
 
 def get_parser(bank_format: str) -> BankStatementParser:
