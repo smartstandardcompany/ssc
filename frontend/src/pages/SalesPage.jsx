@@ -338,7 +338,7 @@ export default function SalesPage() {
                         ))}
                         
                         <div className="pt-3 border-t space-y-2">
-                          <div className="grid grid-cols-3 gap-4 text-sm">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                             <div className="p-2 bg-cash/10 rounded border border-cash/30">
                               <div className="text-xs text-muted-foreground">Cash</div>
                               <div className="font-bold text-cash"> SAR {totals.cash.toFixed(2)}</div>
@@ -351,7 +351,41 @@ export default function SalesPage() {
                               <div className="text-xs text-muted-foreground">Credit</div>
                               <div className="font-bold text-credit"> SAR {totals.credit.toFixed(2)}</div>
                             </div>
+                            <div className="p-2 bg-purple-500/10 rounded border border-purple-500/30">
+                              <div className="text-xs text-muted-foreground flex items-center gap-1"><Truck size={12} />Online</div>
+                              <div className="font-bold text-purple-600"> SAR {totals.online.toFixed(2)}</div>
+                            </div>
                           </div>
+                          
+                          {/* Platform Selector - show when online payment selected */}
+                          {totals.online > 0 && (
+                            <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
+                              <Label className="text-sm text-purple-700 dark:text-purple-300 mb-2 block">
+                                <Truck size={14} className="inline mr-1" />
+                                Select Delivery Platform *
+                              </Label>
+                              <Select
+                                value={formData.platform_id}
+                                onValueChange={(val) => setFormData({...formData, platform_id: val})}
+                              >
+                                <SelectTrigger className="bg-white dark:bg-stone-900">
+                                  <SelectValue placeholder="Choose platform..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {platforms.filter(p => p.is_active !== false).map(platform => (
+                                    <SelectItem key={platform.id} value={platform.id}>
+                                      {platform.name} {platform.commission_rate > 0 && `(${platform.commission_rate}% commission)`}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              {platforms.length === 0 && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  No platforms configured. Go to Settings → Platforms to add.
+                                </p>
+                              )}
+                            </div>
+                          )}
                           
                           <div className="space-y-2 pt-2 border-t">
                             <div className="flex justify-between text-sm">
