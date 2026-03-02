@@ -58,6 +58,7 @@ app.add_middleware(
 # Include all routers with /api prefix
 for module in [
     anomaly_detection,
+    assets,
     auth,
     bank_statements,
     branches,
