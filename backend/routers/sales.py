@@ -2,16 +2,15 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from datetime import datetime, timezone
 
-from database import db, get_current_user
+from database import db, get_current_user, require_permission, get_branch_filter
 from models import User, Sale, SaleCreate, SalePayment
 
 router = APIRouter()
 
 @router.get("/sales", response_model=List[Sale])
 async def get_sales(current_user: User = Depends(get_current_user)):
-    query = {}
-    if current_user.branch_id and current_user.role != "admin":
-        query["branch_id"] = current_user.branch_id
+    require_permission(current_user, "sales", "read")
+    query = get_branch_filter(current_user)
     sales = await db.sales.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
     for sale in sales:
         if isinstance(sale.get('date'), str): sale['date'] = datetime.fromisoformat(sale['date'])
@@ -33,6 +32,7 @@ async def get_sales(current_user: User = Depends(get_current_user)):
 
 @router.post("/sales", response_model=Sale)
 async def create_sale(sale_data: SaleCreate, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "sales", "write")
     discount = sale_data.discount or 0; final_amount = sale_data.amount - discount
     total_cash_bank = sum(p["amount"] for p in sale_data.payment_details if p["mode"] in ["cash", "bank"])
     total_credit = sum(p["amount"] for p in sale_data.payment_details if p["mode"] == "credit")
@@ -48,6 +48,7 @@ async def create_sale(sale_data: SaleCreate, current_user: User = Depends(get_cu
 
 @router.post("/sales/{sale_id}/receive-credit")
 async def receive_credit_payment(sale_id: str, payment: SalePayment, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "sales", "write")
     sale = await db.sales.find_one({"id": sale_id}, {"_id": 0})
     if not sale:
         raise HTTPException(status_code=404, detail="Sale not found")
@@ -64,6 +65,7 @@ async def receive_credit_payment(sale_id: str, payment: SalePayment, current_use
 
 @router.delete("/sales/{sale_id}")
 async def delete_sale(sale_id: str, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "sales", "write")
     result = await db.sales.delete_one({"id": sale_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Sale not found")
