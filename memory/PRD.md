@@ -403,4 +403,40 @@ Widget options added to dashboard customization dialog. All widgets have proper 
 - Cashier/Waiter/Kitchen PIN: 1234
 
 ## Backlog / Future Tasks
-- None remaining — all requested features implemented
+
+### P1: Asset & Liability Tracking Module
+Create a new section to manage company assets (e.g., equipment) and liabilities (e.g., loans, fines). Features:
+- Document management with expiry date alerts
+- Asset depreciation tracking
+- Liability payment scheduling
+
+### P1: Advanced Partner P&L Report
+Develop a specific report to calculate and display Profit & Loss for business partners:
+- Partner investment tracking
+- Revenue/expense allocation
+- Dividend calculations
+
+### P2: Mobile App Bottom Tab Bar
+Implement a customizable bottom tab bar for mobile view to improve navigation:
+- Quick access to key features
+- Customizable tab options
+- Role-based tab visibility
+
+---
+
+## Session 10 Verification (Mar 2, 2026)
+
+### Online Platform Sales Module - VERIFIED ✅
+- **Overview Tab**: Total Sales (SAR 3,000), Received (SAR 2,400), Commission (SAR 600)
+- **By Branch Tab**: Branch-wise breakdown working correctly
+  - Test Branch: SAR 2,400 sales, SAR 1,440 received, SAR 600 pending
+  - Branch A: SAR 600 sales, SAR 160 received, SAR 400 pending
+- **Payments Tab**: 3 payments recorded with auto-calculated commissions (20%)
+- **Platforms**: 9 platforms configured (HungerStation, Jahez, ToYou, etc.)
+
+### Table Management System - VERIFIED ✅
+Already fully implemented with:
+- **Backend API**: `/api/tables/*` - CRUD, status, sections, waiter assignment
+- **Admin Page**: `/table-management` - Floor plan design, table config, stats
+- **Waiter Page**: `/waiter` - PIN login, table selection, order management
+- **Features**: 20 tables, 5 sections, occupancy tracking, KDS integration
