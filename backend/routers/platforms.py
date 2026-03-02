@@ -230,6 +230,8 @@ async def record_platform_payment(body: dict, current_user: User = Depends(get_c
             {"$set": {"platform_status": "settled", "settlement_id": payment["id"]}}
         )
     
+    # Remove MongoDB _id before returning
+    payment.pop("_id", None)
     return {"message": "Payment recorded", "id": payment["id"], "payment": payment}
 
 
