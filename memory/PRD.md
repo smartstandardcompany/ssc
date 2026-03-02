@@ -12,7 +12,60 @@ A comprehensive business management ERP system named "SSC Track" for Smart Stand
 - **WhatsApp:** Twilio (config-dependent)
 - **PWA:** Full offline-capable Progressive Web App
 
-## Latest Updates (Mar 2, 2026 — Session 6)
+## Latest Updates (Mar 2, 2026 — Session 7)
+
+### All Backlog Items COMPLETE & VERIFIED
+
+#### 1. Quick Actions Widget (NEW)
+Role-based quick action buttons on dashboard:
+- **10 actions:** Record Sale, Add Expense, Pay Supplier, New Invoice, Approve Leave, Pay Salary, Add Customer, View Reports, Stock Entry, CCTV Live
+- Permission-based visibility (shows only actions user has access to)
+- Colorful pill buttons with icons
+- Multi-language labels (EN, AR)
+- Data-testid: `quick-actions-widget`, `quick-action-{action_id}`
+
+#### 2. Multi-Language AI Widget Support (NEW)
+Added translations for all AI widgets in 5 languages:
+- **English (EN):** Complete
+- **Arabic (AR):** Complete
+- **Urdu (UR):** Complete
+- **Hindi (HI):** Complete
+- **Bengali (BN):** Complete
+
+Translated keys: `ai_low_stock`, `ai_peak_hours`, `ai_customer_clv`, `ai_profit_analysis`, `quick_actions`, and all related strings.
+
+#### 3. WhatsApp Notification Expansion (NEW)
+New notification endpoints:
+- `POST /api/whatsapp/send-low-stock-alert` - Send low stock alerts
+- `POST /api/whatsapp/send-leave-notification` - Notify employee of leave approval/rejection
+- `POST /api/whatsapp/send-salary-notification` - Notify employee of salary payment
+- `POST /api/whatsapp/send-bulk-salary-notification` - Bulk salary notifications
+- `POST /api/whatsapp/send-custom` - Custom message to specific phone or configured recipients
+
+#### 4. CCTV Face Recognition Enhancement (NEW)
+- `POST /api/cctv/faces/register-multiple` - Register up to 5 face images per employee (improves accuracy)
+- `GET /api/cctv/faces/training-status` - View face training status across employees
+- Training status: `trained` (3+ images), `partial` (1-2 images), `untrained`
+- Branch filtering supported
+
+#### 5. Additional Bank Statement Formats (NEW)
+Added UAE bank parsers:
+- **Emirates NBD** (`enbd`)
+- **RAK Bank** (`rakbank`)
+- **Dubai Islamic Bank** (`dib`)
+- **Mashreq Bank** (`mashreq`) - uses ENBD parser
+- **ADCB** (`adcb`) - uses ENBD parser
+
+Auto-detection from filename and content. Total supported banks: 12 (7 Saudi + 5 UAE)
+
+### Testing Results (Iteration 60)
+- **Backend:** 17/17 tests passed (100%)
+- **Frontend:** All features working (100%)
+- **Files:** `backend/tests/test_iter60_quick_actions_whatsapp_cctv.py`
+
+---
+
+## Previous Session Updates (Mar 2, 2026 — Session 6)
 
 ### All Requested Features COMPLETE & VERIFIED
 
