@@ -753,6 +753,25 @@ const translations = {
     widget_desc_spending: 'खर्च श्रेणियाँ और व्यय', widget_desc_dues: 'आपूर्तिकर्ता बकाया, जुर्माना, अलर्ट',
     widget_desc_branch: 'शाखाओं के बीच शेष', widget_desc_vat: 'कर गणना',
     show_all: 'सभी दिखाएँ', minimize: 'न्यूनतम', done: 'हो गया',
+    // AI Widget translations
+    ai_low_stock: 'AI: स्टॉक अलर्ट', ai_low_stock_desc: 'कम होने वाले आइटम',
+    ai_peak_hours: 'AI: व्यस्त समय', ai_peak_hours_desc: 'स्टाफ योजना',
+    ai_customer_clv: 'AI: ग्राहक मूल्य', ai_customer_clv_desc: 'जीवनकाल मूल्य भविष्यवाणी',
+    ai_profit_analysis: 'AI: लाभ विश्लेषण', ai_profit_analysis_desc: 'दैनिक लाभ रुझान',
+    items_at_risk: 'जोखिम में आइटम', all_stock_healthy: 'सभी स्टॉक स्तर स्वस्थ',
+    days_left: 'दिन शेष', stock_level: 'स्टॉक', reorder_point: 'रीऑर्डर',
+    based_on_transactions: '{count} लेनदेन के आधार पर', peak_hours_staff: 'इन घंटों में अतिरिक्त स्टाफ रखें',
+    of_traffic: 'ट्रैफिक का', projected_revenue: '12 महीने की अनुमानित आय',
+    lifetime_value: 'जीवनकाल मूल्य', orders_active: 'ऑर्डर', days_active: 'दिन सक्रिय',
+    add_customers_clv: 'CLV देखने के लिए ग्राहक जोड़ें', avg_daily_profit: 'औसत दैनिक लाभ',
+    trend: 'रुझान', improving: 'सुधार', declining: 'गिरावट', stable: 'स्थिर',
+    best_day: 'सर्वश्रेष्ठ', worst_day: 'सबसे खराब', not_enough_data: 'विश्लेषण के लिए पर्याप्त डेटा नहीं',
+    // Quick Actions
+    quick_actions: 'त्वरित कार्य', qa_record_sale: 'बिक्री दर्ज करें', qa_add_expense: 'खर्च जोड़ें',
+    qa_pay_supplier: 'आपूर्तिकर्ता भुगतान', qa_new_invoice: 'नया इनवॉइस', qa_approve_leave: 'छुट्टी मंजूर करें',
+    qa_pay_salary: 'वेतन दें', qa_add_customer: 'ग्राहक जोड़ें', qa_view_reports: 'रिपोर्ट देखें',
+    qa_stock_entry: 'स्टॉक एंट्री', qa_cctv_live: 'लाइव कैमरा', qa_available: 'उपलब्ध',
+    qa_no_actions: 'आपकी भूमिका के लिए कोई त्वरित कार्य उपलब्ध नहीं',
     // Menu Items
     menu_items: 'मेनू आइटम', nav_menu_items: 'मेनू आइटम',
     // Order Status
