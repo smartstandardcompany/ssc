@@ -7,16 +7,22 @@ from models import User, Sale, SaleCreate, SalePayment
 
 router = APIRouter()
 
-@router.get("/sales", response_model=List[Sale])
+@router.get("/sales")
 async def get_sales(current_user: User = Depends(get_current_user)):
     require_permission(current_user, "sales", "read")
     query = get_branch_filter(current_user)
     sales = await db.sales.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
+    result = []
     for sale in sales:
         if isinstance(sale.get('date'), str): sale['date'] = datetime.fromisoformat(sale['date'])
         if isinstance(sale.get('created_at'), str): sale['created_at'] = datetime.fromisoformat(sale['created_at'])
         if 'discount' not in sale: sale['discount'] = 0
         if 'final_amount' not in sale: sale['final_amount'] = sale.get('amount', 0) - sale.get('discount', 0)
+        # Ensure required fields exist (handle legacy/waiter data)
+        if 'sale_type' not in sale: sale['sale_type'] = sale.get('payment_mode', 'cash')
+        if 'created_by' not in sale: sale['created_by'] = sale.get('waiter_id', 'system')
+        if 'credit_amount' not in sale: sale['credit_amount'] = 0
+        if 'credit_received' not in sale: sale['credit_received'] = 0
         if 'payment_details' not in sale or sale['payment_details'] is None:
             payment_mode = sale.get('payment_mode', 'cash'); payment_status = sale.get('payment_status', 'received')
             if payment_mode == 'credit':
@@ -27,8 +33,8 @@ async def get_sales(current_user: User = Depends(get_current_user)):
                     sale['payment_details'] = [{"mode": received_mode, "amount": sale['final_amount']}]; sale['credit_amount'] = 0; sale['credit_received'] = 0
             else:
                 sale['payment_details'] = [{"mode": payment_mode, "amount": sale['final_amount']}]; sale['credit_amount'] = 0; sale['credit_received'] = 0
-            await db.sales.update_one({"id": sale['id']}, {"$set": {"payment_details": sale['payment_details'], "credit_amount": sale['credit_amount'], "credit_received": sale['credit_received'], "discount": sale['discount'], "final_amount": sale['final_amount']}})
-    return sales
+        result.append(sale)
+    return result
 
 @router.post("/sales", response_model=Sale)
 async def create_sale(sale_data: SaleCreate, current_user: User = Depends(get_current_user)):
