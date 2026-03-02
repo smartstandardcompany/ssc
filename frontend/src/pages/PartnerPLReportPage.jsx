@@ -207,10 +207,10 @@ export default function PartnerPLReportPage() {
                     <span className="text-xs text-muted-foreground">Expenses</span>
                   </div>
                   <p className="text-2xl font-bold" data-testid="total-expenses">
-                    SAR {(report.company_summary?.operating_expenses + report.company_summary?.cost_of_goods)?.toLocaleString()}
+                    SAR {((report.company_summary?.operating_expenses || 0) + (report.company_summary?.cost_of_goods || 0)).toLocaleString()}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    + SAR {report.company_summary?.supplier_payments?.toLocaleString()} suppliers
+                    + SAR {(report.company_summary?.supplier_payments || 0).toLocaleString()} suppliers
                   </p>
                 </CardContent>
               </Card>
