@@ -98,6 +98,12 @@ export default function DashboardPage() {
   const [dailyTrend, setDailyTrend] = useState({ sales: [], expenses: [], profit: [] });
   const [isEditMode, setIsEditMode] = useState(false);
   const [layout, setLayout] = useState(getLayoutPrefs());
+  const [predictiveData, setPredictiveData] = useState({
+    lowStock: { items_at_risk: 0, forecasts: [] },
+    peakHours: { peak_hours: [], total_transactions_analyzed: 0 },
+    customerCLV: { high_value_customers: [], total_projected_revenue: 0 },
+    profitTrend: { summary: {}, daily_breakdown: [] }
+  });
   const t = THEMES[theme] || THEMES.default;
   const { t: tr } = useLanguage();
 
