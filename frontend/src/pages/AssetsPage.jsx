@@ -747,12 +747,12 @@ export default function AssetsPage() {
               </div>
               <div>
                 <Label>Branch</Label>
-                <Select value={assetForm.branch_id} onValueChange={(v) => setAssetForm({ ...assetForm, branch_id: v })}>
+                <Select value={assetForm.branch_id || 'none'} onValueChange={(v) => setAssetForm({ ...assetForm, branch_id: v === 'none' ? '' : v })}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select branch" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Branch</SelectItem>
+                    <SelectItem value="none">No Branch</SelectItem>
                     {branches.map(b => (
                       <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                     ))}
