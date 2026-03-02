@@ -2,16 +2,15 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Optional
 from datetime import datetime, timezone
 
-from database import db, get_current_user
+from database import db, get_current_user, require_permission, get_branch_filter
 from models import User, Supplier, SupplierCreate, SupplierPayment, SupplierPaymentCreate, SupplierCreditPayment
 
 router = APIRouter()
 
 @router.get("/suppliers", response_model=List[Supplier])
 async def get_suppliers(current_user: User = Depends(get_current_user)):
-    query = {}
-    if current_user.branch_id and current_user.role != "admin":
-        query["branch_id"] = current_user.branch_id
+    require_permission(current_user, "suppliers", "read")
+    query = get_branch_filter(current_user)
     suppliers = await db.suppliers.find(query, {"_id": 0}).to_list(1000)
     for supplier in suppliers:
         if isinstance(supplier.get('created_at'), str):
@@ -20,6 +19,7 @@ async def get_suppliers(current_user: User = Depends(get_current_user)):
 
 @router.post("/suppliers", response_model=Supplier)
 async def create_supplier(supplier_data: SupplierCreate, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "suppliers", "write")
     data = supplier_data.model_dump()
     for f in ['branch_id', 'category', 'sub_category', 'phone', 'email']:
         if data.get(f) == '': data[f] = None
@@ -31,6 +31,7 @@ async def create_supplier(supplier_data: SupplierCreate, current_user: User = De
 
 @router.put("/suppliers/{supplier_id}", response_model=Supplier)
 async def update_supplier(supplier_id: str, supplier_data: SupplierCreate, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "suppliers", "write")
     result = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
     if not result:
         raise HTTPException(status_code=404, detail="Supplier not found")
@@ -45,6 +46,7 @@ async def update_supplier(supplier_id: str, supplier_data: SupplierCreate, curre
 
 @router.delete("/suppliers/{supplier_id}")
 async def delete_supplier(supplier_id: str, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "suppliers", "write")
     result = await db.suppliers.delete_one({"id": supplier_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Supplier not found")
@@ -52,6 +54,7 @@ async def delete_supplier(supplier_id: str, current_user: User = Depends(get_cur
 
 @router.post("/suppliers/{supplier_id}/pay-credit")
 async def pay_supplier_credit(supplier_id: str, payment: SupplierCreditPayment, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "supplier_payments", "write")
     supplier = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
@@ -69,6 +72,7 @@ async def pay_supplier_credit(supplier_id: str, payment: SupplierCreditPayment, 
 # Supplier Payment Routes
 @router.get("/supplier-payments", response_model=List[SupplierPayment])
 async def get_supplier_payments(current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "supplier_payments", "read")
     payments = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).sort("date", -1).to_list(1000)
     for payment in payments:
         if isinstance(payment.get('date'), str): payment['date'] = datetime.fromisoformat(payment['date'])
@@ -77,6 +81,7 @@ async def get_supplier_payments(current_user: User = Depends(get_current_user)):
 
 @router.post("/supplier-payments", response_model=SupplierPayment)
 async def create_supplier_payment(payment_data: SupplierPaymentCreate, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "supplier_payments", "write")
     supplier = await db.suppliers.find_one({"id": payment_data.supplier_id}, {"_id": 0})
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
@@ -98,6 +103,7 @@ async def create_supplier_payment(payment_data: SupplierPaymentCreate, current_u
 
 @router.delete("/supplier-payments/{payment_id}")
 async def delete_supplier_payment(payment_id: str, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "supplier_payments", "write")
     result = await db.supplier_payments.delete_one({"id": payment_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Payment not found")
