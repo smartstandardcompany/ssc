@@ -17,6 +17,48 @@ async def get_suppliers(current_user: User = Depends(get_current_user)):
             supplier['created_at'] = datetime.fromisoformat(supplier['created_at'])
     return suppliers
 
+
+@router.get("/suppliers/names")
+async def get_supplier_names(current_user: User = Depends(get_current_user)):
+    """Get just supplier names and IDs for dropdowns. No permission required beyond login."""
+    query = get_branch_filter(current_user)
+    suppliers = await db.suppliers.find(query, {"_id": 0, "id": 1, "name": 1}).to_list(1000)
+    return [{"id": s["id"], "name": s["name"]} for s in suppliers]
+
+
+@router.put("/suppliers/recalculate-all-balances")
+async def recalculate_all_supplier_balances(current_user: User = Depends(get_current_user)):
+    """Recalculate all supplier balances based on actual expenses and payments."""
+    require_permission(current_user, "suppliers", "write")
+    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+    all_credit_expenses = await db.expenses.find({"payment_mode": "credit", "supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(50000)
+    all_payments = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(50000)
+    
+    results = []
+    for supplier in suppliers:
+        sid = supplier["id"]
+        # Credit expenses add to balance
+        total_credit = sum(e.get("amount", 0) for e in all_credit_expenses if e.get("supplier_id") == sid)
+        # Cash/bank payments reduce balance
+        total_paid = sum(p.get("amount", 0) for p in all_payments if p.get("supplier_id") == sid and p.get("payment_mode") in ["cash", "bank"])
+        
+        correct_balance = max(0, total_credit - total_paid)
+        old_balance = supplier.get("current_credit", 0)
+        
+        if old_balance != correct_balance:
+            await db.suppliers.update_one({"id": sid}, {"$set": {"current_credit": correct_balance}})
+            results.append({
+                "supplier_name": supplier["name"],
+                "old_balance": old_balance,
+                "new_balance": correct_balance
+            })
+    
+    return {
+        "suppliers_updated": len(results),
+        "updates": results
+    }
+
+
 @router.post("/suppliers", response_model=Supplier)
 async def create_supplier(supplier_data: SupplierCreate, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "suppliers", "write")
@@ -213,37 +255,4 @@ async def recalculate_supplier_balance(supplier_id: str, current_user: User = De
         "total_credit_expenses": total_credit_added,
         "total_payments": total_paid,
         "message": f"Balance updated from {old_balance} to {correct_balance}"
-    }
-
-
-@router.post("/suppliers/recalculate-all-balances")
-async def recalculate_all_supplier_balances(current_user: User = Depends(get_current_user)):
-    """Recalculate all supplier balances based on actual expenses and payments."""
-    require_permission(current_user, "suppliers", "write")
-    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
-    all_credit_expenses = await db.expenses.find({"payment_mode": "credit", "supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(50000)
-    all_payments = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(50000)
-    
-    results = []
-    for supplier in suppliers:
-        sid = supplier["id"]
-        # Credit expenses add to balance
-        total_credit = sum(e.get("amount", 0) for e in all_credit_expenses if e.get("supplier_id") == sid)
-        # Cash/bank payments reduce balance
-        total_paid = sum(p.get("amount", 0) for p in all_payments if p.get("supplier_id") == sid and p.get("payment_mode") in ["cash", "bank"])
-        
-        correct_balance = max(0, total_credit - total_paid)
-        old_balance = supplier.get("current_credit", 0)
-        
-        if old_balance != correct_balance:
-            await db.suppliers.update_one({"id": sid}, {"$set": {"current_credit": correct_balance}})
-            results.append({
-                "supplier_name": supplier["name"],
-                "old_balance": old_balance,
-                "new_balance": correct_balance
-            })
-    
-    return {
-        "suppliers_updated": len(results),
-        "updates": results
     }

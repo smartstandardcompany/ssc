@@ -65,7 +65,7 @@ export default function POSPage() {
       api.get('/customers'), 
       api.get('/categories'),
       api.get('/platforms').catch(() => ({ data: [] })),
-      api.get('/suppliers').catch(() => ({ data: [] })),
+      api.get('/suppliers/names').catch(() => ({ data: [] })),
     ]).then(([bR, cR, catR, pR, sR]) => {
       setBranches(bR.data);
       setCustomers(cR.data);
