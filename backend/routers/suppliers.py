@@ -7,16 +7,36 @@ from models import User, Supplier, SupplierCreate, SupplierPayment, SupplierPaym
 
 router = APIRouter()
 
-@router.get("/suppliers", response_model=List[Supplier])
+@router.get("/suppliers")
 async def get_suppliers(current_user: User = Depends(get_current_user)):
     require_permission(current_user, "suppliers", "read")
     # Use centralized filter that includes branch-specific AND global (no branch) suppliers
     query = get_branch_filter_with_global(current_user)
     
     suppliers = await db.suppliers.find(query, {"_id": 0}).to_list(1000)
+    
+    # Aggregate total purchase amounts for all suppliers
+    all_expenses = await db.expenses.find(
+        {"supplier_id": {"$exists": True, "$ne": None}},
+        {"_id": 0, "supplier_id": 1, "amount": 1}
+    ).to_list(50000)
+    
+    # Build a lookup of supplier_id -> total purchases
+    purchase_totals = {}
+    for exp in all_expenses:
+        sid = exp.get("supplier_id")
+        if sid:
+            purchase_totals[sid] = purchase_totals.get(sid, 0) + exp.get("amount", 0)
+    
     for supplier in suppliers:
         if isinstance(supplier.get('created_at'), str):
-            supplier['created_at'] = datetime.fromisoformat(supplier['created_at'])
+            supplier['created_at'] = datetime.fromisoformat(supplier['created_at']).isoformat()
+        elif hasattr(supplier.get('created_at'), 'isoformat'):
+            supplier['created_at'] = supplier['created_at'].isoformat()
+        if supplier.get('updated_at') and hasattr(supplier['updated_at'], 'isoformat'):
+            supplier['updated_at'] = supplier['updated_at'].isoformat()
+        supplier['total_purchases'] = purchase_totals.get(supplier['id'], 0)
+    
     return suppliers
 
 
@@ -221,92 +241,6 @@ async def get_all_supplier_summaries(current_user: User = Depends(get_current_us
     return result
 
 
-@router.get("/suppliers/{supplier_id}/ledger")
-async def get_supplier_ledger(supplier_id: str, current_user: User = Depends(get_current_user)):
-    """
-    Get complete supplier ledger showing:
-    - Purchase Invoices (from expenses): Cash purchases and Credit purchases
-    - Credit Payments: Payments made to reduce credit balance
-    """
-    supplier = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
-    if not supplier:
-        raise HTTPException(status_code=404, detail="Supplier not found")
-    
-    # Get all expenses (purchase invoices) for this supplier
-    expenses = await db.expenses.find(
-        {"supplier_id": supplier_id}, {"_id": 0}
-    ).sort("date", -1).to_list(10000)
-    
-    # Get all payments made to this supplier
-    payments = await db.supplier_payments.find(
-        {"supplier_id": supplier_id}, {"_id": 0}
-    ).sort("date", -1).to_list(10000)
-    
-    # Build ledger entries
-    ledger = []
-    running_balance = 0
-    
-    # Combine and sort all transactions by date
-    all_transactions = []
-    
-    for exp in expenses:
-        all_transactions.append({
-            "id": exp["id"],
-            "date": exp.get("date"),
-            "type": "purchase_invoice",
-            "sub_type": "credit" if exp.get("payment_mode") == "credit" else "cash",
-            "description": exp.get("description", "Purchase"),
-            "category": exp.get("category", ""),
-            "amount": exp.get("amount", 0),
-            "payment_mode": exp.get("payment_mode"),
-            "affects_balance": exp.get("payment_mode") == "credit",  # Only credit affects balance
-            "source": "expense"
-        })
-    
-    for pay in payments:
-        # Payments via pay-credit (cash/bank) reduce balance
-        # Payments with mode=credit increase balance (adding more credit)
-        is_credit_payment = pay.get("payment_mode") in ["cash", "bank"]
-        all_transactions.append({
-            "id": pay["id"],
-            "date": pay.get("date"),
-            "type": "credit_payment" if is_credit_payment else "credit_addition",
-            "sub_type": pay.get("payment_mode"),
-            "description": pay.get("notes", "Payment to supplier"),
-            "category": "",
-            "amount": pay.get("amount", 0),
-            "payment_mode": pay.get("payment_mode"),
-            "affects_balance": True,
-            "source": "supplier_payment"
-        })
-    
-    # Sort by date descending
-    all_transactions.sort(key=lambda x: x.get("date") or "", reverse=True)
-    
-    # Calculate totals
-    total_purchases_cash = sum(e["amount"] for e in expenses if e.get("payment_mode") in ["cash", "bank"])
-    total_purchases_credit = sum(e["amount"] for e in expenses if e.get("payment_mode") == "credit")
-    total_credit_paid = sum(p["amount"] for p in payments if p.get("payment_mode") in ["cash", "bank"])
-    total_credit_added = sum(p["amount"] for p in payments if p.get("payment_mode") == "credit")
-    
-    current_balance = supplier.get("current_credit", 0)
-    
-    return {
-        "supplier_id": supplier_id,
-        "supplier_name": supplier["name"],
-        "current_balance": current_balance,
-        "summary": {
-            "total_purchases_cash": total_purchases_cash,
-            "total_purchases_credit": total_purchases_credit,
-            "total_credit_paid": total_credit_paid,
-            "total_credit_added": total_credit_added,
-            "purchase_invoices_count": len(expenses),
-            "payments_count": len(payments)
-        },
-        "transactions": all_transactions
-    }
-
-
 @router.post("/suppliers/{supplier_id}/recalculate-balance")
 async def recalculate_supplier_balance(supplier_id: str, current_user: User = Depends(get_current_user)):
     """Recalculate supplier balance based on actual credit expenses and payments."""
@@ -463,4 +397,297 @@ async def preview_migration(current_user: User = Depends(get_current_user)):
         "total_amount": sum(p.get("amount", 0) for p in payments),
         "by_supplier": by_supplier,
         "action": "These will be converted to purchase bills (expenses) with payment_mode matching original. Run POST /suppliers/migrate-payments-to-bills to execute."
+    }
+
+
+
+@router.get("/suppliers/{supplier_id}/ledger")
+async def get_supplier_ledger(
+    supplier_id: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get supplier ledger with all purchases, payments, and running balance.
+    Ledger shows complete transaction history for sharing with suppliers.
+    """
+    require_permission(current_user, "suppliers", "read")
+    
+    supplier = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    
+    # Build date query
+    date_query = {}
+    if start_date:
+        date_query["$gte"] = start_date
+    if end_date:
+        date_query["$lte"] = end_date + "T23:59:59"
+    
+    # Get all expenses (purchases) from this supplier
+    exp_query = {"supplier_id": supplier_id}
+    if date_query:
+        exp_query["date"] = date_query
+    expenses = await db.expenses.find(exp_query, {"_id": 0}).sort("date", 1).to_list(10000)
+    
+    # Get all payments to this supplier
+    pay_query = {"supplier_id": supplier_id}
+    if date_query:
+        pay_query["date"] = date_query
+    payments = await db.supplier_payments.find(pay_query, {"_id": 0}).sort("date", 1).to_list(10000)
+    
+    # Combine and sort by date
+    ledger_entries = []
+    
+    for exp in expenses:
+        ledger_entries.append({
+            "date": exp.get("date", ""),
+            "type": "purchase",
+            "description": exp.get("description") or exp.get("category", "Purchase"),
+            "category": exp.get("category", ""),
+            "debit": exp.get("amount", 0) if exp.get("payment_mode") == "credit" else 0,
+            "credit": 0,
+            "payment_mode": exp.get("payment_mode", ""),
+            "reference": exp.get("id", "")[:8],
+            "notes": exp.get("notes", "")
+        })
+    
+    for pay in payments:
+        ledger_entries.append({
+            "date": pay.get("date", ""),
+            "type": "payment",
+            "description": f"Payment ({pay.get('payment_mode', 'cash').title()})",
+            "category": "",
+            "debit": 0,
+            "credit": pay.get("amount", 0),
+            "payment_mode": pay.get("payment_mode", ""),
+            "reference": pay.get("id", "")[:8],
+            "notes": pay.get("notes", "")
+        })
+    
+    # Sort by date
+    ledger_entries.sort(key=lambda x: x["date"])
+    
+    # Calculate running balance
+    running_balance = 0
+    for entry in ledger_entries:
+        running_balance += entry["debit"] - entry["credit"]
+        entry["balance"] = running_balance
+    
+    # Calculate totals
+    total_purchases = sum(e.get("amount", 0) for e in expenses)
+    total_credit_purchases = sum(e.get("amount", 0) for e in expenses if e.get("payment_mode") == "credit")
+    total_cash_purchases = sum(e.get("amount", 0) for e in expenses if e.get("payment_mode") == "cash")
+    total_bank_purchases = sum(e.get("amount", 0) for e in expenses if e.get("payment_mode") == "bank")
+    total_payments = sum(p.get("amount", 0) for p in payments)
+    total_cash_payments = sum(p.get("amount", 0) for p in payments if p.get("payment_mode") == "cash")
+    total_bank_payments = sum(p.get("amount", 0) for p in payments if p.get("payment_mode") == "bank")
+    
+    return {
+        "supplier": {
+            "id": supplier.get("id"),
+            "name": supplier.get("name"),
+            "phone": supplier.get("phone"),
+            "email": supplier.get("email"),
+            "category": supplier.get("category"),
+            "bank_accounts": supplier.get("bank_accounts", []),
+            "current_credit": supplier.get("current_credit", 0)
+        },
+        "period": {
+            "start": start_date or "All time",
+            "end": end_date or "Present"
+        },
+        "summary": {
+            "total_purchases": total_purchases,
+            "credit_purchases": total_credit_purchases,
+            "cash_purchases": total_cash_purchases,
+            "bank_purchases": total_bank_purchases,
+            "total_payments": total_payments,
+            "cash_payments": total_cash_payments,
+            "bank_payments": total_bank_payments,
+            "opening_balance": 0,
+            "closing_balance": running_balance,
+            "current_outstanding": supplier.get("current_credit", 0)
+        },
+        "entries": ledger_entries,
+        "entry_count": len(ledger_entries)
+    }
+
+
+@router.get("/suppliers/{supplier_id}/ledger/export")
+async def export_supplier_ledger(
+    supplier_id: str,
+    format: str = "pdf",
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Export supplier ledger as PDF or Excel.
+    """
+    from fastapi.responses import StreamingResponse
+    from io import BytesIO
+    
+    require_permission(current_user, "suppliers", "read")
+    
+    # Get ledger data
+    ledger = await get_supplier_ledger(supplier_id, start_date, end_date, current_user)
+    supplier = ledger["supplier"]
+    entries = ledger["entries"]
+    summary = ledger["summary"]
+    
+    if format == "excel":
+        import openpyxl
+        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+        
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Supplier Ledger"
+        
+        # Header
+        ws.merge_cells('A1:G1')
+        ws['A1'] = f"Supplier Ledger - {supplier['name']}"
+        ws['A1'].font = Font(bold=True, size=16)
+        ws['A1'].alignment = Alignment(horizontal='center')
+        
+        ws.merge_cells('A2:G2')
+        ws['A2'] = f"Period: {ledger['period']['start']} to {ledger['period']['end']}"
+        ws['A2'].alignment = Alignment(horizontal='center')
+        
+        # Summary
+        ws['A4'] = "SUMMARY"
+        ws['A4'].font = Font(bold=True)
+        ws['A5'] = f"Total Purchases: SAR {summary['total_purchases']:,.2f}"
+        ws['A6'] = f"Total Payments: SAR {summary['total_payments']:,.2f}"
+        ws['A7'] = f"Outstanding Balance: SAR {summary['current_outstanding']:,.2f}"
+        
+        # Headers
+        headers = ['Date', 'Type', 'Description', 'Debit', 'Credit', 'Balance', 'Reference']
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=9, column=col, value=header)
+            cell.font = Font(bold=True)
+            cell.fill = PatternFill(start_color="E0E0E0", fill_type="solid")
+        
+        # Data
+        for row, entry in enumerate(entries, 10):
+            ws.cell(row=row, column=1, value=entry['date'][:10] if entry['date'] else '')
+            ws.cell(row=row, column=2, value=entry['type'].title())
+            ws.cell(row=row, column=3, value=entry['description'])
+            ws.cell(row=row, column=4, value=entry['debit'] if entry['debit'] > 0 else '')
+            ws.cell(row=row, column=5, value=entry['credit'] if entry['credit'] > 0 else '')
+            ws.cell(row=row, column=6, value=entry['balance'])
+            ws.cell(row=row, column=7, value=entry['reference'])
+        
+        # Column widths
+        ws.column_dimensions['A'].width = 12
+        ws.column_dimensions['B'].width = 10
+        ws.column_dimensions['C'].width = 30
+        ws.column_dimensions['D'].width = 12
+        ws.column_dimensions['E'].width = 12
+        ws.column_dimensions['F'].width = 12
+        ws.column_dimensions['G'].width = 10
+        
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        
+        filename = f"ledger_{supplier['name'].replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.xlsx"
+        return StreamingResponse(
+            buffer,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    
+    else:  # PDF
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.units import mm
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=20*mm, bottomMargin=20*mm)
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Title
+        title_style = ParagraphStyle('Title', parent=styles['Title'], fontSize=16, spaceAfter=10)
+        elements.append(Paragraph(f"Supplier Ledger - {supplier['name']}", title_style))
+        elements.append(Paragraph(f"Period: {ledger['period']['start']} to {ledger['period']['end']}", styles['Normal']))
+        elements.append(Spacer(1, 10*mm))
+        
+        # Summary
+        summary_data = [
+            ['SUMMARY', ''],
+            ['Total Purchases:', f"SAR {summary['total_purchases']:,.2f}"],
+            ['Total Payments:', f"SAR {summary['total_payments']:,.2f}"],
+            ['Outstanding:', f"SAR {summary['current_outstanding']:,.2f}"],
+        ]
+        summary_table = Table(summary_data, colWidths=[80*mm, 60*mm])
+        summary_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ]))
+        elements.append(summary_table)
+        elements.append(Spacer(1, 10*mm))
+        
+        # Ledger entries
+        ledger_data = [['Date', 'Type', 'Description', 'Debit', 'Credit', 'Balance']]
+        for entry in entries:
+            ledger_data.append([
+                entry['date'][:10] if entry['date'] else '',
+                entry['type'].title(),
+                entry['description'][:30],
+                f"{entry['debit']:,.2f}" if entry['debit'] > 0 else '',
+                f"{entry['credit']:,.2f}" if entry['credit'] > 0 else '',
+                f"{entry['balance']:,.2f}"
+            ])
+        
+        ledger_table = Table(ledger_data, colWidths=[25*mm, 20*mm, 55*mm, 25*mm, 25*mm, 25*mm])
+        ledger_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+            ('ALIGN', (3, 0), (-1, -1), 'RIGHT'),
+        ]))
+        elements.append(ledger_table)
+        
+        doc.build(elements)
+        buffer.seek(0)
+        
+        filename = f"ledger_{supplier['name'].replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.pdf"
+        return StreamingResponse(
+            buffer,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+
+
+@router.get("/suppliers/{supplier_id}/total-purchases")
+async def get_supplier_total_purchases(
+    supplier_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get total purchase amount from a supplier.
+    """
+    require_permission(current_user, "suppliers", "read")
+    
+    expenses = await db.expenses.find({"supplier_id": supplier_id}, {"_id": 0}).to_list(50000)
+    
+    total = sum(e.get("amount", 0) for e in expenses)
+    cash = sum(e.get("amount", 0) for e in expenses if e.get("payment_mode") == "cash")
+    bank = sum(e.get("amount", 0) for e in expenses if e.get("payment_mode") == "bank")
+    credit = sum(e.get("amount", 0) for e in expenses if e.get("payment_mode") == "credit")
+    
+    return {
+        "supplier_id": supplier_id,
+        "total_purchases": total,
+        "cash_purchases": cash,
+        "bank_purchases": bank,
+        "credit_purchases": credit,
+        "purchase_count": len(expenses)
     }

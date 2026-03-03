@@ -42,6 +42,7 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
 
     cash_sales = 0
     bank_sales = 0
+    online_sales = 0
     credit_sales = pending_credits
 
     for sale in sales:
@@ -50,6 +51,12 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
                 cash_sales += payment["amount"]
             elif payment["mode"] == "bank":
                 bank_sales += payment["amount"]
+            elif payment["mode"] in ["online", "online_platform"]:
+                online_sales += payment["amount"]
+        # Also count sales with sale_type online/online_platform that might not have payment_details
+        if sale.get("sale_type") in ["online", "online_platform"] and sale.get("payment_mode") == "online_platform":
+            if not sale.get("payment_details"):
+                online_sales += sale.get("amount", 0)
 
     net_profit = total_sales - total_expenses - total_supplier_payments
 
@@ -138,6 +145,7 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
         "pending_credits": pending_credits,
         "cash_sales": cash_sales,
         "bank_sales": bank_sales,
+        "online_sales": online_sales,
         "credit_sales": credit_sales,
         "cash_in_hand": cash_in_hand,
         "bank_in_hand": bank_in_hand,

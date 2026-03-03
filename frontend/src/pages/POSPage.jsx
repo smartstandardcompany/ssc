@@ -93,22 +93,11 @@ export default function POSPage() {
   const refreshStats = async () => {
     try {
       const { data } = await api.get('/dashboard/stats');
-      // Get online sales from platforms summary
-      let onlineSales = 0;
-      try {
-        const platformsRes = await api.get('/platforms/summary');
-        if (platformsRes.data && platformsRes.data.platforms) {
-          // Sum up all platform total_sales
-          platformsRes.data.platforms.forEach(platform => {
-            onlineSales += platform.total_sales || 0;
-          });
-        }
-      } catch {}
       setTodayStats({ 
         sales: data.total_sales || 0, 
         expenses: data.total_expenses || 0, 
         count: (data.total_sales_count || 0) + (data.total_expenses_count || 0),
-        onlineSales: onlineSales
+        onlineSales: data.online_sales || 0
       });
     } catch {}
   };
@@ -677,19 +666,23 @@ export default function POSPage() {
           </div>
         )}
 
-        {/* EXPENSE MODE - Multiple Expenses */}
+        {/* EXPENSE MODE - General Business Expenses */}
         {entryType === 'expense' && (
           <div className="space-y-3">
+            {/* Help Box */}
+            <div className="p-3 bg-red-50 rounded-xl border border-red-200 text-xs">
+              <p className="font-medium text-red-800">General Business Expenses</p>
+              <p className="text-red-700 mt-1">
+                Record daily expenses like rent, utilities, salaries, supplies etc.
+                For <strong>supplier purchases</strong>, use the <strong>Add Bills</strong> tab instead.
+              </p>
+            </div>
+
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium text-red-700">Record Multiple Expenses</Label>
+              <Label className="text-sm font-medium text-red-700">Record Business Expenses</Label>
               <Button 
-                type="button" 
-                size="sm" 
-                variant="outline"
-                onClick={addExpenseRow}
-                className="h-8 text-xs border-red-300 text-red-600 hover:bg-red-50"
-                data-testid="add-expense-row"
-              >
+                type="button" size="sm" variant="outline" onClick={addExpenseRow}
+                className="h-8 text-xs border-red-300 text-red-600 hover:bg-red-50" data-testid="add-expense-row">
                 <Plus size={14} className="mr-1" /> Add More
               </Button>
             </div>
@@ -701,34 +694,17 @@ export default function POSPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-red-600">Expense #{index + 1}</span>
                     {expenses.length > 1 && (
-                      <button 
-                        onClick={() => removeExpenseRow(index)}
-                        className="text-xs text-red-500 hover:text-red-700"
-                        data-testid={`remove-expense-${index}`}
-                      >
-                        Remove
-                      </button>
+                      <button onClick={() => removeExpenseRow(index)} className="text-xs text-red-500 hover:text-red-700" data-testid={`remove-expense-${index}`}>Remove</button>
                     )}
                   </div>
                   
                   <div className="grid grid-cols-2 gap-2">
-                    {/* Amount */}
-                    <Input
-                      type="number"
-                      placeholder="Amount"
-                      value={expense.amount}
+                    <Input type="number" placeholder="Amount (SAR)" value={expense.amount}
                       onChange={(e) => updateExpenseRow(index, 'amount', e.target.value)}
-                      className="h-10 rounded-lg bg-white"
-                      data-testid={`expense-amount-${index}`}
-                    />
-                    
-                    {/* Category */}
-                    <Select 
-                      value={expense.category || "general"} 
-                      onValueChange={(v) => updateExpenseRow(index, 'category', v)}
-                    >
+                      className="h-10 rounded-lg bg-white" data-testid={`expense-amount-${index}`} />
+                    <Select value={expense.category || "general"} onValueChange={(v) => updateExpenseRow(index, 'category', v)}>
                       <SelectTrigger className="h-10 rounded-lg bg-white" data-testid={`expense-category-${index}`}>
-                        <SelectValue placeholder="Category" />
+                        <SelectValue placeholder="Expense Type" />
                       </SelectTrigger>
                       <SelectContent>
                         {categories.map(c => <SelectItem key={c.id || c.name} value={c.name}>{c.name}</SelectItem>)}
@@ -738,65 +714,29 @@ export default function POSPage() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
-                    {/* Payment Mode */}
-                    <Select 
-                      value={expense.payment_mode} 
-                      onValueChange={(v) => updateExpenseRow(index, 'payment_mode', v)}
-                    >
+                    <Select value={expense.payment_mode} onValueChange={(v) => updateExpenseRow(index, 'payment_mode', v)}>
                       <SelectTrigger className="h-10 rounded-lg bg-white" data-testid={`expense-mode-${index}`}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="cash">
-                          <div className="flex items-center gap-2">
-                            <Banknote size={14} /> Cash
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="bank">
-                          <div className="flex items-center gap-2">
-                            <CreditCard size={14} /> Bank
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="credit">
-                          <div className="flex items-center gap-2">
-                            <Users size={14} /> Credit
-                          </div>
-                        </SelectItem>
+                        <SelectItem value="cash"><div className="flex items-center gap-2"><Banknote size={14} /> Paid by Cash</div></SelectItem>
+                        <SelectItem value="bank"><div className="flex items-center gap-2"><CreditCard size={14} /> Paid by Bank</div></SelectItem>
                       </SelectContent>
                     </Select>
-                    
-                    {/* Supplier Selection */}
-                    <Select 
-                      value={expense.supplier_id || "none"} 
-                      onValueChange={(v) => updateExpenseRow(index, 'supplier_id', v === "none" ? "" : v)}
-                    >
+                    <Select value={expense.supplier_id || "none"} onValueChange={(v) => updateExpenseRow(index, 'supplier_id', v === "none" ? "" : v)}>
                       <SelectTrigger className="h-10 rounded-lg bg-white" data-testid={`expense-supplier-${index}`}>
-                        <SelectValue placeholder="Supplier" />
+                        <SelectValue placeholder="Linked Supplier (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">- No Supplier -</SelectItem>
-                        {suppliers.map(s => (
-                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                        ))}
+                        <SelectItem value="none">No Supplier (General)</SelectItem>
+                        {suppliers.map(s => (<SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>))}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  {/* Description */}
-                  <Input
-                    placeholder="Description (optional)"
-                    value={expense.description}
+                  <Input placeholder="Description / Invoice # (optional)" value={expense.description}
                     onChange={(e) => updateExpenseRow(index, 'description', e.target.value)}
-                    className="h-9 rounded-lg bg-white text-sm"
-                    data-testid={`expense-description-${index}`}
-                  />
-
-                  {/* Credit Warning */}
-                  {expense.payment_mode === 'credit' && expense.supplier_id && (
-                    <div className="p-2 bg-amber-50 rounded-lg border border-amber-200 text-xs text-amber-700">
-                      <strong>Credit:</strong> Will be added to supplier's balance
-                    </div>
-                  )}
+                    className="h-9 rounded-lg bg-white text-sm" data-testid={`expense-description-${index}`} />
                 </div>
               ))}
             </div>
@@ -812,12 +752,8 @@ export default function POSPage() {
               </div>
             </div>
 
-            <Button 
-              onClick={submitMultipleExpenses} 
-              disabled={submittingExpenses || totalExpensesAmount === 0}
-              className="w-full h-14 rounded-xl text-lg font-semibold bg-red-500 hover:bg-red-600"
-              data-testid="submit-expenses"
-            >
+            <Button onClick={submitMultipleExpenses} disabled={submittingExpenses || totalExpensesAmount === 0}
+              className="w-full h-14 rounded-xl text-lg font-semibold bg-red-500 hover:bg-red-600" data-testid="submit-expenses">
               {submittingExpenses ? <Loader2 className="animate-spin mr-2" /> : <Receipt size={20} className="mr-2" />}
               Record Expenses - SAR {totalExpensesAmount.toLocaleString()}
             </Button>

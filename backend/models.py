@@ -147,6 +147,8 @@ class Supplier(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     account_number: Optional[str] = None
+    # Multiple bank accounts support
+    bank_accounts: Optional[List[dict]] = []  # [{bank_name, account_number, iban, swift_code}]
     credit_limit: Optional[float] = 0
     current_credit: Optional[float] = 0
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -160,6 +162,7 @@ class SupplierCreate(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     account_number: Optional[str] = None
+    bank_accounts: Optional[List[dict]] = []
     credit_limit: Optional[float] = 0
 
 class SupplierPayment(BaseModel):

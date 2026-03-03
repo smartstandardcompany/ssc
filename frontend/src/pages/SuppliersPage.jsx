@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2, DollarSign, FileText, ArrowUpCircle, ArrowDownCircle, Receipt, CreditCard, Banknote } from 'lucide-react';
+import { Plus, Edit, Trash2, DollarSign, FileText, ArrowUpCircle, ArrowDownCircle, Receipt, CreditCard, Banknote, Download, Building2, X } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -28,17 +28,21 @@ export default function SuppliersPage() {
   const [billData, setBillData] = useState({ amount: '', category: '', payment_mode: 'credit', description: '' });
   const [ledgerData, setLedgerData] = useState(null);
   const [ledgerLoading, setLedgerLoading] = useState(false);
+  const [ledgerStartDate, setLedgerStartDate] = useState('');
+  const [ledgerEndDate, setLedgerEndDate] = useState('');
+  const [ledgerSupplier, setLedgerSupplier] = useState(null);
   const [expenseCategories, setExpenseCategories] = useState([]);
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [payingSupplier, setPayingSupplier] = useState(null);
-  const [formData, setFormData] = useState({ name: '', category: '', sub_category: '', branch_id: '', phone: '', email: '', account_number: '', credit_limit: 0 });
+  const [formData, setFormData] = useState({
+    name: '', category: '', sub_category: '', branch_id: '', phone: '', email: '', account_number: '', credit_limit: 0,
+    bank_accounts: []
+  });
   const [paymentData, setPaymentData] = useState({ payment_mode: 'cash', amount: '', branch_id: '' });
   const [newCategory, setNewCategory] = useState('');
   const [newSubCategory, setNewSubCategory] = useState('');
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     try {
@@ -54,11 +58,8 @@ export default function SuppliersPage() {
       setCategories(categoriesRes.data);
       setPaySummaries(summariesRes.data);
       setExpenseCategories(expCatRes.data || []);
-    } catch (error) {
-      toast.error('Failed to fetch data');
-    } finally {
-      setLoading(false);
-    }
+    } catch { toast.error('Failed to fetch data'); }
+    finally { setLoading(false); }
   };
 
   const handleAddCategory = async () => {
@@ -69,9 +70,7 @@ export default function SuppliersPage() {
       setNewCategory('');
       const res = await api.get('/categories?category_type=supplier');
       setCategories(res.data);
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to add category');
-    }
+    } catch (error) { toast.error(error.response?.data?.detail || 'Failed to add category'); }
   };
 
   const handleAddSubCategory = async () => {
@@ -83,9 +82,7 @@ export default function SuppliersPage() {
       setNewSubCategory('');
       const res = await api.get('/categories?category_type=supplier');
       setCategories(res.data);
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed');
-    }
+    } catch (error) { toast.error(error.response?.data?.detail || 'Failed'); }
   };
 
   const subCategories = categories.filter(c => {
@@ -96,19 +93,22 @@ export default function SuppliersPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const submitData = { ...formData };
+      // Validate bank accounts (max 3, filter empty)
+      submitData.bank_accounts = (formData.bank_accounts || [])
+        .filter(ba => ba.bank_name || ba.account_number || ba.iban)
+        .slice(0, 3);
       if (editingSupplier) {
-        await api.put(`/suppliers/${editingSupplier.id}`, formData);
+        await api.put(`/suppliers/${editingSupplier.id}`, submitData);
         toast.success('Supplier updated successfully');
       } else {
-        await api.post('/suppliers', formData);
+        await api.post('/suppliers', submitData);
         toast.success('Supplier added successfully');
       }
       setShowDialog(false);
       resetForm();
       fetchData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to save supplier');
-    }
+    } catch (error) { toast.error(error.response?.data?.detail || 'Failed to save supplier'); }
   };
 
   const handlePayCredit = async (e) => {
@@ -119,29 +119,45 @@ export default function SuppliersPage() {
       setShowPayDialog(false);
       setPaymentData({ payment_mode: 'cash', amount: '', branch_id: '' });
       fetchData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to record payment');
-    }
+    } catch (error) { toast.error(error.response?.data?.detail || 'Failed to record payment'); }
   };
 
-  const viewLedger = async (supplier) => {
+  const viewLedger = async (supplier, startDate, endDate) => {
     setLedgerLoading(true);
+    setLedgerSupplier(supplier);
     setShowLedgerDialog(true);
     try {
-      const res = await api.get(`/suppliers/${supplier.id}/ledger`);
+      let url = `/suppliers/${supplier.id}/ledger`;
+      const params = [];
+      if (startDate) params.push(`start_date=${startDate}`);
+      if (endDate) params.push(`end_date=${endDate}`);
+      if (params.length > 0) url += `?${params.join('&')}`;
+      const res = await api.get(url);
       setLedgerData(res.data);
-    } catch (error) {
-      toast.error('Failed to load supplier ledger');
-      setShowLedgerDialog(false);
-    } finally {
-      setLedgerLoading(false);
-    }
+    } catch { toast.error('Failed to load supplier ledger'); setShowLedgerDialog(false); }
+    finally { setLedgerLoading(false); }
+  };
+
+  const exportLedger = async (format) => {
+    if (!ledgerSupplier) return;
+    try {
+      let url = `/suppliers/${ledgerSupplier.id}/ledger/export?format=${format}`;
+      if (ledgerStartDate) url += `&start_date=${ledgerStartDate}`;
+      if (ledgerEndDate) url += `&end_date=${ledgerEndDate}`;
+      const res = await api.get(url, { responseType: 'blob' });
+      const blob = new Blob([res.data]);
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `ledger_${ledgerSupplier.name.replace(/\s+/g, '_')}.${format === 'excel' ? 'xlsx' : 'pdf'}`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      toast.success(`Ledger exported as ${format.toUpperCase()}`);
+    } catch { toast.error('Failed to export ledger'); }
   };
 
   const handleAddBill = async (e) => {
     e.preventDefault();
     if (!payingSupplier) return;
-    
     try {
       await api.post('/expenses', {
         amount: parseFloat(billData.amount),
@@ -152,15 +168,12 @@ export default function SuppliersPage() {
         branch_id: payingSupplier.branch_id || '',
         date: new Date().toISOString(),
       });
-      
       const modeText = billData.payment_mode === 'credit' ? 'Credit bill added to balance' : 'Cash/Bank bill recorded';
       toast.success(`Purchase bill recorded! ${modeText}`);
       setShowAddBillDialog(false);
       setBillData({ amount: '', category: '', payment_mode: 'credit', description: '' });
       fetchData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to add purchase bill');
-    }
+    } catch (error) { toast.error(error.response?.data?.detail || 'Failed to add purchase bill'); }
   };
 
   const handleEdit = (supplier) => {
@@ -172,7 +185,9 @@ export default function SuppliersPage() {
       branch_id: supplier.branch_id || '',
       phone: supplier.phone || '',
       email: supplier.email || '',
-      account_number: supplier.account_number || '', credit_limit: supplier.credit_limit || 0
+      account_number: supplier.account_number || '',
+      credit_limit: supplier.credit_limit || 0,
+      bank_accounts: supplier.bank_accounts || []
     });
     setShowDialog(true);
   };
@@ -183,17 +198,38 @@ export default function SuppliersPage() {
         await api.delete(`/suppliers/${id}`);
         toast.success('Supplier deleted successfully');
         fetchData();
-      } catch (error) {
-        toast.error('Failed to delete supplier');
-      }
+      } catch { toast.error('Failed to delete supplier'); }
     }
   };
 
   const resetForm = () => {
-    setFormData({ name: '', category: '', sub_category: '', branch_id: '', phone: '', email: '', account_number: '', credit_limit: 0 });
+    setFormData({ name: '', category: '', sub_category: '', branch_id: '', phone: '', email: '', account_number: '', credit_limit: 0, bank_accounts: [] });
     setEditingSupplier(null);
   };
 
+  // Bank account helpers
+  const addBankAccount = () => {
+    if ((formData.bank_accounts || []).length >= 3) {
+      toast.error('Maximum 3 bank accounts allowed');
+      return;
+    }
+    setFormData({
+      ...formData,
+      bank_accounts: [...(formData.bank_accounts || []), { bank_name: '', account_number: '', iban: '', swift_code: '' }]
+    });
+  };
+
+  const updateBankAccount = (index, field, value) => {
+    const updated = [...(formData.bank_accounts || [])];
+    updated[index] = { ...updated[index], [field]: value };
+    setFormData({ ...formData, bank_accounts: updated });
+  };
+
+  const removeBankAccount = (index) => {
+    setFormData({ ...formData, bank_accounts: formData.bank_accounts.filter((_, i) => i !== index) });
+  };
+
+  // Migration
   const [showMigrateDialog, setShowMigrateDialog] = useState(false);
   const [migrationPreview, setMigrationPreview] = useState(null);
   const [migrating, setMigrating] = useState(false);
@@ -203,9 +239,7 @@ export default function SuppliersPage() {
       const res = await api.get('/suppliers/migration-preview');
       setMigrationPreview(res.data);
       setShowMigrateDialog(true);
-    } catch (error) {
-      toast.error('Failed to preview migration');
-    }
+    } catch { toast.error('Failed to preview migration'); }
   };
 
   const executeMigration = async () => {
@@ -216,19 +250,12 @@ export default function SuppliersPage() {
       setShowMigrateDialog(false);
       setMigrationPreview(null);
       fetchData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Migration failed');
-    } finally {
-      setMigrating(false);
-    }
+    } catch (error) { toast.error(error.response?.data?.detail || 'Migration failed'); }
+    finally { setMigrating(false); }
   };
 
   if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-64">Loading...</div>
-      </DashboardLayout>
-    );
+    return (<DashboardLayout><div className="flex items-center justify-center h-64">Loading...</div></DashboardLayout>);
   }
 
   return (
@@ -241,165 +268,148 @@ export default function SuppliersPage() {
           </div>
           <div className="flex gap-2 items-center flex-wrap">
             <ExportButtons dataType="suppliers" />
-            
-            {/* Migration Button */}
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={previewMigration}
-              className="text-amber-600 border-amber-300 hover:bg-amber-50"
-              data-testid="migrate-payments-btn"
-            >
-              <ArrowUpCircle size={16} className="mr-1" />
-              Fix Data
+            <Button variant="outline" size="sm" onClick={previewMigration}
+              className="text-amber-600 border-amber-300 hover:bg-amber-50" data-testid="migrate-payments-btn">
+              <ArrowUpCircle size={16} className="mr-1" /> Fix Data
             </Button>
-            
             <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button className="rounded-full" data-testid="add-supplier-button">
-                <Plus size={18} className="mr-2" />
-                Add Supplier
-              </Button>
-            </DialogTrigger>
-            <DialogContent data-testid="supplier-dialog" aria-describedby="supplier-dialog-description">
-              <DialogHeader>
-                <DialogTitle className="font-outfit">{editingSupplier ? 'Edit Supplier' : 'Add New Supplier'}</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <Label>Supplier Name *</Label>
-                  <Input
-                    value={formData.name}
-                    data-testid="supplier-name-input"
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label>Category</Label>
-                  <Select value={formData.category || "none"} onValueChange={(val) => setFormData({ ...formData, category: val === "none" ? "" : val })}>
-                    <SelectTrigger data-testid="supplier-category-select">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No Category</SelectItem>
-                      {categories.filter(c => !c.parent_id).map((cat) => (
-                        <SelectItem key={cat.id} value={cat.name}>
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <div className="flex gap-2 mt-2">
-                    <Input
-                      value={newCategory}
-                      onChange={(e) => setNewCategory(e.target.value)}
-                      placeholder="New category name"
-                      className="h-8 text-xs"
-                      data-testid="new-category-input"
-                    />
-                    <Button type="button" size="sm" variant="outline" onClick={handleAddCategory} className="h-8 text-xs whitespace-nowrap" data-testid="add-category-button">
-                      <Plus size={12} className="mr-1" />
-                      Add
-                    </Button>
-                  </div>
-                </div>
-                {formData.category && (
+              <DialogTrigger asChild>
+                <Button className="rounded-full" data-testid="add-supplier-button">
+                  <Plus size={18} className="mr-2" /> Add Supplier
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto" data-testid="supplier-dialog" aria-describedby="supplier-dialog-description">
+                <DialogHeader>
+                  <DialogTitle className="font-outfit">{editingSupplier ? 'Edit Supplier' : 'Add New Supplier'}</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <Label>Sub-Category</Label>
-                    <Select value={formData.sub_category || "none"} onValueChange={(val) => setFormData({ ...formData, sub_category: val === "none" ? "" : val })}>
-                      <SelectTrigger data-testid="supplier-subcategory-select"><SelectValue placeholder="Select sub-category" /></SelectTrigger>
+                    <Label>Supplier Name *</Label>
+                    <Input value={formData.name} data-testid="supplier-name-input"
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+                  </div>
+                  <div>
+                    <Label>Category</Label>
+                    <Select value={formData.category || "none"} onValueChange={(val) => setFormData({ ...formData, category: val === "none" ? "" : val })}>
+                      <SelectTrigger data-testid="supplier-category-select"><SelectValue placeholder="Select category" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">No Sub-Category</SelectItem>
-                        {subCategories.map((cat) => <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>)}
+                        <SelectItem value="none">No Category</SelectItem>
+                        {categories.filter(c => !c.parent_id).map((cat) => (
+                          <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <div className="flex gap-2 mt-2">
-                      <Input value={newSubCategory} onChange={(e) => setNewSubCategory(e.target.value)} placeholder="New sub-category" className="h-8 text-xs" data-testid="new-subcategory-input" />
-                      <Button type="button" size="sm" variant="outline" onClick={handleAddSubCategory} className="h-8 text-xs whitespace-nowrap"><Plus size={12} className="mr-1" />Add</Button>
+                      <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="New category name" className="h-8 text-xs" data-testid="new-category-input" />
+                      <Button type="button" size="sm" variant="outline" onClick={handleAddCategory} className="h-8 text-xs whitespace-nowrap" data-testid="add-category-button">
+                        <Plus size={12} className="mr-1" /> Add
+                      </Button>
                     </div>
                   </div>
-                )}
-                <div>
-                  <Label>Branch</Label>
-                  <Select value={formData.branch_id || "all"} onValueChange={(val) => setFormData({ ...formData, branch_id: val === "all" ? "" : val })}>
-                    <SelectTrigger data-testid="branch-select">
-                      <SelectValue placeholder="Select branch" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Branches</SelectItem>
-                      {branches.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Phone</Label>
-                  <Input
-                    value={formData.phone}
-                    data-testid="supplier-phone-input"
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Email</Label>
-                  <Input
-                    type="email"
-                    value={formData.email}
-                    data-testid="supplier-email-input"
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Bank Account #</Label>
-                  <Input value={formData.account_number} onChange={(e) => setFormData({ ...formData, account_number: e.target.value })} placeholder="For bank statement matching" />
-                </div>
-                <div>
-                  <Label>Credit Limit</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.credit_limit}
-                    data-testid="credit-limit-input"
-                    onChange={(e) => setFormData({ ...formData, credit_limit: parseFloat(e.target.value) || 0 })}
-                  />
-                </div>
-                <div className="flex gap-3">
-                  <Button type="submit" data-testid="submit-supplier-button" className="rounded-full">
-                    {editingSupplier ? 'Update' : 'Add'} Supplier
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => setShowDialog(false)} className="rounded-full">
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  {formData.category && (
+                    <div>
+                      <Label>Sub-Category</Label>
+                      <Select value={formData.sub_category || "none"} onValueChange={(val) => setFormData({ ...formData, sub_category: val === "none" ? "" : val })}>
+                        <SelectTrigger data-testid="supplier-subcategory-select"><SelectValue placeholder="Select sub-category" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No Sub-Category</SelectItem>
+                          {subCategories.map((cat) => <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <div className="flex gap-2 mt-2">
+                        <Input value={newSubCategory} onChange={(e) => setNewSubCategory(e.target.value)} placeholder="New sub-category" className="h-8 text-xs" data-testid="new-subcategory-input" />
+                        <Button type="button" size="sm" variant="outline" onClick={handleAddSubCategory} className="h-8 text-xs whitespace-nowrap"><Plus size={12} className="mr-1" />Add</Button>
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <Label>Branch</Label>
+                    <Select value={formData.branch_id || "all"} onValueChange={(val) => setFormData({ ...formData, branch_id: val === "all" ? "" : val })}>
+                      <SelectTrigger data-testid="branch-select"><SelectValue placeholder="Select branch" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Branches</SelectItem>
+                        {branches.map((branch) => (<SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Phone</Label>
+                      <Input value={formData.phone} data-testid="supplier-phone-input" onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label>Email</Label>
+                      <Input type="email" value={formData.email} data-testid="supplier-email-input" onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Credit Limit</Label>
+                    <Input type="number" step="0.01" value={formData.credit_limit} data-testid="credit-limit-input"
+                      onChange={(e) => setFormData({ ...formData, credit_limit: parseFloat(e.target.value) || 0 })} />
+                  </div>
+
+                  {/* Bank Accounts Section */}
+                  <div className="space-y-3 pt-2 border-t">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium flex items-center gap-1.5">
+                        <Building2 size={14} /> Bank Accounts
+                        <span className="text-xs text-muted-foreground">({(formData.bank_accounts || []).length}/3)</span>
+                      </Label>
+                      {(formData.bank_accounts || []).length < 3 && (
+                        <Button type="button" size="sm" variant="outline" onClick={addBankAccount}
+                          className="h-7 text-xs" data-testid="add-bank-account-btn">
+                          <Plus size={12} className="mr-1" /> Add Bank
+                        </Button>
+                      )}
+                    </div>
+                    {(formData.bank_accounts || []).map((ba, idx) => (
+                      <div key={idx} className="p-3 bg-stone-50 rounded-lg border space-y-2" data-testid={`bank-account-${idx}`}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-stone-500">Bank #{idx + 1}</span>
+                          <button type="button" onClick={() => removeBankAccount(idx)} className="text-xs text-red-500 hover:text-red-700">
+                            <X size={14} />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input placeholder="Bank Name" value={ba.bank_name || ''} className="h-8 text-sm"
+                            onChange={(e) => updateBankAccount(idx, 'bank_name', e.target.value)} data-testid={`bank-name-${idx}`} />
+                          <Input placeholder="Account Number" value={ba.account_number || ''} className="h-8 text-sm"
+                            onChange={(e) => updateBankAccount(idx, 'account_number', e.target.value)} data-testid={`bank-acc-${idx}`} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input placeholder="IBAN" value={ba.iban || ''} className="h-8 text-sm"
+                            onChange={(e) => updateBankAccount(idx, 'iban', e.target.value)} data-testid={`bank-iban-${idx}`} />
+                          <Input placeholder="SWIFT Code" value={ba.swift_code || ''} className="h-8 text-sm"
+                            onChange={(e) => updateBankAccount(idx, 'swift_code', e.target.value)} data-testid={`bank-swift-${idx}`} />
+                        </div>
+                      </div>
+                    ))}
+                    {(formData.bank_accounts || []).length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-2">No bank accounts added</p>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button type="submit" data-testid="submit-supplier-button" className="rounded-full">
+                      {editingSupplier ? 'Update' : 'Add'} Supplier
+                    </Button>
+                    <Button type="button" variant="outline" onClick={() => setShowDialog(false)} className="rounded-full">Cancel</Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
         {/* Advanced Search */}
-        <AdvancedSearch 
+        <AdvancedSearch
           onSearch={setSearchFilters}
           config={{
             searchFields: ['name', 'phone', 'email', 'category'],
             placeholder: 'Search suppliers by name, category...',
             filters: [
-              { 
-                key: 'branch_id', 
-                label: 'Branch', 
-                type: 'select', 
-                options: branches.map(b => ({ value: b.id, label: b.name }))
-              },
-              { 
-                key: 'category', 
-                label: 'Category', 
-                type: 'select', 
-                options: categories.filter(c => !c.parent_id).map(c => ({ value: c.name, label: c.name }))
-              },
+              { key: 'branch_id', label: 'Branch', type: 'select', options: branches.map(b => ({ value: b.id, label: b.name })) },
+              { key: 'category', label: 'Category', type: 'select', options: categories.filter(c => !c.parent_id).map(c => ({ value: c.name, label: c.name })) },
               { key: 'current_credit', label: 'Credit Balance', type: 'range' }
             ]
           }}
@@ -409,7 +419,8 @@ export default function SuppliersPage() {
           {applySearchFilters(suppliers, searchFilters).map((supplier) => {
             const branchName = branches.find((b) => b.id === supplier.branch_id)?.name || 'All Branches';
             const creditUtilization = supplier.credit_limit > 0 ? (supplier.current_credit / supplier.credit_limit) * 100 : 0;
-            
+            const totalPurchases = supplier.total_purchases || 0;
+
             return (
               <Card key={supplier.id} className="border-border hover:shadow-lg transition-shadow" data-testid="supplier-card">
                 <CardHeader>
@@ -417,119 +428,84 @@ export default function SuppliersPage() {
                     <div className="flex-1">
                       <CardTitle className="font-outfit text-lg">{supplier.name}</CardTitle>
                       {supplier.category && (
-                        <span className="inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
-                          {supplier.category}
-                        </span>
+                        <span className="inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">{supplier.category}</span>
                       )}
                       <p className="text-sm text-muted-foreground mt-1">{branchName}</p>
                     </div>
                     <div className="flex gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleEdit(supplier)}
-                        data-testid="edit-supplier-button"
-                      >
-                        <Edit size={16} />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleDelete(supplier.id)}
-                        data-testid="delete-supplier-button"
-                        className="text-error hover:text-error"
-                      >
-                        <Trash2 size={16} />
-                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => handleEdit(supplier)} data-testid="edit-supplier-button"><Edit size={16} /></Button>
+                      <Button size="sm" variant="ghost" onClick={() => handleDelete(supplier.id)} data-testid="delete-supplier-button" className="text-error hover:text-error"><Trash2 size={16} /></Button>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {supplier.phone && <p className="text-sm">Phone: {supplier.phone}</p>}
-                  
+
+                  {/* Total Purchases */}
+                  <div className="p-2.5 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg border border-amber-200" data-testid={`total-purchases-${supplier.id}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-amber-700 flex items-center gap-1"><Receipt size={12} /> Total Purchases</span>
+                      <span className="text-sm font-bold text-amber-800">SAR {totalPurchases.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+
                   {/* Cash/Bank Paid Breakdown */}
                   {paySummaries[supplier.id] && (paySummaries[supplier.id].cash > 0 || paySummaries[supplier.id].bank > 0) && (
                     <div className="pt-2 border-t space-y-2">
                       <div className="flex gap-2">
                         <div className="flex-1 p-2 bg-cash/10 rounded text-center">
                           <div className="text-xs text-muted-foreground">Cash Paid</div>
-                          <div className="text-sm font-bold text-cash"> SAR {paySummaries[supplier.id].cash.toFixed(2)}</div>
+                          <div className="text-sm font-bold text-cash">SAR {paySummaries[supplier.id].cash.toFixed(2)}</div>
                         </div>
                         <div className="flex-1 p-2 bg-bank/10 rounded text-center">
                           <div className="text-xs text-muted-foreground">Bank Paid</div>
-                          <div className="text-sm font-bold text-bank"> SAR {paySummaries[supplier.id].bank.toFixed(2)}</div>
+                          <div className="text-sm font-bold text-bank">SAR {paySummaries[supplier.id].bank.toFixed(2)}</div>
                         </div>
                       </div>
-                      {Object.keys(paySummaries[supplier.id].by_branch || {}).length > 0 && (
-                        <div className="space-y-1">
-                          {Object.entries(paySummaries[supplier.id].by_branch).map(([bName, bData]) => (
-                            <div key={bName} className="flex justify-between text-xs p-1.5 bg-secondary/50 rounded">
-                              <span className="font-medium">{bName}</span>
-                              <span><span className="text-cash">C:${bData.cash.toFixed(0)}</span> <span className="text-bank">B:${bData.bank.toFixed(0)}</span></span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   )}
-                  
+
+                  {/* Bank Accounts Preview */}
+                  {supplier.bank_accounts && supplier.bank_accounts.length > 0 && (
+                    <div className="pt-2 border-t">
+                      <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Building2 size={11} /> Bank Accounts ({supplier.bank_accounts.length})</p>
+                      {supplier.bank_accounts.map((ba, i) => (
+                        <div key={i} className="text-xs text-stone-600 bg-stone-50 px-2 py-1 rounded mb-1">
+                          {ba.bank_name || 'Bank'}: {ba.account_number || ba.iban || '-'}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="pt-3 border-t">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm font-medium">Credit Status</span>
-                      <span className="text-sm font-bold"> SAR {supplier.current_credit?.toFixed(2) || '0.00'} / ${supplier.credit_limit?.toFixed(2) || '0.00'}</span>
+                      <span className="text-sm font-bold">SAR {supplier.current_credit?.toFixed(2) || '0.00'} / {supplier.credit_limit?.toFixed(2) || '0.00'}</span>
                     </div>
                     <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full transition-all ${
-                          creditUtilization > 80 ? 'bg-error' : creditUtilization > 50 ? 'bg-warning' : 'bg-success'
-                        }`}
-                        style={{ width: `${Math.min(creditUtilization, 100)}%` }}
-                      />
+                      <div className={`h-full transition-all ${creditUtilization > 80 ? 'bg-error' : creditUtilization > 50 ? 'bg-warning' : 'bg-success'}`}
+                        style={{ width: `${Math.min(creditUtilization, 100)}%` }} />
                     </div>
                   </div>
 
                   {/* Action Buttons */}
                   <div className="grid grid-cols-2 gap-2 mt-3">
-                    {/* Add Purchase Bill */}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => { 
-                        setPayingSupplier(supplier); 
-                        setShowAddBillDialog(true);
-                        setBillData({ amount: '', category: '', payment_mode: 'credit', description: '' });
-                      }}
-                      data-testid={`add-bill-${supplier.id}`}
-                      className="text-amber-600 border-amber-300 hover:bg-amber-50"
-                    >
-                      <Receipt size={14} className="mr-1" />
-                      Add Bill
+                    <Button size="sm" variant="outline" onClick={() => { setPayingSupplier(supplier); setShowAddBillDialog(true); setBillData({ amount: '', category: '', payment_mode: 'credit', description: '' }); }}
+                      data-testid={`add-bill-${supplier.id}`} className="text-amber-600 border-amber-300 hover:bg-amber-50">
+                      <Receipt size={14} className="mr-1" /> Add Bill
                     </Button>
-                    
-                    {/* Pay Credit */}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => { setPayingSupplier(supplier); setShowPayDialog(true); }}
+                    <Button size="sm" variant="outline" onClick={() => { setPayingSupplier(supplier); setShowPayDialog(true); }}
                       data-testid="pay-credit-button"
                       className={`${supplier.current_credit > 0 ? 'text-blue-600 border-blue-300 hover:bg-blue-50' : 'text-stone-400 border-stone-200'}`}
-                      disabled={!supplier.current_credit || supplier.current_credit <= 0}
-                    >
-                      <DollarSign size={14} className="mr-1" />
-                      Pay Credit
+                      disabled={!supplier.current_credit || supplier.current_credit <= 0}>
+                      <DollarSign size={14} className="mr-1" /> Pay Credit
                     </Button>
                   </div>
-                  
+
                   {/* View Ledger Button */}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => viewLedger(supplier)}
-                    data-testid={`view-ledger-${supplier.id}`}
-                    className="w-full mt-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                  >
-                    <FileText size={14} className="mr-1" />
-                    View Ledger (Invoices & Payments)
+                  <Button size="sm" variant="ghost" onClick={() => { setLedgerStartDate(''); setLedgerEndDate(''); viewLedger(supplier); }}
+                    data-testid={`view-ledger-${supplier.id}`} className="w-full mt-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                    <FileText size={14} className="mr-1" /> View Ledger
                   </Button>
                 </CardContent>
               </Card>
@@ -537,9 +513,7 @@ export default function SuppliersPage() {
           })}
           {suppliers.length === 0 && (
             <Card className="col-span-full border-dashed">
-              <CardContent className="p-12 text-center">
-                <p className="text-muted-foreground">No suppliers yet. Add your first supplier to get started!</p>
-              </CardContent>
+              <CardContent className="p-12 text-center"><p className="text-muted-foreground">No suppliers yet. Add your first supplier to get started!</p></CardContent>
             </Card>
           )}
         </div>
@@ -547,36 +521,21 @@ export default function SuppliersPage() {
         {/* Pay Credit Dialog */}
         <Dialog open={showPayDialog} onOpenChange={setShowPayDialog}>
           <DialogContent data-testid="pay-credit-dialog">
-            <DialogHeader>
-              <DialogTitle className="font-outfit">Pay Supplier Credit</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle className="font-outfit">Pay Supplier Credit</DialogTitle></DialogHeader>
             <form onSubmit={handlePayCredit} className="space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground mb-2">
-                  Paying to: <span className="font-medium text-foreground">{payingSupplier?.name}</span>
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Current Credit: <span className="font-bold text-error"> SAR {payingSupplier?.current_credit?.toFixed(2)}</span>
-                </p>
+                <p className="text-sm text-muted-foreground mb-2">Paying to: <span className="font-medium text-foreground">{payingSupplier?.name}</span></p>
+                <p className="text-sm text-muted-foreground">Current Credit: <span className="font-bold text-error">SAR {payingSupplier?.current_credit?.toFixed(2)}</span></p>
               </div>
               <div>
                 <Label>Payment Amount *</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={paymentData.amount}
-                  data-testid="payment-amount-input"
-                  onChange={(e) => setPaymentData({ ...paymentData, amount: e.target.value })}
-                  required
-                  max={payingSupplier?.current_credit}
-                />
+                <Input type="number" step="0.01" value={paymentData.amount} data-testid="payment-amount-input"
+                  onChange={(e) => setPaymentData({ ...paymentData, amount: e.target.value })} required max={payingSupplier?.current_credit} />
               </div>
               <div>
                 <Label>Payment Mode *</Label>
                 <Select value={paymentData.payment_mode} onValueChange={(val) => setPaymentData({ ...paymentData, payment_mode: val })}>
-                  <SelectTrigger data-testid="payment-mode-select">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger data-testid="payment-mode-select"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="cash">Cash</SelectItem>
                     <SelectItem value="bank">Bank</SelectItem>
@@ -586,22 +545,16 @@ export default function SuppliersPage() {
               <div>
                 <Label>From Branch</Label>
                 <Select value={paymentData.branch_id || "all"} onValueChange={(val) => setPaymentData({ ...paymentData, branch_id: val === "all" ? "" : val })}>
-                  <SelectTrigger data-testid="pay-branch-select">
-                    <SelectValue placeholder="Select branch" />
-                  </SelectTrigger>
+                  <SelectTrigger data-testid="pay-branch-select"><SelectValue placeholder="Select branch" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">No Branch</SelectItem>
-                    {branches.map((branch) => (
-                      <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
-                    ))}
+                    {branches.map((branch) => (<SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex gap-3">
                 <Button type="submit" data-testid="submit-payment-button" className="rounded-full">Pay Credit</Button>
-                <Button type="button" variant="outline" onClick={() => setShowPayDialog(false)} className="rounded-full">
-                  Cancel
-                </Button>
+                <Button type="button" variant="outline" onClick={() => setShowPayDialog(false)} className="rounded-full">Cancel</Button>
               </div>
             </form>
           </DialogContent>
@@ -609,14 +562,41 @@ export default function SuppliersPage() {
 
         {/* Supplier Ledger Dialog */}
         <Dialog open={showLedgerDialog} onOpenChange={setShowLedgerDialog}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col" data-testid="ledger-dialog">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <FileText className="text-blue-500" />
-                {ledgerData?.supplier_name} - Ledger
+                {ledgerData?.supplier?.name || ledgerSupplier?.name} - Ledger
               </DialogTitle>
             </DialogHeader>
-            
+
+            {/* Date Filter */}
+            <div className="flex flex-wrap items-end gap-2 pb-3 border-b">
+              <div>
+                <Label className="text-xs">From</Label>
+                <Input type="date" value={ledgerStartDate} onChange={e => setLedgerStartDate(e.target.value)}
+                  className="h-8 text-sm w-36" data-testid="ledger-start-date" />
+              </div>
+              <div>
+                <Label className="text-xs">To</Label>
+                <Input type="date" value={ledgerEndDate} onChange={e => setLedgerEndDate(e.target.value)}
+                  className="h-8 text-sm w-36" data-testid="ledger-end-date" />
+              </div>
+              <Button size="sm" variant="outline" className="h-8"
+                onClick={() => ledgerSupplier && viewLedger(ledgerSupplier, ledgerStartDate, ledgerEndDate)}
+                data-testid="ledger-filter-btn">Filter</Button>
+              <div className="ml-auto flex gap-1.5">
+                <Button size="sm" variant="outline" className="h-8 text-red-600 border-red-200 hover:bg-red-50"
+                  onClick={() => exportLedger('pdf')} data-testid="export-ledger-pdf">
+                  <Download size={13} className="mr-1" /> PDF
+                </Button>
+                <Button size="sm" variant="outline" className="h-8 text-green-600 border-green-200 hover:bg-green-50"
+                  onClick={() => exportLedger('excel')} data-testid="export-ledger-excel">
+                  <Download size={13} className="mr-1" /> Excel
+                </Button>
+              </div>
+            </div>
+
             {ledgerLoading ? (
               <div className="flex items-center justify-center py-8">Loading...</div>
             ) : ledgerData && (
@@ -625,7 +605,9 @@ export default function SuppliersPage() {
                 <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border">
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground">Current Credit Balance</p>
-                    <p className="text-3xl font-bold text-blue-600">SAR {ledgerData.current_balance?.toFixed(2) || '0.00'}</p>
+                    <p className="text-3xl font-bold text-blue-600" data-testid="ledger-balance">
+                      SAR {ledgerData.supplier?.current_credit?.toFixed(2) || '0.00'}
+                    </p>
                   </div>
                 </div>
 
@@ -633,98 +615,67 @@ export default function SuppliersPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-center">
                     <p className="text-xs text-amber-600">Credit Purchases</p>
-                    <p className="text-lg font-bold text-amber-700">SAR {ledgerData.summary?.total_purchases_credit?.toFixed(0) || 0}</p>
+                    <p className="text-lg font-bold text-amber-700">SAR {(ledgerData.summary?.credit_purchases || 0).toLocaleString()}</p>
                     <p className="text-[10px] text-amber-500">Adds to balance</p>
                   </div>
                   <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200 text-center">
                     <p className="text-xs text-emerald-600">Cash/Bank Purchases</p>
-                    <p className="text-lg font-bold text-emerald-700">SAR {ledgerData.summary?.total_purchases_cash?.toFixed(0) || 0}</p>
+                    <p className="text-lg font-bold text-emerald-700">SAR {((ledgerData.summary?.cash_purchases || 0) + (ledgerData.summary?.bank_purchases || 0)).toLocaleString()}</p>
                     <p className="text-[10px] text-emerald-500">Paid immediately</p>
                   </div>
                   <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 text-center">
                     <p className="text-xs text-blue-600">Credit Paid</p>
-                    <p className="text-lg font-bold text-blue-700">SAR {ledgerData.summary?.total_credit_paid?.toFixed(0) || 0}</p>
+                    <p className="text-lg font-bold text-blue-700">SAR {(ledgerData.summary?.total_payments || 0).toLocaleString()}</p>
                     <p className="text-[10px] text-blue-500">Reduces balance</p>
                   </div>
                   <div className="p-3 bg-stone-50 rounded-lg border border-stone-200 text-center">
-                    <p className="text-xs text-stone-600">Total Invoices</p>
-                    <p className="text-lg font-bold text-stone-700">{ledgerData.summary?.purchase_invoices_count || 0}</p>
-                    <p className="text-[10px] text-stone-500">Payments: {ledgerData.summary?.payments_count || 0}</p>
+                    <p className="text-xs text-stone-600">Closing Balance</p>
+                    <p className="text-lg font-bold text-stone-700">SAR {(ledgerData.summary?.closing_balance || 0).toLocaleString()}</p>
+                    <p className="text-[10px] text-stone-500">{ledgerData.entry_count || 0} entries</p>
                   </div>
                 </div>
 
-                {/* Transaction Legend */}
-                <div className="flex flex-wrap gap-2 text-xs">
-                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300">
-                    <ArrowUpCircle size={12} className="mr-1" /> Credit Invoice = +Balance
-                  </Badge>
-                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300">
-                    <Receipt size={12} className="mr-1" /> Cash Invoice = Paid
-                  </Badge>
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
-                    <ArrowDownCircle size={12} className="mr-1" /> Payment = -Balance
-                  </Badge>
-                </div>
-
-                {/* Transactions List */}
+                {/* Ledger Entries Table */}
                 <div className="border rounded-lg overflow-hidden">
                   <div className="bg-stone-100 px-3 py-2 text-xs font-medium grid grid-cols-12 gap-2">
                     <span className="col-span-2">Date</span>
-                    <span className="col-span-3">Type</span>
-                    <span className="col-span-4">Description</span>
-                    <span className="col-span-2 text-right">Amount</span>
-                    <span className="col-span-1 text-center">Mode</span>
+                    <span className="col-span-2">Type</span>
+                    <span className="col-span-3">Description</span>
+                    <span className="col-span-2 text-right">Debit</span>
+                    <span className="col-span-1 text-right">Credit</span>
+                    <span className="col-span-2 text-right">Balance</span>
                   </div>
                   <div className="max-h-[300px] overflow-y-auto">
-                    {ledgerData.transactions?.map((txn, idx) => (
-                      <div 
-                        key={txn.id || idx} 
-                        className={`px-3 py-2 text-xs grid grid-cols-12 gap-2 border-t ${
-                          txn.type === 'purchase_invoice' 
-                            ? txn.sub_type === 'credit' ? 'bg-amber-50/50' : 'bg-emerald-50/50'
-                            : txn.type === 'credit_payment' ? 'bg-blue-50/50' : 'bg-stone-50'
-                        }`}
-                      >
+                    {ledgerData.entries?.map((entry, idx) => (
+                      <div key={idx} className={`px-3 py-2 text-xs grid grid-cols-12 gap-2 border-t ${
+                        entry.type === 'purchase' ? 'bg-amber-50/30' : 'bg-blue-50/30'
+                      }`} data-testid={`ledger-entry-${idx}`}>
                         <span className="col-span-2 text-muted-foreground">
-                          {txn.date ? new Date(txn.date).toLocaleDateString() : '-'}
+                          {entry.date ? new Date(entry.date).toLocaleDateString() : '-'}
                         </span>
-                        <span className="col-span-3">
-                          {txn.type === 'purchase_invoice' && (
-                            <Badge variant="outline" className={`text-[10px] ${txn.sub_type === 'credit' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                              {txn.sub_type === 'credit' ? 'Credit Invoice' : 'Cash Invoice'}
-                            </Badge>
-                          )}
-                          {txn.type === 'credit_payment' && (
-                            <Badge variant="outline" className="text-[10px] bg-blue-100 text-blue-700">
-                              Credit Payment
-                            </Badge>
-                          )}
-                          {txn.type === 'credit_addition' && (
-                            <Badge variant="outline" className="text-[10px] bg-purple-100 text-purple-700">
-                              Credit Added
-                            </Badge>
-                          )}
+                        <span className="col-span-2">
+                          <Badge variant="outline" className={`text-[10px] ${
+                            entry.type === 'purchase'
+                              ? entry.payment_mode === 'credit' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                              : 'bg-blue-100 text-blue-700'
+                          }`}>
+                            {entry.type === 'purchase'
+                              ? (entry.payment_mode === 'credit' ? 'Credit Purchase' : 'Paid Purchase')
+                              : 'Payment'}
+                          </Badge>
                         </span>
-                        <span className="col-span-4 truncate" title={txn.description}>
-                          {txn.description || txn.category || '-'}
+                        <span className="col-span-3 truncate" title={entry.description}>{entry.description || '-'}</span>
+                        <span className={`col-span-2 text-right font-medium ${entry.debit > 0 ? 'text-amber-600' : ''}`}>
+                          {entry.debit > 0 ? `${entry.debit.toFixed(2)}` : ''}
                         </span>
-                        <span className={`col-span-2 text-right font-medium ${
-                          txn.type === 'credit_payment' ? 'text-blue-600' : 
-                          txn.sub_type === 'credit' ? 'text-amber-600' : 'text-emerald-600'
-                        }`}>
-                          {txn.type === 'credit_payment' ? '-' : ''}SAR {txn.amount?.toFixed(2)}
+                        <span className={`col-span-1 text-right font-medium ${entry.credit > 0 ? 'text-blue-600' : ''}`}>
+                          {entry.credit > 0 ? `${entry.credit.toFixed(2)}` : ''}
                         </span>
-                        <span className="col-span-1 text-center">
-                          {txn.payment_mode === 'cash' && <Banknote size={14} className="inline text-emerald-500" />}
-                          {txn.payment_mode === 'bank' && <CreditCard size={14} className="inline text-blue-500" />}
-                          {txn.payment_mode === 'credit' && <Receipt size={14} className="inline text-amber-500" />}
-                        </span>
+                        <span className="col-span-2 text-right font-bold">{entry.balance?.toFixed(2)}</span>
                       </div>
                     ))}
-                    {(!ledgerData.transactions || ledgerData.transactions.length === 0) && (
-                      <div className="px-3 py-8 text-center text-muted-foreground">
-                        No transactions found for this supplier
-                      </div>
+                    {(!ledgerData.entries || ledgerData.entries.length === 0) && (
+                      <div className="px-3 py-8 text-center text-muted-foreground">No transactions found</div>
                     )}
                   </div>
                 </div>
@@ -737,49 +688,33 @@ export default function SuppliersPage() {
         <Dialog open={showAddBillDialog} onOpenChange={setShowAddBillDialog}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Receipt className="text-amber-500" />
-                Add Purchase Bill - {payingSupplier?.name}
-              </DialogTitle>
+              <DialogTitle className="flex items-center gap-2"><Receipt className="text-amber-500" /> Add Purchase Bill - {payingSupplier?.name}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleAddBill} className="space-y-4">
               <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-sm">
                 <p className="font-medium text-amber-800">What is a Purchase Bill?</p>
                 <p className="text-amber-700 text-xs mt-1">
-                  A purchase bill is when you BUY goods from this supplier. 
-                  Choose <strong>Credit</strong> if you'll pay later (adds to balance), 
+                  A purchase bill is when you BUY goods from this supplier.
+                  Choose <strong>Credit</strong> if you'll pay later (adds to balance),
                   or <strong>Cash/Bank</strong> if paid now.
                 </p>
               </div>
-              
               <div>
                 <Label>Amount (SAR)</Label>
-                <Input
-                  type="number"
-                  value={billData.amount}
-                  onChange={(e) => setBillData({ ...billData, amount: e.target.value })}
-                  placeholder="0.00"
-                  required
-                  className="text-lg font-bold"
-                />
+                <Input type="number" value={billData.amount} onChange={(e) => setBillData({ ...billData, amount: e.target.value })} placeholder="0.00" required className="text-lg font-bold" />
               </div>
-              
               <div>
                 <Label>Payment Type</Label>
                 <div className="grid grid-cols-3 gap-2 mt-1">
                   {['credit', 'cash', 'bank'].map(mode => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => setBillData({ ...billData, payment_mode: mode })}
+                    <button key={mode} type="button" onClick={() => setBillData({ ...billData, payment_mode: mode })}
                       className={`py-2.5 px-3 rounded-lg text-sm font-medium transition-all border ${
                         billData.payment_mode === mode
                           ? mode === 'credit' ? 'bg-amber-500 text-white border-amber-500'
                             : mode === 'cash' ? 'bg-emerald-500 text-white border-emerald-500'
                             : 'bg-blue-500 text-white border-blue-500'
                           : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
-                      }`}
-                    >
+                      }`}>
                       {mode === 'credit' && <Receipt size={14} className="inline mr-1" />}
                       {mode === 'cash' && <Banknote size={14} className="inline mr-1" />}
                       {mode === 'bank' && <CreditCard size={14} className="inline mr-1" />}
@@ -788,47 +723,29 @@ export default function SuppliersPage() {
                   ))}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {billData.payment_mode === 'credit' 
-                    ? '⚠️ Credit: Will add to supplier balance (pay later)' 
-                    : '✅ Paid: No balance change'}
+                  {billData.payment_mode === 'credit' ? 'Credit: Will add to supplier balance (pay later)' : 'Paid: No balance change'}
                 </p>
               </div>
-              
               <div>
                 <Label>Category</Label>
                 <Select value={billData.category || "general"} onValueChange={(v) => setBillData({ ...billData, category: v })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Supplier Purchase">Supplier Purchase</SelectItem>
                     <SelectItem value="Inventory">Inventory</SelectItem>
                     <SelectItem value="Raw Materials">Raw Materials</SelectItem>
                     <SelectItem value="Supplies">Supplies</SelectItem>
-                    {expenseCategories.map(c => (
-                      <SelectItem key={c.id || c.name} value={c.name}>{c.name}</SelectItem>
-                    ))}
+                    {expenseCategories.map(c => (<SelectItem key={c.id || c.name} value={c.name}>{c.name}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
-              
               <div>
                 <Label>Description (Optional)</Label>
-                <Input
-                  value={billData.description}
-                  onChange={(e) => setBillData({ ...billData, description: e.target.value })}
-                  placeholder="e.g., Invoice #1234"
-                />
+                <Input value={billData.description} onChange={(e) => setBillData({ ...billData, description: e.target.value })} placeholder="e.g., Invoice #1234" />
               </div>
-              
               <div className="flex gap-3 pt-2">
-                <Button type="submit" className="flex-1 bg-amber-500 hover:bg-amber-600">
-                  <Receipt size={16} className="mr-1" />
-                  Add Purchase Bill
-                </Button>
-                <Button type="button" variant="outline" onClick={() => setShowAddBillDialog(false)}>
-                  Cancel
-                </Button>
+                <Button type="submit" className="flex-1 bg-amber-500 hover:bg-amber-600"><Receipt size={16} className="mr-1" /> Add Purchase Bill</Button>
+                <Button type="button" variant="outline" onClick={() => setShowAddBillDialog(false)}>Cancel</Button>
               </div>
             </form>
           </DialogContent>
@@ -838,22 +755,14 @@ export default function SuppliersPage() {
         <Dialog open={showMigrateDialog} onOpenChange={setShowMigrateDialog}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-amber-600">
-                <ArrowUpCircle />
-                Fix Payment Data - Convert to Purchase Bills
-              </DialogTitle>
+              <DialogTitle className="flex items-center gap-2 text-amber-600"><ArrowUpCircle /> Fix Payment Data - Convert to Purchase Bills</DialogTitle>
             </DialogHeader>
-            
             {migrationPreview && (
               <div className="space-y-4">
                 <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-sm">
                   <p className="font-medium text-amber-800">What will happen?</p>
-                  <p className="text-amber-700 mt-1">
-                    Your supplier payments will be converted to <strong>Purchase Bills (Expenses)</strong> with credit payment mode.
-                    This fixes the data so balances calculate correctly.
-                  </p>
+                  <p className="text-amber-700 mt-1">Your supplier payments will be converted to <strong>Purchase Bills (Expenses)</strong> with credit payment mode.</p>
                 </div>
-                
                 <div className="p-4 bg-stone-50 rounded-lg border">
                   <div className="grid grid-cols-2 gap-4 text-center">
                     <div>
@@ -866,7 +775,6 @@ export default function SuppliersPage() {
                     </div>
                   </div>
                 </div>
-                
                 {migrationPreview.total_payments > 0 ? (
                   <>
                     <div className="max-h-48 overflow-y-auto border rounded-lg">
@@ -874,22 +782,15 @@ export default function SuppliersPage() {
                       {Object.entries(migrationPreview.by_supplier || {}).map(([name, data]) => (
                         <div key={name} className="px-3 py-2 border-t flex justify-between text-sm">
                           <span>{name}</span>
-                          <span className="text-muted-foreground">{data.count} entries • SAR {data.total?.toLocaleString()}</span>
+                          <span className="text-muted-foreground">{data.count} entries - SAR {data.total?.toLocaleString()}</span>
                         </div>
                       ))}
                     </div>
-                    
                     <div className="flex gap-3">
-                      <Button 
-                        onClick={executeMigration} 
-                        disabled={migrating}
-                        className="flex-1 bg-amber-500 hover:bg-amber-600"
-                      >
+                      <Button onClick={executeMigration} disabled={migrating} className="flex-1 bg-amber-500 hover:bg-amber-600">
                         {migrating ? 'Converting...' : 'Convert to Purchase Bills'}
                       </Button>
-                      <Button variant="outline" onClick={() => setShowMigrateDialog(false)}>
-                        Cancel
-                      </Button>
+                      <Button variant="outline" onClick={() => setShowMigrateDialog(false)}>Cancel</Button>
                     </div>
                   </>
                 ) : (
