@@ -62,6 +62,21 @@ A comprehensive business management ERP system named "SSC Track" for tracking sa
 - Verified 100% test pass rate (12/12 backend tests, frontend verified)
 - Admin sees all data, restricted users see appropriate filtered data based on their branch assignment
 
+### Phase 12: Barcode & Timestamps (COMPLETED - Mar 2026)
+- **Print Barcode Feature** - Full barcode generation system for stock items:
+  - Backend: `/api/barcode/item/{id}` (download), `/api/barcode/item/{id}/preview` (inline), `/api/barcode/items` (list), `/api/barcode/batch` (PDF)
+  - Barcode label includes: Company logo, company name, item name, price (SAR), Code128 barcode
+  - Frontend: Barcode column in Items table with preview dialog, Print/Download buttons
+  - Batch selection with checkboxes for multi-item PDF generation
+  - Uses python-barcode library with Pillow for image composition
+- **updated_at Timestamps** - Added automatic `updated_at` tracking:
+  - Customers: Set on `/api/customers/{id}` PUT
+  - Suppliers: Set on `/api/suppliers/{id}` PUT
+  - Sales: Set on `/api/sales/{id}/receive-credit` POST
+  - Items: Set on `/api/items/{id}` PUT
+  - Models updated to include `updated_at: Optional[str] = None` in responses
+- Test Results: Backend 92% (12/13), Frontend 100%
+
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
 - Operator: test@ssc.com / Test@123
@@ -73,13 +88,13 @@ A comprehensive business management ERP system named "SSC Track" for tracking sa
 ### P0 (None - all critical items done)
 
 ### P1 (High Priority)
-- Implement `createdAt` and `updatedAt` timestamps for all major DB collections (data auditing)
-- Add "Print Barcode" feature for stock items
+- None - both P1 tasks completed (timestamps + barcode)
 
 ### P2 (Medium Priority)
 - Implement "Advanced Search" component for all main data tables (Sales, Stock, etc.)
 - User activity logging to track key actions (logins, deletions, settings changes)
 - Propagate get_branch_filter to remaining minor routers (anomaly_detection, cctv, etc.)
+- Add more timestamp tracking to remaining endpoints (expenses, stock entries)
 
 ### P3 (Future/Backlog)
 - Mobile-responsive design for admin pages
