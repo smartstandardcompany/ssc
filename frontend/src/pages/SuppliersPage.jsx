@@ -24,8 +24,11 @@ export default function SuppliersPage() {
   const [showDialog, setShowDialog] = useState(false);
   const [showPayDialog, setShowPayDialog] = useState(false);
   const [showLedgerDialog, setShowLedgerDialog] = useState(false);
+  const [showAddBillDialog, setShowAddBillDialog] = useState(false);
+  const [billData, setBillData] = useState({ amount: '', category: '', payment_mode: 'credit', description: '' });
   const [ledgerData, setLedgerData] = useState(null);
   const [ledgerLoading, setLedgerLoading] = useState(false);
+  const [expenseCategories, setExpenseCategories] = useState([]);
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [payingSupplier, setPayingSupplier] = useState(null);
   const [formData, setFormData] = useState({ name: '', category: '', sub_category: '', branch_id: '', phone: '', email: '', account_number: '', credit_limit: 0 });
@@ -39,16 +42,18 @@ export default function SuppliersPage() {
 
   const fetchData = async () => {
     try {
-      const [suppliersRes, branchesRes, categoriesRes, summariesRes] = await Promise.all([
+      const [suppliersRes, branchesRes, categoriesRes, summariesRes, expCatRes] = await Promise.all([
         api.get('/suppliers'),
         api.get('/branches'),
         api.get('/categories?category_type=supplier'),
         api.get('/suppliers/payment-summaries'),
+        api.get('/categories?category_type=expense').catch(() => ({ data: [] })),
       ]);
       setSuppliers(suppliersRes.data);
       setBranches(branchesRes.data);
       setCategories(categoriesRes.data);
       setPaySummaries(summariesRes.data);
+      setExpenseCategories(expCatRes.data || []);
     } catch (error) {
       toast.error('Failed to fetch data');
     } finally {
@@ -130,6 +135,31 @@ export default function SuppliersPage() {
       setShowLedgerDialog(false);
     } finally {
       setLedgerLoading(false);
+    }
+  };
+
+  const handleAddBill = async (e) => {
+    e.preventDefault();
+    if (!payingSupplier) return;
+    
+    try {
+      await api.post('/expenses', {
+        amount: parseFloat(billData.amount),
+        category: billData.category || 'Supplier Purchase',
+        description: billData.description || `Purchase from ${payingSupplier.name}`,
+        payment_mode: billData.payment_mode,
+        supplier_id: payingSupplier.id,
+        branch_id: payingSupplier.branch_id || '',
+        date: new Date().toISOString(),
+      });
+      
+      const modeText = billData.payment_mode === 'credit' ? 'Credit bill added to balance' : 'Cash/Bank bill recorded';
+      toast.success(`Purchase bill recorded! ${modeText}`);
+      setShowAddBillDialog(false);
+      setBillData({ amount: '', category: '', payment_mode: 'credit', description: '' });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to add purchase bill');
     }
   };
 
@@ -393,18 +423,37 @@ export default function SuppliersPage() {
                     </div>
                   </div>
 
-                  {supplier.current_credit > 0 && (
+                  {/* Action Buttons */}
+                  <div className="grid grid-cols-2 gap-2 mt-3">
+                    {/* Add Purchase Bill */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => { 
+                        setPayingSupplier(supplier); 
+                        setShowAddBillDialog(true);
+                        setBillData({ amount: '', category: '', payment_mode: 'credit', description: '' });
+                      }}
+                      data-testid={`add-bill-${supplier.id}`}
+                      className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                    >
+                      <Receipt size={14} className="mr-1" />
+                      Add Bill
+                    </Button>
+                    
+                    {/* Pay Credit */}
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => { setPayingSupplier(supplier); setShowPayDialog(true); }}
                       data-testid="pay-credit-button"
-                      className="w-full mt-2"
+                      className={`${supplier.current_credit > 0 ? 'text-blue-600 border-blue-300 hover:bg-blue-50' : 'text-stone-400 border-stone-200'}`}
+                      disabled={!supplier.current_credit || supplier.current_credit <= 0}
                     >
                       <DollarSign size={14} className="mr-1" />
                       Pay Credit
                     </Button>
-                  )}
+                  </div>
                   
                   {/* View Ledger Button */}
                   <Button
@@ -616,6 +665,107 @@ export default function SuppliersPage() {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Purchase Bill Dialog */}
+        <Dialog open={showAddBillDialog} onOpenChange={setShowAddBillDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Receipt className="text-amber-500" />
+                Add Purchase Bill - {payingSupplier?.name}
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleAddBill} className="space-y-4">
+              <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-sm">
+                <p className="font-medium text-amber-800">What is a Purchase Bill?</p>
+                <p className="text-amber-700 text-xs mt-1">
+                  A purchase bill is when you BUY goods from this supplier. 
+                  Choose <strong>Credit</strong> if you'll pay later (adds to balance), 
+                  or <strong>Cash/Bank</strong> if paid now.
+                </p>
+              </div>
+              
+              <div>
+                <Label>Amount (SAR)</Label>
+                <Input
+                  type="number"
+                  value={billData.amount}
+                  onChange={(e) => setBillData({ ...billData, amount: e.target.value })}
+                  placeholder="0.00"
+                  required
+                  className="text-lg font-bold"
+                />
+              </div>
+              
+              <div>
+                <Label>Payment Type</Label>
+                <div className="grid grid-cols-3 gap-2 mt-1">
+                  {['credit', 'cash', 'bank'].map(mode => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setBillData({ ...billData, payment_mode: mode })}
+                      className={`py-2.5 px-3 rounded-lg text-sm font-medium transition-all border ${
+                        billData.payment_mode === mode
+                          ? mode === 'credit' ? 'bg-amber-500 text-white border-amber-500'
+                            : mode === 'cash' ? 'bg-emerald-500 text-white border-emerald-500'
+                            : 'bg-blue-500 text-white border-blue-500'
+                          : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
+                      }`}
+                    >
+                      {mode === 'credit' && <Receipt size={14} className="inline mr-1" />}
+                      {mode === 'cash' && <Banknote size={14} className="inline mr-1" />}
+                      {mode === 'bank' && <CreditCard size={14} className="inline mr-1" />}
+                      {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {billData.payment_mode === 'credit' 
+                    ? '⚠️ Credit: Will add to supplier balance (pay later)' 
+                    : '✅ Paid: No balance change'}
+                </p>
+              </div>
+              
+              <div>
+                <Label>Category</Label>
+                <Select value={billData.category || "general"} onValueChange={(v) => setBillData({ ...billData, category: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Supplier Purchase">Supplier Purchase</SelectItem>
+                    <SelectItem value="Inventory">Inventory</SelectItem>
+                    <SelectItem value="Raw Materials">Raw Materials</SelectItem>
+                    <SelectItem value="Supplies">Supplies</SelectItem>
+                    {expenseCategories.map(c => (
+                      <SelectItem key={c.id || c.name} value={c.name}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label>Description (Optional)</Label>
+                <Input
+                  value={billData.description}
+                  onChange={(e) => setBillData({ ...billData, description: e.target.value })}
+                  placeholder="e.g., Invoice #1234"
+                />
+              </div>
+              
+              <div className="flex gap-3 pt-2">
+                <Button type="submit" className="flex-1 bg-amber-500 hover:bg-amber-600">
+                  <Receipt size={16} className="mr-1" />
+                  Add Purchase Bill
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setShowAddBillDialog(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </form>
           </DialogContent>
         </Dialog>
       </div>

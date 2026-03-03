@@ -745,8 +745,20 @@ export default function POSPage() {
         {/* SUPPLIER PAYMENTS SECTION */}
         {entryType === 'supplier_payment' && (
           <div className="space-y-3">
+            {/* Help Box */}
+            <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 text-xs">
+              <p className="font-medium text-blue-800">💡 What is this for?</p>
+              <p className="text-blue-700 mt-1">
+                Use this to <strong>PAY BACK</strong> credit you owe to suppliers. 
+                This reduces your credit balance with them.
+              </p>
+              <p className="text-blue-600 mt-1">
+                For <strong>Purchase Bills</strong> (when you BUY from supplier), go to <strong>Expenses</strong> tab or <strong>Suppliers → Add Bill</strong>.
+              </p>
+            </div>
+
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium text-orange-700">Pay Multiple Suppliers</Label>
+              <Label className="text-sm font-medium text-orange-700">Pay Credit to Suppliers</Label>
               <Button 
                 type="button" 
                 size="sm" 
