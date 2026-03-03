@@ -1,657 +1,75 @@
-# SSC Track - Product Requirements Document
+# SSC Track - ERP System PRD
 
 ## Original Problem Statement
-A comprehensive business management ERP system named "SSC Track" for Smart Standard Company.
+A comprehensive business management ERP system named "SSC Track" for tracking sales, expenses, supplier payments, and more. The system has evolved to include financial management, HR, stock management, restaurant operations, asset tracking, CCTV security, and reporting modules.
+
+## Core Requirements
+- **Financial Management:** Sales (Bank/Cash/Online/Credit), Expenses, Supplier Payments, Customer Credit Management, ZATCA-compliant Invoicing, Item-level P&L, Online Platform Sales & Commission Management.
+- **HR Management:** Employee database, salary payments, leave tracking, loan management, Employee Self-Service Portal.
+- **Staff Management:** Manual and AI-driven Staff Shift Scheduling, Cashier shift management.
+- **Stock Management:** Inventory tracking, stock-in/out, multi-branch transfers, real-time low-stock alerts, Smart alerts (velocity-based).
+- **Restaurant Operations:** POS, Kitchen Display System (KDS), Customer-Facing Order Status Display, Table Management, Table Reservations.
+- **Asset & Liability Tracking:** Unified module for company assets/liabilities (loans, fines), document management with expiry alerts.
+- **CCTV Security Module:** Integration with Hikvision cameras, AI-powered features.
+- **Cash Flow & Bank Reconciliation:** Branch-to-branch transfers, central balance, bank statement analysis.
+- **Reporting & Analytics:** Customizable dashboards, advanced reporting, AI-driven predictive analytics.
+- **Administration & UI/UX:** Role-based access, branding, data management, dark mode, multi-language support, PWA capabilities.
+- **Customer Loyalty Program:** Points-based rewards system with tiers and redemption.
 
 ## Tech Stack
-- **Backend:** FastAPI, Motor (async MongoDB), JWT auth, APScheduler, pywebpush, aiosmtplib, pdfplumber
-- **Frontend:** React, TailwindCSS, Shadcn UI, Recharts, react-grid-layout, date-fns
-- **Database:** MongoDB
-- **AI:** emergentintegrations (GPT-4o Vision), AI Shift Scheduler
-- **Push:** VAPID-based Web Push, Service Worker
-- **WhatsApp:** Twilio (config-dependent) with Chatbot
-- **PWA:** Full offline-capable Progressive Web App with shortcuts
-
-## Latest Updates (Mar 2, 2026 — Session 12)
-
-### New Features Implemented ✅
-
-#### 1. Customer Loyalty Program (P2 → DONE)
-- **Route:** `/loyalty`
-- **Backend:** `backend/routers/customers.py` (lines 156-370)
-- **Frontend:** `frontend/src/pages/LoyaltyProgramPage.jsx`
-- **Features:**
-  - Tier System: Bronze (0pts) → Silver (500pts, 1.25x) → Gold (1000pts, 1.5x) → Platinum (2500pts, 2x)
-  - Points Configuration: 1 point per SAR spent, each point worth SAR 0.1
-  - Minimum 100 points to redeem
-  - Leaderboard with top customers ranked by points
-  - Individual customer loyalty view with earn/redeem actions
-  - Settings panel for admins to configure program
-- **API Endpoints:**
-  - `GET /api/loyalty/settings` - Get program configuration
-  - `POST /api/loyalty/settings` - Update program configuration
-  - `GET /api/loyalty/leaderboard` - Top customers by points
-  - `GET /api/customers/{id}/loyalty` - Customer's points/tier info
-  - `POST /api/customers/{id}/loyalty/earn` - Award points for purchase
-  - `POST /api/customers/{id}/loyalty/redeem` - Redeem points for discount
-
-#### 2. Smart Stock Alerts (P1 → DONE)
-- **Route:** `/stock` (Smart Alerts tab)
-- **Backend:** `backend/routers/stock.py` - `get_smart_stock_alerts` endpoint
-- **Features:**
-  - Velocity-based predictions using 30-day consumption analysis
-  - 7-day forecast for stock depletion
-  - Alert levels: Critical (out of stock or ≤3 days), Warning (≤7 days), Info (≤14 days)
-  - Suggested order quantity based on 2-week runway
-  - Summary cards showing Critical/Warning/Info/Total counts
-- **API Endpoint:**
-  - `GET /api/stock/smart-alerts?branch_id=&days_lookback=30&days_forecast=7`
-
-### Bug Fixes ✅
-
-#### Supplier Payment Deletion Bug (P0 → FIXED)
-- **Issue:** When deleting a cash/bank payment that paid down supplier credit, the balance wasn't updating correctly
-- **Root Cause:** Delete logic only handled "credit" mode payments, not cash/bank payments
-- **Fix:** `backend/routers/suppliers.py` lines 104-138 now properly:
-  - Cash/Bank payment deletion → Increases supplier credit (you owe them again)
-  - Credit payment deletion → Decreases supplier credit
-- **Verification:** Testing agent confirmed fix works correctly
-
----
-
-## Previous Updates (Mar 2, 2026 — Session 11)
-
-### P0/P1 Items Verified ✅
-
-#### Password Reset Functionality
-- **Admin Password Reset API:** `PUT /api/users/{user_id}/reset-password` working correctly
-- **Test:** Successfully reset password for user Ahmed (ahmed@test.com) to `ahmed@123`
-- **Feature:** Admin can reset any user's password with optional "must change on login" flag
-
-#### Employee Portal Access
-- **Route:** `/my-portal` (employees are auto-redirected after login)
-- **Features Available to Employees:**
-  - Profile overview (name, position, salary)
-  - Financial info (loan balance, due balance, active loans)
-  - Leave balance (annual, sick, ticket entitlement)
-  - Payments awaiting confirmation with "Confirm" button
-  - Tabs: Attendance, Payments, Leaves, Loans, Requests, Letters, My Tasks
-- **Test Credentials:**
-  - Email: `ahmed@test.com`
-  - Password: `ahmed@123`
-
-#### Quick Entry (POS) Page Verification
-- **Online Sales Stat Card:** ✅ Working - Shows "SAR 3,000" from platforms summary API
-- **Date Picker:** ✅ Working - Shows date selection input
-- **Branch Selection:** ✅ Working
-- **Regular/Online Sale Tabs:** ✅ Working
-- **Supplier Selection for Expenses:** ✅ Working
-
-#### Sales Page Branch-wise Monthly Summary
-- **Feature:** ✅ Working - Shows "March 2026 - Branch Sales" with per-branch breakdown
-- **Data:** Branch A: SAR 400, Test Branch: SAR 600, Online Total: SAR 1,000, Total: SAR 1,000
-- **Payment Mode Breakdown:** Cash, Bank, Credit, Online per branch
-
-#### Supplier Balance Bug Fixes
-- **Credit Expense Deletion:** ✅ Fixed in `backend/routers/expenses.py` - reduces supplier credit
-- **Supplier Payment Deletion:** ✅ Fixed in `backend/routers/suppliers.py` - reduces supplier credit
-- **Recalculation Endpoints:** Available for manual correction if needed
-
----
-
-## Previous Updates (Mar 2, 2026 — Session 10)
-
-### Quick Entry Improvements ✅
-
-#### Online Sale Quick Entry
-- **Purple "Online Sale" tab** in Sales page for easy access
-- **Platform selection** with colorful buttons showing all platforms with commission rates
-- **Auto-sets payment mode** to "Online Platform" when clicking the tab
-- **Customer optional** - defaults to "Walk-in" for online orders
-
-#### Expense Supplier Selection
-- **New "Supplier" dropdown** in Expenses form
-- Shows all suppliers with their current credit balance
-- **Credit warning** displayed when selecting Credit payment mode with a supplier
-- Links expense directly to supplier for balance tracking
-
-### Supplier Balance Bug Fix ✅
-- **Issue:** Deleting credit expenses linked to suppliers didn't reduce the supplier's credit balance
-- **Fix:** `DELETE /api/expenses/{id}` now checks if expense was on credit and reduces supplier's `current_credit`
-- **New Endpoints:**
-  - `POST /api/suppliers/{id}/recalculate-balance` - Recalculate single supplier's balance
-  - `POST /api/suppliers/recalculate-all-balances` - Recalculate all suppliers' balances
-
-### Table Reservations System - IMPLEMENTED ✅
-Full reservation management for restaurant tables:
-
-**Features:**
-- Create/edit/delete reservations with customer details
-- Table capacity validation
-- Conflict detection (no double-booking)
-- Status lifecycle: pending → confirmed → seated → completed
-- No-show and cancellation tracking
-- Available slots finder for party size
-- Confirmation codes (e.g., RES2603024B3E)
-- Occasion tracking (birthday, anniversary, business, celebration)
-- Special requests notes
-
-**API Endpoints:**
-- `GET/POST/PUT/DELETE /api/reservations` - CRUD operations
-- `GET /api/reservations/today` - Today's reservations
-- `GET /api/reservations/upcoming?days=N` - Next N days
-- `GET /api/reservations/available-slots?date=X&party_size=N` - Find availability
-- `GET /api/reservations/stats` - Booking statistics
-- `POST /api/reservations/{id}/status` - Update status
-
-**Frontend:**
-- **ReservationsPage:** `/reservations` with Today, Upcoming, Calendar tabs
-- **Stats cards:** Today's bookings, seated, completed, cancelled, no-shows
-- **New Reservation dialog:** Table selection, party size, time slots, occasions
-- **Reservation detail:** Full lifecycle actions (Seat, Complete, Cancel, No Show)
-
-### Testing Results (Iteration 65)
-- **Backend:** 20/20 tests passed (100%)
-- **Frontend:** 100%
-- **Bug Fixed:** ReservationUpdate model missing table_id field
-
-### Assets & Liabilities Module COMPLETE & VERIFIED ✅
-
-#### New Feature: Company Asset Tracking
-Full asset management with depreciation calculation:
-
-**Asset Types:**
-- Equipment (general machinery)
-- Vehicle (delivery vans, cars)
-- Property (buildings, land)
-- Furniture (office furniture)
-- Electronics (computers, phones)
-- Kitchen Equipment (restaurant equipment)
-- Other (custom)
-
-**Features:**
-- **Asset CRUD:** Add/edit/delete company assets
-- **Depreciation Tracking:** Automatic depreciation calculation by year
-- **Warranty Alerts:** Track warranty expiry dates
-- **Maintenance Log:** Record maintenance, repairs, inspections per asset
-- **Book Value:** Real-time calculated value after depreciation
-- **Branch Assignment:** Assign assets to specific branches
-- **File Attachments:** Upload purchase receipts, photos
-
-#### Unified Liabilities Dashboard
-Single view of all company financial obligations:
-- **Company Loans:** Outstanding balances, monthly payments
-- **Unpaid Fines:** Traffic, government, regulatory fines
-- **Supplier Dues:** Outstanding supplier payments
-- **Document Alerts:** Expired and expiring documents
-
-**API Endpoints:**
-- `GET/POST/PUT/DELETE /api/assets` - Asset CRUD
-- `GET /api/assets/stats` - Asset statistics
-- `GET /api/assets/types` - Asset type definitions
-- `GET /api/assets/depreciation-report` - Depreciation report
-- `POST/GET /api/assets/{id}/maintenance` - Maintenance logs
-- `GET /api/liabilities/summary` - Unified liabilities view
-
-**Frontend:**
-- **AssetsPage:** `/assets` with Assets, Liabilities, Depreciation tabs
-- **Navigation:** Added "Assets & Liabilities" to sidebar under Assets section
-
-### Partner P&L Report - NaN Bug Fixed ✅
-Fixed display of "SAR NaN" when no data available in summary cards.
-
-### Mobile Bottom Tab Bar - VERIFIED WORKING ✅
-Customizable bottom navigation for mobile devices already implemented.
-
-### Testing Results (Iteration 64)
-- **Backend:** 14/14 tests passed (100%)
-- **Frontend:** 100%
-- **Bug Fixed:** Empty SelectItem value crash in Add Asset dialog
-
----
-
-## Previous Session Updates (Mar 2, 2026 — Session 9)
-
-### Online Delivery Platforms Feature COMPLETE & VERIFIED
-
-#### Online Sales Platform Management (NEW)
-Full support for food delivery platforms like HungerStation, Jahez, ToYou, etc:
-
-**Pre-configured Platforms (10):**
-- HungerStation (20% commission)
-- Hunger (18% commission)
-- Jahez (20% commission)
-- ToYou (18% commission)
-- Keta (15% commission)
-- Ninja (15% commission)
-- Careem Food (22% commission)
-- Talabat (20% commission)
-- Marsool (15% commission)
-- Other (custom)
-
-**Features:**
-- **Platform Management:** Add/edit/delete platforms with Arabic names
-- **Commission Tracking:** Track commission rates per platform
-- **Quick Sale Integration:** "Online Platform" payment mode in sales
-- **Platform Selection:** Choose platform when recording online sales
-- **Payment Recording:** Record when platforms pay you (settlements)
-- **Reconciliation:** Track total sales, received amounts, and pending balances
-- **Summary Dashboard:** Overview with totals per platform
-
-**API Endpoints:**
-- `GET /api/platforms` - List all platforms with balances
-- `POST /api/platforms` - Add new platform
-- `POST /api/platforms/seed-defaults` - Seed 10 default platforms
-- `GET /api/platforms/summary` - Summary with totals
-- `GET /api/platforms/{id}/reconciliation` - Detailed reconciliation
-- `GET/POST /api/platform-payments` - Record/view settlements
-
-**Frontend:**
-- **PlatformsPage:** `/platforms` with Overview, Platforms, Payments tabs
-- **SalesPage:** Updated with "Online Platform" payment mode
-- **Navigation:** Added to Finance section in sidebar
-
-### Testing Results (Iteration 62)
-- **Backend:** 12/12 tests passed (100%)
-- **Frontend:** 100%
-- **Bug Fixed:** MongoDB ObjectId serialization in platforms.py
-
----
-
-## Previous Session Updates (Mar 2, 2026 — Session 8)
-
-### All Future/Backlog Items COMPLETE & VERIFIED
-
-#### 1. Dashboard Quick Tour (NEW)
-Interactive 9-step onboarding guide for new users:
-- **Steps:** Welcome, Quick Actions, AI Widgets (Low Stock, Peak Hours, CLV, Profit), Customize, Complete
-- Auto-shows on first login, can be restarted via "Take Tour" button
-- Multi-language support (EN, AR)
-- Progress bar, skip option, localStorage persistence
-- Component: `frontend/src/components/DashboardTour.jsx`
-
-#### 2. PDF Bank Statement Parsing (NEW)
-Parse transactions from PDF bank statements using pdfplumber:
-- Table extraction for structured PDFs
-- Text extraction fallback for unstructured PDFs
-- Auto-detects bank from content (Saudi & UAE banks)
-- Categorizes transactions automatically
-- Service: `backend/services/bank_parsers.py` - `PDFStatementParser` class
-
-#### 3. WhatsApp Chatbot Integration (NEW)
-Full chatbot with natural language commands:
-- **Commands:** help, sales today/week, stock low, expenses today/week, dues, summary, profit
-- Webhook endpoint: `POST /api/whatsapp/webhook` (for Twilio)
-- Test endpoint: `POST /api/whatsapp/test-command`
-- Message history: `GET /api/whatsapp/messages`
-- Arabic command support: مساعدة (help)
-- Logs all incoming/outgoing messages
-
-#### 4. AI-Powered Shift Scheduling (NEW)
-Optimizes staff schedules based on historical data:
-- **Peak Hours Analysis:** Analyzes 30 days of sales data
-- **Smart Scheduling:** Assigns more staff during peak hours
-- **Fairness:** Distributes hours evenly among employees
-- **Leave Awareness:** Excludes employees on approved leave
-- Endpoints:
-  - `POST /api/schedules/generate` - Generate optimized schedule
-  - `GET /api/schedules/peak-hours/analysis` - View peak hour data
-  - `GET /api/schedules` - List saved schedules
-  - `POST /api/schedules/{id}/publish` - Publish schedule
-- Service: `backend/services/shift_scheduler.py`
-
-#### 5. Enhanced PWA (NEW)
-Improved Progressive Web App capabilities:
-- **Offline Support:** offline.html page with reconnect button
-- **Service Worker:** API caching, background sync, stale-while-revalidate
-- **App Shortcuts:** Quick Entry, POS, Reports (long-press app icon)
-- **Manifest:** Updated with shortcuts, dark theme colors
-- Files: `frontend/public/sw.js`, `offline.html`, `manifest.json`
-
-### Testing Results (Iteration 61)
-- **Backend:** 22/22 tests passed (100%)
-- **Frontend:** 95% (minor tour positioning issue on scroll)
-- **Files:** `backend/tests/test_iter61_dashboard_tour_pdf_whatsapp_shift.py`
-
----
-
-## Previous Session Updates (Mar 2, 2026 — Session 7)
-
-### All Backlog Items COMPLETE & VERIFIED
-
-#### 1. Quick Actions Widget (NEW)
-Role-based quick action buttons on dashboard:
-- **10 actions:** Record Sale, Add Expense, Pay Supplier, New Invoice, Approve Leave, Pay Salary, Add Customer, View Reports, Stock Entry, CCTV Live
-- Permission-based visibility (shows only actions user has access to)
-- Colorful pill buttons with icons
-- Multi-language labels (EN, AR)
-- Data-testid: `quick-actions-widget`, `quick-action-{action_id}`
-
-#### 2. Multi-Language AI Widget Support (NEW)
-Added translations for all AI widgets in 5 languages:
-- **English (EN):** Complete
-- **Arabic (AR):** Complete
-- **Urdu (UR):** Complete
-- **Hindi (HI):** Complete
-- **Bengali (BN):** Complete
-
-Translated keys: `ai_low_stock`, `ai_peak_hours`, `ai_customer_clv`, `ai_profit_analysis`, `quick_actions`, and all related strings.
-
-#### 3. WhatsApp Notification Expansion (NEW)
-New notification endpoints:
-- `POST /api/whatsapp/send-low-stock-alert` - Send low stock alerts
-- `POST /api/whatsapp/send-leave-notification` - Notify employee of leave approval/rejection
-- `POST /api/whatsapp/send-salary-notification` - Notify employee of salary payment
-- `POST /api/whatsapp/send-bulk-salary-notification` - Bulk salary notifications
-- `POST /api/whatsapp/send-custom` - Custom message to specific phone or configured recipients
-
-#### 4. CCTV Face Recognition Enhancement (NEW)
-- `POST /api/cctv/faces/register-multiple` - Register up to 5 face images per employee (improves accuracy)
-- `GET /api/cctv/faces/training-status` - View face training status across employees
-- Training status: `trained` (3+ images), `partial` (1-2 images), `untrained`
-- Branch filtering supported
-
-#### 5. Additional Bank Statement Formats (NEW)
-Added UAE bank parsers:
-- **Emirates NBD** (`enbd`)
-- **RAK Bank** (`rakbank`)
-- **Dubai Islamic Bank** (`dib`)
-- **Mashreq Bank** (`mashreq`) - uses ENBD parser
-- **ADCB** (`adcb`) - uses ENBD parser
-
-Auto-detection from filename and content. Total supported banks: 12 (7 Saudi + 5 UAE)
-
-### Testing Results (Iteration 60)
-- **Backend:** 17/17 tests passed (100%)
-- **Frontend:** All features working (100%)
-- **Files:** `backend/tests/test_iter60_quick_actions_whatsapp_cctv.py`
-
----
-
-## Previous Session Updates (Mar 2, 2026 — Session 6)
-
-### All Requested Features COMPLETE & VERIFIED
-
-#### 1. Dashboard AI Predictive Widgets (NEW)
-Added 4 new AI-powered widgets to the main dashboard:
-- **AI: Low Stock Alerts** - Shows items predicted to run low with days until stockout
-- **AI: Peak Hours** - Displays optimal staffing hours based on transaction analysis
-- **AI: Customer CLV** - Shows customer lifetime value predictions and top customers
-- **AI: Profit Analysis** - Daily profit trends, best/worst days, trend direction
-
-Widget options added to dashboard customization dialog. All widgets have proper data-testid attributes.
-
-#### 2. HR Module Review (VERIFIED COMPLETE)
-- Employee self-service portal at `/my-portal`
-- Leave management with calendar view at `/leave-approvals`
-- Bulk salary payments with preview
-- Loan management and tracking
-
-#### 3. Mobile POS Interface (VERIFIED COMPLETE)
-- Mobile-optimized POS at `/cashier-pos`
-- Mobile cart toggle button
-- Category filters, item modifiers
-- Touch-friendly interface
-
-#### 4. Customer-Facing Order Status Display (VERIFIED COMPLETE)
-- Real-time order status at `/order-status`
-- Preparing/Ready columns with visual indicators
-- Sound notification when orders ready
-- Dark theme, mobile responsive
-
-### Testing Results (Iteration 59)
-- **Backend:** 14/14 tests passed (100%)
-- **Frontend:** All pages and widgets working (100%)
-- **Files:** `backend/tests/test_iter59_dashboard_widgets.py`
-
----
-
-## Previous Session Updates (Mar 2, 2026 — Session 5)
-
-### Verification: All Three Major Features COMPLETE & TESTED
-1. **Advanced Bank Statement Parsing** - 100% Working
-   - Multi-bank support: Al Rajhi, SNB, Riyad, Alinma, SABB, ANB, Albilad
-   - Generic formats: CSV, Excel, OFX/QFX, MT940 (SWIFT)
-   - Auto-matching engine, manual matching, unmatched suggestions
-   - API: `/api/bank-statements/*` (upload, auto-match, unmatched, analysis, reconciliation)
-   
-2. **AI-Powered CCTV Enhancements** - 100% Working
-   - OpenAI Vision (GPT-4o) integration via EMERGENT_LLM_KEY
-   - Face Recognition for attendance
-   - Object Detection for inventory monitoring
-   - People Counting for foot traffic
-   - Motion Analysis for security alerts
-   - API: `/api/cctv/ai/*` (count-people, detect-objects, analyze-motion, recognize-face)
-   
-3. **Predictive Analytics** - 100% Working
-   - Inventory Demand Forecasting (weighted moving average)
-   - Customer Lifetime Value (CLV) prediction
-   - Peak Hours Analysis for staff scheduling
-   - Profit Decomposition with trend & seasonality analysis
-   - API: `/api/predictions/*` (inventory-demand, customer-clv, peak-hours, profit-decomposition)
-   - Frontend: Predictive Analytics Hub in AnalyticsPage.jsx with 14 tabs
-
-### Testing Results (Iteration 58)
-- **Backend:** 27/27 tests passed (100%)
-- **Frontend:** All pages and tabs working (100%)
-- **Files:** `backend/tests/test_bank_cctv_predictions_iter58.py`
-
-## Previous Updates (Mar 2, 2026 — Session 4)
-
-### Feature: Password Management System (COMPLETED)
-- **Backend**: New password management endpoints in `auth.py`
-  - `PUT /api/users/{id}/reset-password` — Admin resets user password with optional force-change flag
-  - `POST /api/auth/forgot-password` — Self-service forgot password (sends email reset link)
-  - `POST /api/auth/reset-password` — Reset password using token from email
-  - `GET /api/auth/validate-reset-token/{token}` — Validate reset token before displaying form
-  - `POST /api/auth/change-password` — User changes own password (supports forced change)
-  - New models: `PasswordReset`, `ForgotPasswordRequest`, `ResetPasswordWithToken`, `ChangePassword`
-  - User model updated with `must_change_password: bool` field
-  - Login endpoint returns `must_change_password` flag for frontend redirect
-- **Frontend**: Complete password management UI
-  - **Login page**: Added "Forgot password?" link
-  - **ForgotPasswordPage**: Email input form, sends reset link, shows success message
-  - **ResetPasswordPage**: Token validation, new password form, error handling for expired tokens
-  - **ChangePasswordPage**: For both voluntary and forced password changes
-  - **UsersPage**: Reset Password button (key icon), Reset Password dialog with "Force change on login" checkbox
-  - **"Must Change PW"** badge displays on users with pending forced password change
-  - App.js updated to redirect users with `must_change_password=true` to change-password page
-- **Email**: Uses SMTP via aiosmtplib (requires email settings configuration)
-- **Security**: Tokens expire after 1 hour, prevents email enumeration, clears flag after successful change
-- **Testing**: 100% pass rate (21/21 backend, all frontend features verified)
-
-### Feature: Granular Role-Based Access Control (RBAC) (COMPLETED)
-- **Backend**: New permission system with module-level access control
-  - `has_permission(user, module, level)` — checks if user has read/write access
-  - `require_permission(user, module, level)` — raises HTTPException 403 if denied
-  - `get_branch_filter(user)` — returns MongoDB query filter for branch-restricted users
-  - `normalize_permissions(perms)` — backward compatibility: converts old list format to dict
-  - Updated routers: sales, expenses, customers, suppliers, employees with permission checks
-  - User model updated with `Dict[str, str]` permissions and field_validator
-- **Frontend**: New User Management UI
-  - Module Permissions section with read/write/none dropdowns for each module
-  - 25 modules organized by groups: Core, Finance, HR, Stock, Operations, Reports, Admin
-  - Quick action buttons: "All Write", "All Read", "All None"
-  - Permission summary badges in users table showing "X write, Y read"
-  - Branch assignment dropdown for restricting users to specific branch data
-  - Admin users show "Full Access" badge (no permission config needed)
-- **Navigation**: DashboardLayout updated with `hasPermission()` for filtering navigation
-- **Backward Compatibility**: Old list-based permissions auto-converted to new dict format
-- **Testing**: 100% pass rate (16/16 backend, all frontend features verified)
-
-## Previous Updates (Mar 1, 2026 — Session 3)
-
-### Feature: Bangla Language Support (COMPLETED)
-- Added full Bangla (`bn`) translations to `/frontend/src/lib/i18n.js` (lines 734-902)
-- Updated LANGUAGES array to include `{ code: 'bn', label: 'বাংলা', flag: 'বা', rtl: false }`
-- All navigation, dashboard, sales, expenses, employees, stock, invoices, reports, and UI text translated
-
-### Feature: Automated Performance Report (COMPLETED)
-- **Backend**: `GET /api/performance-report?period=N` — comprehensive aggregation endpoint
-  - KPI summary (sales, expenses, profit, margin, transactions, avg ticket, salary, compliance)
-  - Sales & profit daily trend
-  - Branch ranking (sales, expenses, profit, transactions, avg ticket)
-  - Employee performance table (tasks received/completed, compliance %, status)
-  - Expense breakdown by category
-  - Payment mode distribution
-  - Period comparison with growth %
-- **Frontend**: `/performance-report` page with 4 tabs (Overview, Employees, Branches, Expenses)
-  - 5 KPI cards with growth indicators
-  - Area chart for sales/expense/profit trend
-  - Pie chart for payment distribution
-  - Bar charts for branch comparison and expense breakdown
-  - Employee performance table with compliance status badges
-  - Period selector (7/14/30/60/90 days)
-- **Navigation**: Added under Reports section in sidebar
-- **Testing**: 100% pass rate (11/11 backend, all frontend features verified)
-
-### Feature: Enhanced Bank Reconciliation (COMPLETED)
-- **Backend**: New endpoints:
-  - `GET /api/bank-statements/{id}/unmatched` — unmatched transactions with top-3 match suggestions (score, tier, amount diff)
-  - `POST /api/bank-statements/{id}/manual-match` — manually link bank transaction to sale/expense/supplier payment
-- **Frontend**: 3-tab reconciliation: POS Reconciliation, Matched, Unmatched
-  - Adjustable tolerance (SAR 1/5/10/50) and date range (1-7 days) controls
-  - Confidence tier badges (Exact/Probable/Possible) on auto-matches
-  - Manual "Link" button on each unmatched suggestion for one-click linking
-- **Testing**: 100% pass rate (12/12 backend, all frontend features verified)
-
-### Feature: Expanded Keyboard Shortcuts (COMPLETED)
-- Grew from 15 to 31 total shortcuts
-- **Single-key**: B (Reconciliation), F (Performance Report), G (Task Compliance), J (Invoices), M (Menu Items), Q (Schedule)
-- **Ctrl+Shift**: R (Reconciliation), I (Invoices), D (Documents), T (Transfers)
-- **Alt**: P (Performance Report), C (Task Compliance), V (Visualizations), S (Schedule), L (Leave Approvals), M (Menu Items)
-- **Actions**: Ctrl+F (Filter), Ctrl+Shift+E (Export)
-- Updated shortcut modal with all new entries grouped by category
-
-### Feature: Automated Reconciliation Alerts (COMPLETED)
-- **Backend**: Weekly scheduled job that scans all bank statements for unmatched transactions above configurable threshold
-  - `GET /api/reconciliation-alerts/settings` — configurable threshold, schedule (day/hour), channels, enabled toggle
-  - `PUT /api/reconciliation-alerts/settings` — updates settings and manages APScheduler job
-  - `POST /api/reconciliation-alerts/run` — manual trigger, generates alert, sends WhatsApp/Email/Push notifications
-  - `GET /api/reconciliation-alerts` — alert history sorted by date
-  - `GET /api/reconciliation-alerts/latest` — most recent alert
-  - Flags high-value unmatched transactions with statement summaries and match rates
-- **Frontend**: New "Alerts" tab on Reconciliation page
-  - Alert Settings card with threshold dropdown (SAR 100-5000), schedule day/hour, enabled toggle, channel badges
-  - "Run Now" button for manual execution
-  - Alert History with Flagged/Clean status badges, statement summaries, top flagged item previews
-- **Notifications**: Sends via WhatsApp, Push, and Email channels (WhatsApp/Email require credentials)
-- **Testing**: 100% pass rate (20/20 backend, all frontend features verified)
-
-### Feature: Automated Anomaly Detection (COMPLETED)
-- **Backend**: New router `anomaly_detection.py` with 3 statistical detectors:
-  - **Sales**: Daily spikes/drops, transaction count anomalies, payment mode shifts (15%+), branch underperformance
-  - **Expenses**: Above category average (2+ std devs), weekly spending trends, category concentration (40%+)
-  - **Bank**: Match rate drops, flagged transaction spikes, large unmatched transactions (5K+ SAR with z-score >= 3)
-  - Uses z-scores and standard deviations for anomaly scoring
-  - Endpoints: `GET /api/anomaly-detection/scan?days=N`, `GET /api/anomaly-detection/history`
-  - Scan results saved to `anomaly_scans` collection
-- **Frontend**: `/anomaly-detection` page with:
-  - 7 summary cards (Total, Critical, Warning, Info, Sales, Expenses, Bank)
-  - Category filter pills (All/Sales/Expenses/Bank)
-  - Severity filter pills (All/Critical/Warning/Info)
-  - Anomaly list with severity icons, category badges, descriptions, actual/expected/z-score values
-  - Scan history with severity badges
-  - Toast notifications on scan completion
-- **Navigation**: Under Reports section, keyboard shortcut Alt+A
-- **Testing**: 100% pass rate (21/21 backend, all frontend features verified)
-
-### Feature: Scheduled Auto-Scan with Notifications (COMPLETED)
-- **Backend**: Configurable daily/weekly auto-scan scheduler job
-  - `GET /api/anomaly-detection/schedule` — settings (frequency, day, hour, period, threshold, channels)
-  - `PUT /api/anomaly-detection/schedule` — updates settings and manages APScheduler CronTrigger job
-  - `POST /api/anomaly-detection/test-scan` — manually triggers auto-scan with notifications
-  - Smart alerting: only sends notifications when anomalies meet severity threshold (critical only, warning+, any)
-  - Sends via push, WhatsApp, email channels (configurable)
-  - Auto-scan records marked with `source: "auto"` for distinguishing from manual scans
-- **Frontend**: Auto-Scan Schedule card on Anomaly Detection page
-  - Enabled toggle, Frequency (Daily/Weekly), Day (for weekly), Time, Period, Alert threshold
-  - Channel badges (push/whatsapp/email) with click-to-toggle
-  - Test Now button, Last auto-scan timestamp
-  - Scan history shows "auto" badge for scheduled scans
-- **Testing**: 100% pass rate (27/27 backend, all frontend features verified)
-
-### Previous Session Features
-1. Enhanced Predictive Analytics (Inventory Demand, CLV, Peak Hours, Profit Decomposition)
-2. Custom Report Builder with Saved Views, Column Toggles, CSV Export
-3. Push Notification Preferences + WhatsApp Channel
-4. Bank Reconciliation Auto-Matching Engine
-5. System-wide Keyboard Shortcuts (15+ shortcuts, Ctrl+/ help dialog)
-6. Full Mobile PWA (offline caching, install prompt)
-7. Daily Digest Email (comprehensive daily summary)
-8. AI-Powered Task Reminders (presets for Cleaner/Waiter/Cashier/Chef, scheduler)
-9. Task Compliance Dashboard (role/employee analytics, heatmap, trend, flagged alerts)
-
-### All Features (All Sessions Combined)
-- Full core ERP: Sales, Expenses, Customers, Suppliers, Employees, Stock, Invoicing
-- Table Management, Waiter/Cashier Portals, KDS
-- Loan Management, HR Analytics, Leave Calendar
-- Employee Self-Service Portal with Task Reminders
-- 14 Predictive Analytics Models
-- Bank Reconciliation with Auto-Match Engine
-- Custom Report Builder with Saved Views
-- Push Notifications + WhatsApp + Daily Digest
-- Task Reminders System + Compliance Dashboard
-- ZATCA Phase 2, AI CCTV, i18n (EN/AR/UR/HI/BN)
-- Mobile POS, Dark Mode, PWA, Keyboard Shortcuts, Advanced Export
+- **Frontend:** React + Tailwind CSS + Shadcn/UI
+- **Backend:** FastAPI (Python)
+- **Database:** MongoDB (via Motor async driver)
+- **Auth:** JWT-based
+- **Integrations:** OpenAI GPT-4o (via Emergent LLM Key), Twilio (WhatsApp), aiosmtplib (email)
+
+## User Roles
+- **Admin (ss@ssc.com):** Full access to everything. Protected from deletion/password changes.
+- **Manager:** Access to most modules except admin-only ones (users, settings, partners).
+- **Operator:** Limited access based on assigned permissions. Branch-restricted.
+- **Employee:** Self-service portal only.
+- **Cashier/Waiter:** POS-only access via PIN login.
+
+## What's Been Implemented (Completed)
+
+### Phase 1-9: Core ERP Features (ALL DONE)
+- All financial modules (sales, expenses, suppliers, invoices, credit management)
+- HR and employee management (portal, leave, salary, loans)
+- Stock management with smart alerts
+- Restaurant POS system (KDS, tables, reservations, waiter mode)
+- Asset & liability tracking
+- CCTV security integration
+- Cash flow & bank reconciliation
+- Reporting & analytics (dashboards, visualizations, anomaly detection)
+- Admin tools (settings, branding, PWA, i18n, dark mode)
+- Customer Loyalty Program
+
+### Phase 10: Security & Access Control (COMPLETED - Feb 2026)
+- Protected admin account (ss@ssc.com) from deletion/password changes
+- Role-based sidebar navigation filtering (users only see permitted links)
+- Client-side route protection with Access Denied page (prevents URL-based bypass)
+- Backend permission enforcement (require_permission + get_branch_filter) across all key routers:
+  - sales.py, expenses.py, customers.py, suppliers.py, employees.py, platforms.py (already had)
+  - stock.py, invoices.py, branches.py, settings.py, reports.py, transfers.py, dashboard.py (newly added)
+- Branch-based data filtering for branch-restricted users
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
+- Operator: test@ssc.com / test123
 - Employee: ahmed@test.com / emp@123
-- Cashier/Waiter/Kitchen PIN: 1234
+- Cashier PIN: 1234
 
-## Backlog / Future Tasks
+## Prioritized Backlog
 
-### P0: High Priority (None)
-All high-priority items completed.
+### P0 (None - all critical items done)
 
-### P1: Nice to Have
-1. **SMS/WhatsApp Confirmation for Reservations**
-   - Send booking confirmation via Twilio
-   - Reminder messages before reservation
-   - Easy cancellation via text
+### P1 (Nice to Have)
+- Propagate get_branch_filter to remaining minor routers (anomaly_detection, cctv, etc.)
+- Add granular read/write permission enforcement to more endpoints
+- Audit all remaining API endpoints for comprehensive permission checks
 
-2. **Advanced Reporting**
-   - Custom dashboard widgets
-   - Scheduled report emails
-   - More export formats (Excel, PDF)
-
-### P2: Future Enhancements
-1. **Online Booking Widget**
-   - Public URL for customer self-booking
-   - Integration with website/social media
-2. **Multi-currency Support**
-3. **Franchise Management**
-4. **Customer Loyalty Program**
-5. **Delivery Route Optimization**
-
-## Completed Features Summary
-- ✅ Supplier Balance Bug Fix (Session 10)
-- ✅ Table Reservations System (Session 10)
-- ✅ Asset & Liability Tracking (Session 10)
-- ✅ Partner P&L Report (Pre-existing, NaN bug fixed in Session 10)
-- ✅ Mobile Bottom Tab Bar (Pre-existing, verified in Session 10)
-- ✅ Online Platform Sales & Commission Tracking (Session 9)
-- ✅ Dashboard Quick Tour (Session 8)
-- ✅ PDF Bank Statement Parsing (Session 8)
-- ✅ WhatsApp Chatbot (Session 8)
-- ✅ AI Shift Scheduling (Session 8)
-
----
-
-## Session 10 Verification (Mar 2, 2026)
-
-### Online Platform Sales Module - VERIFIED ✅
-- **Overview Tab**: Total Sales (SAR 3,000), Received (SAR 2,400), Commission (SAR 600)
-- **By Branch Tab**: Branch-wise breakdown working correctly
-  - Test Branch: SAR 2,400 sales, SAR 1,440 received, SAR 600 pending
-  - Branch A: SAR 600 sales, SAR 160 received, SAR 400 pending
-- **Payments Tab**: 3 payments recorded with auto-calculated commissions (20%)
-- **Platforms**: 9 platforms configured (HungerStation, Jahez, ToYou, etc.)
-
-### Table Management System - VERIFIED ✅
-Already fully implemented with:
-- **Backend API**: `/api/tables/*` - CRUD, status, sections, waiter assignment
-- **Admin Page**: `/table-management` - Floor plan design, table config, stats
-- **Waiter Page**: `/waiter` - PIN login, table selection, order management
-- **Features**: 20 tables, 5 sections, occupancy tracking, KDS integration
+### P2 (Future)
+- Advanced analytics refinements
+- CCTV AI features expansion
+- WhatsApp chatbot improvements
+- Performance optimization for large datasets
