@@ -125,6 +125,24 @@ A comprehensive business management ERP system named "SSC Track" for tracking sa
   - Sidebar link under Reports section
 - Test Results: Backend 100% (13/13), Frontend 100%
 
+### Phase 16: Sales Alerts & Extended Search (COMPLETED - Mar 2026)
+- **Sales Alert System** (`/sales-alerts`) - Proactive notifications:
+  - Backend: `/api/sales-alerts/config` (get/save), `/api/sales-alerts/preview`, `/api/sales-alerts/send-test`, `/api/sales-alerts/history`
+  - Configurable threshold (5-50% below average) - per user choice
+  - Daily alert time configuration (HH:MM) - per user choice
+  - Configurable recipients list (email + WhatsApp) - per user choice
+  - Email notifications via existing SMTP infrastructure
+  - WhatsApp notifications via existing Twilio integration
+  - Prediction preview: Shows tomorrow's predicted vs historical average
+  - Alert history tracking with sent results
+  - Test alert functionality to verify configuration
+  - Activity logging for config changes
+- **AdvancedSearch Extended** - Added to remaining pages:
+  - Customers Page: Filters for Branch, Credit Balance range
+  - Suppliers Page: Filters for Branch, Category, Credit Balance range
+  - Mobile-responsive table columns (hidden on smaller screens)
+- Test Results: Backend 100% (15/15), Frontend 100%
+
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
 - Operator: test@ssc.com / Test@123
@@ -133,14 +151,14 @@ A comprehensive business management ERP system named "SSC Track" for tracking sa
 
 ## Prioritized Backlog
 
-### P0-P2 (All completed)
+### P0-P3 (All major items completed)
 
-### P3 (Future/Backlog)
-- Integrate AdvancedSearch into Customers/Suppliers pages
-- Propagate get_branch_filter to remaining minor routers
-- Mobile-responsive design for admin pages
+### Future Enhancements
+- Propagate get_branch_filter to remaining minor routers (anomaly_detection, cctv)
+- Mobile-responsive design for remaining admin pages
 - Frontend state management refactor (Zustand/Redux Toolkit)
 - Advanced analytics refinements
 - CCTV AI features expansion
 - WhatsApp chatbot improvements
 - Performance optimization for large datasets
+- Weekly/Monthly trend comparison reports
