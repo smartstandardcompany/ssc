@@ -48,115 +48,54 @@ A comprehensive business management ERP system named "SSC Track" for tracking sa
 - Protected admin account (ss@ssc.com) from deletion/password changes
 - Role-based sidebar navigation filtering (users only see permitted links)
 - Client-side route protection with Access Denied page (prevents URL-based bypass)
-- Backend permission enforcement (require_permission + get_branch_filter) across all key routers:
-  - sales.py, expenses.py, customers.py, suppliers.py, employees.py, platforms.py (already had)
-  - stock.py, invoices.py, branches.py, settings.py, reports.py, transfers.py, dashboard.py (newly added)
+- Backend permission enforcement (require_permission + get_branch_filter) across all key routers
 - Branch-based data filtering for branch-restricted users
 
 ### Phase 11: Branch Filtering Refactor (COMPLETED - Dec 2025)
-- Refactored suppliers.py to use centralized `get_branch_filter_with_global` instead of manual filtering logic
-- Refactored customers.py to use centralized `get_branch_filter_with_global` for consistent behavior
-- Two helper functions now centralize all branch filtering logic in database.py:
-  - `get_branch_filter()`: Strict branch filtering for sales, expenses, stock entries - restricts to user's branch only
-  - `get_branch_filter_with_global()`: Includes branch-specific AND global (no branch) items - used for suppliers, customers
-- Verified 100% test pass rate (12/12 backend tests, frontend verified)
-- Admin sees all data, restricted users see appropriate filtered data based on their branch assignment
+- Refactored suppliers.py and customers.py to use centralized `get_branch_filter_with_global`
+- Two helper functions now centralize all branch filtering logic in database.py
 
 ### Phase 12: Barcode & Timestamps (COMPLETED - Mar 2026)
-- **Print Barcode Feature** - Full barcode generation system for stock items:
-  - Backend: `/api/barcode/item/{id}` (download), `/api/barcode/item/{id}/preview` (inline), `/api/barcode/items` (list), `/api/barcode/batch` (PDF)
-  - Barcode label includes: Company logo, company name, item name, price (SAR), Code128 barcode
-  - Frontend: Barcode column in Items table with preview dialog, Print/Download buttons
-  - Batch selection with checkboxes for multi-item PDF generation
-  - Uses python-barcode library with Pillow for image composition
-- **updated_at Timestamps** - Added automatic `updated_at` tracking:
-  - Customers: Set on `/api/customers/{id}` PUT
-  - Suppliers: Set on `/api/suppliers/{id}` PUT
-  - Sales: Set on `/api/sales/{id}/receive-credit` POST
-  - Items: Set on `/api/items/{id}` PUT
-  - Models updated to include `updated_at: Optional[str] = None` in responses
-- Test Results: Backend 92% (12/13), Frontend 100%
+- Print Barcode Feature for stock items with company logo
+- updated_at Timestamps for data auditing
 
 ### Phase 13: Activity Logging & Advanced Search (COMPLETED - Mar 2026)
-- **User Activity Logging System** - Comprehensive audit trail:
-  - Backend: `/api/activity-logs` (list with pagination), `/api/activity-logs/summary` (7-day stats), `/api/activity-logs/cleanup` (delete old logs)
-  - Tracks: logins, creates, updates, deletes across all modules
-  - Logs: user_id, email, action, resource, resource_id, details, IP address, user agent, timestamp
-  - Integrated into: auth (login), sales (create/delete), expenses (create/delete), settings (update)
-  - Frontend: Admin-only Activity Logs page with filters (action, resource, date range), pagination, summary cards
-  - Sidebar link under Admin section
-- **Advanced Search Component** - Reusable filter component:
-  - `AdvancedSearch.jsx` with text search, select filters, range filters, date range filters
-  - `applySearchFilters()` helper function for client-side filtering
-  - Available for integration into data tables (Sales, Stock, Customers, etc.)
-- Test Results: Backend 100% (18/18), Frontend 100%
+- User Activity Logging System with comprehensive audit trail
+- Advanced Search Component (reusable filter component)
 
 ### Phase 14: Daily Summary Dashboard (COMPLETED - Mar 2026)
-- **Daily Summary Page** (`/daily-summary`) - Easy overview of daily business activity:
-  - Backend: `/api/dashboard/daily-summary` endpoint with comprehensive daily metrics
-  - Summary cards: Total Sales (green), Total Expenses (red), Net Cash Flow (blue), Net Profit
-  - Sales breakdown: Cash, Bank, Credit, Online payment modes
-  - Expenses breakdown: By category with counts
-  - Supplier activity: Payments made, Credit purchases
-  - Top selling items with quantity and revenue
-  - Recent transactions list (sales and expenses)
-  - Date selector: Date picker + Today/Yesterday quick buttons
-  - Branch filter for multi-branch businesses
-  - Three tabs: Sales, Expenses, Suppliers
-  - Sidebar link under Operations section
-- Test Results: Backend 100% (17/17), Frontend 100%
+- Daily Summary Page with comprehensive daily business metrics
 
 ### Phase 15: Advanced Search & AI Forecasting (COMPLETED - Mar 2026)
-- **AdvancedSearch Integration** - Integrated into key pages:
-  - Sales Page: Filters for Branch, Payment Mode, Amount range, Date range
-  - Expenses Page: Filters for Branch, Category, Payment, Amount range, Date range
-  - Replaced old DateFilter and BranchFilter with unified AdvancedSearch component
-  - Responsive grid layout (2 cols mobile, 3 cols tablet, 4 cols desktop)
-- **AI Sales Forecasting** (`/sales-forecast`) - Predictive analytics:
-  - Backend: `/api/predictions/sales-forecast` with 180-day historical analysis
-  - Prediction methods: Weighted moving average, day-of-week patterns, monthly seasonality
-  - 95% confidence intervals (lower/upper bounds)
-  - Summary cards: Next X Days total, Next Week, Daily Average, Sales Trend
-  - Day-of-week pattern visualization with best/worst day indicators
-  - Historical performance comparison (7/30/180 day averages)
-  - Daily forecast table with date, day, predicted, bounds
-  - Configurable forecast period (7/14/30/60/90 days)
-  - Branch filter for multi-branch analysis
-  - Sidebar link under Reports section
-- Test Results: Backend 100% (13/13), Frontend 100%
+- AdvancedSearch Integration into Sales, Expenses, Customers, Suppliers pages
+- AI Sales Forecasting with predictive analytics
 
 ### Phase 16: Sales Alerts & Extended Search (COMPLETED - Mar 2026)
-- **Sales Alert System** (`/sales-alerts`) - Proactive notifications:
-  - Backend: `/api/sales-alerts/config` (get/save), `/api/sales-alerts/preview`, `/api/sales-alerts/send-test`, `/api/sales-alerts/history`
-  - Configurable threshold (5-50% below average) - per user choice
-  - Daily alert time configuration (HH:MM) - per user choice
-  - Configurable recipients list (email + WhatsApp) - per user choice
-  - Email notifications via existing SMTP infrastructure
-  - WhatsApp notifications via existing Twilio integration
-  - Prediction preview: Shows tomorrow's predicted vs historical average
-  - Alert history tracking with sent results
-  - Test alert functionality to verify configuration
-  - Activity logging for config changes
-- **AdvancedSearch Extended** - Added to remaining pages:
-  - Customers Page: Filters for Branch, Credit Balance range
-  - Suppliers Page: Filters for Branch, Category, Credit Balance range
-  - Mobile-responsive table columns (hidden on smaller screens)
-- Test Results: Backend 100% (15/15), Frontend 100%
+- Sales Alert System with email/WhatsApp notifications
+- AdvancedSearch Extended to remaining pages
+
+### Phase 17: Supplier Module Enhancements & POS UI/UX (COMPLETED - Mar 2026)
+- **Supplier Total Purchases:** Backend aggregates total purchase amounts from expenses collection. Displayed on each supplier card with amber-themed "Total Purchases" badge.
+- **Supplier Ledger:** Full ledger endpoint (`GET /api/suppliers/{id}/ledger`) with running balance, debit/credit entries, date filtering (start_date, end_date params). Ledger dialog shows summary cards (credit purchases, cash/bank purchases, credit paid, closing balance) and scrollable entries table.
+- **Ledger Export:** PDF export via reportlab, Excel export via openpyxl (`GET /api/suppliers/{id}/ledger/export?format=pdf|excel`). Export buttons in ledger dialog.
+- **Multiple Bank Accounts:** Up to 3 bank accounts per supplier (bank_name, account_number, iban, swift_code). Add/Edit form with add/remove bank account UI, (x/3) counter.
+- **POS Expense Form Improvement:** "Expenses" tab renamed to "General Business Expenses" with clear help text distinguishing from supplier purchases. Payment modes limited to "Paid by Cash" and "Paid by Bank" (removed credit option for general expenses). Supplier field labeled "No Supplier (General)" as default.
+- **Online Sales Fix:** Added `online_sales` field to `/api/dashboard/stats` by summing payment_details with mode "online_platform". POS page now reads online_sales directly from dashboard stats instead of separate platforms/summary call.
+- **Duplicate Route Fix:** Removed duplicate `get_supplier_ledger` endpoint in suppliers.py.
+- Test Results: Backend 100% (13/13), Frontend 100%
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
-- Operator: test@ssc.com / Test@123
+- Operator: test@ssc.com / testtest
 - Employee: ahmed@test.com / emp@123
 - Cashier PIN: 1234
 
 ## Prioritized Backlog
 
-### P0-P3 (All major items completed)
-
 ### Future Enhancements
+- Frontend state management refactor (Zustand/Redux Toolkit)
 - Propagate get_branch_filter to remaining minor routers (anomaly_detection, cctv)
 - Mobile-responsive design for remaining admin pages
-- Frontend state management refactor (Zustand/Redux Toolkit)
 - Advanced analytics refinements
 - CCTV AI features expansion
 - WhatsApp chatbot improvements
