@@ -77,6 +77,20 @@ A comprehensive business management ERP system named "SSC Track" for tracking sa
   - Models updated to include `updated_at: Optional[str] = None` in responses
 - Test Results: Backend 92% (12/13), Frontend 100%
 
+### Phase 13: Activity Logging & Advanced Search (COMPLETED - Mar 2026)
+- **User Activity Logging System** - Comprehensive audit trail:
+  - Backend: `/api/activity-logs` (list with pagination), `/api/activity-logs/summary` (7-day stats), `/api/activity-logs/cleanup` (delete old logs)
+  - Tracks: logins, creates, updates, deletes across all modules
+  - Logs: user_id, email, action, resource, resource_id, details, IP address, user agent, timestamp
+  - Integrated into: auth (login), sales (create/delete), expenses (create/delete), settings (update)
+  - Frontend: Admin-only Activity Logs page with filters (action, resource, date range), pagination, summary cards
+  - Sidebar link under Admin section
+- **Advanced Search Component** - Reusable filter component:
+  - `AdvancedSearch.jsx` with text search, select filters, range filters, date range filters
+  - `applySearchFilters()` helper function for client-side filtering
+  - Available for integration into data tables (Sales, Stock, Customers, etc.)
+- Test Results: Backend 100% (18/18), Frontend 100%
+
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
 - Operator: test@ssc.com / Test@123
@@ -87,14 +101,13 @@ A comprehensive business management ERP system named "SSC Track" for tracking sa
 
 ### P0 (None - all critical items done)
 
-### P1 (High Priority)
-- None - both P1 tasks completed (timestamps + barcode)
+### P1 (None - all P1 tasks completed)
 
-### P2 (Medium Priority)
-- Implement "Advanced Search" component for all main data tables (Sales, Stock, etc.)
-- User activity logging to track key actions (logins, deletions, settings changes)
+### P2 (Medium Priority - Completed)
+- ✅ User activity logging to track key actions
+- ✅ Advanced Search component created
+- Integrate AdvancedSearch into main data tables (Sales, Expenses, Customers, etc.)
 - Propagate get_branch_filter to remaining minor routers (anomaly_detection, cctv, etc.)
-- Add more timestamp tracking to remaining endpoints (expenses, stock entries)
 
 ### P3 (Future/Backlog)
 - Mobile-responsive design for admin pages
