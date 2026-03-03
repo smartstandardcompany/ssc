@@ -12,13 +12,13 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ExportButtons } from '@/components/ExportButtons';
-import { BranchFilter } from '@/components/BranchFilter';
+import { AdvancedSearch, applySearchFilters } from '@/components/AdvancedSearch';
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState([]);
   const [balances, setBalances] = useState([]);
   const [branches, setBranches] = useState([]);
-  const [branchFilter, setBranchFilter] = useState([]);
+  const [searchFilters, setSearchFilters] = useState({});
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [showReceiveDialog, setShowReceiveDialog] = useState(false);
@@ -123,11 +123,10 @@ export default function CustomersPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="customers-page-title">Customers</h1>
-            <p className="text-muted-foreground">Manage customers and track balances</p>
+            <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-2" data-testid="customers-page-title">Customers</h1>
+            <p className="text-muted-foreground text-sm">Manage customers and track balances</p>
           </div>
           <div className="flex gap-3 items-center flex-wrap">
-            <BranchFilter onChange={setBranchFilter} />
             <ExportButtons dataType="customers" />
             <Dialog open={showDialog} onOpenChange={(o) => { setShowDialog(o); if (!o) resetForm(); }}>
               <DialogTrigger asChild><Button className="rounded-full" data-testid="add-customer-button"><Plus size={18} className="mr-2" />Add Customer</Button></DialogTrigger>
@@ -162,43 +161,61 @@ export default function CustomersPage() {
         <Card className="border-border">
           <CardHeader><CardTitle className="font-outfit">All Customers</CardTitle></CardHeader>
           <CardContent>
+            {/* Advanced Search */}
+            <AdvancedSearch 
+              onSearch={setSearchFilters}
+              config={{
+                searchFields: ['name', 'phone', 'email'],
+                placeholder: 'Search customers by name, phone...',
+                filters: [
+                  { 
+                    key: 'branch_id', 
+                    label: 'Branch', 
+                    type: 'select', 
+                    options: branches.map(b => ({ value: b.id, label: b.name }))
+                  },
+                  { key: 'credit_balance', label: 'Credit Balance', type: 'range' }
+                ]
+              }}
+              className="mb-4"
+            />
             <div className="overflow-x-auto">
               <table className="w-full" data-testid="customers-table">
                 <thead><tr className="border-b border-border">
                   <th className="text-left p-3 font-medium text-sm">Name</th>
-                  <th className="text-left p-3 font-medium text-sm">Branch</th>
-                  <th className="text-left p-3 font-medium text-sm">Phone</th>
-                  <th className="text-right p-3 font-medium text-sm">Total Sales</th>
-                  <th className="text-right p-3 font-medium text-sm">Cash</th>
-                  <th className="text-right p-3 font-medium text-sm">Bank</th>
+                  <th className="text-left p-3 font-medium text-sm hidden sm:table-cell">Branch</th>
+                  <th className="text-left p-3 font-medium text-sm hidden md:table-cell">Phone</th>
+                  <th className="text-right p-3 font-medium text-sm hidden lg:table-cell">Total Sales</th>
+                  <th className="text-right p-3 font-medium text-sm hidden lg:table-cell">Cash</th>
+                  <th className="text-right p-3 font-medium text-sm hidden lg:table-cell">Bank</th>
                   <th className="text-right p-3 font-medium text-sm">Credit Balance</th>
                   <th className="text-right p-3 font-medium text-sm">Actions</th>
                 </tr></thead>
                 <tbody>
-                  {customers.filter(c => {
-                    if (branchFilter.length > 0 && !branchFilter.includes(c.branch_id) && c.branch_id) return false;
-                    return true;
-                  }).map((c) => {
+                  {applySearchFilters(customers.map(c => {
+                    const bal = getBalance(c.id);
+                    return { ...c, credit_balance: bal.credit_balance || 0, total_sales: bal.total_sales || 0 };
+                  }), searchFilters).map((c) => {
                     const bal = getBalance(c.id);
                     const brName = branches.find(b => b.id === c.branch_id)?.name || 'All';
                     return (
                       <tr key={c.id} className="border-b border-border hover:bg-secondary/50" data-testid="customer-row">
                         <td className="p-3 text-sm font-medium">{c.name}</td>
-                        <td className="p-3 text-sm">{brName}</td>
-                        <td className="p-3 text-sm">{c.phone || '-'}</td>
-                        <td className="p-3 text-sm text-right"> SAR {(bal.total_sales || 0).toFixed(2)}</td>
-                        <td className="p-3 text-sm text-right text-cash"> SAR {(bal.cash || 0).toFixed(2)}</td>
-                        <td className="p-3 text-sm text-right text-bank"> SAR {(bal.bank || 0).toFixed(2)}</td>
+                        <td className="p-3 text-sm hidden sm:table-cell">{brName}</td>
+                        <td className="p-3 text-sm hidden md:table-cell">{c.phone || '-'}</td>
+                        <td className="p-3 text-sm text-right hidden lg:table-cell"> SAR {(bal.total_sales || 0).toFixed(2)}</td>
+                        <td className="p-3 text-sm text-right text-cash hidden lg:table-cell"> SAR {(bal.cash || 0).toFixed(2)}</td>
+                        <td className="p-3 text-sm text-right text-bank hidden lg:table-cell"> SAR {(bal.bank || 0).toFixed(2)}</td>
                         <td className="p-3 text-sm text-right">
                           {(bal.credit_balance || 0) > 0 ? <span className="font-bold text-warning"> SAR {bal.credit_balance.toFixed(2)}</span> : <span className="text-muted-foreground">$0.00</span>}
                         </td>
                         <td className="p-3 text-right">
-                          <div className="flex gap-1 justify-end">
-                            <Button size="sm" variant="outline" onClick={() => viewReport(c.id)} className="h-8 text-xs" data-testid="view-report-btn"><Eye size={14} className="mr-1" />Report</Button>
+                          <div className="flex gap-1 justify-end flex-wrap">
+                            <Button size="sm" variant="outline" onClick={() => viewReport(c.id)} className="h-8 text-xs" data-testid="view-report-btn"><Eye size={14} className="mr-1 hidden sm:inline" />Report</Button>
                             <Button size="sm" variant="ghost" onClick={() => exportCustomerPDF(c.id)} className="h-8"><FileText size={14} /></Button>
                             {(bal.credit_balance || 0) > 0 && (
                               <Button size="sm" variant="outline" onClick={() => { setReceivingCustomer({ ...c, credit_balance: bal.credit_balance }); setReceiveData({ payment_mode: 'cash', amount: '' }); setShowReceiveDialog(true); }} data-testid="receive-credit-btn" className="h-8 text-xs">
-                                <DollarSign size={14} className="mr-1" />Receive
+                                <DollarSign size={14} className="mr-1 hidden sm:inline" />Receive
                               </Button>
                             )}
                             <Button size="sm" variant="ghost" onClick={() => handleEdit(c)} data-testid="edit-customer-button" className="h-8"><Edit size={14} /></Button>

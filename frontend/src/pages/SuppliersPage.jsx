@@ -12,13 +12,13 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ExportButtons } from '@/components/ExportButtons';
-import { BranchFilter } from '@/components/BranchFilter';
+import { AdvancedSearch, applySearchFilters } from '@/components/AdvancedSearch';
 
 export default function SuppliersPage() {
   const [suppliers, setSuppliers] = useState([]);
   const [branches, setBranches] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [branchFilter, setBranchFilter] = useState([]);
+  const [searchFilters, setSearchFilters] = useState({});
   const [paySummaries, setPaySummaries] = useState({});
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
@@ -234,24 +234,24 @@ export default function SuppliersPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
-            <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="suppliers-page-title">Suppliers</h1>
-            <p className="text-muted-foreground">Manage suppliers and track credit</p>
+            <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-2" data-testid="suppliers-page-title">Suppliers</h1>
+            <p className="text-muted-foreground text-sm">Manage suppliers and track credit</p>
           </div>
-          <div className="flex gap-3 items-center flex-wrap">
-            <BranchFilter onChange={setBranchFilter} />
+          <div className="flex gap-2 items-center flex-wrap">
             <ExportButtons dataType="suppliers" />
             
             {/* Migration Button */}
             <Button 
               variant="outline" 
+              size="sm"
               onClick={previewMigration}
               className="text-amber-600 border-amber-300 hover:bg-amber-50"
               data-testid="migrate-payments-btn"
             >
               <ArrowUpCircle size={16} className="mr-1" />
-              Fix Payment Data
+              Fix Data
             </Button>
             
             <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) resetForm(); }}>
@@ -381,8 +381,32 @@ export default function SuppliersPage() {
           </div>
         </div>
 
+        {/* Advanced Search */}
+        <AdvancedSearch 
+          onSearch={setSearchFilters}
+          config={{
+            searchFields: ['name', 'phone', 'email', 'category'],
+            placeholder: 'Search suppliers by name, category...',
+            filters: [
+              { 
+                key: 'branch_id', 
+                label: 'Branch', 
+                type: 'select', 
+                options: branches.map(b => ({ value: b.id, label: b.name }))
+              },
+              { 
+                key: 'category', 
+                label: 'Category', 
+                type: 'select', 
+                options: categories.filter(c => !c.parent_id).map(c => ({ value: c.name, label: c.name }))
+              },
+              { key: 'current_credit', label: 'Credit Balance', type: 'range' }
+            ]
+          }}
+        />
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {suppliers.filter(s => branchFilter.length === 0 || branchFilter.includes(s.branch_id) || !s.branch_id).map((supplier) => {
+          {applySearchFilters(suppliers, searchFilters).map((supplier) => {
             const branchName = branches.find((b) => b.id === supplier.branch_id)?.name || 'All Branches';
             const creditUtilization = supplier.credit_limit > 0 ? (supplier.current_credit / supplier.credit_limit) * 100 : 0;
             

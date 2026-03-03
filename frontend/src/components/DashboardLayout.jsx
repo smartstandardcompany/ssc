@@ -69,6 +69,7 @@ const NAV_GROUPS = [
       { path: '/analytics', icon: BarChart3, label: 'Analytics', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/visualizations', icon: Activity, label: 'Visualizations', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/sales-forecast', icon: TrendingUp, label: 'Sales Forecast', perm: 'reports', roles: ['admin', 'manager'] },
+      { path: '/sales-alerts', icon: Bell, label: 'Sales Alerts', perm: 'settings', roles: ['admin'] },
       { path: '/shift-report', icon: CalendarClock, label: 'Shift Report', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/partner-pl-report', icon: Handshake, label: 'Partner P&L', perm: 'partners', roles: ['admin'] },
       { path: '/reports', icon: BarChart3, label: 'Reports', perm: 'reports', roles: ['admin', 'manager'] },
