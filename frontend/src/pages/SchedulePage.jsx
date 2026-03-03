@@ -156,8 +156,8 @@ export default function SchedulePage() {
       <div className="space-y-6">
         <div className="flex justify-between items-start flex-wrap gap-3">
           <div>
-            <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="schedule-title">Staff Schedule</h1>
-            <p className="text-muted-foreground">Manage shifts, schedules, and track attendance</p>
+            <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-2" data-testid="schedule-title">Staff Schedule</h1>
+            <p className="text-muted-foreground text-sm">Manage shifts, schedules, and track attendance</p>
           </div>
           <div className="flex gap-2 items-center">
             <Select value={branchId || "none"} onValueChange={(v) => setBranchId(v === "none" ? "" : v)}>

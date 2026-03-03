@@ -121,6 +121,67 @@ logger = logging.getLogger(__name__)
 async def startup_event():
     """Initialize database with default admin user if empty"""
     await seed_database()
+    await create_indexes()
+
+
+async def create_indexes():
+    """Create MongoDB indexes for performance optimization"""
+    try:
+        # Sales - most queried collection
+        await db.sales.create_index("id", unique=True)
+        await db.sales.create_index("date")
+        await db.sales.create_index("branch_id")
+        await db.sales.create_index("sale_type")
+        await db.sales.create_index([("date", -1), ("branch_id", 1)])
+        await db.sales.create_index("customer_id")
+        await db.sales.create_index("platform_id")
+        
+        # Expenses
+        await db.expenses.create_index("id", unique=True)
+        await db.expenses.create_index("date")
+        await db.expenses.create_index("branch_id")
+        await db.expenses.create_index("supplier_id")
+        await db.expenses.create_index([("date", -1), ("branch_id", 1)])
+        
+        # Suppliers
+        await db.suppliers.create_index("id", unique=True)
+        await db.suppliers.create_index("branch_id")
+        
+        # Customers
+        await db.customers.create_index("id", unique=True)
+        await db.customers.create_index("branch_id")
+        await db.customers.create_index("phone")
+        
+        # Supplier payments
+        await db.supplier_payments.create_index("supplier_id")
+        await db.supplier_payments.create_index("date")
+        
+        # Stock items
+        await db.stock_items.create_index("id", unique=True)
+        await db.stock_items.create_index("branch_id")
+        await db.stock_items.create_index("barcode")
+        await db.stock_items.create_index("name")
+        
+        # Users
+        await db.users.create_index("email", unique=True)
+        await db.users.create_index("id", unique=True)
+        
+        # Activity logs
+        await db.activity_logs.create_index([("created_at", -1)])
+        await db.activity_logs.create_index("user_id")
+        
+        # Invoices
+        await db.invoices.create_index("id", unique=True)
+        await db.invoices.create_index("customer_id")
+        await db.invoices.create_index([("date", -1)])
+        
+        # Notifications
+        await db.notifications.create_index([("created_at", -1)])
+        await db.notifications.create_index("user_id")
+        
+        logger.info("Database indexes created successfully")
+    except Exception as e:
+        logger.warning(f"Index creation warning: {e}")
 
 
 async def seed_database():

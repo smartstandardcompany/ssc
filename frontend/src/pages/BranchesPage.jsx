@@ -62,10 +62,10 @@ export default function BranchesPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
-            <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="branches-page-title">Branches</h1>
-            <p className="text-muted-foreground">Manage branches and view performance</p>
+            <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-2" data-testid="branches-page-title">Branches</h1>
+            <p className="text-muted-foreground text-sm">Manage branches and view performance</p>
           </div>
           <Dialog open={showDialog} onOpenChange={(o) => { setShowDialog(o); if (!o) resetForm(); }}>
             <DialogTrigger asChild><Button className="rounded-full" data-testid="add-branch-button"><Plus size={18} className="mr-2" />Add Branch</Button></DialogTrigger>

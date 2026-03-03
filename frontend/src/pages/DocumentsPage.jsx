@@ -128,10 +128,10 @@ export default function DocumentsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
-            <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="documents-page-title">Documents</h1>
-            <p className="text-muted-foreground">Track document expiry dates and get alerts</p>
+            <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-2" data-testid="documents-page-title">Documents</h1>
+            <p className="text-muted-foreground text-sm">Track document expiry dates and get alerts</p>
           </div>
           <Dialog open={showDialog} onOpenChange={(o) => { setShowDialog(o); if (!o) resetForm(); }}>
             <DialogTrigger asChild>

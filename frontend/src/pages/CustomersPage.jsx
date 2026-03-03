@@ -56,7 +56,8 @@ export default function CustomersPage() {
     if (!receivingCustomer) return;
     try {
       const salesRes = await api.get('/sales');
-      const custSales = salesRes.data.filter(s => s.customer_id === receivingCustomer.id && (s.credit_amount - s.credit_received) > 0);
+      const allSales = salesRes.data?.data || salesRes.data || [];
+      const custSales = allSales.filter(s => s.customer_id === receivingCustomer.id && (s.credit_amount - s.credit_received) > 0);
       if (custSales.length === 0) { toast.error('No pending credit sales'); return; }
       
       let remainingPay = parseFloat(receiveData.amount) || 0;

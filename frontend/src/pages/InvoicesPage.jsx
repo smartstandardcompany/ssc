@@ -178,7 +178,7 @@ export default function InvoicesPage() {
   const [viewImage, setViewImage] = useState(null);
   const imageInputRef = useRef(null);
   useEffect(() => {
-    api.get('/sales').then(r => setSalesData(r.data)).catch(() => {});
+    api.get('/sales').then(r => setSalesData(r.data?.data || r.data || [])).catch(() => {});
   }, [invoices]);
   const getCreditRemaining = (inv) => {
     if (!inv.sale_id) return 0;

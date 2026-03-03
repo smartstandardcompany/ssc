@@ -144,7 +144,7 @@ export default function PartnersPage() {
 
         {filteredTxns.length > 0 && (
           <Card className="border-stone-100"><CardHeader><CardTitle className="font-outfit text-base">Recent Transactions</CardTitle></CardHeader><CardContent>
-            <table className="w-full"><thead><tr className="border-b"><th className="text-left p-3 text-sm font-medium">Date</th><th className="text-left p-3 text-sm font-medium">Partner</th><th className="text-left p-3 text-sm font-medium">Type</th><th className="text-left p-3 text-sm font-medium">Description</th><th className="text-left p-3 text-sm font-medium">Mode</th><th className="text-right p-3 text-sm font-medium">Amount</th><th className="text-right p-3 text-sm font-medium">Actions</th></tr></thead>
+            <div className="overflow-x-auto"><table className="w-full"><thead><tr className="border-b"><th className="text-left p-3 text-sm font-medium">Date</th><th className="text-left p-3 text-sm font-medium">Partner</th><th className="text-left p-3 text-sm font-medium">Type</th><th className="text-left p-3 text-sm font-medium">Description</th><th className="text-left p-3 text-sm font-medium">Mode</th><th className="text-right p-3 text-sm font-medium">Amount</th><th className="text-right p-3 text-sm font-medium">Actions</th></tr></thead>
             <tbody>{filteredTxns.slice(0, 50).map(t => {
               const tc = TXN_TYPES.find(x => x.value === t.transaction_type);
               const isIn = t.transaction_type === 'investment';
@@ -157,7 +157,7 @@ export default function PartnersPage() {
                 <td className={`p-3 text-sm text-right font-bold ${isIn ? 'text-success' : 'text-error'}`}>{isIn ? '+' : '-'}SAR {t.amount.toFixed(2)}</td>
                 <td className="p-3 text-right"><Button size="sm" variant="ghost" onClick={async () => { if (window.confirm('Delete?')) { await api.delete(`/partner-transactions/${t.id}`); fetchData(); } }} className="h-7 text-error"><Trash2 size={12} /></Button></td>
               </tr>);
-            })}</tbody></table>
+            })}</tbody></table></div>
           </CardContent></Card>
         )}
         {/* Pay Partner Salary Dialog */}

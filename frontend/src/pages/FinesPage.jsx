@@ -164,7 +164,7 @@ export default function FinesPage() {
 
           <TabsContent value="fines">
             <Card className="border-stone-100"><CardContent className="pt-6">
-              <table className="w-full"><thead><tr className="border-b">
+              <div className="overflow-x-auto"><table className="w-full"><thead><tr className="border-b">
                 <th className="text-left p-3 text-sm font-medium">Date</th><th className="text-left p-3 text-sm font-medium">Type</th><th className="text-left p-3 text-sm font-medium">Department</th><th className="text-left p-3 text-sm font-medium">Description</th><th className="text-right p-3 text-sm font-medium">Amount</th><th className="text-right p-3 text-sm font-medium">Paid</th><th className="text-center p-3 text-sm font-medium">Status</th><th className="text-right p-3 text-sm font-medium">Actions</th>
               </tr></thead><tbody>
                 {filteredFines.map(f => (
@@ -194,13 +194,13 @@ export default function FinesPage() {
                   </tr>
                 ))}
                 {filteredFines.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">No fines recorded</td></tr>}
-              </tbody></table>
+              </tbody></table></div>
             </CardContent></Card>
           </TabsContent>
 
           <TabsContent value="deductions">
             <Card className="border-stone-100"><CardContent className="pt-6">
-              <table className="w-full"><thead><tr className="border-b">
+              <div className="overflow-x-auto"><table className="w-full"><thead><tr className="border-b">
                 <th className="text-left p-3 text-sm font-medium">Date</th><th className="text-left p-3 text-sm font-medium">Employee</th><th className="text-left p-3 text-sm font-medium">Type</th><th className="text-left p-3 text-sm font-medium">Reason</th><th className="text-left p-3 text-sm font-medium">Period</th><th className="text-right p-3 text-sm font-medium">Amount</th><th className="text-right p-3 text-sm font-medium">Actions</th>
               </tr></thead><tbody>
                 {filteredDed.map(d => (
@@ -215,7 +215,7 @@ export default function FinesPage() {
                   </tr>
                 ))}
                 {filteredDed.length === 0 && <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">No deductions recorded</td></tr>}
-              </tbody></table>
+              </tbody></table></div>
             </CardContent></Card>
           </TabsContent>
           <TabsContent value="capital">
@@ -224,7 +224,7 @@ export default function FinesPage() {
                 <p className="text-sm text-muted-foreground">Track goodwill, building purchases, branch acquisition costs</p>
                 <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowCapitalDialog(true)}><Plus size={14} className="mr-1" />Add Capital Expense</Button>
               </div>
-              <table className="w-full"><thead><tr className="border-b">
+              <div className="overflow-x-auto"><table className="w-full"><thead><tr className="border-b">
                 <th className="text-left p-3 text-sm font-medium">Date</th><th className="text-left p-3 text-sm font-medium">Title</th><th className="text-left p-3 text-sm font-medium">Category</th><th className="text-left p-3 text-sm font-medium">Description</th><th className="text-left p-3 text-sm font-medium">Mode</th><th className="text-right p-3 text-sm font-medium">Amount</th><th className="text-right p-3 text-sm font-medium">Actions</th>
               </tr></thead><tbody>
                 {capitalExpenses.map(c => (
@@ -240,7 +240,7 @@ export default function FinesPage() {
                 ))}
                 {capitalExpenses.length === 0 && <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">No capital expenses</td></tr>}
                 {capitalExpenses.length > 0 && <tr className="bg-stone-50"><td colSpan={5} className="p-3 font-bold text-sm">Total</td><td className="p-3 text-right font-bold text-sm">SAR {capitalExpenses.reduce((s,c) => s + c.amount, 0).toFixed(2)}</td><td></td></tr>}
-              </tbody></table>
+              </tbody></table></div>
             </CardContent></Card>
           </TabsContent>
         </Tabs>

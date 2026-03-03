@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import api from '@/lib/api';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { navLabelToKey, LANGUAGES } from '@/lib/i18n';
+import { useAuthStore } from '@/stores/authStore';
 
 const NAV_GROUPS = [
   {
@@ -205,9 +206,10 @@ export const DashboardLayout = ({ children }) => {
   const [showNavCustomize, setShowNavCustomize] = useState(false);
   const { t, lang, setLang, isRTL } = useLanguage();
 
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const isEmployee = user.role === 'employee';
-  const userPerms = user.permissions || [];
+  const { user, logout: storeLogout } = useAuthStore();
+  const currentUser = user || JSON.parse(localStorage.getItem('user') || '{}');
+  const isEmployee = currentUser.role === 'employee';
+  const userPerms = currentUser.permissions || [];
 
   useEffect(() => {
     const fetchNotifs = async () => {
@@ -271,8 +273,7 @@ export const DashboardLayout = ({ children }) => {
   }, [location.pathname]);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    storeLogout();
     toast.success('Logged out successfully');
     navigate('/login');
     window.location.reload();
@@ -319,7 +320,7 @@ export const DashboardLayout = ({ children }) => {
             <NavGroup
               key={group.label}
               group={group}
-              userRole={user.role}
+              userRole={currentUser.role}
               userPerms={userPerms}
               currentPath={location.pathname}
               onNavigate={() => setMobileOpen(false)}
@@ -332,13 +333,13 @@ export const DashboardLayout = ({ children }) => {
       <div className="p-3 border-t border-stone-100 bg-white dark:bg-stone-900 dark:border-stone-700">
         <div className="flex items-center gap-2.5 mb-2.5">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-amber-400 flex items-center justify-center text-white font-bold text-xs shrink-0">
-            {user.name?.charAt(0)?.toUpperCase() || 'U'}
+            {currentUser.name?.charAt(0)?.toUpperCase() || 'U'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-stone-800 dark:text-stone-200 truncate" data-testid="user-name">{user.name}</p>
-            <p className="text-[10px] text-stone-400 truncate">{user.email}</p>
+            <p className="text-sm font-semibold text-stone-800 dark:text-stone-200 truncate" data-testid="user-name">{currentUser.name}</p>
+            <p className="text-[10px] text-stone-400 truncate">{currentUser.email}</p>
           </div>
-          <Badge className="bg-orange-50 text-orange-600 border-orange-200 capitalize text-[10px] shrink-0">{user.role}</Badge>
+          <Badge className="bg-orange-50 text-orange-600 border-orange-200 capitalize text-[10px] shrink-0">{currentUser.role}</Badge>
         </div>
         <div className="flex gap-1.5 mb-1.5">
           <button onClick={() => setDarkMode(!darkMode)} data-testid="dark-mode-toggle" className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border border-stone-200 dark:border-stone-600 text-stone-500 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 text-xs transition-colors">
@@ -413,7 +414,7 @@ export const DashboardLayout = ({ children }) => {
             </Link>
           )}
           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-amber-400 flex items-center justify-center text-white font-bold text-[10px]">
-            {user.name?.charAt(0)?.toUpperCase() || 'U'}
+            {currentUser.name?.charAt(0)?.toUpperCase() || 'U'}
           </div>
         </div>
       </div>

@@ -153,7 +153,7 @@ export default function BankStatementsPage() {
 
                       {/* Side-by-side Table */}
                       <div className="max-h-[500px] overflow-y-auto border rounded-xl">
-                        <table className="w-full" data-testid="reconciliation-table">
+                        <div className="overflow-x-auto"><table className="w-full" data-testid="reconciliation-table">
                           <thead className="sticky top-0 bg-stone-50 z-10"><tr className="border-b">
                             <th className="text-left p-2 text-xs font-medium">Bank Date</th>
                             <th className="text-left p-2 text-xs font-medium">Sale Date</th>
@@ -184,7 +184,7 @@ export default function BankStatementsPage() {
                             ))}
                             {reconciliation.rows.length === 0 && <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">No POS transactions to reconcile. Ensure POS machines are mapped to branches.</td></tr>}
                           </tbody>
-                        </table>
+                        </table></div>
                       </div>
                     </>
                   )}
@@ -200,7 +200,7 @@ export default function BankStatementsPage() {
                       toast.success('Exported');
                     }}><Upload size={14} className="mr-1" />Export CSV</Button>
                   </div>
-                  <table className="w-full"><thead><tr className="border-b bg-stone-50"><th className="text-left p-2 text-xs font-medium">Name / IBAN / Bank</th><th className="text-center p-2 text-xs font-medium">Times</th><th className="text-right p-2 text-xs font-medium">Received</th><th className="text-right p-2 text-xs font-medium">Sent</th><th className="text-right p-2 text-xs font-medium">Fees/VAT</th><th className="text-left p-2 text-xs font-medium">Period</th></tr></thead>
+                  <div className="overflow-x-auto"><table className="w-full"><thead><tr className="border-b bg-stone-50"><th className="text-left p-2 text-xs font-medium">Name / IBAN / Bank</th><th className="text-center p-2 text-xs font-medium">Times</th><th className="text-right p-2 text-xs font-medium">Received</th><th className="text-right p-2 text-xs font-medium">Sent</th><th className="text-right p-2 text-xs font-medium">Fees/VAT</th><th className="text-left p-2 text-xs font-medium">Period</th></tr></thead>
                   <tbody>{analysis?.senders?.map((s, i) => (
                     <tr key={i} className="border-b hover:bg-stone-50">
                       <td className="p-2 text-sm font-medium max-w-xs">
@@ -223,7 +223,7 @@ export default function BankStatementsPage() {
                     <td className="p-2 text-xs text-right">Fee:{(analysis?.senders?.reduce((s,x) => s + (x.fees||0), 0) || 0).toFixed(1)}</td>
                     <td></td>
                   </tr>
-                  </tbody></table>
+                  </tbody></table></div>
                 </TabsContent>
 
                 <TabsContent value="pos" className="space-y-4">
@@ -273,17 +273,17 @@ export default function BankStatementsPage() {
                       ))}
                     </div>
                   )}
-                  <table className="w-full"><thead><tr className="border-b"><th className="text-left p-2 text-xs font-medium">Transaction</th><th className="text-left p-2 text-xs font-medium">Supplier</th><th className="text-left p-2 text-xs font-medium">Match</th><th className="text-right p-2 text-xs font-medium">Amount</th><th className="text-left p-2 text-xs font-medium">Date</th></tr></thead>
+                  <div className="overflow-x-auto"><table className="w-full"><thead><tr className="border-b"><th className="text-left p-2 text-xs font-medium">Transaction</th><th className="text-left p-2 text-xs font-medium">Supplier</th><th className="text-left p-2 text-xs font-medium">Match</th><th className="text-right p-2 text-xs font-medium">Amount</th><th className="text-left p-2 text-xs font-medium">Date</th></tr></thead>
                   <tbody>{analysis?.supplier_matches?.map((m, i) => (
                     <tr key={i} className="border-b hover:bg-stone-50"><td className="p-2 text-xs max-w-xs truncate">{m.transaction}</td><td className="p-2"><Badge className="bg-primary/20 text-primary">{m.supplier}</Badge></td><td className="p-2"><Badge variant="outline" className="text-xs">{m.match_type}</Badge></td><td className="p-2 text-sm text-right font-bold text-error">SAR {m.amount.toFixed(2)}</td><td className="p-2 text-xs">{m.date}</td></tr>
-                  ))}{(!analysis?.supplier_matches || analysis.supplier_matches.length === 0) && <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">Add supplier account numbers in Suppliers page for auto-matching</td></tr>}</tbody></table>
+                  ))}{(!analysis?.supplier_matches || analysis.supplier_matches.length === 0) && <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">Add supplier account numbers in Suppliers page for auto-matching</td></tr>}</tbody></table></div>
                 </TabsContent>
 
-                <TabsContent value="daily"><table className="w-full"><thead><tr className="border-b"><th className="text-left p-2 text-xs font-medium">Date</th><th className="text-right p-2 text-xs font-medium">In</th><th className="text-right p-2 text-xs font-medium">Out</th><th className="text-right p-2 text-xs font-medium">Net</th></tr></thead>
-                <tbody>{detail.daily_summary?.map(d => (<tr key={d.date} className="border-b hover:bg-stone-50"><td className="p-2 text-sm">{d.date}</td><td className="p-2 text-sm text-right text-success">SAR {d.credit.toFixed(2)}</td><td className="p-2 text-sm text-right text-error">SAR {d.debit.toFixed(2)}</td><td className={`p-2 text-sm text-right font-bold ${d.credit-d.debit>=0?'text-success':'text-error'}`}>SAR {(d.credit-d.debit).toFixed(2)}</td></tr>))}</tbody></table></TabsContent>
+                <TabsContent value="daily"><div className="overflow-x-auto"><table className="w-full"><thead><tr className="border-b"><th className="text-left p-2 text-xs font-medium">Date</th><th className="text-right p-2 text-xs font-medium">In</th><th className="text-right p-2 text-xs font-medium">Out</th><th className="text-right p-2 text-xs font-medium">Net</th></tr></thead>
+                <tbody>{detail.daily_summary?.map(d => (<tr key={d.date} className="border-b hover:bg-stone-50"><td className="p-2 text-sm">{d.date}</td><td className="p-2 text-sm text-right text-success">SAR {d.credit.toFixed(2)}</td><td className="p-2 text-sm text-right text-error">SAR {d.debit.toFixed(2)}</td><td className={`p-2 text-sm text-right font-bold ${d.credit-d.debit>=0?'text-success':'text-error'}`}>SAR {(d.credit-d.debit).toFixed(2)}</td></tr>))}</tbody></table></div></TabsContent>
 
-                <TabsContent value="all"><div className="max-h-96 overflow-y-auto"><table className="w-full"><thead><tr className="border-b sticky top-0 bg-white"><th className="text-left p-2 text-xs font-medium">Date</th><th className="text-left p-2 text-xs font-medium">Cat</th><th className="text-left p-2 text-xs font-medium">Description</th><th className="text-right p-2 text-xs font-medium">In</th><th className="text-right p-2 text-xs font-medium">Out</th></tr></thead>
-                <tbody>{detail.transactions?.map((t, i) => (<tr key={i} className="border-b hover:bg-stone-50 text-xs"><td className="p-2">{t.date}</td><td className="p-2"><Badge variant="secondary" className="text-xs">{CAT_LABELS[t.category]||t.category}</Badge></td><td className="p-2 max-w-md truncate">{t.description}</td><td className="p-2 text-right text-success">{t.credit>0?`${t.credit.toFixed(2)}`:''}</td><td className="p-2 text-right text-error">{t.debit>0?`${t.debit.toFixed(2)}`:''}</td></tr>))}</tbody></table></div></TabsContent>
+                <TabsContent value="all"><div className="max-h-96 overflow-y-auto"><div className="overflow-x-auto"><table className="w-full"><thead><tr className="border-b sticky top-0 bg-white"><th className="text-left p-2 text-xs font-medium">Date</th><th className="text-left p-2 text-xs font-medium">Cat</th><th className="text-left p-2 text-xs font-medium">Description</th><th className="text-right p-2 text-xs font-medium">In</th><th className="text-right p-2 text-xs font-medium">Out</th></tr></thead>
+                <tbody>{detail.transactions?.map((t, i) => (<tr key={i} className="border-b hover:bg-stone-50 text-xs"><td className="p-2">{t.date}</td><td className="p-2"><Badge variant="secondary" className="text-xs">{CAT_LABELS[t.category]||t.category}</Badge></td><td className="p-2 max-w-md truncate">{t.description}</td><td className="p-2 text-right text-success">{t.credit>0?`${t.credit.toFixed(2)}`:''}</td><td className="p-2 text-right text-error">{t.debit>0?`${t.debit.toFixed(2)}`:''}</td></tr>))}</tbody></table></div></div></TabsContent>
               </Tabs>
             </CardContent>
           </Card>

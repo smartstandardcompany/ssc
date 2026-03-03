@@ -74,7 +74,7 @@ export default function ExpensesPage() {
   const fetchData = async () => {
     try {
       const [eR, sR, bR, cR, rR] = await Promise.all([api.get('/expenses'), api.get('/suppliers'), api.get('/branches'), api.get('/categories?category_type=expense'), api.get('/recurring-expenses')]);
-      setExpenses(eR.data); setSuppliers(sR.data); setBranches(bR.data); setCategories(cR.data); setRecurringExpenses(rR.data);
+      setExpenses(eR.data?.data || eR.data || []); setSuppliers(sR.data); setBranches(bR.data); setCategories(cR.data); setRecurringExpenses(rR.data);
     } catch { toast.error('Failed'); } finally { setLoading(false); }
   };
 

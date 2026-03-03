@@ -691,3 +691,203 @@ async def get_supplier_total_purchases(
         "credit_purchases": credit,
         "purchase_count": len(expenses)
     }
+
+
+@router.post("/suppliers/{supplier_id}/share-statement")
+async def share_supplier_statement(
+    supplier_id: str,
+    body: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Share supplier ledger/statement via Email and/or WhatsApp.
+    body: { channels: ["email", "whatsapp"], email: "...", phone: "+...", start_date, end_date }
+    """
+    require_permission(current_user, "suppliers", "read")
+    
+    supplier = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    
+    channels = body.get("channels", [])
+    email_to = body.get("email", supplier.get("email"))
+    phone_to = body.get("phone", supplier.get("phone"))
+    start_date = body.get("start_date")
+    end_date = body.get("end_date")
+    
+    if not channels:
+        raise HTTPException(status_code=400, detail="At least one channel (email/whatsapp) required")
+    
+    # Get ledger data
+    ledger = await get_supplier_ledger(supplier_id, start_date, end_date, current_user)
+    supplier_info = ledger["supplier"]
+    entries = ledger["entries"]
+    summary = ledger["summary"]
+    
+    results = {"email": None, "whatsapp": None}
+    
+    # --- Send via Email with PDF attachment ---
+    if "email" in channels:
+        if not email_to:
+            results["email"] = {"success": False, "error": "No email address provided"}
+        else:
+            try:
+                import aiosmtplib
+                from email.mime.multipart import MIMEMultipart
+                from email.mime.text import MIMEText
+                from email.mime.application import MIMEApplication
+                
+                email_settings = await db.email_settings.find_one({}, {"_id": 0})
+                if not email_settings or not email_settings.get("smtp_host"):
+                    results["email"] = {"success": False, "error": "Email not configured"}
+                else:
+                    # Generate PDF
+                    pdf_buffer = _generate_ledger_pdf(supplier_info, entries, summary, ledger["period"])
+                    
+                    # Build email
+                    msg = MIMEMultipart()
+                    msg["Subject"] = f"Statement of Account - {supplier_info['name']}"
+                    msg["From"] = email_settings.get("from_email", email_settings["username"])
+                    msg["To"] = email_to
+                    
+                    period_text = f"{ledger['period']['start']} to {ledger['period']['end']}"
+                    html_body = f"""
+                    <h2>Statement of Account</h2>
+                    <p><strong>Supplier:</strong> {supplier_info['name']}</p>
+                    <p><strong>Period:</strong> {period_text}</p>
+                    <p><strong>Total Purchases:</strong> SAR {summary['total_purchases']:,.2f}</p>
+                    <p><strong>Total Payments:</strong> SAR {summary['total_payments']:,.2f}</p>
+                    <p><strong>Outstanding Balance:</strong> SAR {summary['current_outstanding']:,.2f}</p>
+                    <br>
+                    <p>Please find the detailed statement attached as PDF.</p>
+                    <p>Regards,<br>SSC Track</p>
+                    """
+                    msg.attach(MIMEText(html_body, "html"))
+                    
+                    # Attach PDF
+                    pdf_attachment = MIMEApplication(pdf_buffer.read(), _subtype="pdf")
+                    pdf_attachment.add_header("Content-Disposition", "attachment", 
+                        filename=f"statement_{supplier_info['name'].replace(' ', '_')}.pdf")
+                    msg.attach(pdf_attachment)
+                    
+                    await aiosmtplib.send(msg, 
+                        hostname=email_settings["smtp_host"], 
+                        port=email_settings["smtp_port"],
+                        username=email_settings["username"], 
+                        password=email_settings["password"],
+                        use_tls=email_settings.get("use_tls", True))
+                    results["email"] = {"success": True, "sent_to": email_to}
+            except Exception as e:
+                results["email"] = {"success": False, "error": str(e)}
+    
+    # --- Send via WhatsApp ---
+    if "whatsapp" in channels:
+        if not phone_to:
+            results["whatsapp"] = {"success": False, "error": "No phone number provided"}
+        else:
+            try:
+                from routers.whatsapp import send_whatsapp_message
+                
+                # Build text summary
+                period_text = f"{ledger['period']['start']} to {ledger['period']['end']}"
+                wa_msg = (
+                    f"*SSC Track - Supplier Statement*\n\n"
+                    f"*{supplier_info['name']}*\n"
+                    f"Period: {period_text}\n\n"
+                    f"Total Purchases: SAR {summary['total_purchases']:,.2f}\n"
+                    f"  - Cash/Bank: SAR {(summary['cash_purchases'] + summary['bank_purchases']):,.2f}\n"
+                    f"  - Credit: SAR {summary['credit_purchases']:,.2f}\n\n"
+                    f"Total Payments: SAR {summary['total_payments']:,.2f}\n"
+                    f"*Outstanding Balance: SAR {summary['current_outstanding']:,.2f}*\n\n"
+                    f"Transactions: {ledger['entry_count']}"
+                )
+                
+                # Try sending to specific number
+                config = await db.whatsapp_config.find_one({}, {"_id": 0})
+                if not config or not config.get("account_sid"):
+                    results["whatsapp"] = {"success": False, "error": "WhatsApp not configured"}
+                else:
+                    from twilio.rest import Client
+                    client_tw = Client(config["account_sid"], config["auth_token"])
+                    client_tw.messages.create(
+                        from_=f'whatsapp:{config["phone_number"]}',
+                        body=wa_msg,
+                        to=f'whatsapp:{phone_to}'
+                    )
+                    results["whatsapp"] = {"success": True, "sent_to": phone_to}
+            except Exception as e:
+                results["whatsapp"] = {"success": False, "error": str(e)}
+    
+    return {
+        "message": "Statement sharing completed",
+        "supplier": supplier_info["name"],
+        "results": results
+    }
+
+
+def _generate_ledger_pdf(supplier_info, entries, summary, period):
+    """Generate a PDF buffer for the supplier ledger."""
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=20*mm, bottomMargin=20*mm)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    title_style = ParagraphStyle('Title', parent=styles['Title'], fontSize=16, spaceAfter=10)
+    elements.append(Paragraph(f"Statement of Account - {supplier_info['name']}", title_style))
+    elements.append(Paragraph(f"Period: {period['start']} to {period['end']}", styles['Normal']))
+    if supplier_info.get('phone'):
+        elements.append(Paragraph(f"Phone: {supplier_info['phone']}", styles['Normal']))
+    if supplier_info.get('email'):
+        elements.append(Paragraph(f"Email: {supplier_info['email']}", styles['Normal']))
+    elements.append(Spacer(1, 10*mm))
+    
+    summary_data = [
+        ['SUMMARY', ''],
+        ['Total Purchases:', f"SAR {summary['total_purchases']:,.2f}"],
+        ['Cash/Bank Purchases:', f"SAR {(summary['cash_purchases'] + summary['bank_purchases']):,.2f}"],
+        ['Credit Purchases:', f"SAR {summary['credit_purchases']:,.2f}"],
+        ['Total Payments:', f"SAR {summary['total_payments']:,.2f}"],
+        ['Outstanding:', f"SAR {summary['current_outstanding']:,.2f}"],
+    ]
+    summary_table = Table(summary_data, colWidths=[80*mm, 60*mm])
+    summary_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.Color(0.9, 0.95, 1.0)),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+    ]))
+    elements.append(summary_table)
+    elements.append(Spacer(1, 10*mm))
+    
+    ledger_data = [['Date', 'Type', 'Description', 'Debit', 'Credit', 'Balance']]
+    for entry in entries:
+        ledger_data.append([
+            entry['date'][:10] if entry['date'] else '',
+            entry['type'].title(),
+            entry['description'][:30] if entry.get('description') else '',
+            f"{entry['debit']:,.2f}" if entry['debit'] > 0 else '',
+            f"{entry['credit']:,.2f}" if entry['credit'] > 0 else '',
+            f"{entry['balance']:,.2f}"
+        ])
+    
+    ledger_table = Table(ledger_data, colWidths=[25*mm, 20*mm, 55*mm, 25*mm, 25*mm, 25*mm])
+    ledger_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('ALIGN', (3, 0), (-1, -1), 'RIGHT'),
+    ]))
+    elements.append(ledger_table)
+    
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer

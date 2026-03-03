@@ -99,7 +99,7 @@ export default function SalesPage() {
         api.get('/customers'),
         api.get('/platforms').catch(() => ({ data: [] })),
       ]);
-      setSales(salesRes.data);
+      setSales(salesRes.data?.data || salesRes.data || []);
       setBranches(branchesRes.data);
       setCustomers(customersRes.data);
       setPlatforms(platformsRes.data || []);

@@ -1,5 +1,5 @@
-from fastapi import APIRouter, HTTPException, Depends
-from typing import List
+from fastapi import APIRouter, HTTPException, Depends, Query
+from typing import List, Optional
 from datetime import datetime, timezone
 
 from database import db, get_current_user, require_permission, get_branch_filter
@@ -8,10 +8,25 @@ from models import User, Sale, SaleCreate, SalePayment
 router = APIRouter()
 
 @router.get("/sales")
-async def get_sales(current_user: User = Depends(get_current_user)):
+async def get_sales(
+    page: int = Query(1, ge=1),
+    limit: int = Query(100, ge=1, le=500),
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
     require_permission(current_user, "sales", "read")
     query = get_branch_filter(current_user)
-    sales = await db.sales.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
+    if start_date:
+        query["date"] = query.get("date", {})
+        query["date"]["$gte"] = start_date
+    if end_date:
+        if "date" not in query: query["date"] = {}
+        query["date"]["$lte"] = end_date + "T23:59:59"
+    
+    total = await db.sales.count_documents(query)
+    skip = (page - 1) * limit
+    sales = await db.sales.find(query, {"_id": 0}).sort("date", -1).skip(skip).limit(limit).to_list(limit)
     result = []
     for sale in sales:
         if isinstance(sale.get('date'), str): sale['date'] = datetime.fromisoformat(sale['date'])
@@ -34,7 +49,7 @@ async def get_sales(current_user: User = Depends(get_current_user)):
             else:
                 sale['payment_details'] = [{"mode": payment_mode, "amount": sale['final_amount']}]; sale['credit_amount'] = 0; sale['credit_received'] = 0
         result.append(sale)
-    return result
+    return {"data": result, "total": total, "page": page, "limit": limit, "pages": (total + limit - 1) // limit}
 
 @router.post("/sales", response_model=Sale)
 async def create_sale(sale_data: SaleCreate, current_user: User = Depends(get_current_user)):

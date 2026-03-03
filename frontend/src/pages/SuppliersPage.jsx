@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2, DollarSign, FileText, ArrowUpCircle, ArrowDownCircle, Receipt, CreditCard, Banknote, Download, Building2, X } from 'lucide-react';
+import { Plus, Edit, Trash2, DollarSign, FileText, ArrowUpCircle, ArrowDownCircle, Receipt, CreditCard, Banknote, Download, Building2, X, Send, Mail, MessageSquare, Loader2 } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -25,7 +25,7 @@ export default function SuppliersPage() {
   const [showPayDialog, setShowPayDialog] = useState(false);
   const [showLedgerDialog, setShowLedgerDialog] = useState(false);
   const [showAddBillDialog, setShowAddBillDialog] = useState(false);
-  const [billData, setBillData] = useState({ amount: '', category: '', payment_mode: 'credit', description: '' });
+  const [billData, setBillData] = useState({ amount: '', category: '', payment_mode: 'credit', description: '', branch_id: '' });
   const [ledgerData, setLedgerData] = useState(null);
   const [ledgerLoading, setLedgerLoading] = useState(false);
   const [ledgerStartDate, setLedgerStartDate] = useState('');
@@ -41,6 +41,9 @@ export default function SuppliersPage() {
   const [paymentData, setPaymentData] = useState({ payment_mode: 'cash', amount: '', branch_id: '' });
   const [newCategory, setNewCategory] = useState('');
   const [newSubCategory, setNewSubCategory] = useState('');
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [shareData, setShareData] = useState({ channels: [], email: '', phone: '' });
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => { fetchData(); }, []);
 
@@ -165,13 +168,13 @@ export default function SuppliersPage() {
         description: billData.description || `Purchase from ${payingSupplier.name}`,
         payment_mode: billData.payment_mode,
         supplier_id: payingSupplier.id,
-        branch_id: payingSupplier.branch_id || '',
+        branch_id: billData.branch_id || '',
         date: new Date().toISOString(),
       });
       const modeText = billData.payment_mode === 'credit' ? 'Credit bill added to balance' : 'Cash/Bank bill recorded';
       toast.success(`Purchase bill recorded! ${modeText}`);
       setShowAddBillDialog(false);
-      setBillData({ amount: '', category: '', payment_mode: 'credit', description: '' });
+      setBillData({ amount: '', category: '', payment_mode: 'credit', description: '', branch_id: '' });
       fetchData();
     } catch (error) { toast.error(error.response?.data?.detail || 'Failed to add purchase bill'); }
   };
@@ -227,6 +230,49 @@ export default function SuppliersPage() {
 
   const removeBankAccount = (index) => {
     setFormData({ ...formData, bank_accounts: formData.bank_accounts.filter((_, i) => i !== index) });
+  };
+
+  // Share statement
+  const openShareDialog = () => {
+    setShareData({
+      channels: [],
+      email: ledgerData?.supplier?.email || ledgerSupplier?.email || '',
+      phone: ledgerData?.supplier?.phone || ledgerSupplier?.phone || ''
+    });
+    setShowShareDialog(true);
+  };
+
+  const toggleShareChannel = (channel) => {
+    setShareData(prev => ({
+      ...prev,
+      channels: prev.channels.includes(channel)
+        ? prev.channels.filter(c => c !== channel)
+        : [...prev.channels, channel]
+    }));
+  };
+
+  const shareStatement = async () => {
+    if (shareData.channels.length === 0) { toast.error('Select at least one channel'); return; }
+    if (shareData.channels.includes('email') && !shareData.email) { toast.error('Enter email address'); return; }
+    if (shareData.channels.includes('whatsapp') && !shareData.phone) { toast.error('Enter phone number'); return; }
+    setSharing(true);
+    try {
+      const res = await api.post(`/suppliers/${ledgerSupplier.id}/share-statement`, {
+        channels: shareData.channels,
+        email: shareData.email,
+        phone: shareData.phone,
+        start_date: ledgerStartDate || undefined,
+        end_date: ledgerEndDate || undefined
+      });
+      const r = res.data.results;
+      if (r.email?.success) toast.success(`Statement sent to ${r.email.sent_to}`);
+      if (r.email && !r.email.success) toast.error(`Email: ${r.email.error}`);
+      if (r.whatsapp?.success) toast.success(`WhatsApp sent to ${r.whatsapp.sent_to}`);
+      if (r.whatsapp && !r.whatsapp.success) toast.error(`WhatsApp: ${r.whatsapp.error}`);
+      setShowShareDialog(false);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to share statement');
+    } finally { setSharing(false); }
   };
 
   // Migration
@@ -490,7 +536,7 @@ export default function SuppliersPage() {
 
                   {/* Action Buttons */}
                   <div className="grid grid-cols-2 gap-2 mt-3">
-                    <Button size="sm" variant="outline" onClick={() => { setPayingSupplier(supplier); setShowAddBillDialog(true); setBillData({ amount: '', category: '', payment_mode: 'credit', description: '' }); }}
+                    <Button size="sm" variant="outline" onClick={() => { setPayingSupplier(supplier); setShowAddBillDialog(true); setBillData({ amount: '', category: '', payment_mode: 'credit', description: '', branch_id: supplier.branch_id || '' }); }}
                       data-testid={`add-bill-${supplier.id}`} className="text-amber-600 border-amber-300 hover:bg-amber-50">
                       <Receipt size={14} className="mr-1" /> Add Bill
                     </Button>
@@ -586,6 +632,10 @@ export default function SuppliersPage() {
                 onClick={() => ledgerSupplier && viewLedger(ledgerSupplier, ledgerStartDate, ledgerEndDate)}
                 data-testid="ledger-filter-btn">Filter</Button>
               <div className="ml-auto flex gap-1.5">
+                <Button size="sm" variant="outline" className="h-8 text-blue-600 border-blue-200 hover:bg-blue-50"
+                  onClick={openShareDialog} data-testid="share-statement-btn">
+                  <Send size={13} className="mr-1" /> Share
+                </Button>
                 <Button size="sm" variant="outline" className="h-8 text-red-600 border-red-200 hover:bg-red-50"
                   onClick={() => exportLedger('pdf')} data-testid="export-ledger-pdf">
                   <Download size={13} className="mr-1" /> PDF
@@ -688,9 +738,35 @@ export default function SuppliersPage() {
         <Dialog open={showAddBillDialog} onOpenChange={setShowAddBillDialog}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2"><Receipt className="text-amber-500" /> Add Purchase Bill - {payingSupplier?.name}</DialogTitle>
+              <DialogTitle className="flex items-center gap-2"><Receipt className="text-amber-500" /> Add Purchase Bill</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleAddBill} className="space-y-4">
+              {/* Supplier info (pre-selected, changeable) */}
+              <div>
+                <Label>Supplier</Label>
+                <Select value={payingSupplier?.id || "none"} onValueChange={(v) => {
+                  const s = suppliers.find(sup => sup.id === v);
+                  if (s) { setPayingSupplier(s); setBillData(prev => ({ ...prev, branch_id: s.branch_id || prev.branch_id })); }
+                }}>
+                  <SelectTrigger data-testid="bill-supplier-select"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {suppliers.map(s => (<SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Branch Selection */}
+              <div>
+                <Label>Branch</Label>
+                <Select value={billData.branch_id || "all"} onValueChange={(v) => setBillData({ ...billData, branch_id: v === "all" ? "" : v })}>
+                  <SelectTrigger data-testid="bill-branch-select"><SelectValue placeholder="Select Branch" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Branches</SelectItem>
+                    {branches.map(b => (<SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-sm">
                 <p className="font-medium text-amber-800">What is a Purchase Bill?</p>
                 <p className="text-amber-700 text-xs mt-1">
@@ -701,7 +777,7 @@ export default function SuppliersPage() {
               </div>
               <div>
                 <Label>Amount (SAR)</Label>
-                <Input type="number" value={billData.amount} onChange={(e) => setBillData({ ...billData, amount: e.target.value })} placeholder="0.00" required className="text-lg font-bold" />
+                <Input type="number" value={billData.amount} onChange={(e) => setBillData({ ...billData, amount: e.target.value })} placeholder="0.00" required className="text-lg font-bold" data-testid="bill-amount-input" />
               </div>
               <div>
                 <Label>Payment Type</Label>
@@ -714,7 +790,7 @@ export default function SuppliersPage() {
                             : mode === 'cash' ? 'bg-emerald-500 text-white border-emerald-500'
                             : 'bg-blue-500 text-white border-blue-500'
                           : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
-                      }`}>
+                      }`} data-testid={`bill-mode-${mode}`}>
                       {mode === 'credit' && <Receipt size={14} className="inline mr-1" />}
                       {mode === 'cash' && <Banknote size={14} className="inline mr-1" />}
                       {mode === 'bank' && <CreditCard size={14} className="inline mr-1" />}
@@ -741,13 +817,75 @@ export default function SuppliersPage() {
               </div>
               <div>
                 <Label>Description (Optional)</Label>
-                <Input value={billData.description} onChange={(e) => setBillData({ ...billData, description: e.target.value })} placeholder="e.g., Invoice #1234" />
+                <Input value={billData.description} onChange={(e) => setBillData({ ...billData, description: e.target.value })} placeholder="e.g., Invoice #1234" data-testid="bill-description-input" />
               </div>
               <div className="flex gap-3 pt-2">
-                <Button type="submit" className="flex-1 bg-amber-500 hover:bg-amber-600"><Receipt size={16} className="mr-1" /> Add Purchase Bill</Button>
+                <Button type="submit" className="flex-1 bg-amber-500 hover:bg-amber-600" data-testid="submit-bill-btn"><Receipt size={16} className="mr-1" /> Add Purchase Bill</Button>
                 <Button type="button" variant="outline" onClick={() => setShowAddBillDialog(false)}>Cancel</Button>
               </div>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Share Statement Dialog */}
+        <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+          <DialogContent className="max-w-sm" data-testid="share-statement-dialog">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2"><Send className="text-blue-500" size={18} /> Share Statement</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Send <strong>{ledgerSupplier?.name}</strong>'s statement via:
+              </p>
+
+              {/* Channel Selection */}
+              <div className="flex gap-3">
+                <button type="button" onClick={() => toggleShareChannel('email')}
+                  className={`flex-1 p-3 rounded-lg border-2 transition-all text-center ${
+                    shareData.channels.includes('email')
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-stone-200 text-stone-500 hover:border-stone-300'
+                  }`} data-testid="share-email-toggle">
+                  <Mail size={20} className="mx-auto mb-1" />
+                  <span className="text-sm font-medium">Email</span>
+                  <p className="text-[10px] mt-0.5">PDF attached</p>
+                </button>
+                <button type="button" onClick={() => toggleShareChannel('whatsapp')}
+                  className={`flex-1 p-3 rounded-lg border-2 transition-all text-center ${
+                    shareData.channels.includes('whatsapp')
+                      ? 'border-green-500 bg-green-50 text-green-700'
+                      : 'border-stone-200 text-stone-500 hover:border-stone-300'
+                  }`} data-testid="share-whatsapp-toggle">
+                  <MessageSquare size={20} className="mx-auto mb-1" />
+                  <span className="text-sm font-medium">WhatsApp</span>
+                  <p className="text-[10px] mt-0.5">Summary text</p>
+                </button>
+              </div>
+
+              {/* Email Input */}
+              {shareData.channels.includes('email') && (
+                <div>
+                  <Label className="text-xs">Email Address</Label>
+                  <Input value={shareData.email} onChange={e => setShareData({ ...shareData, email: e.target.value })}
+                    placeholder="supplier@example.com" type="email" data-testid="share-email-input" />
+                </div>
+              )}
+
+              {/* Phone Input */}
+              {shareData.channels.includes('whatsapp') && (
+                <div>
+                  <Label className="text-xs">WhatsApp Number (with country code)</Label>
+                  <Input value={shareData.phone} onChange={e => setShareData({ ...shareData, phone: e.target.value })}
+                    placeholder="+966512345678" data-testid="share-phone-input" />
+                </div>
+              )}
+
+              <Button onClick={shareStatement} disabled={sharing || shareData.channels.length === 0}
+                className="w-full" data-testid="send-statement-btn">
+                {sharing ? <Loader2 size={16} className="mr-2 animate-spin" /> : <Send size={16} className="mr-2" />}
+                {sharing ? 'Sending...' : 'Send Statement'}
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
 

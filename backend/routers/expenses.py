@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import Optional
 from datetime import datetime, timezone
 
@@ -9,15 +9,30 @@ import uuid
 
 router = APIRouter()
 
-@router.get("/expenses", response_model=list)
-async def get_expenses(current_user: User = Depends(get_current_user)):
+@router.get("/expenses")
+async def get_expenses(
+    page: int = Query(1, ge=1),
+    limit: int = Query(100, ge=1, le=500),
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
     require_permission(current_user, "expenses", "read")
     query = get_branch_filter(current_user)
-    expenses = await db.expenses.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
+    if start_date:
+        query["date"] = query.get("date", {})
+        query["date"]["$gte"] = start_date
+    if end_date:
+        if "date" not in query: query["date"] = {}
+        query["date"]["$lte"] = end_date + "T23:59:59"
+    
+    total = await db.expenses.count_documents(query)
+    skip = (page - 1) * limit
+    expenses = await db.expenses.find(query, {"_id": 0}).sort("date", -1).skip(skip).limit(limit).to_list(limit)
     for expense in expenses:
         if isinstance(expense.get('date'), str): expense['date'] = datetime.fromisoformat(expense['date'])
         if isinstance(expense.get('created_at'), str): expense['created_at'] = datetime.fromisoformat(expense['created_at'])
-    return expenses
+    return {"data": expenses, "total": total, "page": page, "limit": limit, "pages": (total + limit - 1) // limit}
 
 @router.post("/expenses", response_model=Expense)
 async def create_expense(expense_data: ExpenseCreate, current_user: User = Depends(get_current_user)):

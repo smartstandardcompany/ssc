@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuthStore } from '@/stores/authStore';
 
 export default function LoginPage({ setIsAuthenticated }) {
   const { t } = useLanguage();
@@ -14,18 +15,17 @@ export default function LoginPage({ setIsAuthenticated }) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const authLogin = useAuthStore(s => s.login);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const response = await api.post('/auth/login', { email, password });
-      localStorage.setItem('token', response.data.access_token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      const data = await authLogin(email, password);
       
       // Check if password change is required
-      if (response.data.must_change_password) {
+      if (data.must_change_password) {
         toast.info('Please change your password');
         setIsAuthenticated(true);
         navigate('/change-password?forced=true');
