@@ -7,7 +7,7 @@ import {
   Handshake, HelpCircle, Building2, Package, ChefHat, CalendarClock,
   ArrowDownUp, Activity, PackageCheck, ChevronDown, Menu, X, Zap,
   AlertCircle, Moon, Sun, Keyboard, Globe, UtensilsCrossed, Camera, Armchair, Wallet,
-  CalendarDays, Gift
+  CalendarDays, Gift, TrendingUp
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -68,6 +68,7 @@ const NAV_GROUPS = [
     items: [
       { path: '/analytics', icon: BarChart3, label: 'Analytics', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/visualizations', icon: Activity, label: 'Visualizations', perm: 'reports', roles: ['admin', 'manager'] },
+      { path: '/sales-forecast', icon: TrendingUp, label: 'Sales Forecast', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/shift-report', icon: CalendarClock, label: 'Shift Report', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/partner-pl-report', icon: Handshake, label: 'Partner P&L', perm: 'partners', roles: ['admin'] },
       { path: '/reports', icon: BarChart3, label: 'Reports', perm: 'reports', roles: ['admin', 'manager'] },

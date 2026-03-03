@@ -15,8 +15,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
 import { WhatsAppSendDialog } from '@/components/WhatsAppSendDialog';
-import { BranchFilter } from '@/components/BranchFilter';
-import { DateFilter } from '@/components/DateFilter';
+import { AdvancedSearch, applySearchFilters } from '@/components/AdvancedSearch';
 
 export default function ExpensesPage() {
   const { t } = useLanguage();
@@ -26,8 +25,7 @@ export default function ExpensesPage() {
   const [categories, setCategories] = useState([]);
   const [recurringExpenses, setRecurringExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [branchFilter, setBranchFilter] = useState([]);
-  const [dateFilter, setDateFilter] = useState({ start: null, end: null, period: 'all' });
+  const [searchFilters, setSearchFilters] = useState({});
   const [showCatManager, setShowCatManager] = useState(false);
   const [showRenewDialog, setShowRenewDialog] = useState(false);
   const [renewingRec, setRenewingRec] = useState(null);
@@ -124,11 +122,7 @@ export default function ExpensesPage() {
 
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-64">Loading...</div></DashboardLayout>;
 
-  const filtered = expenses.filter(e => {
-    if (branchFilter.length > 0 && !branchFilter.includes(e.branch_id)) return false;
-    if (dateFilter.start && dateFilter.end) { const d = new Date(e.date); return d >= dateFilter.start && d <= dateFilter.end; }
-    return true;
-  });
+  const filtered = applySearchFilters(expenses, searchFilters);
   const totalExp = filtered.reduce((s, e) => s + e.amount, 0);
 
   return (
@@ -140,13 +134,46 @@ export default function ExpensesPage() {
             <p className="text-sm text-muted-foreground">{t('expenses_subtitle')}</p>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
-            <BranchFilter onChange={setBranchFilter} />
-            <DateFilter onFilterChange={setDateFilter} />
             <ExportButtons dataType="expenses" />
             <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowWhatsApp(true)} data-testid="expenses-whatsapp-btn"><MessageCircle size={14} className="mr-1" />WhatsApp</Button>
             {isAdmin && <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowCatManager(true)}><Settings2 size={14} className="mr-1" />{t('category')}</Button>}
           </div>
         </div>
+
+        {/* Advanced Search */}
+        <AdvancedSearch 
+          onSearch={setSearchFilters}
+          config={{
+            searchFields: ['description', 'notes'],
+            placeholder: 'Search expenses...',
+            filters: [
+              { 
+                key: 'branch_id', 
+                label: 'Branch', 
+                type: 'select', 
+                options: branches.map(b => ({ value: b.id, label: b.name }))
+              },
+              { 
+                key: 'category', 
+                label: 'Category', 
+                type: 'select', 
+                options: mainCats.map(c => ({ value: c, label: tc(c) }))
+              },
+              { 
+                key: 'payment_mode', 
+                label: 'Payment', 
+                type: 'select', 
+                options: [
+                  { value: 'cash', label: 'Cash' },
+                  { value: 'bank', label: 'Bank' },
+                  { value: 'credit', label: 'Credit' }
+                ]
+              },
+              { key: 'amount', label: 'Amount', type: 'range' },
+              { key: 'date', label: 'Date', type: 'dateRange' }
+            ]
+          }}
+        />
 
         <Tabs defaultValue="add">
           <TabsList><TabsTrigger value="add">{t('add_expense')}</TabsTrigger><TabsTrigger value="list">{t('all_expenses')} ({filtered.length})</TabsTrigger><TabsTrigger value="recurring">Recurring</TabsTrigger></TabsList>

@@ -62,6 +62,7 @@ import ReservationsPage from "./pages/ReservationsPage";
 import LoyaltyProgramPage from "./pages/LoyaltyProgramPage";
 import ActivityLogsPage from "./pages/ActivityLogsPage";
 import DailySummaryPage from "./pages/DailySummaryPage";
+import SalesForecastPage from "./pages/SalesForecastPage";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
@@ -227,6 +228,7 @@ function App() {
           <Route path="/category-report" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><CategoryReportPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/bank-statements" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin']}><BankStatementsPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/reconciliation" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin']}><ReconciliationPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/sales-forecast" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><SalesForecastPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/performance-report" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><PerformanceReportPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/anomaly-detection" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><AnomalyDetectionPage /></ProtectedRoute></AuthRoute>} />
 

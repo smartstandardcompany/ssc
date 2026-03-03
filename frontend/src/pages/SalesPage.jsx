@@ -14,8 +14,7 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
-import { DateFilter } from '@/components/DateFilter';
-import { BranchFilter } from '@/components/BranchFilter';
+import { AdvancedSearch, applySearchFilters } from '@/components/AdvancedSearch';
 
 export default function SalesPage() {
   const [sales, setSales] = useState([]);
@@ -40,8 +39,7 @@ export default function SalesPage() {
   });
 
   const [receivePayment, setReceivePayment] = useState({ payment_mode: 'cash', amount: '' });
-  const [dateFilter, setDateFilter] = useState({ start: null, end: null, period: 'all' });
-  const [branchFilter, setBranchFilter] = useState([]);
+  const [searchFilters, setSearchFilters] = useState({});
 
   // Calculate branch-wise monthly sales
   const branchMonthlySales = useMemo(() => {
@@ -300,8 +298,6 @@ export default function SalesPage() {
             <p className="text-sm text-muted-foreground">Track sales with flexible payment options</p>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
-            <BranchFilter onChange={setBranchFilter} />
-            <DateFilter onFilterChange={setDateFilter} />
             <ExportButtons dataType="sales" />
             <Button
             onClick={() => setShowForm(!showForm)}
@@ -573,6 +569,36 @@ export default function SalesPage() {
             <CardTitle className="font-outfit">All Sales</CardTitle>
           </CardHeader>
           <CardContent>
+            {/* Advanced Search */}
+            <AdvancedSearch 
+              onSearch={setSearchFilters}
+              config={{
+                searchFields: ['notes'],
+                placeholder: 'Search sales by notes...',
+                filters: [
+                  { 
+                    key: 'branch_id', 
+                    label: 'Branch', 
+                    type: 'select', 
+                    options: branches.map(b => ({ value: b.id, label: b.name }))
+                  },
+                  { 
+                    key: 'payment_mode', 
+                    label: 'Payment Mode', 
+                    type: 'select', 
+                    options: [
+                      { value: 'cash', label: 'Cash' },
+                      { value: 'bank', label: 'Bank' },
+                      { value: 'credit', label: 'Credit' },
+                      { value: 'online_platform', label: 'Online' }
+                    ]
+                  },
+                  { key: 'final_amount', label: 'Amount', type: 'range' },
+                  { key: 'date', label: 'Date', type: 'dateRange' }
+                ]
+              }}
+              className="mb-4"
+            />
             <div className="overflow-x-auto">
               <table className="w-full" data-testid="sales-table">
                 <thead>
@@ -590,14 +616,10 @@ export default function SalesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sales.filter(s => {
-                    if (branchFilter.length > 0 && !branchFilter.includes(s.branch_id)) return false;
-                    if (dateFilter.start && dateFilter.end) {
-                      const d = new Date(s.date);
-                      return d >= dateFilter.start && d <= dateFilter.end;
-                    }
-                    return true;
-                  }).map((sale) => {
+                  {applySearchFilters(sales.map(s => ({
+                    ...s,
+                    payment_mode: s.payment_details?.[0]?.mode || 'cash'
+                  })), searchFilters).map((sale) => {
                     const branchName = branches.find((b) => b.id === sale.branch_id)?.name || '-';
                     const customerName = customers.find((c) => c.id === sale.customer_id)?.name || '-';
                     const remainingCredit = getRemainingCredit(sale);

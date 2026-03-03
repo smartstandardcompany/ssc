@@ -439,3 +439,160 @@ async def get_profit_decomposition(current_user: User = Depends(get_current_user
             "total_anomalies": len(anomalies)
         }
     }
+
+
+
+@router.get("/predictions/sales-forecast")
+async def get_sales_forecast(
+    days: int = 30,
+    branch_id: str = None,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    AI-powered sales forecasting using historical data analysis.
+    Predicts daily sales for the next N days with confidence intervals.
+    """
+    now = datetime.now(timezone.utc)
+    
+    # Get historical sales data (last 180 days for better patterns)
+    start_date = (now - timedelta(days=180)).isoformat()
+    query = {"date": {"$gte": start_date}}
+    if branch_id:
+        query["branch_id"] = branch_id
+    
+    sales = await db.sales.find(query, {"_id": 0}).to_list(50000)
+    
+    # Aggregate daily sales
+    daily_sales = defaultdict(float)
+    for s in sales:
+        d = s.get("date", "")[:10]
+        daily_sales[d] += s.get("final_amount", s.get("amount", 0))
+    
+    # Build time series
+    ts = []
+    for i in range(180):
+        d = (now - timedelta(days=180 - i)).strftime("%Y-%m-%d")
+        ts.append(daily_sales.get(d, 0))
+    
+    if sum(ts) == 0:
+        return {
+            "message": "Insufficient data for forecasting",
+            "forecast": [],
+            "summary": {}
+        }
+    
+    # Calculate statistics
+    recent_30 = ts[-30:]
+    recent_7 = ts[-7:]
+    
+    avg_30 = sum(recent_30) / len(recent_30)
+    avg_7 = sum(recent_7) / len(recent_7)
+    avg_all = sum(ts) / len(ts)
+    
+    # Standard deviation for confidence
+    variance = sum((x - avg_30) ** 2 for x in recent_30) / len(recent_30)
+    std_dev = math.sqrt(variance)
+    
+    # Day-of-week patterns
+    dow_sales = defaultdict(list)
+    for i in range(180):
+        d = now - timedelta(days=180 - i)
+        dow_sales[d.weekday()].append(ts[i])
+    
+    dow_avg = {}
+    dow_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    for dow in range(7):
+        vals = dow_sales[dow]
+        if vals:
+            dow_avg[dow] = sum(vals) / len(vals)
+        else:
+            dow_avg[dow] = avg_30
+    
+    # Trend calculation
+    first_half = sum(ts[:90]) / 90
+    second_half = sum(ts[90:]) / 90
+    trend_pct = ((second_half - first_half) / max(first_half, 1)) * 100
+    trend_direction = "up" if trend_pct > 5 else "down" if trend_pct < -5 else "stable"
+    
+    # Monthly patterns (for seasonality)
+    monthly_avg = defaultdict(list)
+    for i in range(180):
+        d = now - timedelta(days=180 - i)
+        monthly_avg[d.month].append(ts[i])
+    
+    month_factors = {}
+    for m, vals in monthly_avg.items():
+        month_factors[m] = (sum(vals) / len(vals)) / max(avg_all, 1)
+    
+    # Generate forecast
+    forecasts = []
+    total_forecast = 0
+    
+    for i in range(days):
+        fd = now + timedelta(days=i + 1)
+        dow = fd.weekday()
+        month = fd.month
+        
+        # Base prediction using day-of-week pattern
+        base = dow_avg.get(dow, avg_30)
+        
+        # Apply monthly seasonality
+        season_factor = month_factors.get(month, 1)
+        
+        # Apply trend
+        trend_factor = 1 + (trend_pct / 100 * 0.3)
+        
+        # Final prediction
+        predicted = base * season_factor * trend_factor
+        
+        # Confidence interval (95%)
+        lower = max(0, predicted - 1.96 * std_dev)
+        upper = predicted + 1.96 * std_dev
+        
+        total_forecast += predicted
+        
+        forecasts.append({
+            "date": fd.strftime("%Y-%m-%d"),
+            "day_name": dow_names[dow],
+            "predicted": round(predicted, 2),
+            "lower_bound": round(lower, 2),
+            "upper_bound": round(upper, 2),
+            "confidence": 0.95
+        })
+    
+    # Weekly and monthly projections
+    next_7_days = sum(f["predicted"] for f in forecasts[:7])
+    next_30_days = sum(f["predicted"] for f in forecasts[:min(30, days)])
+    
+    # Best/worst day predictions
+    dow_predictions = defaultdict(list)
+    for f in forecasts:
+        dow_predictions[f["day_name"]].append(f["predicted"])
+    
+    best_day = max(dow_predictions.items(), key=lambda x: sum(x[1])/len(x[1]))[0] if dow_predictions else "-"
+    worst_day = min(dow_predictions.items(), key=lambda x: sum(x[1])/len(x[1]))[0] if dow_predictions else "-"
+    
+    return {
+        "forecast": forecasts,
+        "summary": {
+            "forecast_period_days": days,
+            "total_predicted": round(total_forecast, 2),
+            "next_7_days": round(next_7_days, 2),
+            "next_30_days": round(next_30_days, 2),
+            "avg_daily_predicted": round(total_forecast / days, 2),
+            "trend": trend_direction,
+            "trend_percentage": round(trend_pct, 1),
+            "best_day": best_day,
+            "worst_day": worst_day,
+            "confidence_level": "95%"
+        },
+        "historical": {
+            "avg_last_7_days": round(avg_7, 2),
+            "avg_last_30_days": round(avg_30, 2),
+            "avg_last_180_days": round(avg_all, 2),
+            "std_deviation": round(std_dev, 2)
+        },
+        "day_of_week_pattern": {
+            dow_names[k]: round(v, 2) for k, v in dow_avg.items()
+        }
+    }
