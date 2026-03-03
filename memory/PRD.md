@@ -53,9 +53,18 @@ A comprehensive business management ERP system named "SSC Track" for tracking sa
   - stock.py, invoices.py, branches.py, settings.py, reports.py, transfers.py, dashboard.py (newly added)
 - Branch-based data filtering for branch-restricted users
 
+### Phase 11: Branch Filtering Refactor (COMPLETED - Dec 2025)
+- Refactored suppliers.py to use centralized `get_branch_filter_with_global` instead of manual filtering logic
+- Refactored customers.py to use centralized `get_branch_filter_with_global` for consistent behavior
+- Two helper functions now centralize all branch filtering logic in database.py:
+  - `get_branch_filter()`: Strict branch filtering for sales, expenses, stock entries - restricts to user's branch only
+  - `get_branch_filter_with_global()`: Includes branch-specific AND global (no branch) items - used for suppliers, customers
+- Verified 100% test pass rate (12/12 backend tests, frontend verified)
+- Admin sees all data, restricted users see appropriate filtered data based on their branch assignment
+
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
-- Operator: test@ssc.com / test123
+- Operator: test@ssc.com / Test@123
 - Employee: ahmed@test.com / emp@123
 - Cashier PIN: 1234
 
@@ -63,12 +72,19 @@ A comprehensive business management ERP system named "SSC Track" for tracking sa
 
 ### P0 (None - all critical items done)
 
-### P1 (Nice to Have)
-- Propagate get_branch_filter to remaining minor routers (anomaly_detection, cctv, etc.)
-- Add granular read/write permission enforcement to more endpoints
-- Audit all remaining API endpoints for comprehensive permission checks
+### P1 (High Priority)
+- Implement `createdAt` and `updatedAt` timestamps for all major DB collections (data auditing)
+- Add "Print Barcode" feature for stock items
 
-### P2 (Future)
+### P2 (Medium Priority)
+- Implement "Advanced Search" component for all main data tables (Sales, Stock, etc.)
+- User activity logging to track key actions (logins, deletions, settings changes)
+- Propagate get_branch_filter to remaining minor routers (anomaly_detection, cctv, etc.)
+
+### P3 (Future/Backlog)
+- Mobile-responsive design for admin pages
+- Frontend state management refactor (Zustand/Redux Toolkit)
+- AI-powered sales forecasting in reports
 - Advanced analytics refinements
 - CCTV AI features expansion
 - WhatsApp chatbot improvements
