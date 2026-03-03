@@ -17,72 +17,44 @@ A comprehensive business management ERP system named "SSC Track" for tracking sa
 - **Customer Loyalty Program:** Points-based rewards system with tiers and redemption.
 
 ## Tech Stack
-- **Frontend:** React + Tailwind CSS + Shadcn/UI
+- **Frontend:** React + Tailwind CSS + Shadcn/UI + **Zustand** (state management)
 - **Backend:** FastAPI (Python)
-- **Database:** MongoDB (via Motor async driver)
+- **Database:** MongoDB (via Motor async driver) with **indexed collections**
 - **Auth:** JWT-based
 - **Integrations:** OpenAI GPT-4o (via Emergent LLM Key), Twilio (WhatsApp), aiosmtplib (email)
 
 ## User Roles
-- **Admin (ss@ssc.com):** Full access to everything. Protected from deletion/password changes.
-- **Manager:** Access to most modules except admin-only ones (users, settings, partners).
+- **Admin (ss@ssc.com):** Full access. Protected from deletion/password changes.
+- **Manager:** Access to most modules except admin-only ones.
 - **Operator:** Limited access based on assigned permissions. Branch-restricted.
 - **Employee:** Self-service portal only.
 - **Cashier/Waiter:** POS-only access via PIN login.
 
-## What's Been Implemented (Completed)
+## What's Been Implemented
 
 ### Phase 1-9: Core ERP Features (ALL DONE)
-- All financial modules (sales, expenses, suppliers, invoices, credit management)
-- HR and employee management (portal, leave, salary, loans)
-- Stock management with smart alerts
-- Restaurant POS system (KDS, tables, reservations, waiter mode)
-- Asset & liability tracking
-- CCTV security integration
-- Cash flow & bank reconciliation
-- Reporting & analytics (dashboards, visualizations, anomaly detection)
-- Admin tools (settings, branding, PWA, i18n, dark mode)
-- Customer Loyalty Program
+All financial modules, HR, stock, restaurant POS, assets, CCTV, cash flow, reporting, admin tools, loyalty program.
 
-### Phase 10: Security & Access Control (COMPLETED - Feb 2026)
-- Protected admin account (ss@ssc.com) from deletion/password changes
-- Role-based sidebar navigation filtering (users only see permitted links)
-- Client-side route protection with Access Denied page (prevents URL-based bypass)
-- Backend permission enforcement (require_permission + get_branch_filter) across all key routers
-- Branch-based data filtering for branch-restricted users
+### Phase 10: Security & Access Control (DONE)
+Protected admin account, role-based sidebar, route protection, backend permission enforcement, branch-based data filtering.
 
-### Phase 11: Branch Filtering Refactor (COMPLETED - Dec 2025)
-- Refactored suppliers.py and customers.py to use centralized `get_branch_filter_with_global`
-- Two helper functions now centralize all branch filtering logic in database.py
+### Phase 11-16: Advanced Features (ALL DONE)
+Branch filtering refactor, barcode printing, timestamps, activity logging, advanced search, daily summary dashboard, AI sales forecasting, sales alert system.
 
-### Phase 12: Barcode & Timestamps (COMPLETED - Mar 2026)
-- Print Barcode Feature for stock items with company logo
-- updated_at Timestamps for data auditing
+### Phase 17: Supplier Module Enhancements & POS UI/UX (DONE - Mar 2026)
+- Supplier total purchases on cards, ledger with running balance, PDF/Excel export
+- Multiple bank accounts (up to 3) per supplier
+- POS expense form with clear labels (General Expenses vs Supplier Purchases)
+- Online sales fix (dashboard stats now includes online_sales)
 
-### Phase 13: Activity Logging & Advanced Search (COMPLETED - Mar 2026)
-- User Activity Logging System with comprehensive audit trail
-- Advanced Search Component (reusable filter component)
-
-### Phase 14: Daily Summary Dashboard (COMPLETED - Mar 2026)
-- Daily Summary Page with comprehensive daily business metrics
-
-### Phase 15: Advanced Search & AI Forecasting (COMPLETED - Mar 2026)
-- AdvancedSearch Integration into Sales, Expenses, Customers, Suppliers pages
-- AI Sales Forecasting with predictive analytics
-
-### Phase 16: Sales Alerts & Extended Search (COMPLETED - Mar 2026)
-- Sales Alert System with email/WhatsApp notifications
-- AdvancedSearch Extended to remaining pages
-
-### Phase 17: Supplier Module Enhancements & POS UI/UX (COMPLETED - Mar 2026)
-- **Supplier Total Purchases:** Backend aggregates total purchase amounts from expenses collection. Displayed on each supplier card with amber-themed "Total Purchases" badge.
-- **Supplier Ledger:** Full ledger endpoint (`GET /api/suppliers/{id}/ledger`) with running balance, debit/credit entries, date filtering (start_date, end_date params). Ledger dialog shows summary cards (credit purchases, cash/bank purchases, credit paid, closing balance) and scrollable entries table.
-- **Ledger Export:** PDF export via reportlab, Excel export via openpyxl (`GET /api/suppliers/{id}/ledger/export?format=pdf|excel`). Export buttons in ledger dialog.
-- **Multiple Bank Accounts:** Up to 3 bank accounts per supplier (bank_name, account_number, iban, swift_code). Add/Edit form with add/remove bank account UI, (x/3) counter.
-- **POS Expense Form Improvement:** "Expenses" tab renamed to "General Business Expenses" with clear help text distinguishing from supplier purchases. Payment modes limited to "Paid by Cash" and "Paid by Bank" (removed credit option for general expenses). Supplier field labeled "No Supplier (General)" as default.
-- **Online Sales Fix:** Added `online_sales` field to `/api/dashboard/stats` by summing payment_details with mode "online_platform". POS page now reads online_sales directly from dashboard stats instead of separate platforms/summary call.
-- **Duplicate Route Fix:** Removed duplicate `get_supplier_ledger` endpoint in suppliers.py.
-- Test Results: Backend 100% (13/13), Frontend 100%
+### Phase 18: Statement Sharing, State Management, Performance & Mobile (DONE - Mar 2026)
+- **Supplier Statement Sharing:** Share ledger via Email (PDF attachment) and/or WhatsApp (text summary) directly from the ledger dialog. POST /api/suppliers/{id}/share-statement endpoint.
+- **Add Bill Bug Fixes:** Branch selector added to Add Purchase Bill dialog. Supplier auto-selected from card click with ability to change.
+- **Zustand State Management:** Migrated core auth, branch, and UI state to Zustand stores. Integrated into DashboardLayout and LoginPage. Backward-compatible with localStorage.
+- **API Pagination:** Sales and Expenses endpoints return paginated responses {data, total, page, limit, pages}. All frontend consumers updated to handle both formats.
+- **MongoDB Indexes:** Created on startup for sales, expenses, suppliers, customers, stock_items, users, activity_logs, invoices, notifications - covering common query patterns.
+- **Mobile Responsive:** Fixed page headers (flex-col sm:flex-row), text sizing (text-2xl sm:text-4xl), overflow-x-auto wrappers on tables in BankStatements, Fines, Partners pages.
+- Test Results: Backend 100% (17/17), Frontend 100%
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
@@ -90,14 +62,18 @@ A comprehensive business management ERP system named "SSC Track" for tracking sa
 - Employee: ahmed@test.com / emp@123
 - Cashier PIN: 1234
 
-## Prioritized Backlog
+## Zustand Store Architecture
+```
+/app/frontend/src/stores/
+├── index.js          # Re-exports all stores
+├── authStore.js      # user, token, login(), logout(), hasPermission()
+├── branchStore.js    # branches[], fetchBranches(), getBranchName()
+└── uiStore.js        # darkMode, sidebarCollapsed, toggle functions
+```
 
-### Future Enhancements
-- Frontend state management refactor (Zustand/Redux Toolkit)
-- Propagate get_branch_filter to remaining minor routers (anomaly_detection, cctv)
-- Mobile-responsive design for remaining admin pages
+## Prioritized Backlog
+- Propagate get_branch_filter to remaining minor routers
 - Advanced analytics refinements
 - CCTV AI features expansion
 - WhatsApp chatbot improvements
-- Performance optimization for large datasets
 - Weekly/Monthly trend comparison reports
