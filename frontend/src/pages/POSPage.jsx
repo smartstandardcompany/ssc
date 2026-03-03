@@ -910,12 +910,12 @@ export default function POSPage() {
                         </SelectItem>
                         <SelectItem value="cash">
                           <div className="flex items-center gap-2">
-                            <Banknote size={14} className="text-emerald-500" /> Paid Cash
+                            <Banknote size={14} className="text-emerald-500" /> Cash
                           </div>
                         </SelectItem>
                         <SelectItem value="bank">
                           <div className="flex items-center gap-2">
-                            <CreditCard size={14} className="text-blue-500" /> Paid Bank
+                            <CreditCard size={14} className="text-blue-500" /> Bank
                           </div>
                         </SelectItem>
                       </SelectContent>

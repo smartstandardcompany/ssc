@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Mail, MessageCircle, Bell, Send, Upload, Download, Database, Shield, Clock, Play, FileCheck, Camera, Wifi, WifiOff, Video, Users, AlertTriangle } from 'lucide-react';
+import { Mail, MessageCircle, Bell, Send, Upload, Download, Database, Shield, Clock, Play, FileCheck, Camera, Wifi, WifiOff, Video, Users, AlertTriangle, ExternalLink, Link } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -222,8 +222,9 @@ export default function SettingsPage() {
           <p className="text-muted-foreground">Configure email, WhatsApp, notifications & company settings</p>
         </div>
 
-        <Tabs defaultValue="email">
+        <Tabs defaultValue="links">
           <TabsList className="flex-wrap h-auto gap-1">
+            <TabsTrigger value="links"><Link size={14} className="mr-2" />Quick Links</TabsTrigger>
             <TabsTrigger value="email"><Mail size={14} className="mr-2" />Email</TabsTrigger>
             <TabsTrigger value="whatsapp"><MessageCircle size={14} className="mr-2" />WhatsApp</TabsTrigger>
             <TabsTrigger value="notifications"><Bell size={14} className="mr-2" />Alerts</TabsTrigger>
@@ -235,6 +236,142 @@ export default function SettingsPage() {
             <TabsTrigger value="deploy"><Shield size={14} className="mr-2" />Deploy</TabsTrigger>
             <TabsTrigger value="company">Company</TabsTrigger>
           </TabsList>
+
+          {/* Quick Links Tab */}
+          <TabsContent value="links">
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle className="font-outfit">Quick Access Links</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Share these links with your staff to access their portals directly.
+                </p>
+                
+                <div className="grid md:grid-cols-2 gap-4">
+                  {/* POS Waiter Portal */}
+                  <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+                    <CardContent className="pt-4">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-emerald-500 rounded-lg">
+                          <Users className="text-white" size={24} />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-emerald-800">POS / Waiter Portal</h3>
+                          <p className="text-xs text-emerald-600 mt-1">For cashiers, waiters, and kitchen staff</p>
+                          <div className="mt-3 space-y-2">
+                            <div className="flex items-center gap-2 bg-white rounded-lg p-2 border">
+                              <code className="text-xs flex-1 text-emerald-700">{window.location.origin}/cashier-pos</code>
+                              <Button size="sm" variant="ghost" className="h-7" onClick={() => {navigator.clipboard.writeText(`${window.location.origin}/cashier-pos`); toast.success('Link copied!');}}>
+                                Copy
+                              </Button>
+                            </div>
+                            <Button 
+                              className="w-full bg-emerald-500 hover:bg-emerald-600" 
+                              onClick={() => window.open('/cashier-pos', '_blank')}
+                            >
+                              <ExternalLink size={14} className="mr-2" /> Open POS Portal
+                            </Button>
+                          </div>
+                          <p className="text-[10px] text-emerald-500 mt-2">Staff login with their PIN</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Employee Self-Service Portal */}
+                  <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                    <CardContent className="pt-4">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-blue-500 rounded-lg">
+                          <Users className="text-white" size={24} />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-blue-800">Employee Self-Service</h3>
+                          <p className="text-xs text-blue-600 mt-1">For employees to view payslips, leaves, loans</p>
+                          <div className="mt-3 space-y-2">
+                            <div className="flex items-center gap-2 bg-white rounded-lg p-2 border">
+                              <code className="text-xs flex-1 text-blue-700">{window.location.origin}/my-portal</code>
+                              <Button size="sm" variant="ghost" className="h-7" onClick={() => {navigator.clipboard.writeText(`${window.location.origin}/my-portal`); toast.success('Link copied!');}}>
+                                Copy
+                              </Button>
+                            </div>
+                            <Button 
+                              className="w-full bg-blue-500 hover:bg-blue-600" 
+                              onClick={() => window.open('/my-portal', '_blank')}
+                            >
+                              <ExternalLink size={14} className="mr-2" /> Open Employee Portal
+                            </Button>
+                          </div>
+                          <p className="text-[10px] text-blue-500 mt-2">Employees login with email & password</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Kitchen Display */}
+                  <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+                    <CardContent className="pt-4">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-orange-500 rounded-lg">
+                          <Bell className="text-white" size={24} />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-orange-800">Kitchen Display (KDS)</h3>
+                          <p className="text-xs text-orange-600 mt-1">For kitchen staff to see incoming orders</p>
+                          <div className="mt-3 space-y-2">
+                            <div className="flex items-center gap-2 bg-white rounded-lg p-2 border">
+                              <code className="text-xs flex-1 text-orange-700">{window.location.origin}/kds</code>
+                              <Button size="sm" variant="ghost" className="h-7" onClick={() => {navigator.clipboard.writeText(`${window.location.origin}/kds`); toast.success('Link copied!');}}>
+                                Copy
+                              </Button>
+                            </div>
+                            <Button 
+                              className="w-full bg-orange-500 hover:bg-orange-600" 
+                              onClick={() => window.open('/kds', '_blank')}
+                            >
+                              <ExternalLink size={14} className="mr-2" /> Open KDS
+                            </Button>
+                          </div>
+                          <p className="text-[10px] text-orange-500 mt-2">Kitchen PIN required</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Customer Order Status */}
+                  <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                    <CardContent className="pt-4">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-purple-500 rounded-lg">
+                          <Clock className="text-white" size={24} />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-purple-800">Customer Order Status</h3>
+                          <p className="text-xs text-purple-600 mt-1">Display for customers to see order progress</p>
+                          <div className="mt-3 space-y-2">
+                            <div className="flex items-center gap-2 bg-white rounded-lg p-2 border">
+                              <code className="text-xs flex-1 text-purple-700">{window.location.origin}/order-status</code>
+                              <Button size="sm" variant="ghost" className="h-7" onClick={() => {navigator.clipboard.writeText(`${window.location.origin}/order-status`); toast.success('Link copied!');}}>
+                                Copy
+                              </Button>
+                            </div>
+                            <Button 
+                              className="w-full bg-purple-500 hover:bg-purple-600" 
+                              onClick={() => window.open('/order-status', '_blank')}
+                            >
+                              <ExternalLink size={14} className="mr-2" /> Open Status Display
+                            </Button>
+                          </div>
+                          <p className="text-[10px] text-purple-500 mt-2">No login required</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="email">
             <Card className="border-border">
