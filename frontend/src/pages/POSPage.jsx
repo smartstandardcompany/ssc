@@ -57,6 +57,10 @@ export default function POSPage() {
   const [expenses, setExpenses] = useState([{ category: '', amount: '', payment_mode: 'cash', supplier_id: '', description: '' }]);
   const [submittingExpenses, setSubmittingExpenses] = useState(false);
 
+  // Multi Supplier Bills - array of {supplier_id, amount, payment_mode, description}
+  const [supplierBills, setSupplierBills] = useState([{ supplier_id: '', amount: '', payment_mode: 'credit', description: '' }]);
+  const [submittingBills, setSubmittingBills] = useState(false);
+
   // Regular sale amounts
   const [cashAmount, setCashAmount] = useState('');
   const [bankAmount, setBankAmount] = useState('');
@@ -373,6 +377,79 @@ export default function POSPage() {
 
   const totalExpensesAmount = expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
 
+  // Multi Supplier Bills Functions
+  const addBillRow = () => {
+    setSupplierBills([...supplierBills, { supplier_id: '', amount: '', payment_mode: 'credit', description: '' }]);
+  };
+
+  const removeBillRow = (index) => {
+    if (supplierBills.length > 1) {
+      setSupplierBills(supplierBills.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateBillRow = (index, field, value) => {
+    const updated = [...supplierBills];
+    updated[index][field] = value;
+    setSupplierBills(updated);
+  };
+
+  const submitMultipleBills = async () => {
+    if (!branch) { toast.error('Select a branch'); return; }
+    
+    const validBills = supplierBills.filter(b => b.supplier_id && parseFloat(b.amount) > 0);
+    if (validBills.length === 0) {
+      toast.error('Please add at least one bill with supplier and amount');
+      return;
+    }
+
+    setSubmittingBills(true);
+    let successCount = 0;
+    const entries = [];
+
+    for (const bill of validBills) {
+      try {
+        const supplierName = suppliers.find(s => s.id === bill.supplier_id)?.name;
+        await api.post('/expenses', {
+          amount: parseFloat(bill.amount),
+          category: 'Supplier Purchase',
+          description: bill.description || `Purchase from ${supplierName}`,
+          payment_mode: bill.payment_mode,
+          supplier_id: bill.supplier_id,
+          branch_id: branch,
+          date: getDateISO(),
+        });
+        entries.push({ 
+          type: 'Purchase Bill', 
+          amount: parseFloat(bill.amount), 
+          mode: bill.payment_mode,
+          supplier: supplierName 
+        });
+        successCount++;
+      } catch (err) {
+        const supplierName = suppliers.find(s => s.id === bill.supplier_id)?.name;
+        toast.error(`Failed to add bill for ${supplierName}: ${err.response?.data?.detail || 'Error'}`);
+      }
+    }
+
+    if (successCount > 0) {
+      const creditBills = validBills.filter(b => b.payment_mode === 'credit').length;
+      const cashBills = validBills.filter(b => b.payment_mode !== 'credit').length;
+      let msg = `${successCount} bill(s) recorded!`;
+      if (creditBills > 0) msg += ` ${creditBills} on credit (balance updated).`;
+      if (cashBills > 0) msg += ` ${cashBills} paid.`;
+      toast.success(msg);
+      setLastEntries(entries);
+      setSupplierBills([{ supplier_id: '', amount: '', payment_mode: 'credit', description: '' }]);
+      refreshStats();
+      // Refresh suppliers to see updated balances
+      api.get('/suppliers/names').then(res => setSuppliers(res.data || [])).catch(() => {});
+    }
+    setSubmittingBills(false);
+  };
+
+  const totalBillsAmount = supplierBills.reduce((sum, b) => sum + (parseFloat(b.amount) || 0), 0);
+
   return (
     <DashboardLayout>
       <div className="max-w-lg mx-auto py-4 px-2 space-y-4" data-testid="pos-page">
@@ -413,21 +490,26 @@ export default function POSPage() {
         </div>
 
         {/* Entry Type Toggle */}
-        <div className="flex rounded-xl overflow-hidden border">
+        <div className="grid grid-cols-4 gap-1 rounded-xl overflow-hidden border p-1 bg-stone-100">
           <button onClick={() => setEntryType('sale')}
-            className={`flex-1 py-3 font-medium transition-all flex items-center justify-center gap-2 ${entryType === 'sale' ? 'bg-emerald-500 text-white' : 'bg-white text-stone-600'}`}
+            className={`py-2.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 text-sm ${entryType === 'sale' ? 'bg-emerald-500 text-white shadow' : 'bg-transparent text-stone-600 hover:bg-white'}`}
             data-testid="pos-sale-btn">
-            <ShoppingCart size={18} /> Sales
+            <ShoppingCart size={16} /> Sales
           </button>
           <button onClick={() => setEntryType('expense')}
-            className={`flex-1 py-3 font-medium transition-all flex items-center justify-center gap-2 ${entryType === 'expense' ? 'bg-red-500 text-white' : 'bg-white text-stone-600'}`}
+            className={`py-2.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 text-sm ${entryType === 'expense' ? 'bg-red-500 text-white shadow' : 'bg-transparent text-stone-600 hover:bg-white'}`}
             data-testid="pos-expense-btn">
-            <Receipt size={18} /> Expenses
+            <Receipt size={16} /> Expenses
+          </button>
+          <button onClick={() => setEntryType('supplier_bill')}
+            className={`py-2.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 text-sm ${entryType === 'supplier_bill' ? 'bg-amber-500 text-white shadow' : 'bg-transparent text-stone-600 hover:bg-white'}`}
+            data-testid="pos-supplier-bill-btn">
+            <Package size={16} /> Add Bills
           </button>
           <button onClick={() => setEntryType('supplier_payment')}
-            className={`flex-1 py-3 font-medium transition-all flex items-center justify-center gap-2 ${entryType === 'supplier_payment' ? 'bg-orange-500 text-white' : 'bg-white text-stone-600'}`}
+            className={`py-2.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 text-sm ${entryType === 'supplier_payment' ? 'bg-blue-500 text-white shadow' : 'bg-transparent text-stone-600 hover:bg-white'}`}
             data-testid="pos-supplier-payment-btn">
-            <Truck size={18} /> Pay Suppliers
+            <DollarSign size={16} /> Pay Credit
           </button>
         </div>
 
@@ -742,29 +824,170 @@ export default function POSPage() {
           </div>
         )}
 
+        {/* SUPPLIER BILLS SECTION */}
+        {entryType === 'supplier_bill' && (
+          <div className="space-y-3">
+            {/* Help Box */}
+            <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs">
+              <p className="font-medium text-amber-800">📦 Add Purchase Bills</p>
+              <p className="text-amber-700 mt-1">
+                Record bills when you <strong>BUY goods from suppliers</strong>. 
+                Choose <strong>Credit</strong> to pay later (adds to balance) or <strong>Cash/Bank</strong> if paid now.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium text-amber-700">Supplier Purchase Bills</Label>
+              <Button 
+                type="button" 
+                size="sm" 
+                variant="outline"
+                onClick={addBillRow}
+                className="h-8 text-xs border-amber-300 text-amber-600 hover:bg-amber-50"
+                data-testid="add-bill-row"
+              >
+                <Plus size={14} className="mr-1" /> Add More
+              </Button>
+            </div>
+
+            {/* Bill Rows */}
+            <div className="space-y-2">
+              {supplierBills.map((bill, index) => (
+                <div key={index} className="p-3 bg-amber-50/50 rounded-xl border border-amber-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-amber-600">Bill #{index + 1}</span>
+                    {supplierBills.length > 1 && (
+                      <button 
+                        onClick={() => removeBillRow(index)}
+                        className="text-xs text-red-500 hover:text-red-700"
+                        data-testid={`remove-bill-${index}`}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Supplier Selection */}
+                  <Select 
+                    value={bill.supplier_id || "none"} 
+                    onValueChange={(v) => updateBillRow(index, 'supplier_id', v === "none" ? "" : v)}
+                  >
+                    <SelectTrigger className="h-10 rounded-lg bg-white" data-testid={`bill-supplier-${index}`}>
+                      <SelectValue placeholder="Select Supplier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">- Select Supplier -</SelectItem>
+                      {suppliers.map(s => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Amount */}
+                    <Input
+                      type="number"
+                      placeholder="Amount"
+                      value={bill.amount}
+                      onChange={(e) => updateBillRow(index, 'amount', e.target.value)}
+                      className="h-10 rounded-lg bg-white"
+                      data-testid={`bill-amount-${index}`}
+                    />
+                    
+                    {/* Payment Mode - Credit, Cash, or Bank */}
+                    <Select 
+                      value={bill.payment_mode} 
+                      onValueChange={(v) => updateBillRow(index, 'payment_mode', v)}
+                    >
+                      <SelectTrigger className="h-10 rounded-lg bg-white" data-testid={`bill-mode-${index}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="credit">
+                          <div className="flex items-center gap-2">
+                            <Receipt size={14} className="text-amber-500" /> Credit (Pay Later)
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="cash">
+                          <div className="flex items-center gap-2">
+                            <Banknote size={14} className="text-emerald-500" /> Cash (Paid)
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="bank">
+                          <div className="flex items-center gap-2">
+                            <CreditCard size={14} className="text-blue-500" /> Bank (Paid)
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Description */}
+                  <Input
+                    placeholder="Invoice # or description (optional)"
+                    value={bill.description}
+                    onChange={(e) => updateBillRow(index, 'description', e.target.value)}
+                    className="h-9 rounded-lg bg-white text-sm"
+                    data-testid={`bill-description-${index}`}
+                  />
+
+                  {/* Credit indicator */}
+                  {bill.payment_mode === 'credit' && bill.supplier_id && (
+                    <div className="text-[10px] text-amber-600 bg-amber-100 px-2 py-1 rounded">
+                      ⚠️ This will add to supplier's credit balance
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Total & Submit */}
+            <div className="p-3 bg-amber-100 rounded-xl border border-amber-300">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-amber-700">Total Bills</span>
+                <span className="text-lg font-bold text-amber-800">SAR {totalBillsAmount.toLocaleString()}</span>
+              </div>
+              <div className="text-xs text-amber-600">
+                {supplierBills.filter(b => b.supplier_id && parseFloat(b.amount) > 0).length} bill(s) • 
+                {supplierBills.filter(b => b.payment_mode === 'credit' && parseFloat(b.amount) > 0).length} on credit
+              </div>
+            </div>
+
+            <Button 
+              onClick={submitMultipleBills} 
+              disabled={submittingBills || totalBillsAmount === 0}
+              className="w-full h-14 rounded-xl text-lg font-semibold bg-amber-500 hover:bg-amber-600"
+              data-testid="submit-bills"
+            >
+              {submittingBills ? <Loader2 className="animate-spin mr-2" /> : <Package size={20} className="mr-2" />}
+              Add Bills - SAR {totalBillsAmount.toLocaleString()}
+            </Button>
+          </div>
+        )}
+
         {/* SUPPLIER PAYMENTS SECTION */}
         {entryType === 'supplier_payment' && (
           <div className="space-y-3">
             {/* Help Box */}
             <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 text-xs">
-              <p className="font-medium text-blue-800">💡 What is this for?</p>
+              <p className="font-medium text-blue-800">💰 Pay Credit Back</p>
               <p className="text-blue-700 mt-1">
                 Use this to <strong>PAY BACK</strong> credit you owe to suppliers. 
                 This reduces your credit balance with them.
               </p>
               <p className="text-blue-600 mt-1">
-                For <strong>Purchase Bills</strong> (when you BUY from supplier), go to <strong>Expenses</strong> tab or <strong>Suppliers → Add Bill</strong>.
+                For <strong>Purchase Bills</strong> use the <strong>Add Bills</strong> tab.
               </p>
             </div>
 
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium text-orange-700">Pay Credit to Suppliers</Label>
+              <Label className="text-sm font-medium text-blue-700">Pay Credit to Suppliers</Label>
               <Button 
                 type="button" 
                 size="sm" 
                 variant="outline"
                 onClick={addPaymentRow}
-                className="h-8 text-xs border-orange-300 text-orange-600 hover:bg-orange-50"
+                className="h-8 text-xs border-blue-300 text-blue-600 hover:bg-blue-50"
                 data-testid="add-payment-row"
               >
                 <Plus size={14} className="mr-1" /> Add More
@@ -774,9 +997,9 @@ export default function POSPage() {
             {/* Payment Rows */}
             <div className="space-y-2">
               {supplierPayments.map((payment, index) => (
-                <div key={index} className="p-3 bg-orange-50/50 rounded-xl border border-orange-200 space-y-2">
+                <div key={index} className="p-3 bg-blue-50/50 rounded-xl border border-blue-200 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-orange-600">Payment #{index + 1}</span>
+                    <span className="text-xs font-medium text-blue-600">Payment #{index + 1}</span>
                     {supplierPayments.length > 1 && (
                       <button 
                         onClick={() => removePaymentRow(index)}
@@ -842,24 +1065,24 @@ export default function POSPage() {
             </div>
 
             {/* Total & Submit */}
-            <div className="p-3 bg-orange-100 rounded-xl border border-orange-300">
+            <div className="p-3 bg-blue-100 rounded-xl border border-blue-300">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-orange-700">Total Payments</span>
-                <span className="text-lg font-bold text-orange-800">SAR {totalPaymentsAmount.toLocaleString()}</span>
+                <span className="text-sm font-medium text-blue-700">Total Payments</span>
+                <span className="text-lg font-bold text-blue-800">SAR {totalPaymentsAmount.toLocaleString()}</span>
               </div>
-              <div className="text-xs text-orange-600 mb-2">
-                {supplierPayments.filter(p => p.supplier_id && parseFloat(p.amount) > 0).length} valid payment(s)
+              <div className="text-xs text-blue-600 mb-2">
+                {supplierPayments.filter(p => p.supplier_id && parseFloat(p.amount) > 0).length} valid payment(s) - will reduce credit balance
               </div>
             </div>
 
             <Button 
               onClick={submitMultiplePayments} 
               disabled={submittingPayments || totalPaymentsAmount === 0}
-              className="w-full h-14 rounded-xl text-lg font-semibold bg-orange-500 hover:bg-orange-600"
+              className="w-full h-14 rounded-xl text-lg font-semibold bg-blue-500 hover:bg-blue-600"
               data-testid="submit-supplier-payments"
             >
-              {submittingPayments ? <Loader2 className="animate-spin mr-2" /> : <Truck size={20} className="mr-2" />}
-              Pay Suppliers - SAR {totalPaymentsAmount.toLocaleString()}
+              {submittingPayments ? <Loader2 className="animate-spin mr-2" /> : <DollarSign size={20} className="mr-2" />}
+              Pay Credit - SAR {totalPaymentsAmount.toLocaleString()}
             </Button>
           </div>
         )}
