@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime, timezone
 import uuid
 
-from database import db, get_current_user
+from database import db, get_current_user, require_permission
 from models import User, StockTransfer, StockEntry, StockUsage
 
 router = APIRouter()
@@ -10,6 +10,7 @@ router = APIRouter()
 
 @router.get("/stock-transfers")
 async def get_stock_transfers(status: str = None, branch_id: str = None, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "stock", "read")
     query = {}
     if status:
         query["status"] = status

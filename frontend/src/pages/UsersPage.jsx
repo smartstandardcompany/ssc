@@ -138,6 +138,13 @@ export default function UsersPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // For non-admin roles, require branch selection
+    if (formData.role !== 'admin' && !formData.branch_id) {
+      toast.error('Please select a branch for this user');
+      return;
+    }
+    
     try {
       // Prepare data - ensure permissions is a dict
       const submitData = {

@@ -144,7 +144,17 @@ async def update_user(user_id: str, user_update: UserUpdate, current_user: User 
     result = await db.users.find_one({"id": user_id}, {"_id": 0})
     if not result:
         raise HTTPException(status_code=404, detail="User not found")
-    update_data = {k: v for k, v in user_update.model_dump().items() if v is not None}
+    
+    # Protect the main admin account from being modified
+    if result.get("email") == "ss@ssc.com":
+        # Only allow updating non-critical fields for protected admin
+        allowed_fields = {"name"}
+        update_data = {k: v for k, v in user_update.model_dump().items() if v is not None and k in allowed_fields}
+        if not update_data:
+            raise HTTPException(status_code=403, detail="This admin account is protected. Only name can be updated.")
+    else:
+        update_data = {k: v for k, v in user_update.model_dump().items() if v is not None}
+    
     if update_data:
         await db.users.update_one({"id": user_id}, {"$set": update_data})
     updated = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
@@ -152,12 +162,21 @@ async def update_user(user_id: str, user_update: UserUpdate, current_user: User 
         updated['created_at'] = datetime.fromisoformat(updated['created_at'])
     return User(**updated)
 
+# Protected admin email - cannot be deleted or password changed
+PROTECTED_ADMIN_EMAIL = "ss@ssc.com"
+
 @router.delete("/users/{user_id}")
 async def delete_user(user_id: str, current_user: User = Depends(get_current_user)):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     if user_id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    
+    # Check if trying to delete protected admin
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if user and user.get("email") == PROTECTED_ADMIN_EMAIL:
+        raise HTTPException(status_code=403, detail="This admin account is protected and cannot be deleted")
+    
     result = await db.users.delete_one({"id": user_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
@@ -206,6 +225,10 @@ async def admin_reset_password(user_id: str, data: PasswordReset, current_user: 
     user = await db.users.find_one({"id": user_id}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # Protect the main admin account
+    if user.get("email") == PROTECTED_ADMIN_EMAIL:
+        raise HTTPException(status_code=403, detail="This admin account's password is protected and cannot be changed")
     
     if len(data.new_password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
@@ -276,7 +299,7 @@ async def forgot_password(data: ForgotPasswordRequest):
         if settings and settings.get("smtp_host") and settings.get("password"):
             # Get frontend URL from environment or use default
             import os
-            frontend_url = os.environ.get("FRONTEND_URL", "https://ssc-business-hub.preview.emergentagent.com")
+            frontend_url = os.environ.get("FRONTEND_URL", "https://erp-business-hub-2.preview.emergentagent.com")
             reset_link = f"{frontend_url}/reset-password?token={token}"
             
             body = f"""Hello {user['name']},

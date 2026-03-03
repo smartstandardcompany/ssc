@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Optional
 from datetime import datetime, timezone
 
-from database import db, get_current_user
+from database import db, get_current_user, require_permission
 from models import User, Branch, BranchCreate, CashTransfer, CashTransferCreate, BranchPayback
 
 router = APIRouter()
@@ -17,6 +17,7 @@ async def get_branches(current_user: User = Depends(get_current_user)):
 
 @router.post("/branches", response_model=Branch)
 async def create_branch(branch_data: BranchCreate, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "branches", "write")
     branch = Branch(**branch_data.model_dump())
     branch_dict = branch.model_dump()
     branch_dict["created_at"] = branch_dict["created_at"].isoformat()
@@ -25,6 +26,7 @@ async def create_branch(branch_data: BranchCreate, current_user: User = Depends(
 
 @router.put("/branches/{branch_id}", response_model=Branch)
 async def update_branch(branch_id: str, branch_data: BranchCreate, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "branches", "write")
     result = await db.branches.find_one({"id": branch_id}, {"_id": 0})
     if not result:
         raise HTTPException(status_code=404, detail="Branch not found")

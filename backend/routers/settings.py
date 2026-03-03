@@ -8,7 +8,7 @@ from openpyxl.styles import Font, PatternFill
 import uuid
 import pandas as pd
 
-from database import db, get_current_user, ROOT_DIR
+from database import db, get_current_user, ROOT_DIR, require_permission
 from models import User
 
 router = APIRouter()
@@ -21,6 +21,7 @@ async def get_company_settings(current_user: User = Depends(get_current_user)):
 
 @router.post("/settings/company")
 async def save_company_settings(body: dict, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "settings", "write")
     existing = await db.company_settings.find_one({})
     data = {k: body.get(k, "") for k in ["company_name", "address_line1", "address_line2", "city", "country", "phone", "email", "cr_number", "vat_number"]}
     data["vat_enabled"] = body.get("vat_enabled", False)

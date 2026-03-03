@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 import os
 
-from database import db, get_current_user, ROOT_DIR
+from database import db, get_current_user, ROOT_DIR, require_permission
 from models import User, Document, DocumentCreate
 
 router = APIRouter()

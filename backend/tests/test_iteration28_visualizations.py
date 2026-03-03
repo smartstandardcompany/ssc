@@ -17,7 +17,7 @@ import os
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = "https://ssc-business-hub.preview.emergentagent.com"
+    BASE_URL = "https://erp-business-hub-2.preview.emergentagent.com"
 
 # Test credentials
 ADMIN_EMAIL = "ss@ssc.com"

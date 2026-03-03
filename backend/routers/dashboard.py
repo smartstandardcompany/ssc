@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
 from datetime import datetime, timezone, timedelta
 
-from database import db, get_current_user
+from database import db, get_current_user, get_branch_filter
 from models import User
 
 router = APIRouter()
@@ -21,6 +21,8 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
             sp_query["branch_id"] = {"$in": bid_list}
     elif current_user.branch_id and current_user.role != "admin":
         query["branch_id"] = current_user.branch_id
+        exp_query["branch_id"] = current_user.branch_id
+        sp_query["branch_id"] = current_user.branch_id
 
     if start_date and end_date:
         date_filter = {"$gte": start_date, "$lte": end_date}

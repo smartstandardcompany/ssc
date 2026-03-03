@@ -4,7 +4,7 @@ import uuid
 import os
 from pathlib import Path
 
-from database import db, get_current_user, ROOT_DIR
+from database import db, get_current_user, ROOT_DIR, require_permission, get_branch_filter
 from models import User, Sale, Invoice, InvoiceCreate
 
 router = APIRouter()
@@ -67,7 +67,9 @@ Extract every line item. For Arabic text, translate item names to English. If qu
 
 @router.get("/invoices")
 async def get_invoices(current_user: User = Depends(get_current_user)):
-    invoices = await db.invoices.find({}, {"_id": 0}).sort("date", -1).to_list(1000)
+    require_permission(current_user, "invoices", "read")
+    query = get_branch_filter(current_user)
+    invoices = await db.invoices.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
     for inv in invoices:
         for f in ['date', 'created_at']:
             if isinstance(inv.get(f), str):
@@ -76,6 +78,7 @@ async def get_invoices(current_user: User = Depends(get_current_user)):
 
 @router.post("/invoices")
 async def create_invoice(data: InvoiceCreate, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "invoices", "write")
     customer_name = None
     if data.customer_id:
         cust = await db.customers.find_one({"id": data.customer_id}, {"_id": 0})

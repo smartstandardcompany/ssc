@@ -64,9 +64,69 @@ import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { ShortcutHelpDialog } from "@/components/ShortcutHelpDialog";
+import { DashboardLayout } from "@/components/DashboardLayout";
+import { ShieldAlert } from "lucide-react";
+
+// Normalize permissions - support both old list format and new dict format
+function normalizePermissions(perms) {
+  if (Array.isArray(perms)) {
+    const dict = {};
+    perms.forEach(p => { dict[p] = 'write'; });
+    return dict;
+  }
+  if (typeof perms === 'object' && perms !== null) return perms;
+  return {};
+}
+
+// Check if user has access to a route based on perm and roles
+function userHasAccess(user, perm, roles) {
+  if (!user || !user.role) return false;
+  if (user.role === 'admin') return true;
+  if (roles && !roles.includes(user.role)) return false;
+  if (perm) {
+    const perms = normalizePermissions(user.permissions || []);
+    const level = perms[perm];
+    if (level !== 'read' && level !== 'write') return false;
+  }
+  return true;
+}
+
+// Access Denied page shown when user navigates to a restricted page
+function AccessDeniedPage() {
+  return (
+    <DashboardLayout>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center" data-testid="access-denied-page">
+        <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
+          <ShieldAlert className="w-8 h-8 text-red-500" />
+        </div>
+        <h1 className="text-2xl font-bold text-stone-800 dark:text-stone-200 mb-2">Access Denied</h1>
+        <p className="text-stone-500 dark:text-stone-400 mb-6 max-w-md">
+          You don't have permission to access this page. Contact your administrator to request access.
+        </p>
+        <a href="/" className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium" data-testid="go-to-dashboard-btn">
+          Go to Dashboard
+        </a>
+      </div>
+    </DashboardLayout>
+  );
+}
+
+// ProtectedRoute: checks auth + role + permission
+function ProtectedRoute({ children, perm, roles }) {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  if (!userHasAccess(user, perm, roles)) {
+    return <AccessDeniedPage />;
+  }
+  return children;
+}
+
+// AuthRoute: checks authentication only (no permission check)
+function AuthRoute({ children }) {
+  const isAuth = !!localStorage.getItem('token');
+  return isAuth ? children : <Navigate to="/login" />;
+}
 
 function KeyboardShortcutProvider({ children }) {
-  // Import hook inside Router context since it uses useNavigate
   const { useKeyboardShortcuts } = require('@/hooks/useKeyboardShortcuts');
   useKeyboardShortcuts();
   return children;
@@ -83,7 +143,6 @@ function App() {
     }
     setLoading(false);
 
-    // Register Service Worker for push notifications + offline caching
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
@@ -100,72 +159,88 @@ function App() {
         <KeyboardShortcutProvider>
         <ShortcutHelpDialog />
         <Routes>
+          {/* Public routes */}
           <Route path="/login" element={!isAuthenticated ? <LoginPage setIsAuthenticated={setIsAuthenticated} /> : <Navigate to="/" />} />
           <Route path="/register" element={!isAuthenticated ? <RegisterPage setIsAuthenticated={setIsAuthenticated} /> : <Navigate to="/" />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/change-password" element={isAuthenticated ? <ChangePasswordPage /> : <Navigate to="/login" />} />
-          <Route path="/" element={isAuthenticated ? (() => {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            // Check if user must change password first
-            if (user.must_change_password) {
-              return <Navigate to="/change-password?forced=true" />;
-            }
-            return user.role === 'employee' ? <Navigate to="/my-portal" /> : <DashboardPage />;
-          })() : <Navigate to="/login" />} />
-          <Route path="/sales" element={isAuthenticated ? <SalesPage /> : <Navigate to="/login" />} />
-          <Route path="/branches" element={isAuthenticated ? <BranchesPage /> : <Navigate to="/login" />} />
-          <Route path="/customers" element={isAuthenticated ? <CustomersPage /> : <Navigate to="/login" />} />
-          <Route path="/suppliers" element={isAuthenticated ? <SuppliersPage /> : <Navigate to="/login" />} />
-          <Route path="/supplier-payments" element={isAuthenticated ? <SupplierPaymentsPage /> : <Navigate to="/login" />} />
-          <Route path="/expenses" element={isAuthenticated ? <ExpensesPage /> : <Navigate to="/login" />} />
-          <Route path="/reports" element={isAuthenticated ? <ReportsPage /> : <Navigate to="/login" />} />
-          <Route path="/analytics" element={isAuthenticated ? <AnalyticsPage /> : <Navigate to="/login" />} />
-          <Route path="/credit-report" element={isAuthenticated ? <CreditReportPage /> : <Navigate to="/login" />} />
-          <Route path="/supplier-report" element={isAuthenticated ? <SupplierReportPage /> : <Navigate to="/login" />} />
-          <Route path="/category-report" element={isAuthenticated ? <CategoryReportPage /> : <Navigate to="/login" />} />
-          <Route path="/employees" element={isAuthenticated ? <EmployeesPage /> : <Navigate to="/login" />} />
-          <Route path="/documents" element={isAuthenticated ? <DocumentsPage /> : <Navigate to="/login" />} />
-          <Route path="/my-portal" element={isAuthenticated ? <EmployeePortalPage /> : <Navigate to="/login" />} />
-          <Route path="/leave-approvals" element={isAuthenticated ? <LeaveApprovalsPage /> : <Navigate to="/login" />} />
-          <Route path="/notifications" element={isAuthenticated ? <NotificationsPage /> : <Navigate to="/login" />} />
-          <Route path="/settings" element={isAuthenticated ? <SettingsPage /> : <Navigate to="/login" />} />
-          <Route path="/help" element={isAuthenticated ? <HelpPage /> : <Navigate to="/login" />} />
-          <Route path="/cash-transfers" element={isAuthenticated ? <CashTransfersPage /> : <Navigate to="/login" />} />
-          <Route path="/fines" element={isAuthenticated ? <FinesPage /> : <Navigate to="/login" />} />
-          <Route path="/partners" element={isAuthenticated ? <PartnersPage /> : <Navigate to="/login" />} />
-          <Route path="/company-loans" element={isAuthenticated ? <CompanyLoansPage /> : <Navigate to="/login" />} />
-          <Route path="/bank-statements" element={isAuthenticated ? <BankStatementsPage /> : <Navigate to="/login" />} />
-          <Route path="/invoices" element={isAuthenticated ? <InvoicesPage /> : <Navigate to="/login" />} />
-          <Route path="/stock" element={isAuthenticated ? <StockPage /> : <Navigate to="/login" />} />
-          <Route path="/kitchen" element={isAuthenticated ? <KitchenPage /> : <Navigate to="/login" />} />
-          <Route path="/schedule" element={isAuthenticated ? <SchedulePage /> : <Navigate to="/login" />} />
-          <Route path="/users" element={isAuthenticated ? <UsersPage /> : <Navigate to="/login" />} />
-          <Route path="/reconciliation" element={isAuthenticated ? <ReconciliationPage /> : <Navigate to="/login" />} />
-          <Route path="/pos" element={isAuthenticated ? <POSPage /> : <Navigate to="/login" />} />
-          <Route path="/pos-analytics" element={isAuthenticated ? <POSAnalyticsPage /> : <Navigate to="/login" />} />
-          <Route path="/transfers" element={isAuthenticated ? <TransfersPage /> : <Navigate to="/login" />} />
-          <Route path="/visualizations" element={isAuthenticated ? <VisualizationsPage /> : <Navigate to="/login" />} />
-          <Route path="/menu-items" element={isAuthenticated ? <MenuItemsPage /> : <Navigate to="/login" />} />
-          <Route path="/shift-report" element={isAuthenticated ? <ShiftReportPage /> : <Navigate to="/login" />} />
-          <Route path="/cctv" element={isAuthenticated ? <CCTVPage /> : <Navigate to="/login" />} />
-          <Route path="/partner-pl-report" element={isAuthenticated ? <PartnerPLReportPage /> : <Navigate to="/login" />} />
           <Route path="/cashier" element={<CashierLoginPage />} />
           <Route path="/cashier/pos" element={<CashierPOSPage />} />
           <Route path="/waiter" element={<WaiterPage />} />
-          <Route path="/table-management" element={isAuthenticated ? <TableManagementPage /> : <Navigate to="/login" />} />
-          <Route path="/reservations" element={isAuthenticated ? <ReservationsPage /> : <Navigate to="/login" />} />
-          <Route path="/loyalty" element={isAuthenticated ? <LoyaltyProgramPage /> : <Navigate to="/login" />} />
-          <Route path="/loans" element={isAuthenticated ? <LoanManagementPage /> : <Navigate to="/login" />} />
           <Route path="/kds" element={<KitchenDisplayPage />} />
           <Route path="/order-status" element={<OrderStatusPage />} />
-          <Route path="/notification-preferences" element={isAuthenticated ? <NotificationPreferencesPage /> : <Navigate to="/login" />} />
-          <Route path="/task-reminders" element={isAuthenticated ? <TaskRemindersPage /> : <Navigate to="/login" />} />
-          <Route path="/task-compliance" element={isAuthenticated ? <TaskCompliancePage /> : <Navigate to="/login" />} />
-          <Route path="/performance-report" element={isAuthenticated ? <PerformanceReportPage /> : <Navigate to="/login" />} />
-          <Route path="/anomaly-detection" element={isAuthenticated ? <AnomalyDetectionPage /> : <Navigate to="/login" />} />
-          <Route path="/platforms" element={isAuthenticated ? <PlatformsPage /> : <Navigate to="/login" />} />
-          <Route path="/assets" element={isAuthenticated ? <AssetsPage /> : <Navigate to="/login" />} />
+
+          {/* Auth-only routes (no permission check) */}
+          <Route path="/change-password" element={<AuthRoute><ChangePasswordPage /></AuthRoute>} />
+          <Route path="/my-portal" element={<AuthRoute><EmployeePortalPage /></AuthRoute>} />
+          <Route path="/notifications" element={<AuthRoute><NotificationsPage /></AuthRoute>} />
+          <Route path="/notification-preferences" element={<AuthRoute><NotificationPreferencesPage /></AuthRoute>} />
+          <Route path="/help" element={<AuthRoute><HelpPage /></AuthRoute>} />
+
+          {/* Dashboard / Home */}
+          <Route path="/" element={isAuthenticated ? (() => {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            if (user.must_change_password) return <Navigate to="/change-password?forced=true" />;
+            return user.role === 'employee' ? <Navigate to="/my-portal" /> : <DashboardPage />;
+          })() : <Navigate to="/login" />} />
+
+          {/* Operations */}
+          <Route path="/pos" element={<AuthRoute><ProtectedRoute perm="sales"><POSPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/pos-analytics" element={<AuthRoute><ProtectedRoute perm="dashboard" roles={['admin', 'manager']}><POSAnalyticsPage /></ProtectedRoute></AuthRoute>} />
+
+          {/* Finance */}
+          <Route path="/sales" element={<AuthRoute><ProtectedRoute perm="sales"><SalesPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/platforms" element={<AuthRoute><ProtectedRoute perm="sales"><PlatformsPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/invoices" element={<AuthRoute><ProtectedRoute perm="invoices"><InvoicesPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/expenses" element={<AuthRoute><ProtectedRoute perm="expenses"><ExpensesPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/supplier-payments" element={<AuthRoute><ProtectedRoute perm="supplier_payments" roles={['admin', 'manager']}><SupplierPaymentsPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/cash-transfers" element={<AuthRoute><ProtectedRoute perm="cash_transfers" roles={['admin', 'manager']}><CashTransfersPage /></ProtectedRoute></AuthRoute>} />
+
+          {/* People */}
+          <Route path="/customers" element={<AuthRoute><ProtectedRoute perm="customers"><CustomersPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/loyalty" element={<AuthRoute><ProtectedRoute perm="customers"><LoyaltyProgramPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/suppliers" element={<AuthRoute><ProtectedRoute perm="suppliers" roles={['admin', 'manager']}><SuppliersPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/employees" element={<AuthRoute><ProtectedRoute perm="employees" roles={['admin', 'manager']}><EmployeesPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/loans" element={<AuthRoute><ProtectedRoute perm="employees" roles={['admin', 'manager']}><LoanManagementPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/leave-approvals" element={<AuthRoute><ProtectedRoute perm="employees" roles={['admin', 'manager']}><LeaveApprovalsPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/schedule" element={<AuthRoute><ProtectedRoute perm="shifts" roles={['admin', 'manager']}><SchedulePage /></ProtectedRoute></AuthRoute>} />
+
+          {/* Stock */}
+          <Route path="/stock" element={<AuthRoute><ProtectedRoute perm="stock" roles={['admin', 'manager']}><StockPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/transfers" element={<AuthRoute><ProtectedRoute perm="stock" roles={['admin', 'manager']}><TransfersPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/menu-items" element={<AuthRoute><ProtectedRoute perm="stock" roles={['admin', 'manager']}><MenuItemsPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/table-management" element={<AuthRoute><ProtectedRoute perm="stock" roles={['admin', 'manager']}><TableManagementPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/reservations" element={<AuthRoute><ProtectedRoute perm="stock" roles={['admin', 'manager']}><ReservationsPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/kitchen" element={<AuthRoute><ProtectedRoute perm="kitchen"><KitchenPage /></ProtectedRoute></AuthRoute>} />
+
+          {/* Reports */}
+          <Route path="/analytics" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><AnalyticsPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/visualizations" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><VisualizationsPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/shift-report" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><ShiftReportPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/partner-pl-report" element={<AuthRoute><ProtectedRoute perm="partners" roles={['admin']}><PartnerPLReportPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/reports" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><ReportsPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/credit-report" element={<AuthRoute><ProtectedRoute perm="credit_report" roles={['admin', 'manager']}><CreditReportPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/supplier-report" element={<AuthRoute><ProtectedRoute perm="supplier_report" roles={['admin', 'manager']}><SupplierReportPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/category-report" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><CategoryReportPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/bank-statements" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin']}><BankStatementsPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/reconciliation" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin']}><ReconciliationPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/performance-report" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><PerformanceReportPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/anomaly-detection" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><AnomalyDetectionPage /></ProtectedRoute></AuthRoute>} />
+
+          {/* Assets */}
+          <Route path="/assets" element={<AuthRoute><ProtectedRoute perm="branches" roles={['admin', 'manager']}><AssetsPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/branches" element={<AuthRoute><ProtectedRoute perm="branches" roles={['admin', 'manager']}><BranchesPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/cctv" element={<AuthRoute><ProtectedRoute perm="branches" roles={['admin', 'manager']}><CCTVPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/documents" element={<AuthRoute><ProtectedRoute perm="documents" roles={['admin', 'manager']}><DocumentsPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/fines" element={<AuthRoute><ProtectedRoute perm="fines" roles={['admin', 'manager']}><FinesPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/partners" element={<AuthRoute><ProtectedRoute perm="partners" roles={['admin']}><PartnersPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/company-loans" element={<AuthRoute><ProtectedRoute perm="partners" roles={['admin']}><CompanyLoansPage /></ProtectedRoute></AuthRoute>} />
+
+          {/* Admin */}
+          <Route path="/users" element={<AuthRoute><ProtectedRoute perm="users" roles={['admin']}><UsersPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/settings" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><SettingsPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/task-reminders" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><TaskRemindersPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/task-compliance" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><TaskCompliancePage /></ProtectedRoute></AuthRoute>} />
         </Routes>
         </KeyboardShortcutProvider>
       </BrowserRouter>

@@ -2,15 +2,16 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
 from datetime import datetime, timezone, timedelta
 
-from database import db, get_current_user
+from database import db, get_current_user, require_permission, get_branch_filter
 from models import User
 
 router = APIRouter()
 
 @router.get("/reports/credit-sales")
 async def get_credit_sales_report(current_user: User = Depends(get_current_user)):
-    query = {}
-    if current_user.branch_id and current_user.role != "admin":
+    require_permission(current_user, "reports", "read")
+    query = get_branch_filter(current_user)
+    if not query and current_user.branch_id and current_user.role != "admin":
         query["branch_id"] = current_user.branch_id
     sales = await db.sales.find(query, {"_id": 0}).to_list(10000)
     branches = await db.branches.find({}, {"_id": 0}).to_list(100)

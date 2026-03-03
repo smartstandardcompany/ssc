@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import os
 import uuid
 
-from database import db, get_current_user
+from database import db, get_current_user, require_permission, get_branch_filter
 from models import User, StockEntry, StockUsage, Item
 
 router = APIRouter()
@@ -175,7 +175,8 @@ async def get_smart_stock_alerts(
 
 @router.get("/stock/entries")
 async def get_stock_entries(branch_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
-    query = {}
+    require_permission(current_user, "stock", "read")
+    query = get_branch_filter(current_user)
     if branch_id:
         query["branch_id"] = branch_id
     entries = await db.stock_entries.find(query, {"_id": 0}).sort("date", -1).to_list(5000)
@@ -187,6 +188,7 @@ async def get_stock_entries(branch_id: Optional[str] = None, current_user: User 
 
 @router.post("/stock/entries")
 async def create_stock_entry(body: dict, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "stock", "write")
     item = await db.items.find_one({"id": body["item_id"]}, {"_id": 0})
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -207,6 +209,7 @@ async def create_stock_entry(body: dict, current_user: User = Depends(get_curren
 
 @router.post("/stock/entries/bulk")
 async def create_stock_entries_bulk(body: dict, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "stock", "write")
     items_data = body.get("items", [])
     branch_id = body.get("branch_id")
     supplier_id = body.get("supplier_id") or None
@@ -247,7 +250,8 @@ async def create_stock_entries_bulk(body: dict, current_user: User = Depends(get
 
 @router.get("/stock/usage")
 async def get_stock_usage(branch_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
-    query = {}
+    require_permission(current_user, "stock", "read")
+    query = get_branch_filter(current_user)
     if branch_id:
         query["branch_id"] = branch_id
     usage = await db.stock_usage.find(query, {"_id": 0}).sort("date", -1).to_list(5000)
@@ -259,6 +263,7 @@ async def get_stock_usage(branch_id: Optional[str] = None, current_user: User = 
 
 @router.post("/stock/usage")
 async def create_stock_usage(body: dict, current_user: User = Depends(get_current_user)):
+    require_permission(current_user, "stock", "write")
     item = await db.items.find_one({"id": body["item_id"]}, {"_id": 0})
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
