@@ -84,6 +84,7 @@ async def update_supplier(supplier_id: str, supplier_data: SupplierCreate, curre
     update_data = supplier_data.model_dump()
     for f in ['branch_id', 'category', 'sub_category', 'phone', 'email']:
         if update_data.get(f) == '': update_data[f] = None
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     await db.suppliers.update_one({"id": supplier_id}, {"$set": update_data})
     updated = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
     if isinstance(updated.get('created_at'), str):

@@ -40,7 +40,9 @@ async def update_customer(customer_id: str, customer_data: CustomerCreate, curre
     result = await db.customers.find_one({"id": customer_id}, {"_id": 0})
     if not result:
         raise HTTPException(status_code=404, detail="Customer not found")
-    await db.customers.update_one({"id": customer_id}, {"$set": customer_data.model_dump()})
+    update_data = customer_data.model_dump()
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.customers.update_one({"id": customer_id}, {"$set": update_data})
     updated = await db.customers.find_one({"id": customer_id}, {"_id": 0})
     if isinstance(updated.get('created_at'), str):
         updated['created_at'] = datetime.fromisoformat(updated['created_at'])

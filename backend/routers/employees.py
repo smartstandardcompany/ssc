@@ -1003,6 +1003,7 @@ async def create_item(data: dict, current_user: User = Depends(get_current_user)
 
 @router.put("/items/{item_id}")
 async def update_item(item_id: str, data: dict, current_user: User = Depends(get_current_user)):
+    data["updated_at"] = datetime.now(timezone.utc).isoformat()
     await db.items.update_one({"id": item_id}, {"$set": data})
     return await db.items.find_one({"id": item_id}, {"_id": 0})
 

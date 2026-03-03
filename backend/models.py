@@ -89,6 +89,7 @@ class Customer(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: Optional[str] = None
 
 class CustomerCreate(BaseModel):
     name: str
@@ -117,6 +118,7 @@ class Sale(BaseModel):
     platform_status: Optional[str] = None  # pending/settled - for tracking platform payment status
     payment_status: Optional[str] = None
     received_mode: Optional[str] = None
+    updated_at: Optional[str] = None
 
 class SaleCreate(BaseModel):
     sale_type: str
@@ -148,6 +150,7 @@ class Supplier(BaseModel):
     credit_limit: Optional[float] = 0
     current_credit: Optional[float] = 0
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: Optional[str] = None
 
 class SupplierCreate(BaseModel):
     name: str

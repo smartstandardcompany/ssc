@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Package, TrendingDown, TrendingUp, AlertTriangle, Camera, Loader2, MessageCircle, BarChart3 } from 'lucide-react';
+import { Plus, Package, TrendingDown, TrendingUp, AlertTriangle, Camera, Loader2, MessageCircle, BarChart3, Barcode, Printer, Download } from 'lucide-react';
 import { WhatsAppSendDialog } from '@/components/WhatsAppSendDialog';
 import api from '@/lib/api';
 import { toast } from 'sonner';
@@ -38,6 +38,11 @@ export default function StockPage() {
   const [reportDays, setReportDays] = useState(30);
   const [smartAlerts, setSmartAlerts] = useState({ alerts: [], summary: {} });
   const [alertsLoading, setAlertsLoading] = useState(false);
+  const [showBarcodePreview, setShowBarcodePreview] = useState(false);
+  const [selectedBarcodeItem, setSelectedBarcodeItem] = useState(null);
+  const [barcodeImageUrl, setBarcodeImageUrl] = useState('');
+  const [barcodeLoading, setBarcodeLoading] = useState(false);
+  const [selectedItemsForBatch, setSelectedItemsForBatch] = useState([]);
 
   const [newItem, setNewItem] = useState({ name: '', cost_price: '', unit_price: '', unit: 'piece', category: '', min_stock_level: '' });
   const [stockInData, setStockInData] = useState({ item_id: '', branch_id: '', quantity: '', unit_cost: '', supplier_id: '', date: new Date().toISOString().split('T')[0], notes: '' });
@@ -159,6 +164,81 @@ export default function StockPage() {
       setShowScanDialog(false);
       fetchAll(); fetchBalance();
     } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+  };
+
+  // Barcode functions
+  const handlePreviewBarcode = async (item) => {
+    setSelectedBarcodeItem(item);
+    setBarcodeLoading(true);
+    setShowBarcodePreview(true);
+    try {
+      const response = await api.get(`/barcode/item/${item.id}/preview`, { responseType: 'blob' });
+      const imageUrl = URL.createObjectURL(response.data);
+      setBarcodeImageUrl(imageUrl);
+    } catch (err) {
+      toast.error('Failed to generate barcode');
+      setShowBarcodePreview(false);
+    } finally {
+      setBarcodeLoading(false);
+    }
+  };
+
+  const handleDownloadBarcode = async (itemId) => {
+    try {
+      const response = await api.get(`/barcode/item/${itemId}`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(response.data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `barcode_${itemId}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success('Barcode downloaded');
+    } catch (err) {
+      toast.error('Failed to download barcode');
+    }
+  };
+
+  const handlePrintBarcode = () => {
+    if (!barcodeImageUrl) return;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+        <head><title>Print Barcode</title></head>
+        <body style="margin: 0; padding: 20px; display: flex; justify-content: center;">
+          <img src="${barcodeImageUrl}" style="max-width: 100%;" />
+          <script>window.onload = function() { window.print(); window.close(); }</script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const handleBatchPrint = async () => {
+    if (selectedItemsForBatch.length === 0) {
+      toast.error('Select items to print barcodes');
+      return;
+    }
+    try {
+      const response = await api.post('/barcode/batch', 
+        { item_ids: selectedItemsForBatch, labels_per_item: 1 },
+        { responseType: 'blob' }
+      );
+      const url = window.URL.createObjectURL(response.data);
+      window.open(url, '_blank');
+      toast.success('Batch barcodes generated');
+    } catch (err) {
+      toast.error('Failed to generate batch barcodes');
+    }
+  };
+
+  const toggleItemSelection = (itemId) => {
+    setSelectedItemsForBatch(prev => 
+      prev.includes(itemId) 
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
+    );
   };
 
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-64">Loading...</div></DashboardLayout>;
@@ -483,27 +563,65 @@ export default function StockPage() {
           <TabsContent value="items">
             <Card className="border-stone-100">
               <CardContent className="pt-4">
-                <table className="w-full">
+                {/* Batch barcode actions */}
+                {selectedItemsForBatch.length > 0 && (
+                  <div className="flex items-center gap-2 mb-4 p-3 bg-blue-50 rounded-xl border border-blue-200">
+                    <span className="text-sm font-medium text-blue-700">{selectedItemsForBatch.length} items selected</span>
+                    <Button size="sm" variant="outline" className="ml-auto rounded-xl" onClick={handleBatchPrint} data-testid="batch-print-btn">
+                      <Printer size={14} className="mr-1" />Print Batch Labels
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setSelectedItemsForBatch([])}>Clear</Button>
+                  </div>
+                )}
+                <table className="w-full" data-testid="items-table">
                   <thead><tr className="border-b">
+                    <th className="p-3 w-10">
+                      <input 
+                        type="checkbox" 
+                        className="rounded border-stone-300"
+                        checked={selectedItemsForBatch.length === items.length && items.length > 0}
+                        onChange={(e) => setSelectedItemsForBatch(e.target.checked ? items.map(i => i.id) : [])}
+                      />
+                    </th>
                     <th className="text-left p-3 text-sm font-medium">Name</th>
                     <th className="text-left p-3 text-sm font-medium">Category</th>
                     <th className="text-left p-3 text-sm font-medium">Unit</th>
                     <th className="text-right p-3 text-sm font-medium">Cost Price</th>
                     <th className="text-right p-3 text-sm font-medium">Sale Price</th>
                     <th className="text-right p-3 text-sm font-medium">Min Level</th>
+                    <th className="text-center p-3 text-sm font-medium">Barcode</th>
                   </tr></thead>
                   <tbody>
                     {items.map(item => (
-                      <tr key={item.id} className="border-b hover:bg-stone-50">
+                      <tr key={item.id} className={`border-b hover:bg-stone-50 ${selectedItemsForBatch.includes(item.id) ? 'bg-blue-50/50' : ''}`}>
+                        <td className="p-3">
+                          <input 
+                            type="checkbox" 
+                            className="rounded border-stone-300"
+                            checked={selectedItemsForBatch.includes(item.id)}
+                            onChange={() => toggleItemSelection(item.id)}
+                          />
+                        </td>
                         <td className="p-3 text-sm font-medium">{item.name}</td>
                         <td className="p-3 text-sm">{item.category || '-'}</td>
                         <td className="p-3 text-sm capitalize">{item.unit || 'piece'}</td>
                         <td className="p-3 text-sm text-right">SAR {(item.cost_price || 0).toFixed(2)}</td>
                         <td className="p-3 text-sm text-right">SAR {(item.unit_price || 0).toFixed(2)}</td>
                         <td className="p-3 text-sm text-right">{item.min_stock_level || 0}</td>
+                        <td className="p-3 text-center">
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-8 w-8 p-0"
+                            onClick={() => handlePreviewBarcode(item)}
+                            data-testid={`barcode-btn-${item.id}`}
+                          >
+                            <Barcode size={16} className="text-orange-500" />
+                          </Button>
+                        </td>
                       </tr>
                     ))}
-                    {items.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">No items yet</td></tr>}
+                    {items.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">No items yet</td></tr>}
                   </tbody>
                 </table>
               </CardContent>
@@ -813,6 +931,64 @@ export default function StockPage() {
           </DialogContent>
         </Dialog>
         <WhatsAppSendDialog open={showWhatsApp} onClose={() => setShowWhatsApp(false)} defaultType="low_stock" branches={branches} branchId={branchFilter} />
+
+        {/* BARCODE PREVIEW DIALOG */}
+        <Dialog open={showBarcodePreview} onOpenChange={(open) => {
+          setShowBarcodePreview(open);
+          if (!open) {
+            setBarcodeImageUrl('');
+            setSelectedBarcodeItem(null);
+          }
+        }}>
+          <DialogContent className="max-w-md" data-testid="barcode-preview-dialog">
+            <DialogHeader>
+              <DialogTitle className="font-outfit">Barcode Label</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {barcodeLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 size={32} className="animate-spin text-primary" />
+                </div>
+              ) : barcodeImageUrl ? (
+                <>
+                  <div className="border rounded-xl p-4 bg-white">
+                    <img 
+                      src={barcodeImageUrl} 
+                      alt={`Barcode for ${selectedBarcodeItem?.name}`} 
+                      className="w-full"
+                      data-testid="barcode-image"
+                    />
+                  </div>
+                  <div className="text-sm text-muted-foreground text-center">
+                    <p className="font-medium">{selectedBarcodeItem?.name}</p>
+                    <p>SAR {(selectedBarcodeItem?.unit_price || 0).toFixed(2)}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      className="flex-1 rounded-xl" 
+                      variant="outline"
+                      onClick={handlePrintBarcode}
+                      data-testid="print-barcode-btn"
+                    >
+                      <Printer size={14} className="mr-1" />Print
+                    </Button>
+                    <Button 
+                      className="flex-1 rounded-xl"
+                      onClick={() => handleDownloadBarcode(selectedBarcodeItem?.id)}
+                      data-testid="download-barcode-btn"
+                    >
+                      <Download size={14} className="mr-1" />Download
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>Failed to load barcode preview</p>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

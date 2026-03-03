@@ -66,7 +66,7 @@ async def receive_credit_payment(sale_id: str, payment: SalePayment, current_use
     new_payment_details = list(sale.get("payment_details", []))
     if payment.amount > 0: new_payment_details.append({"mode": payment.payment_mode, "amount": payment.amount})
     if discount > 0: new_payment_details.append({"mode": "discount", "amount": discount})
-    await db.sales.update_one({"id": sale_id}, {"$set": {"credit_received": new_credit_received, "payment_details": new_payment_details}})
+    await db.sales.update_one({"id": sale_id}, {"$set": {"credit_received": new_credit_received, "payment_details": new_payment_details, "updated_at": datetime.now(timezone.utc).isoformat()}})
     return {"message": "Credit payment received", "received": payment.amount, "discount": discount, "remaining_credit": remaining_credit - total_settle}
 
 @router.delete("/sales/{sale_id}")
