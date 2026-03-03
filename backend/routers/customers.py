@@ -9,7 +9,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
 from reportlab.lib.units import inch
 
-from database import db, get_current_user, ROOT_DIR, require_permission, get_branch_filter
+from database import db, get_current_user, ROOT_DIR, require_permission, get_branch_filter_with_global
 from models import User, Customer, CustomerCreate
 
 router = APIRouter()
@@ -17,10 +17,8 @@ router = APIRouter()
 @router.get("/customers", response_model=List[Customer])
 async def get_customers(current_user: User = Depends(get_current_user)):
     require_permission(current_user, "customers", "read")
-    query = get_branch_filter(current_user)
-    if query:
-        # Include customers with no branch or matching user's branch
-        query = {"$or": [query, {"branch_id": None}]}
+    # Use centralized filter that includes branch-specific AND global (no branch) customers
+    query = get_branch_filter_with_global(current_user)
     customers = await db.customers.find(query, {"_id": 0}).to_list(1000)
     for customer in customers:
         if isinstance(customer.get('created_at'), str):

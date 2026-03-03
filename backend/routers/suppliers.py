@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Optional
 from datetime import datetime, timezone
 
-from database import db, get_current_user, require_permission, get_branch_filter
+from database import db, get_current_user, require_permission, get_branch_filter_with_global
 from models import User, Supplier, SupplierCreate, SupplierPayment, SupplierPaymentCreate, SupplierCreditPayment
 
 router = APIRouter()
@@ -10,18 +10,8 @@ router = APIRouter()
 @router.get("/suppliers", response_model=List[Supplier])
 async def get_suppliers(current_user: User = Depends(get_current_user)):
     require_permission(current_user, "suppliers", "read")
-    # For branch-restricted users, include suppliers with their branch OR no branch (all branches)
-    if current_user.role == "admin":
-        query = {}
-    elif current_user.branch_id:
-        query = {"$or": [
-            {"branch_id": current_user.branch_id},
-            {"branch_id": None},
-            {"branch_id": ""},
-            {"branch_id": {"$exists": False}}
-        ]}
-    else:
-        query = {}
+    # Use centralized filter that includes branch-specific AND global (no branch) suppliers
+    query = get_branch_filter_with_global(current_user)
     
     suppliers = await db.suppliers.find(query, {"_id": 0}).to_list(1000)
     for supplier in suppliers:
@@ -33,19 +23,8 @@ async def get_suppliers(current_user: User = Depends(get_current_user)):
 @router.get("/suppliers/names")
 async def get_supplier_names(current_user: User = Depends(get_current_user)):
     """Get just supplier names and IDs for dropdowns. No permission required beyond login."""
-    # For branch-restricted users, include suppliers with their branch OR no branch (all branches)
-    if current_user.role == "admin":
-        query = {}
-    elif current_user.branch_id:
-        # Include suppliers for user's branch OR suppliers with no branch (available to all)
-        query = {"$or": [
-            {"branch_id": current_user.branch_id},
-            {"branch_id": None},
-            {"branch_id": ""},
-            {"branch_id": {"$exists": False}}
-        ]}
-    else:
-        query = {}
+    # Use centralized filter that includes branch-specific AND global (no branch) suppliers
+    query = get_branch_filter_with_global(current_user)
     
     suppliers = await db.suppliers.find(query, {"_id": 0, "id": 1, "name": 1}).to_list(1000)
     return [{"id": s["id"], "name": s["name"]} for s in suppliers]
