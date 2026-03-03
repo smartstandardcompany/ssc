@@ -139,17 +139,13 @@ export default function UsersPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // For non-admin roles, require branch selection
-    if (formData.role !== 'admin' && !formData.branch_id) {
-      toast.error('Please select a branch for this user');
-      return;
-    }
-    
     try {
       // Prepare data - ensure permissions is a dict
       const submitData = {
         ...formData,
-        permissions: formData.permissions || {}
+        permissions: formData.permissions || {},
+        // Allow empty branch_id (means "All Branches" access)
+        branch_id: formData.branch_id || '',
       };
       
       if (editingUser) {
@@ -372,7 +368,7 @@ export default function UsersPage() {
                           <SelectValue placeholder="All branches" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All Branches (No Restriction)</SelectItem>
+                          <SelectItem value="all">All Branches (Full Access)</SelectItem>
                           {branches.map((branch) => (
                             <SelectItem key={branch.id} value={branch.id}>
                               {branch.name}
@@ -380,7 +376,11 @@ export default function UsersPage() {
                           ))}
                         </SelectContent>
                       </Select>
-                      <p className="text-xs text-muted-foreground mt-1">Restrict user to see only data from this branch</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formData.branch_id
+                          ? 'User will only see data from this branch'
+                          : 'User can access data from all branches'}
+                      </p>
                     </div>
                   </div>
 

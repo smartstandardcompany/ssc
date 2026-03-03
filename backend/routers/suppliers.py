@@ -10,23 +10,17 @@ router = APIRouter()
 @router.get("/suppliers")
 async def get_suppliers(current_user: User = Depends(get_current_user)):
     require_permission(current_user, "suppliers", "read")
-    # Use centralized filter that includes branch-specific AND global (no branch) suppliers
     query = get_branch_filter_with_global(current_user)
     
     suppliers = await db.suppliers.find(query, {"_id": 0}).to_list(1000)
     
-    # Aggregate total purchase amounts for all suppliers
-    all_expenses = await db.expenses.find(
-        {"supplier_id": {"$exists": True, "$ne": None}},
-        {"_id": 0, "supplier_id": 1, "amount": 1}
-    ).to_list(50000)
-    
-    # Build a lookup of supplier_id -> total purchases
-    purchase_totals = {}
-    for exp in all_expenses:
-        sid = exp.get("supplier_id")
-        if sid:
-            purchase_totals[sid] = purchase_totals.get(sid, 0) + exp.get("amount", 0)
+    # Use MongoDB aggregation pipeline for total purchases (fast)
+    pipeline = [
+        {"$match": {"supplier_id": {"$exists": True, "$ne": None}}},
+        {"$group": {"_id": "$supplier_id", "total": {"$sum": "$amount"}}}
+    ]
+    agg_result = await db.expenses.aggregate(pipeline).to_list(1000)
+    purchase_totals = {r["_id"]: r["total"] for r in agg_result}
     
     for supplier in suppliers:
         if isinstance(supplier.get('created_at'), str):

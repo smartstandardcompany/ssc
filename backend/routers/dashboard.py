@@ -30,13 +30,37 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
         exp_query["date"] = date_filter
         sp_query["date"] = date_filter
 
-    sales = await db.sales.find(query, {"_id": 0}).to_list(10000)
-    expenses = await db.expenses.find(exp_query, {"_id": 0}).to_list(10000)
-    supplier_payments = await db.supplier_payments.find(sp_query, {"_id": 0}).to_list(10000)
+    # Use aggregation pipelines for expenses and supplier payments (heavy collections)
+    exp_pipeline = [
+        {"$match": exp_query},
+        {"$group": {
+            "_id": None,
+            "total": {"$sum": "$amount"},
+            "cash": {"$sum": {"$cond": [{"$eq": ["$payment_mode", "cash"]}, "$amount", 0]}},
+            "bank": {"$sum": {"$cond": [{"$eq": ["$payment_mode", "bank"]}, "$amount", 0]}},
+        }}
+    ]
+    exp_agg = await db.expenses.aggregate(exp_pipeline).to_list(1)
+    exp_stats = exp_agg[0] if exp_agg else {"total": 0, "cash": 0, "bank": 0}
+    
+    sp_pipeline = [
+        {"$match": sp_query},
+        {"$group": {
+            "_id": None,
+            "total": {"$sum": {"$cond": [{"$ne": ["$payment_mode", "credit"]}, "$amount", 0]}},
+            "cash": {"$sum": {"$cond": [{"$eq": ["$payment_mode", "cash"]}, "$amount", 0]}},
+            "bank": {"$sum": {"$cond": [{"$eq": ["$payment_mode", "bank"]}, "$amount", 0]}},
+        }}
+    ]
+    sp_agg = await db.supplier_payments.aggregate(sp_pipeline).to_list(1)
+    sp_stats = sp_agg[0] if sp_agg else {"total": 0, "cash": 0, "bank": 0}
+
+    # Sales still need full fetch for payment_details breakdown
+    sales = await db.sales.find(query, {"_id": 0, "amount": 1, "credit_amount": 1, "credit_received": 1, "payment_details": 1, "sale_type": 1, "payment_mode": 1}).to_list(10000)
 
     total_sales = sum(sale["amount"] - (sale.get("credit_amount", 0) - sale.get("credit_received", 0)) for sale in sales)
-    total_expenses = sum(expense["amount"] for expense in expenses)
-    total_supplier_payments = sum(payment["amount"] for payment in supplier_payments if payment.get("payment_mode") != "credit")
+    total_expenses = exp_stats["total"]
+    total_supplier_payments = sp_stats["total"]
 
     pending_credits = sum(sale.get("credit_amount", 0) - sale.get("credit_received", 0) for sale in sales)
 
@@ -53,27 +77,28 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
                 bank_sales += payment["amount"]
             elif payment["mode"] in ["online", "online_platform"]:
                 online_sales += payment["amount"]
-        # Also count sales with sale_type online/online_platform that might not have payment_details
         if sale.get("sale_type") in ["online", "online_platform"] and sale.get("payment_mode") == "online_platform":
             if not sale.get("payment_details"):
                 online_sales += sale.get("amount", 0)
 
     net_profit = total_sales - total_expenses - total_supplier_payments
 
-    exp_cash = sum(e["amount"] for e in expenses if e.get("payment_mode") == "cash")
-    exp_bank = sum(e["amount"] for e in expenses if e.get("payment_mode") == "bank")
-    sp_cash = sum(p["amount"] for p in supplier_payments if p.get("payment_mode") == "cash")
-    sp_bank = sum(p["amount"] for p in supplier_payments if p.get("payment_mode") == "bank")
+    exp_cash = exp_stats["cash"]
+    exp_bank = exp_stats["bank"]
+    sp_cash = sp_stats["cash"]
+    sp_bank = sp_stats["bank"]
     cash_in_hand = cash_sales - exp_cash - sp_cash
     bank_in_hand = bank_sales - exp_bank - sp_bank
 
-    expense_by_category = {}
-    for e in expenses:
-        cat = e.get("category", "other")
-        expense_by_category[cat] = expense_by_category.get(cat, 0) + e["amount"]
+    # Expense by category using aggregation
+    cat_pipeline = [{"$match": exp_query}, {"$group": {"_id": "$category", "total": {"$sum": "$amount"}}}]
+    cat_agg = await db.expenses.aggregate(cat_pipeline).to_list(100)
+    expense_by_category = {r["_id"] or "other": r["total"] for r in cat_agg}
 
-    all_suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
-    supplier_dues = sum(s.get("current_credit", 0) for s in all_suppliers)
+    # Supplier dues using aggregation
+    sup_dues_pipeline = [{"$group": {"_id": None, "total": {"$sum": "$current_credit"}}}]
+    sup_dues_agg = await db.suppliers.aggregate(sup_dues_pipeline).to_list(1)
+    supplier_dues = sup_dues_agg[0]["total"] if sup_dues_agg else 0
 
     recurring = await db.recurring_expenses.find({"active": True}, {"_id": 0}).to_list(100)
     now = datetime.now(timezone.utc)
@@ -122,17 +147,26 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
     due_fines = sum(f["amount"] - f.get("paid_amount", 0) for f in all_fines)
     due_fines_list = [{"department": f.get("department",""), "amount": f["amount"] - f.get("paid_amount",0), "type": f.get("fine_type","")} for f in all_fines[:5]]
 
-    # Branch loss alerts
+    # Branch loss alerts - use aggregation for expenses and supplier payments per branch
     branch_alerts_list = []
     all_branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    
+    # Get per-branch expense totals
+    br_exp_pipeline = [{"$match": exp_query}, {"$group": {"_id": "$branch_id", "total": {"$sum": "$amount"}}}]
+    br_exp_agg = await db.expenses.aggregate(br_exp_pipeline).to_list(100)
+    br_exp_totals = {r["_id"]: r["total"] for r in br_exp_agg}
+    
+    # Get per-branch supplier payment totals
+    br_sp_pipeline = [{"$match": sp_query}, {"$group": {"_id": "$branch_id", "total": {"$sum": "$amount"}}}]
+    br_sp_agg = await db.supplier_payments.aggregate(br_sp_pipeline).to_list(100)
+    br_sp_totals = {r["_id"]: r["total"] for r in br_sp_agg}
+    
     for br in all_branches:
         bid = br["id"]
         br_sales = [s for s in sales if s.get("branch_id") == bid]
-        br_exp = [e for e in expenses if e.get("branch_id") == bid]
-        br_sp = [p for p in supplier_payments if p.get("branch_id") == bid]
         br_total_sales = sum(s.get("final_amount", s["amount"]) for s in br_sales)
-        br_total_exp = sum(e["amount"] for e in br_exp)
-        br_total_sp = sum(p["amount"] for p in br_sp)
+        br_total_exp = br_exp_totals.get(bid, 0)
+        br_total_sp = br_sp_totals.get(bid, 0)
         br_profit = br_total_sales - br_total_exp - br_total_sp
         if br_profit < 0:
             branch_alerts_list.append({"branch": br["name"], "profit": br_profit, "sales": br_total_sales, "expenses": br_total_exp + br_total_sp})
@@ -141,6 +175,7 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
         "total_sales": total_sales,
         "total_expenses": total_expenses,
         "total_supplier_payments": total_supplier_payments,
+        "total_sales_count": len(sales),
         "net_profit": net_profit,
         "pending_credits": pending_credits,
         "cash_sales": cash_sales,
