@@ -829,10 +829,10 @@ export default function POSPage() {
           <div className="space-y-3">
             {/* Help Box */}
             <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs">
-              <p className="font-medium text-amber-800">📦 Add Purchase Bills</p>
+              <p className="font-medium text-amber-800">📦 Purchase Bills from Suppliers</p>
               <p className="text-amber-700 mt-1">
-                Record bills when you <strong>BUY goods from suppliers</strong>. 
-                Choose <strong>Credit</strong> to pay later (adds to balance) or <strong>Cash/Bank</strong> if paid now.
+                <strong>On Credit</strong> = Pay supplier later (balance increases) | 
+                <strong> Paid</strong> = Already paid (no balance)
               </p>
             </div>
 
@@ -905,17 +905,17 @@ export default function POSPage() {
                       <SelectContent>
                         <SelectItem value="credit">
                           <div className="flex items-center gap-2">
-                            <Receipt size={14} className="text-amber-500" /> Credit (Pay Later)
+                            <Receipt size={14} className="text-amber-500" /> On Credit
                           </div>
                         </SelectItem>
                         <SelectItem value="cash">
                           <div className="flex items-center gap-2">
-                            <Banknote size={14} className="text-emerald-500" /> Cash (Paid)
+                            <Banknote size={14} className="text-emerald-500" /> Paid Cash
                           </div>
                         </SelectItem>
                         <SelectItem value="bank">
                           <div className="flex items-center gap-2">
-                            <CreditCard size={14} className="text-blue-500" /> Bank (Paid)
+                            <CreditCard size={14} className="text-blue-500" /> Paid Bank
                           </div>
                         </SelectItem>
                       </SelectContent>
@@ -934,7 +934,12 @@ export default function POSPage() {
                   {/* Credit indicator */}
                   {bill.payment_mode === 'credit' && bill.supplier_id && (
                     <div className="text-[10px] text-amber-600 bg-amber-100 px-2 py-1 rounded">
-                      ⚠️ This will add to supplier's credit balance
+                      Will add to balance (pay later)
+                    </div>
+                  )}
+                  {bill.payment_mode !== 'credit' && bill.supplier_id && (
+                    <div className="text-[10px] text-emerald-600 bg-emerald-100 px-2 py-1 rounded">
+                      Already paid - no balance change
                     </div>
                   )}
                 </div>
