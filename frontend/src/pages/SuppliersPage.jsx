@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2, DollarSign } from 'lucide-react';
+import { Plus, Edit, Trash2, DollarSign, FileText, ArrowUpCircle, ArrowDownCircle, Receipt, CreditCard, Banknote } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -22,6 +23,9 @@ export default function SuppliersPage() {
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [showPayDialog, setShowPayDialog] = useState(false);
+  const [showLedgerDialog, setShowLedgerDialog] = useState(false);
+  const [ledgerData, setLedgerData] = useState(null);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [payingSupplier, setPayingSupplier] = useState(null);
   const [formData, setFormData] = useState({ name: '', category: '', sub_category: '', branch_id: '', phone: '', email: '', account_number: '', credit_limit: 0 });
@@ -112,6 +116,20 @@ export default function SuppliersPage() {
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to record payment');
+    }
+  };
+
+  const viewLedger = async (supplier) => {
+    setLedgerLoading(true);
+    setShowLedgerDialog(true);
+    try {
+      const res = await api.get(`/suppliers/${supplier.id}/ledger`);
+      setLedgerData(res.data);
+    } catch (error) {
+      toast.error('Failed to load supplier ledger');
+      setShowLedgerDialog(false);
+    } finally {
+      setLedgerLoading(false);
     }
   };
 
@@ -387,6 +405,18 @@ export default function SuppliersPage() {
                       Pay Credit
                     </Button>
                   )}
+                  
+                  {/* View Ledger Button */}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => viewLedger(supplier)}
+                    data-testid={`view-ledger-${supplier.id}`}
+                    className="w-full mt-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  >
+                    <FileText size={14} className="mr-1" />
+                    View Ledger (Invoices & Payments)
+                  </Button>
                 </CardContent>
               </Card>
             );
@@ -460,6 +490,132 @@ export default function SuppliersPage() {
                 </Button>
               </div>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Supplier Ledger Dialog */}
+        <Dialog open={showLedgerDialog} onOpenChange={setShowLedgerDialog}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FileText className="text-blue-500" />
+                {ledgerData?.supplier_name} - Ledger
+              </DialogTitle>
+            </DialogHeader>
+            
+            {ledgerLoading ? (
+              <div className="flex items-center justify-center py-8">Loading...</div>
+            ) : ledgerData && (
+              <div className="flex-1 overflow-auto space-y-4">
+                {/* Current Balance */}
+                <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border">
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground">Current Credit Balance</p>
+                    <p className="text-3xl font-bold text-blue-600">SAR {ledgerData.current_balance?.toFixed(2) || '0.00'}</p>
+                  </div>
+                </div>
+
+                {/* Summary Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-center">
+                    <p className="text-xs text-amber-600">Credit Purchases</p>
+                    <p className="text-lg font-bold text-amber-700">SAR {ledgerData.summary?.total_purchases_credit?.toFixed(0) || 0}</p>
+                    <p className="text-[10px] text-amber-500">Adds to balance</p>
+                  </div>
+                  <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200 text-center">
+                    <p className="text-xs text-emerald-600">Cash/Bank Purchases</p>
+                    <p className="text-lg font-bold text-emerald-700">SAR {ledgerData.summary?.total_purchases_cash?.toFixed(0) || 0}</p>
+                    <p className="text-[10px] text-emerald-500">Paid immediately</p>
+                  </div>
+                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 text-center">
+                    <p className="text-xs text-blue-600">Credit Paid</p>
+                    <p className="text-lg font-bold text-blue-700">SAR {ledgerData.summary?.total_credit_paid?.toFixed(0) || 0}</p>
+                    <p className="text-[10px] text-blue-500">Reduces balance</p>
+                  </div>
+                  <div className="p-3 bg-stone-50 rounded-lg border border-stone-200 text-center">
+                    <p className="text-xs text-stone-600">Total Invoices</p>
+                    <p className="text-lg font-bold text-stone-700">{ledgerData.summary?.purchase_invoices_count || 0}</p>
+                    <p className="text-[10px] text-stone-500">Payments: {ledgerData.summary?.payments_count || 0}</p>
+                  </div>
+                </div>
+
+                {/* Transaction Legend */}
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300">
+                    <ArrowUpCircle size={12} className="mr-1" /> Credit Invoice = +Balance
+                  </Badge>
+                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300">
+                    <Receipt size={12} className="mr-1" /> Cash Invoice = Paid
+                  </Badge>
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
+                    <ArrowDownCircle size={12} className="mr-1" /> Payment = -Balance
+                  </Badge>
+                </div>
+
+                {/* Transactions List */}
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="bg-stone-100 px-3 py-2 text-xs font-medium grid grid-cols-12 gap-2">
+                    <span className="col-span-2">Date</span>
+                    <span className="col-span-3">Type</span>
+                    <span className="col-span-4">Description</span>
+                    <span className="col-span-2 text-right">Amount</span>
+                    <span className="col-span-1 text-center">Mode</span>
+                  </div>
+                  <div className="max-h-[300px] overflow-y-auto">
+                    {ledgerData.transactions?.map((txn, idx) => (
+                      <div 
+                        key={txn.id || idx} 
+                        className={`px-3 py-2 text-xs grid grid-cols-12 gap-2 border-t ${
+                          txn.type === 'purchase_invoice' 
+                            ? txn.sub_type === 'credit' ? 'bg-amber-50/50' : 'bg-emerald-50/50'
+                            : txn.type === 'credit_payment' ? 'bg-blue-50/50' : 'bg-stone-50'
+                        }`}
+                      >
+                        <span className="col-span-2 text-muted-foreground">
+                          {txn.date ? new Date(txn.date).toLocaleDateString() : '-'}
+                        </span>
+                        <span className="col-span-3">
+                          {txn.type === 'purchase_invoice' && (
+                            <Badge variant="outline" className={`text-[10px] ${txn.sub_type === 'credit' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                              {txn.sub_type === 'credit' ? 'Credit Invoice' : 'Cash Invoice'}
+                            </Badge>
+                          )}
+                          {txn.type === 'credit_payment' && (
+                            <Badge variant="outline" className="text-[10px] bg-blue-100 text-blue-700">
+                              Credit Payment
+                            </Badge>
+                          )}
+                          {txn.type === 'credit_addition' && (
+                            <Badge variant="outline" className="text-[10px] bg-purple-100 text-purple-700">
+                              Credit Added
+                            </Badge>
+                          )}
+                        </span>
+                        <span className="col-span-4 truncate" title={txn.description}>
+                          {txn.description || txn.category || '-'}
+                        </span>
+                        <span className={`col-span-2 text-right font-medium ${
+                          txn.type === 'credit_payment' ? 'text-blue-600' : 
+                          txn.sub_type === 'credit' ? 'text-amber-600' : 'text-emerald-600'
+                        }`}>
+                          {txn.type === 'credit_payment' ? '-' : ''}SAR {txn.amount?.toFixed(2)}
+                        </span>
+                        <span className="col-span-1 text-center">
+                          {txn.payment_mode === 'cash' && <Banknote size={14} className="inline text-emerald-500" />}
+                          {txn.payment_mode === 'bank' && <CreditCard size={14} className="inline text-blue-500" />}
+                          {txn.payment_mode === 'credit' && <Receipt size={14} className="inline text-amber-500" />}
+                        </span>
+                      </div>
+                    ))}
+                    {(!ledgerData.transactions || ledgerData.transactions.length === 0) && (
+                      <div className="px-3 py-8 text-center text-muted-foreground">
+                        No transactions found for this supplier
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>

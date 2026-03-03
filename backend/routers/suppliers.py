@@ -241,6 +241,92 @@ async def get_all_supplier_summaries(current_user: User = Depends(get_current_us
     return result
 
 
+@router.get("/suppliers/{supplier_id}/ledger")
+async def get_supplier_ledger(supplier_id: str, current_user: User = Depends(get_current_user)):
+    """
+    Get complete supplier ledger showing:
+    - Purchase Invoices (from expenses): Cash purchases and Credit purchases
+    - Credit Payments: Payments made to reduce credit balance
+    """
+    supplier = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    
+    # Get all expenses (purchase invoices) for this supplier
+    expenses = await db.expenses.find(
+        {"supplier_id": supplier_id}, {"_id": 0}
+    ).sort("date", -1).to_list(10000)
+    
+    # Get all payments made to this supplier
+    payments = await db.supplier_payments.find(
+        {"supplier_id": supplier_id}, {"_id": 0}
+    ).sort("date", -1).to_list(10000)
+    
+    # Build ledger entries
+    ledger = []
+    running_balance = 0
+    
+    # Combine and sort all transactions by date
+    all_transactions = []
+    
+    for exp in expenses:
+        all_transactions.append({
+            "id": exp["id"],
+            "date": exp.get("date"),
+            "type": "purchase_invoice",
+            "sub_type": "credit" if exp.get("payment_mode") == "credit" else "cash",
+            "description": exp.get("description", "Purchase"),
+            "category": exp.get("category", ""),
+            "amount": exp.get("amount", 0),
+            "payment_mode": exp.get("payment_mode"),
+            "affects_balance": exp.get("payment_mode") == "credit",  # Only credit affects balance
+            "source": "expense"
+        })
+    
+    for pay in payments:
+        # Payments via pay-credit (cash/bank) reduce balance
+        # Payments with mode=credit increase balance (adding more credit)
+        is_credit_payment = pay.get("payment_mode") in ["cash", "bank"]
+        all_transactions.append({
+            "id": pay["id"],
+            "date": pay.get("date"),
+            "type": "credit_payment" if is_credit_payment else "credit_addition",
+            "sub_type": pay.get("payment_mode"),
+            "description": pay.get("notes", "Payment to supplier"),
+            "category": "",
+            "amount": pay.get("amount", 0),
+            "payment_mode": pay.get("payment_mode"),
+            "affects_balance": True,
+            "source": "supplier_payment"
+        })
+    
+    # Sort by date descending
+    all_transactions.sort(key=lambda x: x.get("date") or "", reverse=True)
+    
+    # Calculate totals
+    total_purchases_cash = sum(e["amount"] for e in expenses if e.get("payment_mode") in ["cash", "bank"])
+    total_purchases_credit = sum(e["amount"] for e in expenses if e.get("payment_mode") == "credit")
+    total_credit_paid = sum(p["amount"] for p in payments if p.get("payment_mode") in ["cash", "bank"])
+    total_credit_added = sum(p["amount"] for p in payments if p.get("payment_mode") == "credit")
+    
+    current_balance = supplier.get("current_credit", 0)
+    
+    return {
+        "supplier_id": supplier_id,
+        "supplier_name": supplier["name"],
+        "current_balance": current_balance,
+        "summary": {
+            "total_purchases_cash": total_purchases_cash,
+            "total_purchases_credit": total_purchases_credit,
+            "total_credit_paid": total_credit_paid,
+            "total_credit_added": total_credit_added,
+            "purchase_invoices_count": len(expenses),
+            "payments_count": len(payments)
+        },
+        "transactions": all_transactions
+    }
+
+
 @router.post("/suppliers/{supplier_id}/recalculate-balance")
 async def recalculate_supplier_balance(supplier_id: str, current_user: User = Depends(get_current_user)):
     """Recalculate supplier balance based on actual credit expenses and payments."""
