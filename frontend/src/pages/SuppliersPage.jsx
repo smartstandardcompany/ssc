@@ -194,6 +194,35 @@ export default function SuppliersPage() {
     setEditingSupplier(null);
   };
 
+  const [showMigrateDialog, setShowMigrateDialog] = useState(false);
+  const [migrationPreview, setMigrationPreview] = useState(null);
+  const [migrating, setMigrating] = useState(false);
+
+  const previewMigration = async () => {
+    try {
+      const res = await api.get('/suppliers/migration-preview');
+      setMigrationPreview(res.data);
+      setShowMigrateDialog(true);
+    } catch (error) {
+      toast.error('Failed to preview migration');
+    }
+  };
+
+  const executeMigration = async () => {
+    setMigrating(true);
+    try {
+      const res = await api.post('/suppliers/migrate-payments-to-bills');
+      toast.success(res.data.message);
+      setShowMigrateDialog(false);
+      setMigrationPreview(null);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Migration failed');
+    } finally {
+      setMigrating(false);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -213,6 +242,18 @@ export default function SuppliersPage() {
           <div className="flex gap-3 items-center flex-wrap">
             <BranchFilter onChange={setBranchFilter} />
             <ExportButtons dataType="suppliers" />
+            
+            {/* Migration Button */}
+            <Button 
+              variant="outline" 
+              onClick={previewMigration}
+              className="text-amber-600 border-amber-300 hover:bg-amber-50"
+              data-testid="migrate-payments-btn"
+            >
+              <ArrowUpCircle size={16} className="mr-1" />
+              Fix Payment Data
+            </Button>
+            
             <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button className="rounded-full" data-testid="add-supplier-button">
@@ -766,6 +807,75 @@ export default function SuppliersPage() {
                 </Button>
               </div>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Migration Dialog */}
+        <Dialog open={showMigrateDialog} onOpenChange={setShowMigrateDialog}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-amber-600">
+                <ArrowUpCircle />
+                Fix Payment Data - Convert to Purchase Bills
+              </DialogTitle>
+            </DialogHeader>
+            
+            {migrationPreview && (
+              <div className="space-y-4">
+                <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-sm">
+                  <p className="font-medium text-amber-800">What will happen?</p>
+                  <p className="text-amber-700 mt-1">
+                    Your supplier payments will be converted to <strong>Purchase Bills (Expenses)</strong> with credit payment mode.
+                    This fixes the data so balances calculate correctly.
+                  </p>
+                </div>
+                
+                <div className="p-4 bg-stone-50 rounded-lg border">
+                  <div className="grid grid-cols-2 gap-4 text-center">
+                    <div>
+                      <p className="text-2xl font-bold text-amber-600">{migrationPreview.total_payments}</p>
+                      <p className="text-xs text-muted-foreground">Payments to Convert</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-emerald-600">SAR {migrationPreview.total_amount?.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">Total Amount</p>
+                    </div>
+                  </div>
+                </div>
+                
+                {migrationPreview.total_payments > 0 ? (
+                  <>
+                    <div className="max-h-48 overflow-y-auto border rounded-lg">
+                      <div className="p-2 bg-stone-100 text-xs font-medium sticky top-0">By Supplier</div>
+                      {Object.entries(migrationPreview.by_supplier || {}).map(([name, data]) => (
+                        <div key={name} className="px-3 py-2 border-t flex justify-between text-sm">
+                          <span>{name}</span>
+                          <span className="text-muted-foreground">{data.count} entries • SAR {data.total?.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="flex gap-3">
+                      <Button 
+                        onClick={executeMigration} 
+                        disabled={migrating}
+                        className="flex-1 bg-amber-500 hover:bg-amber-600"
+                      >
+                        {migrating ? 'Converting...' : 'Convert to Purchase Bills'}
+                      </Button>
+                      <Button variant="outline" onClick={() => setShowMigrateDialog(false)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground">
+                    <p>No payments to migrate!</p>
+                    <p className="text-xs mt-1">All data is already correct.</p>
+                  </div>
+                )}
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>

@@ -367,3 +367,120 @@ async def recalculate_supplier_balance(supplier_id: str, current_user: User = De
         "total_payments": total_paid,
         "message": f"Balance updated from {old_balance} to {correct_balance}"
     }
+
+
+@router.post("/suppliers/migrate-payments-to-bills")
+async def migrate_payments_to_bills(current_user: User = Depends(get_current_user)):
+    """
+    Migrate supplier payments to purchase bills (expenses).
+    This converts entries in supplier_payments to expenses with the correct supplier_id.
+    After migration, supplier balances are recalculated.
+    """
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    import uuid
+    
+    # Get all supplier payments
+    payments = await db.supplier_payments.find({}, {"_id": 0}).to_list(50000)
+    
+    if not payments:
+        return {"message": "No supplier payments to migrate", "migrated": 0}
+    
+    migrated_count = 0
+    errors = []
+    
+    for payment in payments:
+        try:
+            # Create expense entry from payment
+            expense = {
+                "id": str(uuid.uuid4()),
+                "amount": payment.get("amount", 0),
+                "category": "Supplier Purchase",
+                "description": payment.get("notes") or f"Migrated from supplier payment - {payment.get('supplier_name', 'Unknown')}",
+                "payment_mode": payment.get("payment_mode", "credit"),  # Assume credit if buying on account
+                "supplier_id": payment.get("supplier_id"),
+                "branch_id": payment.get("branch_id", ""),
+                "date": payment.get("date"),
+                "created_by": payment.get("created_by"),
+                "created_at": payment.get("created_at") or datetime.now(timezone.utc).isoformat(),
+                "migrated_from": "supplier_payment",
+                "original_payment_id": payment.get("id")
+            }
+            
+            # Insert as expense
+            await db.expenses.insert_one(expense)
+            
+            # Delete the old payment
+            await db.supplier_payments.delete_one({"id": payment["id"]})
+            
+            migrated_count += 1
+        except Exception as e:
+            errors.append({"payment_id": payment.get("id"), "error": str(e)})
+    
+    # Recalculate all supplier balances
+    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+    all_credit_expenses = await db.expenses.find(
+        {"payment_mode": "credit", "supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}
+    ).to_list(50000)
+    all_payments = await db.supplier_payments.find(
+        {"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}
+    ).to_list(50000)
+    
+    balance_updates = []
+    for supplier in suppliers:
+        sid = supplier["id"]
+        total_credit = sum(e.get("amount", 0) for e in all_credit_expenses if e.get("supplier_id") == sid)
+        total_paid = sum(p.get("amount", 0) for p in all_payments if p.get("supplier_id") == sid and p.get("payment_mode") in ["cash", "bank"])
+        
+        new_balance = max(0, total_credit - total_paid)
+        old_balance = supplier.get("current_credit", 0)
+        
+        await db.suppliers.update_one({"id": sid}, {"$set": {"current_credit": new_balance}})
+        
+        if old_balance != new_balance:
+            balance_updates.append({
+                "supplier": supplier["name"],
+                "old": old_balance,
+                "new": new_balance
+            })
+    
+    return {
+        "message": f"Migration complete! {migrated_count} payments converted to purchase bills.",
+        "migrated_count": migrated_count,
+        "errors": errors,
+        "balance_updates": balance_updates,
+        "note": "All supplier payments have been converted to expenses (purchase bills) with payment_mode=credit. Balances recalculated."
+    }
+
+
+@router.get("/suppliers/migration-preview")
+async def preview_migration(current_user: User = Depends(get_current_user)):
+    """Preview what will be migrated without actually doing it."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    payments = await db.supplier_payments.find({}, {"_id": 0}).to_list(50000)
+    
+    # Group by supplier
+    by_supplier = {}
+    for p in payments:
+        sname = p.get("supplier_name", "Unknown")
+        if sname not in by_supplier:
+            by_supplier[sname] = {"count": 0, "total": 0, "payments": []}
+        by_supplier[sname]["count"] += 1
+        by_supplier[sname]["total"] += p.get("amount", 0)
+        by_supplier[sname]["payments"].append({
+            "id": p.get("id"),
+            "amount": p.get("amount"),
+            "mode": p.get("payment_mode"),
+            "date": p.get("date"),
+            "notes": p.get("notes")
+        })
+    
+    return {
+        "total_payments": len(payments),
+        "total_amount": sum(p.get("amount", 0) for p in payments),
+        "by_supplier": by_supplier,
+        "action": "These will be converted to purchase bills (expenses) with payment_mode matching original. Run POST /suppliers/migrate-payments-to-bills to execute."
+    }
