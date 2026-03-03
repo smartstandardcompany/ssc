@@ -24,6 +24,7 @@ const NAV_GROUPS = [
     label: 'Operations',
     items: [
       { path: '/', icon: LayoutDashboard, label: 'Dashboard', perm: 'dashboard', roles: ['admin', 'manager'] },
+      { path: '/daily-summary', icon: CalendarDays, label: 'Daily Summary' },
       { path: '/pos', icon: ShoppingCart, label: 'Quick Entry', perm: 'sales' },
       { path: '/pos-analytics', icon: Activity, label: 'Live Analytics', perm: 'dashboard', roles: ['admin', 'manager'] },
     ]

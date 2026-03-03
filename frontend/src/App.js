@@ -61,6 +61,7 @@ import AssetsPage from "./pages/AssetsPage";
 import ReservationsPage from "./pages/ReservationsPage";
 import LoyaltyProgramPage from "./pages/LoyaltyProgramPage";
 import ActivityLogsPage from "./pages/ActivityLogsPage";
+import DailySummaryPage from "./pages/DailySummaryPage";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
@@ -188,6 +189,7 @@ function App() {
           {/* Operations */}
           <Route path="/pos" element={<AuthRoute><ProtectedRoute perm="sales"><POSPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/pos-analytics" element={<AuthRoute><ProtectedRoute perm="dashboard" roles={['admin', 'manager']}><POSAnalyticsPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/daily-summary" element={<AuthRoute><DailySummaryPage /></AuthRoute>} />
 
           {/* Finance */}
           <Route path="/sales" element={<AuthRoute><ProtectedRoute perm="sales"><SalesPage /></ProtectedRoute></AuthRoute>} />

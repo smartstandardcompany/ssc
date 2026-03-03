@@ -350,3 +350,212 @@ async def reset_dashboard_layout(current_user: User = Depends(get_current_user))
     """Reset user's dashboard layout to default"""
     await db.dashboard_layouts.delete_one({"user_id": current_user.id})
     return {"success": True, "message": "Dashboard layout reset to default"}
+
+
+
+@router.get("/dashboard/daily-summary")
+async def get_daily_summary(
+    date: Optional[str] = None,
+    branch_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get comprehensive daily summary of sales, expenses, and supplier activity.
+    
+    Args:
+        date: Date to get summary for (YYYY-MM-DD format). Defaults to today.
+        branch_id: Filter by specific branch
+    """
+    # Default to today
+    if date:
+        target_date = date
+    else:
+        target_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    # Build queries
+    date_start = f"{target_date}T00:00:00"
+    date_end = f"{target_date}T23:59:59"
+    
+    base_query = {"date": {"$gte": date_start, "$lte": date_end}}
+    
+    # Apply branch filter
+    if branch_id:
+        base_query["branch_id"] = branch_id
+    elif current_user.branch_id and current_user.role != "admin":
+        base_query["branch_id"] = current_user.branch_id
+    
+    # Fetch data
+    sales = await db.sales.find(base_query, {"_id": 0}).to_list(10000)
+    
+    exp_query = dict(base_query)
+    expenses = await db.expenses.find(exp_query, {"_id": 0}).to_list(10000)
+    
+    sp_query = {"date": {"$gte": date_start, "$lte": date_end}}
+    if branch_id:
+        sp_query["branch_id"] = branch_id
+    supplier_payments = await db.supplier_payments.find(sp_query, {"_id": 0}).to_list(1000)
+    
+    # Get branches for names
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branch_map = {b["id"]: b.get("name", "Unknown") for b in branches}
+    
+    # Get suppliers for names
+    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+    supplier_map = {s["id"]: s for s in suppliers}
+    
+    # Get customers for names
+    customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
+    customer_map = {c["id"]: c.get("name", "Unknown") for c in customers}
+    
+    # === SALES SUMMARY ===
+    total_sales = sum(s.get("final_amount", s.get("amount", 0)) for s in sales)
+    sales_count = len(sales)
+    
+    cash_sales = 0
+    bank_sales = 0
+    credit_sales = 0
+    online_sales = 0
+    
+    for sale in sales:
+        for p in sale.get("payment_details", []):
+            amt = p.get("amount", 0)
+            mode = p.get("mode", "cash")
+            if mode == "cash":
+                cash_sales += amt
+            elif mode == "bank":
+                bank_sales += amt
+            elif mode == "credit":
+                credit_sales += amt
+            elif mode in ["online", "online_platform"]:
+                online_sales += amt
+    
+    # Pending credit from today's sales
+    pending_credit = sum(s.get("credit_amount", 0) - s.get("credit_received", 0) for s in sales)
+    
+    # Sales by branch
+    sales_by_branch = {}
+    for s in sales:
+        bid = s.get("branch_id")
+        bname = branch_map.get(bid, "Unknown")
+        if bname not in sales_by_branch:
+            sales_by_branch[bname] = {"count": 0, "amount": 0}
+        sales_by_branch[bname]["count"] += 1
+        sales_by_branch[bname]["amount"] += s.get("final_amount", s.get("amount", 0))
+    
+    # Top items sold today
+    item_sales = {}
+    for s in sales:
+        for item in s.get("items", []):
+            iname = item.get("name", item.get("item_name", "Unknown"))
+            qty = item.get("quantity", 1)
+            if iname not in item_sales:
+                item_sales[iname] = {"qty": 0, "revenue": 0}
+            item_sales[iname]["qty"] += qty
+            item_sales[iname]["revenue"] += item.get("price", 0) * qty
+    
+    top_items = sorted(item_sales.items(), key=lambda x: x[1]["revenue"], reverse=True)[:5]
+    
+    # Recent sales (last 10)
+    recent_sales = sorted(sales, key=lambda x: x.get("date", ""), reverse=True)[:10]
+    recent_sales_list = []
+    for s in recent_sales:
+        recent_sales_list.append({
+            "id": s.get("id"),
+            "time": s.get("date", "")[-8:] if len(s.get("date", "")) > 8 else s.get("date", ""),
+            "amount": s.get("final_amount", s.get("amount", 0)),
+            "customer": customer_map.get(s.get("customer_id"), {}).get("name") if s.get("customer_id") else "Walk-in",
+            "payment_mode": s.get("payment_details", [{}])[0].get("mode", "cash") if s.get("payment_details") else "cash",
+            "branch": branch_map.get(s.get("branch_id"), "Unknown")
+        })
+    
+    # === EXPENSES SUMMARY ===
+    total_expenses = sum(e.get("amount", 0) for e in expenses)
+    expenses_count = len(expenses)
+    
+    exp_cash = sum(e["amount"] for e in expenses if e.get("payment_mode") == "cash")
+    exp_bank = sum(e["amount"] for e in expenses if e.get("payment_mode") == "bank")
+    exp_credit = sum(e["amount"] for e in expenses if e.get("payment_mode") == "credit")
+    
+    # Expenses by category
+    expenses_by_category = {}
+    for e in expenses:
+        cat = e.get("category", "Other")
+        if cat not in expenses_by_category:
+            expenses_by_category[cat] = {"count": 0, "amount": 0}
+        expenses_by_category[cat]["count"] += 1
+        expenses_by_category[cat]["amount"] += e.get("amount", 0)
+    
+    # Recent expenses (last 10)
+    recent_expenses = sorted(expenses, key=lambda x: x.get("date", ""), reverse=True)[:10]
+    recent_expenses_list = []
+    for e in recent_expenses:
+        recent_expenses_list.append({
+            "id": e.get("id"),
+            "description": e.get("description", "")[:50],
+            "category": e.get("category", "Other"),
+            "amount": e.get("amount", 0),
+            "payment_mode": e.get("payment_mode", "cash"),
+            "supplier": supplier_map.get(e.get("supplier_id"), {}).get("name") if e.get("supplier_id") else None
+        })
+    
+    # === SUPPLIER ACTIVITY ===
+    supplier_payments_total = sum(p.get("amount", 0) for p in supplier_payments)
+    supplier_payments_count = len(supplier_payments)
+    
+    # Credit purchases from suppliers today (expenses on credit)
+    supplier_credit_purchases = [e for e in expenses if e.get("supplier_id") and e.get("payment_mode") == "credit"]
+    total_supplier_credit = sum(e.get("amount", 0) for e in supplier_credit_purchases)
+    
+    # Recent supplier payments
+    recent_supplier_payments = sorted(supplier_payments, key=lambda x: x.get("date", ""), reverse=True)[:10]
+    supplier_payments_list = []
+    for p in recent_supplier_payments:
+        supplier_payments_list.append({
+            "id": p.get("id"),
+            "supplier": supplier_map.get(p.get("supplier_id"), {}).get("name", "Unknown"),
+            "amount": p.get("amount", 0),
+            "payment_mode": p.get("payment_mode", "cash")
+        })
+    
+    # === NET SUMMARY ===
+    net_cash_flow = (cash_sales - exp_cash)
+    net_bank_flow = (bank_sales - exp_bank)
+    net_profit = total_sales - total_expenses
+    
+    return {
+        "date": target_date,
+        "sales": {
+            "total": total_sales,
+            "count": sales_count,
+            "cash": cash_sales,
+            "bank": bank_sales,
+            "credit": credit_sales,
+            "online": online_sales,
+            "pending_credit": pending_credit,
+            "by_branch": sales_by_branch,
+            "top_items": [{"name": k, "qty": v["qty"], "revenue": v["revenue"]} for k, v in top_items],
+            "recent": recent_sales_list
+        },
+        "expenses": {
+            "total": total_expenses,
+            "count": expenses_count,
+            "cash": exp_cash,
+            "bank": exp_bank,
+            "credit": exp_credit,
+            "by_category": expenses_by_category,
+            "recent": recent_expenses_list
+        },
+        "suppliers": {
+            "payments_total": supplier_payments_total,
+            "payments_count": supplier_payments_count,
+            "credit_purchases": total_supplier_credit,
+            "recent_payments": supplier_payments_list
+        },
+        "summary": {
+            "net_cash_flow": net_cash_flow,
+            "net_bank_flow": net_bank_flow,
+            "net_profit": net_profit,
+            "total_in": total_sales,
+            "total_out": total_expenses + supplier_payments_total
+        }
+    }
