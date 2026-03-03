@@ -60,6 +60,7 @@ import PlatformsPage from "./pages/PlatformsPage";
 import AssetsPage from "./pages/AssetsPage";
 import ReservationsPage from "./pages/ReservationsPage";
 import LoyaltyProgramPage from "./pages/LoyaltyProgramPage";
+import ActivityLogsPage from "./pages/ActivityLogsPage";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
@@ -241,6 +242,7 @@ function App() {
           <Route path="/settings" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><SettingsPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/task-reminders" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><TaskRemindersPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/task-compliance" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><TaskCompliancePage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/activity-logs" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><ActivityLogsPage /></ProtectedRoute></AuthRoute>} />
         </Routes>
         </KeyboardShortcutProvider>
       </BrowserRouter>

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from typing import List, Optional
 from datetime import datetime, timezone, timedelta
 import uuid
@@ -77,7 +77,7 @@ async def register(user_data: UserCreate):
     return Token(access_token=access_token, token_type="bearer", user=user)
 
 @router.post("/auth/login", response_model=Token)
-async def login(credentials: UserLogin):
+async def login(credentials: UserLogin, request: Request):
     user_doc = await db.users.find_one({"email": {"$regex": f"^{credentials.email}$", "$options": "i"}}, {"_id": 0})
     if not user_doc:
         raise HTTPException(status_code=401, detail="Invalid email or password")
@@ -100,6 +100,11 @@ async def login(credentials: UserLogin):
     must_change = user_doc.get("must_change_password", False)
     user = User(**{k: v for k, v in user_doc.items() if k != "password"})
     access_token = create_access_token(data={"sub": user.id})
+    
+    # Log login activity
+    from routers.activity_logs import log_activity
+    await log_activity(user, "login", "auth", request=request)
+    
     return Token(access_token=access_token, token_type="bearer", user=user, must_change_password=must_change)
 
 @router.get("/auth/me", response_model=User)

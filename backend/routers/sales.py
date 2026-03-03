@@ -50,6 +50,9 @@ async def create_sale(sale_data: SaleCreate, current_user: User = Depends(get_cu
     sale_dict = sale.model_dump()
     sale_dict["date"] = sale_dict["date"].isoformat(); sale_dict["created_at"] = sale_dict["created_at"].isoformat()
     await db.sales.insert_one(sale_dict)
+    # Log activity
+    from routers.activity_logs import log_activity
+    await log_activity(current_user, "create", "sales", sale.id, {"amount": final_amount})
     return sale
 
 @router.post("/sales/{sale_id}/receive-credit")
@@ -75,4 +78,7 @@ async def delete_sale(sale_id: str, current_user: User = Depends(get_current_use
     result = await db.sales.delete_one({"id": sale_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Sale not found")
+    # Log activity
+    from routers.activity_logs import log_activity
+    await log_activity(current_user, "delete", "sales", sale_id)
     return {"message": "Sale deleted successfully"}

@@ -98,6 +98,7 @@ const NAV_GROUPS = [
       { path: '/settings', icon: Settings, label: 'Settings', perm: 'settings', roles: ['admin'] },
       { path: '/task-reminders', icon: Bell, label: 'Task Reminders', perm: 'settings', roles: ['admin'] },
       { path: '/task-compliance', icon: Shield, label: 'Compliance', perm: 'settings', roles: ['admin'] },
+      { path: '/activity-logs', icon: Activity, label: 'Activity Logs', perm: 'settings', roles: ['admin'] },
       { path: '/notification-preferences', icon: Bell, label: 'Notif. Settings' },
       { path: '/help', icon: HelpCircle, label: 'Help & Guide' },
     ]

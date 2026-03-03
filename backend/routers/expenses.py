@@ -42,6 +42,9 @@ async def create_expense(expense_data: ExpenseCreate, current_user: User = Depen
         if supplier:
             new_credit = supplier.get("current_credit", 0) + expense_data.amount
             await db.suppliers.update_one({"id": data['supplier_id']}, {"$set": {"current_credit": new_credit}})
+    # Log activity
+    from routers.activity_logs import log_activity
+    await log_activity(current_user, "create", "expenses", expense.id, {"amount": expense_data.amount, "category": expense_data.category})
     return expense
 
 @router.delete("/expenses/{expense_id}")
@@ -65,6 +68,9 @@ async def delete_expense(expense_id: str, current_user: User = Depends(get_curre
     result = await db.expenses.delete_one({"id": expense_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Expense not found")
+    # Log activity
+    from routers.activity_logs import log_activity
+    await log_activity(current_user, "delete", "expenses", expense_id)
     return {"message": "Expense deleted successfully"}
 
 

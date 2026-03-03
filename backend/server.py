@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from database import client, db
 
 from routers import (
+    activity_logs,
     assets,
     auth,
     anomaly_detection,
@@ -58,6 +59,7 @@ app.add_middleware(
 
 # Include all routers with /api prefix
 for module in [
+    activity_logs,
     anomaly_detection,
     assets,
     auth,

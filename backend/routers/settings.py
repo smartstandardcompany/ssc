@@ -31,6 +31,9 @@ async def save_company_settings(body: dict, current_user: User = Depends(get_cur
         await db.company_settings.update_one({}, {"$set": data})
     else:
         await db.company_settings.insert_one(data)
+    # Log activity
+    from routers.activity_logs import log_activity
+    await log_activity(current_user, "update", "settings", "company", {"company_name": data.get("company_name")})
     return {"message": "Company settings saved"}
 
 @router.post("/settings/upload-logo")
