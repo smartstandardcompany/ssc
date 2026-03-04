@@ -5,9 +5,9 @@ A comprehensive business management ERP system named "SSC Track" for tracking sa
 
 ## Tech Stack
 - **Frontend:** React + Tailwind CSS + Shadcn/UI + Zustand
-- **Backend:** FastAPI (Python) + MongoDB (Motor) + Aggregation Pipelines
+- **Backend:** FastAPI (Python) + MongoDB (Motor) + Aggregation Pipelines + APScheduler
 - **Auth:** JWT-based
-- **Integrations:** OpenAI GPT-4o, Twilio, aiosmtplib, APScheduler, Statsmodels
+- **Integrations:** OpenAI GPT-4o, Twilio, aiosmtplib, Statsmodels
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
@@ -15,41 +15,40 @@ A comprehensive business management ERP system named "SSC Track" for tracking sa
 - Employee: ahmed@test.com / emp@123
 - Cashier PIN: 1234
 
-## All Implemented Phases
+## Implemented Phases Summary
 
 ### Phase 1-16: Core ERP + Advanced Features (ALL DONE)
-All financial modules, HR, stock, restaurant POS, assets, CCTV, cash flow, reporting, admin, loyalty, security, barcodes, timestamps, activity logging, search, daily summary, AI forecasting, sales alerts.
+Financial, HR, stock, POS, assets, CCTV, cash flow, reporting, admin, loyalty, security, barcodes, timestamps, logging, search, daily summary, AI forecasting, sales alerts.
 
-### Phase 17: Supplier Module Enhancements & POS UI/UX (DONE)
-Supplier total purchases, ledger with running balance + PDF/Excel export, multiple bank accounts, POS expense form clarity, online sales fix.
+### Phase 17-19: Supplier Enhancements, State Management, Performance (DONE)
+Supplier ledger/export/bank accounts, POS UI, Zustand, pagination, MongoDB indexes, aggregation pipelines, bug fixes.
 
-### Phase 18: Statement Sharing, Zustand, Pagination, Mobile (DONE)
-Supplier statement sharing (email/WhatsApp), Zustand stores, API pagination, MongoDB indexes, responsive fixes.
+### Phase 20: Backlog Features (DONE)
+Supplier aging report, branch filter propagation, trend comparison, CCTV monitoring schedules/motion alerts, WhatsApp chatbot improvements.
 
-### Phase 19: Critical Bug Fixes & Performance (DONE)
-MongoDB aggregation pipelines for dashboard/suppliers, user branch optional, supplier payments revamp with Add Bill.
+### Phase 21: Automated Supplier Payment Reminders (DONE - Mar 2026)
+- **Backend:** New router `supplier_reminders.py` with config CRUD, test endpoint, and reminder check logic
+- **Scheduler:** Daily job via APScheduler CronTrigger (default 9:00 AM) to auto-check supplier aging
+- **Aging Logic:** FIFO-based invoice aging with configurable thresholds (30/60/90/120 days default, plus 150/180 selectable)
+- **Severity Levels:** Low (<30d), Medium (30-59d), High (60-89d), Critical (90d+)
+- **Notifications:** Email (HTML table with all overdue invoices) and WhatsApp (formatted text summary) with configurable recipient lists
+- **History:** Full audit trail of all sent reminders with supplier summaries and channel results
+- **Frontend:** New `/supplier-reminders` page with:
+  - Enable/disable toggle
+  - Threshold selection (30/60/90/120/150/180 days)
+  - Alert time picker
+  - Email and WhatsApp channel toggles with recipient management (add/remove)
+  - Test Now button for immediate reminder check
+  - Reminder history with severity-colored supplier badges
+- **Sidebar:** "Payment Reminders" link under Finance section
+- Test Results: Backend 100% (7/7), Frontend 100%
 
-### Phase 20: Backlog Features Complete (DONE - Mar 2026)
-- **Supplier Aging Report:** New page `/supplier-aging` with FIFO-based aging calculation. Groups outstanding balances by 0-30, 31-60, 61-90, 90+ days. Visual bar chart, expandable supplier details with unpaid invoices. Branch filter. PDF/Excel export. Backend: `GET /api/suppliers/aging-report`, `GET /api/suppliers/aging-report/export?format=pdf|excel`.
-- **Branch Filter Propagation:** Added `get_branch_filter_with_global` to assets.py, documents.py. Added branch enforcement for restricted users in transfers.py.
-- **Trend Comparison:** New page `/trend-comparison` showing this week vs last week, this month vs last month for sales/expenses/profit. 14-day daily trend bar chart with sales bars and expense markers. Backend: `GET /api/reports/trend-comparison`.
-- **CCTV AI Expansion:** New CRUD endpoints for monitoring schedules (camera_ids, days, start/end times, alert_types, sensitivity). Motion alerts with type, severity, zone, confidence, acknowledgment. Endpoints: `/api/cctv/monitoring-schedules`, `/api/cctv/motion-alerts`.
-- **WhatsApp Chatbot Improvements:** Added supplier commands: `supplier all` (all balances), `supplier [name]` (specific supplier), `aging` (quick aging view). Updated help message with all available commands.
-- Test Results: Backend 100% (11/11), Frontend 100%
-
-## Architecture
-```
-/app/
-├── backend/
-│   ├── routers/ (auth, sales, expenses, suppliers, dashboard, reports, cctv, whatsapp, etc.)
-│   ├── models.py, database.py, server.py
-│   └── tests/
-├── frontend/
-│   └── src/
-│       ├── stores/ (authStore, branchStore, uiStore)
-│       ├── pages/ (SupplierAgingPage, TrendComparisonPage, + 30+ existing pages)
-│       └── components/ (DashboardLayout, AdvancedSearch, ExportButtons, etc.)
-```
+## Key Pages & Routes
+- `/supplier-aging` - Supplier Aging Report
+- `/supplier-reminders` - Payment Reminder Settings
+- `/trend-comparison` - Weekly/Monthly Trend Comparison
+- `/supplier-payments` - Supplier Payments with Add Bill
+- Plus 30+ existing pages
 
 ## Remaining Backlog
 - None - all requested features implemented
