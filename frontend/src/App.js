@@ -70,6 +70,7 @@ import SupplierRemindersPage from "./pages/SupplierRemindersPage";
 import StockReorderPage from "./pages/StockReorderPage";
 import EnhancedPnLPage from "./pages/EnhancedPnLPage";
 import OrderTrackingPage from "./pages/OrderTrackingPage";
+import BrandingSettingsPage from "./pages/BrandingSettingsPage";
 import CustomerPortalLogin from "./pages/customer-portal/CustomerPortalLogin";
 import { 
   CustomerPortalDashboard, 
@@ -266,6 +267,7 @@ function App() {
           {/* Admin */}
           <Route path="/users" element={<AuthRoute><ProtectedRoute perm="users" roles={['admin']}><UsersPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/settings" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><SettingsPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/branding" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><BrandingSettingsPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/task-reminders" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><TaskRemindersPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/task-compliance" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><TaskCompliancePage /></ProtectedRoute></AuthRoute>} />
           <Route path="/activity-logs" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><ActivityLogsPage /></ProtectedRoute></AuthRoute>} />

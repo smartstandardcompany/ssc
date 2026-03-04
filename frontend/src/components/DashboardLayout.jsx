@@ -19,6 +19,7 @@ import api from '@/lib/api';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { navLabelToKey, LANGUAGES } from '@/lib/i18n';
 import { useAuthStore, useUIStore, useBranchStore } from '@/stores';
+import { QuickHelpButton } from './QuickHelpButton';
 
 const NAV_GROUPS = [
   {
@@ -106,6 +107,7 @@ const NAV_GROUPS = [
     items: [
       { path: '/users', icon: Shield, label: 'Users', perm: 'users', roles: ['admin'] },
       { path: '/settings', icon: Settings, label: 'Settings', perm: 'settings', roles: ['admin'] },
+      { path: '/branding', icon: Building2, label: 'Branding & PDF', perm: 'settings', roles: ['admin'] },
       { path: '/task-reminders', icon: Bell, label: 'Task Reminders', perm: 'settings', roles: ['admin'] },
       { path: '/task-compliance', icon: Shield, label: 'Compliance', perm: 'settings', roles: ['admin'] },
       { path: '/activity-logs', icon: Activity, label: 'Activity Logs', perm: 'settings', roles: ['admin'] },
@@ -641,6 +643,9 @@ export const DashboardLayout = ({ children }) => {
           </div>
         </div>
       )}
+      
+      {/* Quick Help Button */}
+      <QuickHelpButton />
     </div>
   );
 };
