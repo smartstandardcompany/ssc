@@ -13,6 +13,7 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
+import { SearchableSelect } from '@/components/SearchableSelect';
 import { useBranchStore, useAuthStore } from '@/stores';
 
 // Platform colors for visual distinction
@@ -585,14 +586,12 @@ export default function POSPage() {
 
                     {/* Customer for Credit */}
                     {parseFloat(creditAmount || 0) > 0 && (
-                      <Select value={customerId} onValueChange={setCustomerId}>
-                        <SelectTrigger className="h-10 rounded-lg">
-                          <SelectValue placeholder="Select Customer for Credit" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        items={customers}
+                        value={customerId}
+                        onChange={setCustomerId}
+                        placeholder="Search customer for credit..."
+                      />
                     )}
 
                     {/* Total */}
@@ -734,15 +733,12 @@ export default function POSPage() {
                         <SelectItem value="bank"><div className="flex items-center gap-2"><CreditCard size={14} /> Paid by Bank</div></SelectItem>
                       </SelectContent>
                     </Select>
-                    <Select value={expense.supplier_id || "none"} onValueChange={(v) => updateExpenseRow(index, 'supplier_id', v === "none" ? "" : v)}>
-                      <SelectTrigger className="h-10 rounded-lg bg-white" data-testid={`expense-supplier-${index}`}>
-                        <SelectValue placeholder="Linked Supplier (optional)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No Supplier (General)</SelectItem>
-                        {suppliers.map(s => (<SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>))}
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      items={[{id: '', name: 'No Supplier (General)'}, ...suppliers]}
+                      value={expense.supplier_id || ''}
+                      onChange={(v) => updateExpenseRow(index, 'supplier_id', v)}
+                      placeholder="Search supplier..."
+                    />
                   </div>
 
                   <Input placeholder="Description / Invoice # (optional)" value={expense.description}
@@ -815,20 +811,12 @@ export default function POSPage() {
                   </div>
                   
                   {/* Supplier Selection */}
-                  <Select 
-                    value={bill.supplier_id || "none"} 
-                    onValueChange={(v) => updateBillRow(index, 'supplier_id', v === "none" ? "" : v)}
-                  >
-                    <SelectTrigger className="h-10 rounded-lg bg-white" data-testid={`bill-supplier-${index}`}>
-                      <SelectValue placeholder="Select Supplier" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">- Select Supplier -</SelectItem>
-                      {suppliers.map(s => (
-                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    items={suppliers}
+                    value={bill.supplier_id || ''}
+                    onChange={(v) => updateBillRow(index, 'supplier_id', v)}
+                    placeholder="Search supplier..."
+                  />
 
                   <div className="grid grid-cols-2 gap-2">
                     {/* Amount */}
@@ -964,20 +952,12 @@ export default function POSPage() {
                   </div>
                   
                   {/* Supplier Selection */}
-                  <Select 
-                    value={payment.supplier_id || "none"} 
-                    onValueChange={(v) => updatePaymentRow(index, 'supplier_id', v === "none" ? "" : v)}
-                  >
-                    <SelectTrigger className="h-10 rounded-lg bg-white" data-testid={`payment-supplier-${index}`}>
-                      <SelectValue placeholder="Select Supplier" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">- Select Supplier -</SelectItem>
-                      {suppliers.map(s => (
-                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    items={suppliers}
+                    value={payment.supplier_id || ''}
+                    onChange={(v) => updatePaymentRow(index, 'supplier_id', v)}
+                    placeholder="Search supplier..."
+                  />
 
                   <div className="grid grid-cols-2 gap-2">
                     {/* Amount */}

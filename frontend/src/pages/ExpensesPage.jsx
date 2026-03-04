@@ -19,6 +19,7 @@ import { AdvancedSearch, applySearchFilters } from '@/components/AdvancedSearch'
 import { useBranchStore, useAuthStore } from '@/stores';
 import { VirtualizedTable } from '@/components/VirtualizedTable';
 import { PDFExportButton } from '@/components/PDFExportButton';
+import { SearchableSelect } from '@/components/SearchableSelect';
 
 export default function ExpensesPage() {
   const { t } = useLanguage();
@@ -249,17 +250,12 @@ export default function ExpensesPage() {
                     </div>
                     <div>
                       <Label>Supplier</Label>
-                      <Select value={formData.supplier_id || "none"} onValueChange={(v) => setFormData({ ...formData, supplier_id: v === "none" ? "" : v })}>
-                        <SelectTrigger className="h-10" data-testid="expense-supplier"><SelectValue placeholder="Select supplier..." /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">- No Supplier -</SelectItem>
-                          {suppliers.map(s => (
-                            <SelectItem key={s.id} value={s.id}>
-                              {s.name} {s.current_credit > 0 && `(Credit: SAR ${s.current_credit})`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        items={[{id: '', name: '- No Supplier -'}, ...suppliers]}
+                        value={formData.supplier_id || ''}
+                        onChange={(v) => setFormData({ ...formData, supplier_id: v })}
+                        placeholder="Search supplier..."
+                      />
                     </div>
                     <div>
                       <Label>{t('branch')}</Label>

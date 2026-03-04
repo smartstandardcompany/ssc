@@ -17,6 +17,7 @@ import { ExportButtons } from '@/components/ExportButtons';
 import { DateFilter } from '@/components/DateFilter';
 import { BranchFilter } from '@/components/BranchFilter';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { SearchableSelect } from '@/components/SearchableSelect';
 
 export default function SupplierPaymentsPage() {
   const { t } = useLanguage();
@@ -256,23 +257,19 @@ export default function SupplierPaymentsPage() {
             <CardContent>
               <form onSubmit={formType === 'bill' ? handleBillSubmit : handlePaymentSubmit}>
                 <div className="space-y-4">
-                  {/* Supplier Selection */}
+                  {/* Supplier Selection - Searchable */}
                   <div>
                     <Label>Supplier *</Label>
-                    <div className="flex gap-2 flex-wrap mt-2">
-                      {suppliers.map((supplier, i) => {
-                        const colors = ['bg-orange-100 border-orange-300 text-orange-700', 'bg-green-100 border-green-300 text-green-700', 'bg-blue-100 border-blue-300 text-blue-700', 'bg-purple-100 border-purple-300 text-purple-700', 'bg-red-100 border-red-300 text-red-700', 'bg-cyan-100 border-cyan-300 text-cyan-700', 'bg-amber-100 border-amber-300 text-amber-700'];
-                        return (
-                          <button key={supplier.id} type="button"
-                            onClick={() => setFormData({...formData, supplier_id: supplier.id, branch_id: supplier.branch_id || formData.branch_id})}
-                            data-testid={`select-supplier-${supplier.id}`}
-                            className={`px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all ${colors[i % colors.length]} ${formData.supplier_id === supplier.id ? 'ring-2 ring-primary ring-offset-1 scale-105 shadow-md' : 'opacity-80 hover:opacity-100 hover:scale-105'}`}>
-                            {supplier.name}
-                            {supplier.current_credit > 0 && <span className="ml-1 text-xs opacity-70">SAR {supplier.current_credit.toFixed(0)}</span>}
-                          </button>
-                        );
-                      })}
-                    </div>
+                    <SearchableSelect
+                      items={suppliers}
+                      value={formData.supplier_id}
+                      onChange={(id) => {
+                        const sup = suppliers.find(s => s.id === id);
+                        setFormData({...formData, supplier_id: id, branch_id: sup?.branch_id || formData.branch_id});
+                      }}
+                      placeholder="Search supplier by name..."
+                      className="mt-2"
+                    />
                     {selectedSupplier && (
                       <div className="mt-2 p-2 bg-stone-50 rounded-lg text-xs text-stone-600 flex gap-4">
                         <span>Credit: <strong className="text-red-600">SAR {selectedSupplier.current_credit?.toFixed(2) || '0.00'}</strong></span>
@@ -415,18 +412,13 @@ export default function SupplierPaymentsPage() {
                 <div className="space-y-4">
                   <div>
                     <Label>Supplier *</Label>
-                    <div className="flex gap-2 flex-wrap mt-2">
-                      {suppliers.map((supplier, i) => {
-                        const colors = ['bg-orange-100 border-orange-300 text-orange-700', 'bg-green-100 border-green-300 text-green-700', 'bg-blue-100 border-blue-300 text-blue-700', 'bg-purple-100 border-purple-300 text-purple-700'];
-                        return (
-                          <button key={supplier.id} type="button"
-                            onClick={() => setReturnData({ ...returnData, supplier_id: supplier.id })}
-                            className={`px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all ${colors[i % colors.length]} ${returnData.supplier_id === supplier.id ? 'ring-2 ring-red-400 ring-offset-1 scale-105 shadow-md' : 'opacity-80 hover:opacity-100'}`}>
-                            {supplier.name}
-                          </button>
-                        );
-                      })}
-                    </div>
+                    <SearchableSelect
+                      items={suppliers}
+                      value={returnData.supplier_id}
+                      onChange={(id) => setReturnData({ ...returnData, supplier_id: id })}
+                      placeholder="Search supplier by name..."
+                      className="mt-2"
+                    />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
