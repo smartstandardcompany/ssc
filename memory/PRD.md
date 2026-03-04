@@ -1,87 +1,60 @@
 # SSC Track - ERP System PRD
 
 ## Original Problem Statement
-A comprehensive business management ERP system named "SSC Track" for tracking sales, expenses, supplier payments, and more.
+Data entry application to track sales, expenses, and supplier payments, evolved into a comprehensive business management ERP system named "SSC Track".
 
-## Tech Stack
-- **Frontend:** React + Tailwind CSS + Shadcn/UI + Zustand + Recharts + @tanstack/react-virtual
-- **Backend:** FastAPI (Python) + MongoDB (Motor) + Aggregation Pipelines + APScheduler
-- **Auth:** JWT-based (Staff), Token-based (Customer Portal)
-- **Integrations:** OpenAI GPT-4o, Twilio, aiosmtplib, Statsmodels
+## Core Modules
+- **Financial Management:** Sales (Bank/Cash/Online/Credit), Expenses, Supplier Payments, Customer Credit, ZATCA Invoicing, P&L Reporting, Online Platform Sales & Commission Management, Supplier Aging Reports
+- **HR Management:** Employee database, salary payments, leave tracking, loan management, Employee Self-Service Portal
+- **Staff Management:** Manual and AI-driven Shift Scheduling, Cashier shift management
+- **Stock Management:** Inventory tracking, stock-in/out, multi-branch transfers, real-time low-stock alerts, AI-powered stock reordering suggestions
+- **Restaurant Operations:** POS, KDS, Customer-Facing Order Status, Table Management, Reservations, Order Tracking
+- **Asset & Liability Tracking:** Assets/liabilities module, document management with expiry alerts
+- **CCTV Security:** Hikvision integration, AI monitoring
+- **Cash Flow & Bank Reconciliation:** Branch transfers, central balance, bank statement analysis
+- **Reporting & Analytics:** Customizable dashboards, advanced reporting, AI-driven predictive analytics
+- **Customer Portal:** Customer login, order history, credit balance, statements
+- **Administration:** Role-based access, branding, dark mode, multi-language, PWA, guided tours
+
+## What's Implemented (as of March 4, 2026)
+- Full financial management with sales, expenses, supplier payments
+- Customer credit management & ZATCA invoicing
+- Online platform sales with commission tracking
+- HR module with employee database, salary, leave, loans
+- Stock management with inventory, transfers, low-stock alerts
+- AI-powered stock reordering suggestions page
+- Enhanced P&L reporting page
+- POS, KDS, Table Management, Reservations
+- Customer Portal (auth + dashboard)
+- Order Tracking (staff-facing)
+- CCTV Security module
+- Cash flow, bank reconciliation
+- Analytics, visualizations, sales forecast
+- Role-based access, dark mode, multi-language
+- **Advanced PDF exports with branded headers (logo, company info, colors)**
+- **VirtualizedTable integrated into Sales, Stock, Expenses pages**
+- **Quick Help/Tour button on all pages with page-specific guidance**
+- **Branding Settings page with logo upload**
+- Zustand state management (partial migration)
+- Supplier Aging Reports
+- Anomaly Detection, Trend Comparison
+
+## Architecture
+- **Frontend:** React + Shadcn UI + Zustand + TailwindCSS
+- **Backend:** FastAPI + MongoDB
+- **3rd Party:** OpenAI (Emergent LLM Key), Twilio, reportlab, recharts, react-joyride, react-window
+
+## Pending Tasks
+### P1 - State Management
+- Complete Zustand migration across remaining 20+ pages
+
+### Future/Backlog
+- Real-time WebSocket notifications for stock alerts
+- Mobile-responsive improvements for remaining admin pages
+- Performance optimization for very large datasets
+- WhatsApp chatbot enhancements
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
-- Operator: test@ssc.com / testtest
-- Employee: ahmed@test.com / emp@123
+- Test Operator: test@ssc.com / testtest
 - Cashier PIN: 1234
-- Customer Portal: Register with any email
-
-## Implemented Phases Summary
-
-### Phase 1-24: Core ERP + All Features (ALL DONE)
-Financial, HR, stock, POS, assets, CCTV, cash flow, reporting, admin, loyalty, security, barcodes, timestamps, logging, search, daily summary, AI forecasting, sales alerts, supplier enhancements, automated reminders, Zustand migration, AI stock reorder, enhanced P&L, customer portal.
-
-### Phase 25: Final Feature Batch (DONE - Mar 2026)
-
-**1. Customer Order Tracking & Notifications**
-- **Route:** `/order-tracking`
-- **Status Flow:** placed → confirmed → preparing → ready → out_for_delivery → delivered (+ cancelled)
-- **Features:**
-  - Status summary cards showing count per status (7 cards)
-  - Recent orders list with customer name, amount, date, status
-  - Click-to-update status with visual timeline
-  - Notification Settings: Enable/disable, choose channels (Email/WhatsApp), select trigger statuses
-  - Background notification sending via email and WhatsApp
-  - Notification history logging
-- **Backend Endpoints:**
-  - `GET /api/order-tracking/config` - Get notification config
-  - `POST /api/order-tracking/config` - Update notification config
-  - `GET /api/order-tracking/recent` - Get orders for tracking
-  - `POST /api/order-tracking/update-status` - Update order status + notify
-  - `GET /api/order-tracking/order/{id}` - Get order tracking details
-  - `GET /api/order-tracking/notifications/{id}` - Get notification history
-
-**2. Extended Zustand Migration**
-- `StockPage` now uses `useBranchStore`
-- Total pages using Zustand: Dashboard, POS, Sales, Expenses, Suppliers, Customers, Employees, Stock, StockReorder, EnhancedPnL
-
-**3. VirtualizedTable Component**
-- Created reusable component at `/components/VirtualizedTable.jsx`
-- Uses @tanstack/react-virtual for efficient rendering of large datasets
-- Ready for integration into high-volume tables
-
-Test Results: Backend 100% (16/16), Frontend 100%
-
-## Complete Route Map
-- **Operations:** `/pos`, `/waiter`, `/cashier`, `/kds`, `/order-status`, `/pos-analytics`
-- **Finance:** `/sales`, `/platforms`, `/invoices`, `/expenses`, `/supplier-payments`, `/supplier-aging`, `/supplier-reminders`, `/cash-transfers`
-- **People:** `/customers`, `/loyalty`, `/order-tracking`, `/suppliers`, `/employees`, `/loans`, `/leave-approvals`, `/schedule`
-- **Stock:** `/stock`, `/stock-reorder`, `/transfers`, `/menu-items`, `/table-management`, `/reservations`, `/kitchen`
-- **Reports:** `/analytics`, `/enhanced-pnl`, `/visualizations`, `/sales-forecast`, `/sales-alerts`, `/shift-report`, `/partner-pl-report`, `/reports`, `/credit-report`, `/supplier-report`, `/category-report`, `/bank-statements`, `/reconciliation`, `/performance-report`, `/anomaly-detection`, `/trend-comparison`
-- **Assets:** `/assets`, `/documents`, `/cctv`
-- **Admin:** `/users`, `/settings`, `/task-reminders`, `/task-compliance`, `/activity-logs`, `/branches`
-- **Customer Portal:** `/customer-portal/*` (6 routes)
-
-## Architecture
-```
-/app/
-├── backend/
-│   └── routers/           # 42 routers
-│       ├── order_tracking.py   # NEW
-│       ├── customer_portal.py
-│       └── ... 
-├── frontend/
-│   └── src/
-│       ├── stores/        # Zustand (3 stores)
-│       ├── components/
-│       │   └── VirtualizedTable.jsx  # NEW
-│       └── pages/
-│           ├── OrderTrackingPage.jsx  # NEW
-│           └── ... (40+ pages)
-```
-
-## Remaining Backlog (Optional Enhancements)
-- Integrate VirtualizedTable into Sales, Stock, Expenses tables for very large datasets
-- Real-time WebSocket notifications for instant stock alerts
-- Mobile-responsive improvements for remaining admin pages
-- Advanced reporting PDF exports with company branding
