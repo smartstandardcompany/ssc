@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, AlertTriangle, DollarSign, Settings2, MessageCircle, FileDown } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle, DollarSign, Settings2, MessageCircle, FileDown, RotateCcw } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -38,6 +38,8 @@ export default function ExpensesPage() {
   const [newSubCat, setNewSubCat] = useState({ name: '', parent: '' });
   const [newRecData, setNewRecData] = useState({ name: '', category: 'rent', amount: '', frequency: 'monthly', branch_id: '', next_due_date: '', alert_days: 7 });
   const [showWhatsApp, setShowWhatsApp] = useState(false);
+  const [showRefundDialog, setShowRefundDialog] = useState(false);
+  const [refundData, setRefundData] = useState({ amount: '', reason: '', refund_mode: 'cash', category: 'Refund', branch_id: '', date: new Date().toISOString().split('T')[0] });
 
   const [formData, setFormData] = useState({
     category: '', sub_category: '', description: '', amount: '',
@@ -125,6 +127,22 @@ export default function ExpensesPage() {
     catch { toast.error('Failed'); }
   };
 
+  const handleRefundSubmit = async (e) => {
+    e.preventDefault();
+    if (!refundData.amount || parseFloat(refundData.amount) <= 0) { toast.error('Enter a valid refund amount'); return; }
+    try {
+      await api.post('/expense-refunds', {
+        ...refundData,
+        amount: parseFloat(refundData.amount),
+        date: new Date(refundData.date).toISOString(),
+      });
+      toast.success(`Refund of SAR ${refundData.amount} recorded`);
+      setShowRefundDialog(false);
+      setRefundData({ amount: '', reason: '', refund_mode: 'cash', category: 'Refund', branch_id: '', date: new Date().toISOString().split('T')[0] });
+      fetchData();
+    } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+  };
+
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-64">Loading...</div></DashboardLayout>;
 
   const filtered = applySearchFilters(expenses, searchFilters);
@@ -141,6 +159,7 @@ export default function ExpensesPage() {
           <div className="flex gap-2 items-center flex-wrap">
             <ExportButtons dataType="expenses" />
             <PDFExportButton reportType="expenses" label="Branded PDF" />
+            <Button size="sm" variant="outline" className="rounded-xl text-red-600 border-red-200 hover:bg-red-50" onClick={() => setShowRefundDialog(true)} data-testid="add-refund-btn"><RotateCcw size={14} className="mr-1" />Refund</Button>
             <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowWhatsApp(true)} data-testid="expenses-whatsapp-btn"><MessageCircle size={14} className="mr-1" />WhatsApp</Button>
             {isAdmin && <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowCatManager(true)}><Settings2 size={14} className="mr-1" />{t('category')}</Button>}
           </div>
@@ -488,6 +507,50 @@ export default function ExpensesPage() {
             </div>
           </DialogContent>
         </Dialog>
+        {/* Expense Refund Dialog */}
+        <Dialog open={showRefundDialog} onOpenChange={setShowRefundDialog}>
+          <DialogContent className="max-w-md" data-testid="refund-dialog">
+            <DialogHeader><DialogTitle className="flex items-center gap-2"><RotateCcw className="text-red-500" size={18} /> Record Expense Refund</DialogTitle></DialogHeader>
+            <form onSubmit={handleRefundSubmit} className="space-y-4">
+              <div className="text-sm text-red-700 bg-red-50 p-2 rounded-lg border border-red-200">
+                Record a refund for a returned item or cancelled service. This will create a negative expense entry.
+              </div>
+              <div className="space-y-2">
+                <Label>Refund Amount (SAR) *</Label>
+                <Input type="number" step="0.01" value={refundData.amount} data-testid="refund-amount"
+                  onChange={(e) => setRefundData({ ...refundData, amount: e.target.value })} required placeholder="0.00" className="text-lg font-bold" />
+              </div>
+              <div className="space-y-2">
+                <Label>Reason</Label>
+                <Input value={refundData.reason} onChange={(e) => setRefundData({ ...refundData, reason: e.target.value })} placeholder="Returned item, cancelled service, etc." />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Refund Mode</Label>
+                  <Select value={refundData.refund_mode} onValueChange={(v) => setRefundData({ ...refundData, refund_mode: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="bank">Bank</SelectItem>
+                      <SelectItem value="credit">Credit</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Date</Label>
+                  <Input type="date" value={refundData.date} onChange={(e) => setRefundData({ ...refundData, date: e.target.value })} />
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Button type="submit" className="bg-red-500 hover:bg-red-600 rounded-xl" data-testid="submit-refund-btn">
+                  <RotateCcw size={14} className="mr-1" /> Record Refund
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setShowRefundDialog(false)} className="rounded-xl">Cancel</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+
         <WhatsAppSendDialog open={showWhatsApp} onClose={() => setShowWhatsApp(false)} defaultType="expense_summary" branches={branches} />
       </div>
     </DashboardLayout>

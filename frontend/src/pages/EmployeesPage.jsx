@@ -45,6 +45,7 @@ export default function EmployeesPage() {
   const [pendingSummary, setPendingSummary] = useState([]);
   const [loading, setLoading] = useState(true);
   const [branchFilter, setBranchFilter] = useState([]);
+  const [statusFilter, setStatusFilter] = useState('active');
   const [showDialog, setShowDialog] = useState(false);
   const [showPayDialog, setShowPayDialog] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
@@ -274,11 +275,21 @@ export default function EmployeesPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Total Employees</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-primary">{employees.length}</div></CardContent></Card>
-          <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Monthly Payroll</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-error"> SAR {totalSalary.toFixed(2)}</div></CardContent></Card>
-          <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Outstanding Loans</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-warning"> SAR {totalLoan.toFixed(2)}</div></CardContent></Card>
-          <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Expiring Docs</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-info">{employees.filter(e => isExpiryNear(e.document_expiry)).length}</div></CardContent></Card>
+          <Card className={`border-border cursor-pointer transition-all ${statusFilter === 'active' ? 'ring-2 ring-emerald-400' : ''}`} onClick={() => setStatusFilter('active')} data-testid="filter-active">
+            <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Active</CardTitle></CardHeader>
+            <CardContent><div className="text-2xl font-bold font-outfit text-emerald-600">{employees.filter(e => !e.status || e.status === 'active').length}</div></CardContent>
+          </Card>
+          <Card className={`border-border cursor-pointer transition-all ${statusFilter === 'left' ? 'ring-2 ring-red-400' : ''}`} onClick={() => setStatusFilter('left')} data-testid="filter-left">
+            <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Left / Terminated</CardTitle></CardHeader>
+            <CardContent><div className="text-2xl font-bold font-outfit text-red-600">{employees.filter(e => ['left', 'terminated', 'resigned'].includes(e.status)).length}</div></CardContent>
+          </Card>
+          <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Monthly Payroll</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-error"> SAR {totalSalary.toFixed(0)}</div></CardContent></Card>
+          <Card className={`border-border cursor-pointer transition-all ${statusFilter === 'all' ? 'ring-2 ring-blue-400' : ''}`} onClick={() => setStatusFilter('all')} data-testid="filter-all">
+            <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Show All</CardTitle></CardHeader>
+            <CardContent><div className="text-2xl font-bold font-outfit text-blue-600">{employees.length}</div></CardContent>
+          </Card>
         </div>
 
         <Card className="border-border">
@@ -286,7 +297,12 @@ export default function EmployeesPage() {
           <CardContent>
             {/* Mobile card view */}
             <div className="sm:hidden space-y-2">
-              {employees.filter(emp => branchFilter.length === 0 || branchFilter.includes(emp.branch_id) || !emp.branch_id).map((emp) => {
+              {employees.filter(emp => {
+                if (branchFilter.length > 0 && !branchFilter.includes(emp.branch_id) && emp.branch_id) return false;
+                if (statusFilter === 'active') return !emp.status || emp.status === 'active';
+                if (statusFilter === 'left') return ['left', 'terminated', 'resigned', 'on_notice'].includes(emp.status);
+                return true;
+              }).map((emp) => {
                 const pend = getPending(emp.id);
                 const jt = jobTitles.find(j => j.id === emp.job_title_id);
                 return (
@@ -339,7 +355,12 @@ export default function EmployeesPage() {
                   <th className="text-right p-3 font-medium text-sm">Actions</th>
                 </tr></thead>
                 <tbody>
-                  {employees.filter(emp => branchFilter.length === 0 || branchFilter.includes(emp.branch_id) || !emp.branch_id).map((emp) => {
+                  {employees.filter(emp => {
+                    if (branchFilter.length > 0 && !branchFilter.includes(emp.branch_id) && emp.branch_id) return false;
+                    if (statusFilter === 'active') return !emp.status || emp.status === 'active';
+                    if (statusFilter === 'left') return ['left', 'terminated', 'resigned', 'on_notice'].includes(emp.status);
+                    return true;
+                  }).map((emp) => {
                     const pend = getPending(emp.id);
                     return (
                     <tr key={emp.id} className={`border-b border-border hover:bg-secondary/50 ${emp.status === 'resigned' || emp.status === 'on_notice' ? 'bg-amber-50/30' : emp.status === 'left' || emp.status === 'terminated' ? 'bg-red-50/30' : ''}`} data-testid="employee-row">

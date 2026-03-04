@@ -89,6 +89,85 @@ async def delete_expense(expense_id: str, current_user: User = Depends(get_curre
     return {"message": "Expense deleted successfully"}
 
 
+# =====================================================
+# EXPENSE REFUNDS / RETURNS
+# =====================================================
+
+@router.post("/expense-refunds")
+async def create_expense_refund(body: dict, current_user: User = Depends(get_current_user)):
+    """Record a refund for an expense. Creates a negative expense entry."""
+    require_permission(current_user, "expenses", "write")
+    
+    original_expense_id = body.get("original_expense_id")
+    amount = float(body.get("amount", 0))
+    reason = body.get("reason", "")
+    refund_mode = body.get("refund_mode", "cash")  # cash, bank, credit
+    date_str = body.get("date", datetime.now(timezone.utc).isoformat())
+    
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Valid refund amount required")
+    
+    # If linked to an original expense, get its details
+    original = None
+    if original_expense_id:
+        original = await db.expenses.find_one({"id": original_expense_id}, {"_id": 0})
+    
+    refund_id = str(uuid.uuid4())
+    refund = {
+        "id": refund_id,
+        "original_expense_id": original_expense_id,
+        "amount": amount,
+        "reason": reason,
+        "refund_mode": refund_mode,
+        "category": original.get("category", "Refund") if original else body.get("category", "Refund"),
+        "description": f"REFUND: {reason or (original.get('description', '') if original else '')}",
+        "branch_id": body.get("branch_id") or (original.get("branch_id") if original else None),
+        "supplier_id": original.get("supplier_id") if original else body.get("supplier_id"),
+        "date": date_str,
+        "is_refund": True,
+        "created_by": current_user.id,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    
+    await db.expense_refunds.insert_one(refund)
+    
+    # Also create a negative expense to reflect in totals
+    neg_expense = Expense(
+        category=refund["category"],
+        description=refund["description"],
+        amount=-amount,
+        payment_mode=refund_mode,
+        branch_id=refund.get("branch_id"),
+        supplier_id=refund.get("supplier_id"),
+        date=datetime.fromisoformat(date_str.replace("Z", "+00:00")) if isinstance(date_str, str) else date_str,
+        notes=f"Refund: {reason}",
+        created_by=current_user.id,
+    )
+    ne_dict = neg_expense.model_dump()
+    ne_dict["date"] = ne_dict["date"].isoformat()
+    ne_dict["created_at"] = ne_dict["created_at"].isoformat()
+    ne_dict["is_refund"] = True
+    ne_dict["refund_id"] = refund_id
+    await db.expenses.insert_one(ne_dict)
+    
+    # If supplier credit refund, reduce supplier balance
+    if refund.get("supplier_id") and refund_mode == "credit":
+        supplier = await db.suppliers.find_one({"id": refund["supplier_id"]}, {"_id": 0})
+        if supplier:
+            new_credit = max(0, supplier.get("current_credit", 0) - amount)
+            await db.suppliers.update_one({"id": refund["supplier_id"]}, {"$set": {"current_credit": new_credit}})
+    
+    return {k: v for k, v in refund.items() if k != '_id'}
+
+
+@router.get("/expense-refunds")
+async def get_expense_refunds(current_user: User = Depends(get_current_user)):
+    """Get all expense refunds"""
+    require_permission(current_user, "expenses", "read")
+    refunds = await db.expense_refunds.find({}, {"_id": 0}).sort("date", -1).to_list(1000)
+    return refunds
+
+
 @router.post("/expenses/auto-categorize")
 async def auto_categorize_expense(body: dict, current_user: User = Depends(get_current_user)):
     """Use AI to suggest a category for an expense based on its description."""

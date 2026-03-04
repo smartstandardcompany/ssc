@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Trash2, Receipt, DollarSign, Banknote, CreditCard, FileText, Building2 } from 'lucide-react';
+import { Plus, Trash2, Receipt, DollarSign, Banknote, CreditCard, FileText, Building2, RotateCcw, Upload, Image as ImageIcon, Eye } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -36,19 +36,31 @@ export default function SupplierPaymentsPage() {
   });
   const [dateFilter, setDateFilter] = useState({ start: null, end: null, period: 'all' });
   const [branchFilter, setBranchFilter] = useState([]);
+  const [showReturnForm, setShowReturnForm] = useState(false);
+  const [returns, setReturns] = useState([]);
+  const [returnData, setReturnData] = useState({
+    supplier_id: '', amount: '', return_type: 'credit_return', reason: '', invoice_ref: '',
+    branch_id: '', date: new Date().toISOString().split('T')[0], bill_image_url: '',
+  });
+  const [uploading, setUploading] = useState(false);
+  const [billUploading, setBillUploading] = useState(false);
+  const billFileRef = useRef(null);
+  const returnBillRef = useRef(null);
 
   useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     try {
-      const [paymentsRes, suppliersRes, branchesRes] = await Promise.all([
+      const [paymentsRes, suppliersRes, branchesRes, returnsRes] = await Promise.all([
         api.get('/supplier-payments'),
         api.get('/suppliers'),
         api.get('/branches'),
+        api.get('/supplier-returns').catch(() => ({ data: [] })),
       ]);
       setPayments(paymentsRes.data);
       setSuppliers(suppliersRes.data);
       setBranches(branchesRes.data);
+      setReturns(returnsRes.data);
     } catch { toast.error('Failed to fetch data'); }
     finally { setLoading(false); }
   };
@@ -117,6 +129,48 @@ export default function SupplierPaymentsPage() {
     });
   };
 
+  const handleBillUpload = async (e, target = 'form') => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setBillUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await api.post('/supplier-payments/upload-bill', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      if (target === 'form') setFormData(d => ({ ...d, bill_image_url: res.data.bill_url }));
+      else setReturnData(d => ({ ...d, bill_image_url: res.data.bill_url }));
+      toast.success('Bill image uploaded');
+    } catch { toast.error('Upload failed'); }
+    finally { setBillUploading(false); }
+  };
+
+  const handleReturnSubmit = async (e) => {
+    e.preventDefault();
+    if (!returnData.supplier_id) { toast.error('Select a supplier'); return; }
+    try {
+      await api.post('/supplier-returns', {
+        ...returnData,
+        amount: parseFloat(returnData.amount),
+        date: new Date(returnData.date).toISOString(),
+      });
+      const typeLabel = returnData.return_type === 'cash_refund' ? 'Cash refund' : returnData.return_type === 'credit_return' ? 'Credit return' : 'Full invoice return';
+      toast.success(`${typeLabel} recorded for SAR ${returnData.amount}`);
+      setShowReturnForm(false);
+      setReturnData({ supplier_id: '', amount: '', return_type: 'credit_return', reason: '', invoice_ref: '', branch_id: '', date: new Date().toISOString().split('T')[0], bill_image_url: '' });
+      fetchData();
+    } catch (error) { toast.error(error.response?.data?.detail || 'Failed to record return'); }
+  };
+
+  const handleDeleteReturn = async (id) => {
+    if (window.confirm('Delete this return? Balance changes will be reversed.')) {
+      try {
+        await api.delete(`/supplier-returns/${id}`);
+        toast.success('Return deleted and balance reversed');
+        fetchData();
+      } catch { toast.error('Failed to delete'); }
+    }
+  };
+
   const handleDelete = async (id) => {
     if (window.confirm('Delete this payment? Supplier balance will be updated.')) {
       try {
@@ -166,6 +220,10 @@ export default function SupplierPaymentsPage() {
             <Button onClick={() => openForm('bill')} variant="outline" data-testid="add-bill-button"
               className="rounded-full text-amber-600 border-amber-300 hover:bg-amber-50">
               <Receipt size={16} className="mr-1" /> Add Bill
+            </Button>
+            <Button onClick={() => setShowReturnForm(true)} variant="outline" data-testid="add-return-button"
+              className="rounded-full text-red-600 border-red-300 hover:bg-red-50">
+              <RotateCcw size={16} className="mr-1" /> Return
             </Button>
             <Button onClick={() => openForm('payment')} data-testid="add-payment-button" className="rounded-full">
               <DollarSign size={16} className="mr-1" /> Pay Credit
@@ -309,6 +367,22 @@ export default function SupplierPaymentsPage() {
                         onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                         placeholder={formType === 'bill' ? 'e.g., Invoice #1234 - Chicken, Rice, etc.' : 'Payment reference / notes'} />
                     </div>
+
+                    {/* Bill Image Upload */}
+                    <div className="md:col-span-2">
+                      <Label>Bill / Invoice Image</Label>
+                      <div className="flex items-center gap-3 mt-1">
+                        <input ref={billFileRef} type="file" accept="image/*,application/pdf" onChange={(e) => handleBillUpload(e, 'form')} className="hidden" />
+                        <Button type="button" variant="outline" size="sm" onClick={() => billFileRef.current?.click()} disabled={billUploading} data-testid="upload-bill-btn">
+                          {billUploading ? 'Uploading...' : <><Upload size={14} className="mr-1" /> {formData.bill_image_url ? 'Change' : 'Upload'}</>}
+                        </Button>
+                        {formData.bill_image_url && (
+                          <a href={`${process.env.REACT_APP_BACKEND_URL}${formData.bill_image_url}`} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline flex items-center gap-1">
+                            <Eye size={12} /> View Bill
+                          </a>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   <div className="flex gap-3 mt-2">
@@ -320,6 +394,140 @@ export default function SupplierPaymentsPage() {
                   </div>
                 </div>
               </form>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Return Form Card */}
+        {showReturnForm && (
+          <Card className="border-2 border-red-200" data-testid="return-form-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="font-outfit flex items-center gap-2">
+                <RotateCcw className="text-red-500" size={20} /> Supplier Return
+              </CardTitle>
+              <p className="text-sm text-red-700 bg-red-50 p-2 rounded-lg border border-red-200 mt-2">
+                Record goods returned to a supplier. Choose: <strong>Cash Refund</strong> (get money back), <strong>Credit Return</strong> (reduce balance owed), or <strong>Full Invoice Return</strong> (return entire invoice).
+              </p>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleReturnSubmit}>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Supplier *</Label>
+                    <div className="flex gap-2 flex-wrap mt-2">
+                      {suppliers.map((supplier, i) => {
+                        const colors = ['bg-orange-100 border-orange-300 text-orange-700', 'bg-green-100 border-green-300 text-green-700', 'bg-blue-100 border-blue-300 text-blue-700', 'bg-purple-100 border-purple-300 text-purple-700'];
+                        return (
+                          <button key={supplier.id} type="button"
+                            onClick={() => setReturnData({ ...returnData, supplier_id: supplier.id })}
+                            className={`px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all ${colors[i % colors.length]} ${returnData.supplier_id === supplier.id ? 'ring-2 ring-red-400 ring-offset-1 scale-105 shadow-md' : 'opacity-80 hover:opacity-100'}`}>
+                            {supplier.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label>Return Type *</Label>
+                      <Select value={returnData.return_type} onValueChange={(v) => setReturnData({ ...returnData, return_type: v })}>
+                        <SelectTrigger data-testid="return-type-select"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cash_refund">Cash Refund (get money back)</SelectItem>
+                          <SelectItem value="credit_return">Credit Return (reduce balance)</SelectItem>
+                          <SelectItem value="full_invoice_return">Full Invoice Return</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Amount (SAR) *</Label>
+                      <Input type="number" step="0.01" value={returnData.amount} data-testid="return-amount-input"
+                        onChange={(e) => setReturnData({ ...returnData, amount: e.target.value })} required placeholder="0.00" className="text-lg font-bold" />
+                    </div>
+                    <div>
+                      <Label>Date *</Label>
+                      <Input type="date" value={returnData.date} onChange={(e) => setReturnData({ ...returnData, date: e.target.value })} required />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Invoice Reference</Label>
+                      <Input value={returnData.invoice_ref} onChange={(e) => setReturnData({ ...returnData, invoice_ref: e.target.value })} placeholder="Invoice #1234" />
+                    </div>
+                    <div>
+                      <Label>Reason</Label>
+                      <Input value={returnData.reason} onChange={(e) => setReturnData({ ...returnData, reason: e.target.value })} placeholder="Damaged goods, wrong order, etc." />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Bill / Return Document</Label>
+                    <div className="flex items-center gap-3 mt-1">
+                      <input ref={returnBillRef} type="file" accept="image/*,application/pdf" onChange={(e) => handleBillUpload(e, 'return')} className="hidden" />
+                      <Button type="button" variant="outline" size="sm" onClick={() => returnBillRef.current?.click()} disabled={billUploading}>
+                        {billUploading ? 'Uploading...' : <><Upload size={14} className="mr-1" /> Upload</>}
+                      </Button>
+                      {returnData.bill_image_url && (
+                        <a href={`${process.env.REACT_APP_BACKEND_URL}${returnData.bill_image_url}`} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline flex items-center gap-1">
+                          <Eye size={12} /> View
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button type="submit" className="rounded-xl bg-red-500 hover:bg-red-600" data-testid="submit-return-button">
+                      <RotateCcw size={16} className="mr-1" /> Record Return
+                    </Button>
+                    <Button type="button" variant="outline" onClick={() => setShowReturnForm(false)} className="rounded-xl">Cancel</Button>
+                  </div>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Returns History */}
+        {returns.length > 0 && (
+          <Card className="border-red-200">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="font-outfit text-red-700 flex items-center gap-2"><RotateCcw size={18} /> Supplier Returns</CardTitle>
+                <Badge variant="outline" className="text-xs text-red-600">{returns.length} returns</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full" data-testid="returns-table">
+                  <thead><tr className="border-b bg-red-50/50">
+                    <th className="text-left p-3 text-sm font-medium">Date</th>
+                    <th className="text-left p-3 text-sm font-medium">Supplier</th>
+                    <th className="text-left p-3 text-sm font-medium">Type</th>
+                    <th className="text-right p-3 text-sm font-medium">Amount</th>
+                    <th className="text-left p-3 text-sm font-medium">Invoice</th>
+                    <th className="text-left p-3 text-sm font-medium">Reason</th>
+                    <th className="text-right p-3 text-sm font-medium">Actions</th>
+                  </tr></thead>
+                  <tbody>
+                    {returns.map(r => (
+                      <tr key={r.id} className="border-b hover:bg-red-50/30">
+                        <td className="p-3 text-sm">{r.date ? format(new Date(r.date), 'MMM dd, yyyy') : '-'}</td>
+                        <td className="p-3 text-sm font-medium">{r.supplier_name}</td>
+                        <td className="p-3"><Badge variant="outline" className="text-xs capitalize bg-red-50 text-red-700">{r.return_type?.replace('_', ' ')}</Badge></td>
+                        <td className="p-3 text-sm text-right font-bold text-red-600">SAR {r.amount?.toFixed(2)}</td>
+                        <td className="p-3 text-sm">{r.invoice_ref || '-'}</td>
+                        <td className="p-3 text-sm text-muted-foreground truncate max-w-[150px]">{r.reason || '-'}</td>
+                        <td className="p-3 text-right flex gap-1 justify-end">
+                          {r.bill_image_url && (
+                            <a href={`${process.env.REACT_APP_BACKEND_URL}${r.bill_image_url}`} target="_blank" rel="noreferrer">
+                              <Button size="sm" variant="ghost" className="h-7"><Eye size={12} /></Button>
+                            </a>
+                          )}
+                          <Button size="sm" variant="ghost" onClick={() => handleDeleteReturn(r.id)} className="h-7 text-red-500"><Trash2 size={12} /></Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -343,6 +551,7 @@ export default function SupplierPaymentsPage() {
                     <th className="text-right p-3 font-medium text-sm">Amount</th>
                     <th className="text-left p-3 font-medium text-sm">Mode</th>
                     <th className="text-left p-3 font-medium text-sm">Notes</th>
+                    <th className="text-center p-3 font-medium text-sm">Bill</th>
                     <th className="text-right p-3 font-medium text-sm">Actions</th>
                   </tr>
                 </thead>
@@ -368,6 +577,13 @@ export default function SupplierPaymentsPage() {
                           </Badge>
                         </td>
                         <td className="p-3 text-sm text-muted-foreground max-w-[200px] truncate">{payment.notes || '-'}</td>
+                        <td className="p-3">
+                          {payment.bill_image_url ? (
+                            <a href={`${process.env.REACT_APP_BACKEND_URL}${payment.bill_image_url}`} target="_blank" rel="noreferrer">
+                              <Button size="sm" variant="ghost" className="h-7 text-blue-600"><Eye size={12} className="mr-0.5" />Bill</Button>
+                            </a>
+                          ) : <span className="text-xs text-muted-foreground">-</span>}
+                        </td>
                         <td className="p-3 text-right">
                           <Button size="sm" variant="outline" onClick={() => handleDelete(payment.id)}
                             data-testid="delete-payment-button" className="h-8 text-red-500 hover:text-red-700 hover:bg-red-50">
@@ -379,7 +595,7 @@ export default function SupplierPaymentsPage() {
                   })}
                   {filteredPayments.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                      <td colSpan={8} className="p-8 text-center text-muted-foreground">
                         No supplier payments recorded yet. Use the buttons above to add a purchase bill or pay credit.
                       </td>
                     </tr>

@@ -175,6 +175,7 @@ class SupplierPayment(BaseModel):
     branch_id: Optional[str] = None
     date: datetime
     notes: Optional[str] = None
+    bill_image_url: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     created_by: str
 
@@ -185,6 +186,7 @@ class SupplierPaymentCreate(BaseModel):
     branch_id: Optional[str] = None
     date: datetime
     notes: Optional[str] = None
+    bill_image_url: Optional[str] = None
 
 class SupplierCreditPayment(BaseModel):
     payment_mode: str

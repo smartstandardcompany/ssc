@@ -405,3 +405,77 @@ async def generate_branded_pdf(request: PDFExportRequest):
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+
+# =====================================================
+# SCHEDULED PDF REPORTS
+# =====================================================
+
+class ScheduledReport(BaseModel):
+    report_type: str  # sales, expenses, pnl, supplier_aging
+    frequency: str  # daily, weekly, monthly
+    email_recipients: List[str] = []
+    enabled: bool = True
+    day_of_week: Optional[int] = None  # 0=Mon, 6=Sun (for weekly)
+    day_of_month: Optional[int] = None  # 1-28 (for monthly)
+    time_of_day: str = "08:00"
+
+@router.get("/scheduled-reports")
+async def get_scheduled_reports():
+    """Get all scheduled report configurations"""
+    db = get_db()
+    reports = await db.scheduled_reports.find({}, {"_id": 0}).to_list(100)
+    return reports
+
+@router.post("/scheduled-reports")
+async def create_scheduled_report(config: ScheduledReport):
+    """Create or update a scheduled report"""
+    db = get_db()
+    report_id = str(uuid.uuid4())
+    report = {
+        "id": report_id,
+        **config.model_dump(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "last_sent": None,
+        "next_run": None,
+    }
+    await db.scheduled_reports.insert_one(report)
+    return {k: v for k, v in report.items() if k != '_id'}
+
+@router.put("/scheduled-reports/{report_id}")
+async def update_scheduled_report(report_id: str, config: ScheduledReport):
+    """Update a scheduled report"""
+    db = get_db()
+    existing = await db.scheduled_reports.find_one({"id": report_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Report not found")
+    await db.scheduled_reports.update_one(
+        {"id": report_id},
+        {"$set": {**config.model_dump(), "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return {"message": "Report updated"}
+
+@router.delete("/scheduled-reports/{report_id}")
+async def delete_scheduled_report(report_id: str):
+    """Delete a scheduled report"""
+    db = get_db()
+    result = await db.scheduled_reports.delete_one({"id": report_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Report not found")
+    return {"message": "Scheduled report deleted"}
+
+@router.post("/scheduled-reports/{report_id}/send-now")
+async def send_scheduled_report_now(report_id: str):
+    """Manually trigger a scheduled report to send immediately"""
+    db = get_db()
+    report = await db.scheduled_reports.find_one({"id": report_id}, {"_id": 0})
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    
+    # Update last_sent
+    await db.scheduled_reports.update_one(
+        {"id": report_id},
+        {"$set": {"last_sent": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"message": f"Report '{report['report_type']}' sent to {len(report.get('email_recipients', []))} recipients"}

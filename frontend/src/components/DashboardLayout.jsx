@@ -108,6 +108,7 @@ const NAV_GROUPS = [
       { path: '/users', icon: Shield, label: 'Users', perm: 'users', roles: ['admin'] },
       { path: '/settings', icon: Settings, label: 'Settings', perm: 'settings', roles: ['admin'] },
       { path: '/branding', icon: Building2, label: 'Branding & PDF', perm: 'settings', roles: ['admin'] },
+      { path: '/scheduled-reports', icon: CalendarClock, label: 'Scheduled Reports', perm: 'settings', roles: ['admin'] },
       { path: '/task-reminders', icon: Bell, label: 'Task Reminders', perm: 'settings', roles: ['admin'] },
       { path: '/task-compliance', icon: Shield, label: 'Compliance', perm: 'settings', roles: ['admin'] },
       { path: '/activity-logs', icon: Activity, label: 'Activity Logs', perm: 'settings', roles: ['admin'] },

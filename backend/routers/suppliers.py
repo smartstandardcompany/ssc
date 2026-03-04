@@ -1,9 +1,14 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from typing import List, Optional
 from datetime import datetime, timezone
+import os
+import shutil
 
 from database import db, get_current_user, require_permission, get_branch_filter_with_global
 from models import User, Supplier, SupplierCreate, SupplierPayment, SupplierPaymentCreate, SupplierCreditPayment
+
+BILL_DIR = "/app/uploads/bills"
+os.makedirs(BILL_DIR, exist_ok=True)
 
 router = APIRouter()
 
@@ -199,6 +204,123 @@ async def delete_supplier_payment(payment_id: str, current_user: User = Depends(
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Payment not found")
     return {"message": "Payment deleted successfully", "supplier_balance_updated": True}
+
+
+# =====================================================
+# SUPPLIER RETURNS
+# =====================================================
+
+@router.post("/supplier-returns")
+async def create_supplier_return(body: dict, current_user: User = Depends(get_current_user)):
+    """Record a supplier return. Types: cash_refund, credit_return, full_invoice_return"""
+    require_permission(current_user, "supplier_payments", "write")
+    
+    supplier_id = body.get("supplier_id")
+    return_type = body.get("return_type", "credit_return")  # cash_refund, credit_return, full_invoice_return
+    amount = float(body.get("amount", 0))
+    invoice_ref = body.get("invoice_ref", "")
+    reason = body.get("reason", "")
+    branch_id = body.get("branch_id")
+    date_str = body.get("date", datetime.now(timezone.utc).isoformat())
+    bill_image_url = body.get("bill_image_url", "")
+    
+    if not supplier_id or amount <= 0:
+        raise HTTPException(status_code=400, detail="Supplier and valid amount required")
+    
+    supplier = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    
+    import uuid
+    return_id = str(uuid.uuid4())
+    
+    return_record = {
+        "id": return_id,
+        "supplier_id": supplier_id,
+        "supplier_name": supplier["name"],
+        "return_type": return_type,
+        "amount": amount,
+        "invoice_ref": invoice_ref,
+        "reason": reason,
+        "branch_id": branch_id,
+        "bill_image_url": bill_image_url,
+        "date": date_str,
+        "created_by": current_user.id,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    
+    await db.supplier_returns.insert_one(return_record)
+    
+    # Update supplier balance based on return type
+    current_credit = supplier.get("current_credit", 0)
+    
+    if return_type == "cash_refund":
+        # Supplier gives cash back - no credit change, but record as income/negative expense
+        pass
+    elif return_type == "credit_return":
+        # Reduce the credit balance owed to supplier
+        new_credit = max(0, current_credit - amount)
+        await db.suppliers.update_one({"id": supplier_id}, {"$set": {"current_credit": new_credit}})
+        return_record["balance_change"] = f"Credit reduced from SAR {current_credit:.2f} to SAR {new_credit:.2f}"
+    elif return_type == "full_invoice_return":
+        # Full invoice return - reduce credit balance
+        new_credit = max(0, current_credit - amount)
+        await db.suppliers.update_one({"id": supplier_id}, {"$set": {"current_credit": new_credit}})
+        return_record["balance_change"] = f"Invoice returned. Credit reduced to SAR {new_credit:.2f}"
+    
+    return {k: v for k, v in return_record.items() if k != '_id'}
+
+
+@router.get("/supplier-returns")
+async def get_supplier_returns(supplier_id: str = None, current_user: User = Depends(get_current_user)):
+    """Get all supplier returns, optionally filtered by supplier"""
+    require_permission(current_user, "supplier_payments", "read")
+    query = {}
+    if supplier_id:
+        query["supplier_id"] = supplier_id
+    returns = await db.supplier_returns.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
+    return returns
+
+
+@router.delete("/supplier-returns/{return_id}")
+async def delete_supplier_return(return_id: str, current_user: User = Depends(get_current_user)):
+    """Delete a supplier return and reverse balance changes"""
+    require_permission(current_user, "supplier_payments", "write")
+    ret = await db.supplier_returns.find_one({"id": return_id}, {"_id": 0})
+    if not ret:
+        raise HTTPException(status_code=404, detail="Return not found")
+    
+    # Reverse the balance change
+    if ret.get("return_type") in ["credit_return", "full_invoice_return"]:
+        supplier = await db.suppliers.find_one({"id": ret["supplier_id"]}, {"_id": 0})
+        if supplier:
+            new_credit = supplier.get("current_credit", 0) + ret["amount"]
+            await db.suppliers.update_one({"id": ret["supplier_id"]}, {"$set": {"current_credit": new_credit}})
+    
+    await db.supplier_returns.delete_one({"id": return_id})
+    return {"message": "Return deleted and balance reversed"}
+
+
+# =====================================================
+# PURCHASE BILL IMAGE UPLOAD
+# =====================================================
+
+@router.post("/supplier-payments/upload-bill")
+async def upload_bill_image(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+    """Upload a bill/invoice image. Returns the URL to attach to a payment."""
+    if not file.content_type or not (file.content_type.startswith("image/") or file.content_type == "application/pdf"):
+        raise HTTPException(status_code=400, detail="File must be an image or PDF")
+    
+    import uuid as _uuid
+    ext = file.filename.rsplit(".", 1)[-1] if "." in file.filename else "png"
+    filename = f"bill_{_uuid.uuid4().hex[:8]}.{ext}"
+    filepath = os.path.join(BILL_DIR, filename)
+    
+    with open(filepath, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+    
+    return {"bill_url": f"/uploads/bills/{filename}", "message": "Bill uploaded"}
+
 
 @router.get("/suppliers/{supplier_id}/payment-breakdown")
 async def get_supplier_payment_breakdown(supplier_id: str, current_user: User = Depends(get_current_user)):
