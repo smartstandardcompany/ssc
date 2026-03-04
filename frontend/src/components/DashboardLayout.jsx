@@ -59,6 +59,7 @@ const NAV_GROUPS = [
     label: 'Stock',
     items: [
       { path: '/stock', icon: Package, label: 'Inventory', perm: 'stock', roles: ['admin', 'manager'] },
+      { path: '/stock-reorder', icon: Zap, label: 'AI Reorder', perm: 'stock', roles: ['admin', 'manager'] },
       { path: '/transfers', icon: PackageCheck, label: 'Transfers', perm: 'stock', roles: ['admin', 'manager'] },
       { path: '/menu-items', icon: UtensilsCrossed, label: 'Menu Items', perm: 'stock', roles: ['admin', 'manager'] },
       { path: '/table-management', icon: Armchair, label: 'Tables', perm: 'stock', roles: ['admin', 'manager'] },
@@ -70,6 +71,7 @@ const NAV_GROUPS = [
     label: 'Reports',
     items: [
       { path: '/analytics', icon: BarChart3, label: 'Analytics', perm: 'reports', roles: ['admin', 'manager'] },
+      { path: '/enhanced-pnl', icon: TrendingUp, label: 'Enhanced P&L', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/visualizations', icon: Activity, label: 'Visualizations', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/sales-forecast', icon: TrendingUp, label: 'Sales Forecast', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/sales-alerts', icon: Bell, label: 'Sales Alerts', perm: 'settings', roles: ['admin'] },

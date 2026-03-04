@@ -13,11 +13,12 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ExportButtons } from '@/components/ExportButtons';
 import { AdvancedSearch, applySearchFilters } from '@/components/AdvancedSearch';
+import { useBranchStore } from '@/stores';
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState([]);
   const [balances, setBalances] = useState([]);
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches } = useBranchStore();
   const [searchFilters, setSearchFilters] = useState({});
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
@@ -33,10 +34,11 @@ export default function CustomersPage() {
 
   const fetchData = async () => {
     try {
-      const [custRes, brRes, balRes] = await Promise.all([
-        api.get('/customers'), api.get('/branches'), api.get('/customers-balance')
+      fetchBranches();
+      const [custRes, balRes] = await Promise.all([
+        api.get('/customers'), api.get('/customers-balance')
       ]);
-      setCustomers(custRes.data); setBranches(brRes.data); setBalances(balRes.data);
+      setCustomers(custRes.data); setBalances(balRes.data);
     } catch { toast.error('Failed to fetch data'); }
     finally { setLoading(false); }
   };
