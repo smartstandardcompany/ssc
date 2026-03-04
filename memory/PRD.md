@@ -11,22 +11,14 @@ A comprehensive business management ERP system for tracking sales, expenses, sup
 - **Restaurant Operations:** POS, KDS, Order Status Display, Table Management, Reservations
 - **Asset & Liability Tracking:** Assets, Liabilities, Document management with expiry alerts
 - **Reporting & Analytics:** Dashboards, Reports, Scheduled PDF delivery, AI predictions
+- **CCTV Security:** Hikvision DVR integration, Live View with snapshot display, AI-powered analytics, Setup Guide with TV display options
 - **Administration:** RBAC, Branding, Dark mode, Multi-language, PWA, Guided tours
 
-## What's Been Implemented (Complete)
-- All core financial, HR, stock, restaurant, and admin modules
-- Role-based access control with operator restrictions
-- PWA support with corrected service worker
-- Zustand state management migration (all pages)
-- SearchableSelect component for long dropdowns
-- Employee email sync to user accounts
-- Password hashing security fix
-- Supplier/expense returns and refunds
-- Purchase bill image uploads
-- Scheduled PDF reports (email delivery blocked by M365 SMTP AUTH)
-- End-of-service benefits calculation (Saudi labor law)
-- Email sending to employees (blocked by M365 SMTP AUTH)
-- **Employee Portal - Salary Record tab** (Feb 2026): Month-by-month salary payment history showing period, salary, paid amount, extras, deductions, net received, status (paid/partial/unpaid), payment date, and mode
+## What's Been Implemented (Latest Session - Mar 2026)
+1. **Employee Portal - Salary Record tab:** Month-by-month salary payment history with period, salary, paid amount, extras, deductions, net received, status, payment date, mode
+2. **CCTV Live View Fix:** Replaced placeholder with actual camera snapshot display from Hikvision DVRs via ISAPI (Digest+Basic auth), auto-refresh every 3s, Pause/Play controls, fullscreen view
+3. **CCTV Setup Guide:** New tab with 4 TV display options (HDMI, Web App, Hik-Connect, iVMS-4200), DVR web setup guide, troubleshooting section, RTSP URL reference
+4. **DVR Configuration Improved:** Added HTTP Port and RTSP Port fields, improved device info with RTSP URL display
 
 ## Pending Issues
 - **SMTP Email Delivery (BLOCKED):** User must enable SMTP AUTH in M365 admin for info@smartstandards.co
@@ -41,9 +33,9 @@ A comprehensive business management ERP system for tracking sales, expenses, sup
 
 ## Tech Stack
 - **Frontend:** React, Zustand, Shadcn/UI, react-select, react-window
-- **Backend:** FastAPI, Motor (MongoDB), aiosmtplib, reportlab
+- **Backend:** FastAPI, Motor (MongoDB), httpx, aiosmtplib, reportlab
 - **Database:** MongoDB
-- **3rd Party:** OpenAI Vision (Emergent Key), Twilio (WhatsApp)
+- **3rd Party:** OpenAI Vision (Emergent Key), Twilio (WhatsApp), Hikvision ISAPI
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
