@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { 
   Camera, Video, Bell, Users, Building2, Plus, 
   Maximize2, Grid3X3, LayoutGrid, AlertTriangle, CheckCircle, RefreshCw,
-  Eye, Trash2, Wifi, WifiOff, Clock, TrendingUp, UserCheck, Package, Scan, Activity
+  Eye, Trash2, Wifi, WifiOff, Clock, TrendingUp, UserCheck, Package, Scan, Activity,
+  Tv, HelpCircle, Monitor, Smartphone, Globe, Copy, ExternalLink, Play, Pause, Info
 } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '@/lib/api';
@@ -38,8 +39,13 @@ export default function CCTVPage() {
   const [showAddDVR, setShowAddDVR] = useState(false);
   const [showHikAuth, setShowHikAuth] = useState(false);
   const [hikCredentials, setHikCredentials] = useState({ email: '', password: '' });
+  const [snapshotUrls, setSnapshotUrls] = useState({});
+  const [snapshotErrors, setSnapshotErrors] = useState({});
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [fullscreenCam, setFullscreenCam] = useState(null);
+  const refreshIntervalRef = useRef(null);
   const [newDVR, setNewDVR] = useState({
-    branch_id: '', name: '', ip_address: '', port: 8000,
+    branch_id: '', name: '', ip_address: '', port: 80, http_port: 80, rtsp_port: 554,
     username: 'admin', password: '', device_serial: '', is_cloud: true, channels: 4
   });
 
@@ -47,6 +53,42 @@ export default function CCTVPage() {
     fetchData();
     fetchHikStatus();
   }, []);
+
+  // Auto-refresh snapshots
+  useEffect(() => {
+    if (autoRefresh && activeTab === 'live' && filteredCameras.length > 0) {
+      fetchAllSnapshots();
+      refreshIntervalRef.current = setInterval(fetchAllSnapshots, 3000);
+    }
+    return () => { if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current); };
+  }, [autoRefresh, activeTab, cameras, selectedBranch]);
+
+  const fetchAllSnapshots = async () => {
+    const camsToFetch = selectedBranch ? cameras.filter(c => c.branch_id === selectedBranch) : cameras;
+    for (const cam of camsToFetch.slice(0, gridSize)) {
+      try {
+        const res = await api.get(`/cctv/snapshot/${cam.id}`, { responseType: 'blob' });
+        const url = URL.createObjectURL(res.data);
+        setSnapshotUrls(prev => {
+          if (prev[cam.id]) URL.revokeObjectURL(prev[cam.id]);
+          return { ...prev, [cam.id]: url };
+        });
+        setSnapshotErrors(prev => ({ ...prev, [cam.id]: null }));
+      } catch (err) {
+        let msg = 'Cannot connect to camera';
+        try {
+          if (err.response?.data instanceof Blob) {
+            const text = await err.response.data.text();
+            const parsed = JSON.parse(text);
+            msg = parsed.detail || msg;
+          } else if (err.response?.data?.detail) {
+            msg = err.response.data.detail;
+          }
+        } catch {}
+        setSnapshotErrors(prev => ({ ...prev, [cam.id]: msg }));
+      }
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -98,7 +140,7 @@ export default function CCTVPage() {
       await api.post('/cctv/dvrs', { ...newDVR, branch_name: branch?.name || '' });
       toast.success('DVR added successfully');
       setShowAddDVR(false);
-      setNewDVR({ branch_id: '', name: '', ip_address: '', port: 8000, username: 'admin', password: '', device_serial: '', is_cloud: true, channels: 4 });
+      setNewDVR({ branch_id: '', name: '', ip_address: '', port: 80, http_port: 80, rtsp_port: 554, username: 'admin', password: '', device_serial: '', is_cloud: true, channels: 4 });
       fetchData();
     } catch (err) {
       toast.error('Failed to add DVR');
@@ -250,6 +292,7 @@ export default function CCTVPage() {
               {unacknowledgedAlerts > 0 && <Badge className="ml-1 bg-error text-white text-[10px] px-1">{unacknowledgedAlerts}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="devices" data-testid="devices-tab"><Camera size={14} className="mr-1" /> Devices</TabsTrigger>
+            <TabsTrigger value="guide" data-testid="guide-tab"><HelpCircle size={14} className="mr-1" /> Setup Guide</TabsTrigger>
           </TabsList>
 
           {/* Live View Tab */}
@@ -265,6 +308,19 @@ export default function CCTVPage() {
                     {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                <Button 
+                  size="sm" 
+                  variant={autoRefresh ? "default" : "outline"} 
+                  onClick={() => setAutoRefresh(!autoRefresh)} 
+                  className="rounded-lg"
+                  data-testid="auto-refresh-btn"
+                >
+                  {autoRefresh ? <Pause size={14} className="mr-1" /> : <Play size={14} className="mr-1" />}
+                  {autoRefresh ? 'Pause' : 'Live'}
+                </Button>
+                <Button size="sm" variant="outline" onClick={fetchAllSnapshots} className="rounded-lg">
+                  <RefreshCw size={14} />
+                </Button>
               </div>
               <div className="flex gap-1">
                 <Button size="sm" variant={gridSize === 4 ? "default" : "outline"} onClick={() => setGridSize(4)} className="rounded-lg px-2">
@@ -277,48 +333,93 @@ export default function CCTVPage() {
             </div>
 
             {/* Camera Grid */}
-            <div className={`grid gap-3 ${gridSize === 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+            <div className={`grid gap-3 ${gridSize === 4 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
               {filteredCameras.slice(0, gridSize).map((cam) => (
                 <Card key={cam.id} className="border-border overflow-hidden" data-testid={`camera-${cam.id}`}>
-                  <div className="relative aspect-video bg-stone-900 flex items-center justify-center">
-                    {/* Placeholder for video stream */}
-                    <div className="text-center text-white/60">
-                      <Video size={48} className="mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">{cam.name}</p>
-                      <p className="text-xs opacity-60">{cam.branch_name}</p>
-                    </div>
+                  <div className="relative aspect-video bg-stone-900 flex items-center justify-center overflow-hidden">
+                    {snapshotUrls[cam.id] ? (
+                      <img 
+                        src={snapshotUrls[cam.id]} 
+                        alt={cam.name} 
+                        className="w-full h-full object-cover"
+                        data-testid={`camera-feed-${cam.id}`}
+                      />
+                    ) : snapshotErrors[cam.id] ? (
+                      <div className="text-center text-white/60 p-4">
+                        <WifiOff size={36} className="mx-auto mb-2 opacity-50" />
+                        <p className="text-xs font-medium">{cam.name}</p>
+                        <p className="text-[10px] opacity-60 mt-1 max-w-[200px] mx-auto">{snapshotErrors[cam.id]}</p>
+                      </div>
+                    ) : (
+                      <div className="text-center text-white/60">
+                        <Video size={36} className="mx-auto mb-2 opacity-50 animate-pulse" />
+                        <p className="text-xs">{cam.name}</p>
+                        <p className="text-[10px] opacity-60">Connecting...</p>
+                      </div>
+                    )}
                     {/* Status indicator */}
                     <div className="absolute top-2 left-2">
-                      <Badge className="bg-success/80 text-white text-[10px]">
-                        <span className="w-1.5 h-1.5 bg-white rounded-full mr-1 animate-pulse" />
-                        LIVE
-                      </Badge>
+                      {snapshotUrls[cam.id] ? (
+                        <Badge className="bg-success/80 text-white text-[10px]">
+                          <span className="w-1.5 h-1.5 bg-white rounded-full mr-1 animate-pulse" />
+                          LIVE
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-red-500/80 text-white text-[10px]">
+                          <WifiOff size={10} className="mr-1" />
+                          OFFLINE
+                        </Badge>
+                      )}
                     </div>
-                    {/* Controls overlay */}
-                    <div className="absolute bottom-2 right-2 flex gap-1">
-                      <Button size="sm" variant="secondary" className="h-7 w-7 p-0 rounded-full bg-black/50 hover:bg-black/70">
+                    {/* Camera name overlay */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+                      <p className="text-white text-xs font-medium truncate">{cam.name}</p>
+                      <p className="text-white/60 text-[10px]">{cam.branch_name} &middot; Ch {cam.channel}</p>
+                    </div>
+                    {/* Fullscreen button */}
+                    <div className="absolute top-2 right-2">
+                      <Button 
+                        size="sm" variant="secondary" 
+                        className="h-7 w-7 p-0 rounded-full bg-black/50 hover:bg-black/70"
+                        onClick={() => setFullscreenCam(fullscreenCam === cam.id ? null : cam.id)}
+                      >
                         <Maximize2 size={12} className="text-white" />
                       </Button>
                     </div>
                   </div>
-                  <CardContent className="p-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-medium truncate">{cam.name}</span>
-                      <span className="text-[10px] text-muted-foreground">Ch {cam.channel}</span>
-                    </div>
-                  </CardContent>
                 </Card>
               ))}
               {filteredCameras.length === 0 && (
                 <div className="col-span-full text-center py-12 text-muted-foreground">
                   <Camera size={48} className="mx-auto mb-2 opacity-30" />
                   <p>No cameras configured</p>
-                  <Button size="sm" variant="outline" className="mt-2" onClick={() => setShowAddDVR(true)}>
-                    Add DVR
+                  <p className="text-xs mt-1">Add a DVR first, then cameras will be auto-created</p>
+                  <Button size="sm" variant="outline" className="mt-3" onClick={() => setShowAddDVR(true)}>
+                    <Plus size={14} className="mr-1" /> Add DVR
                   </Button>
                 </div>
               )}
             </div>
+
+            {/* Fullscreen View */}
+            {fullscreenCam && snapshotUrls[fullscreenCam] && (
+              <Dialog open={!!fullscreenCam} onOpenChange={() => setFullscreenCam(null)}>
+                <DialogContent className="max-w-4xl p-0 overflow-hidden">
+                  <img 
+                    src={snapshotUrls[fullscreenCam]} 
+                    alt="Fullscreen Camera" 
+                    className="w-full h-auto"
+                  />
+                  <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center">
+                    <Badge className="bg-success/80 text-white">
+                      <span className="w-1.5 h-1.5 bg-white rounded-full mr-1 animate-pulse" />
+                      LIVE - {filteredCameras.find(c => c.id === fullscreenCam)?.name}
+                    </Badge>
+                    <Button size="sm" variant="secondary" onClick={() => setFullscreenCam(null)}>Close</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
           </TabsContent>
 
           {/* Analytics Tab */}
@@ -510,12 +611,24 @@ export default function CCTVPage() {
                           <span className="ml-2 font-medium">{dvr.ip_address}</span>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Port:</span>
-                          <span className="ml-2 font-medium">{dvr.port}</span>
+                          <span className="text-muted-foreground">HTTP:</span>
+                          <span className="ml-2 font-medium">{dvr.http_port || dvr.port}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">RTSP:</span>
+                          <span className="ml-2 font-medium">{dvr.rtsp_port || 554}</span>
                         </div>
                       </>
                     )}
                   </div>
+                  {!dvr.is_cloud && dvr.ip_address && (
+                    <div className="mt-3 p-2 bg-stone-50 dark:bg-stone-800 rounded-lg">
+                      <p className="text-[10px] text-muted-foreground mb-1">RTSP URL (for VLC / TV apps):</p>
+                      <code className="text-[11px] text-orange-600 dark:text-orange-400 break-all">
+                        rtsp://{dvr.username}:****@{dvr.ip_address}:{dvr.rtsp_port || 554}/Streaming/Channels/101
+                      </code>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
@@ -528,6 +641,121 @@ export default function CCTVPage() {
                 </Button>
               </div>
             )}
+          </TabsContent>
+
+          {/* Setup Guide Tab */}
+          <TabsContent value="guide" className="mt-4 space-y-6">
+            {/* TV Display Guide */}
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle className="font-outfit text-base flex items-center gap-2">
+                  <Tv size={18} className="text-orange-500" />
+                  Display Cameras on TV
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 border rounded-xl dark:border-stone-700 space-y-2" data-testid="guide-hdmi">
+                    <div className="flex items-center gap-2 font-medium text-sm dark:text-white">
+                      <Monitor size={16} className="text-blue-500" />
+                      Option 1: Direct HDMI (Recommended)
+                    </div>
+                    <ol className="text-xs text-muted-foreground space-y-1 pl-5 list-decimal">
+                      <li>Connect an HDMI cable from your DVR's HDMI output to the TV</li>
+                      <li>Switch TV input to the correct HDMI port</li>
+                      <li>Use the DVR's remote or mouse to navigate and select camera layout</li>
+                      <li>Choose 4/8/16 split screen view as needed</li>
+                    </ol>
+                    <Badge className="bg-emerald-100 text-emerald-700 text-[10px]">Best quality - No internet needed</Badge>
+                  </div>
+
+                  <div className="p-4 border rounded-xl dark:border-stone-700 space-y-2" data-testid="guide-web">
+                    <div className="flex items-center gap-2 font-medium text-sm dark:text-white">
+                      <Globe size={16} className="text-purple-500" />
+                      Option 2: SSC Track Web App on Smart TV
+                    </div>
+                    <ol className="text-xs text-muted-foreground space-y-1 pl-5 list-decimal">
+                      <li>Open the browser on your Smart TV (or use a Fire Stick / Chromecast)</li>
+                      <li>Navigate to this SSC Track URL and login</li>
+                      <li>Go to CCTV &gt; Live View to see all cameras</li>
+                      <li>Use the grid layout buttons to adjust the view</li>
+                    </ol>
+                    <Badge className="bg-blue-100 text-blue-700 text-[10px]">Works remotely over internet</Badge>
+                  </div>
+
+                  <div className="p-4 border rounded-xl dark:border-stone-700 space-y-2" data-testid="guide-hikconnect">
+                    <div className="flex items-center gap-2 font-medium text-sm dark:text-white">
+                      <Smartphone size={16} className="text-green-500" />
+                      Option 3: Hik-Connect Mobile App
+                    </div>
+                    <ol className="text-xs text-muted-foreground space-y-1 pl-5 list-decimal">
+                      <li>Download "Hik-Connect" app from App Store / Play Store</li>
+                      <li>Create account and add your DVR using its serial number</li>
+                      <li>View cameras on your phone from anywhere</li>
+                      <li>Cast to TV using Screen Mirroring / AirPlay / Chromecast</li>
+                    </ol>
+                    <Badge className="bg-green-100 text-green-700 text-[10px]">Best for remote mobile access</Badge>
+                  </div>
+
+                  <div className="p-4 border rounded-xl dark:border-stone-700 space-y-2" data-testid="guide-ivms">
+                    <div className="flex items-center gap-2 font-medium text-sm dark:text-white">
+                      <Monitor size={16} className="text-amber-500" />
+                      Option 4: iVMS-4200 on PC/Laptop
+                    </div>
+                    <ol className="text-xs text-muted-foreground space-y-1 pl-5 list-decimal">
+                      <li>Download iVMS-4200 from hikvision.com</li>
+                      <li>Add your DVR using IP address or Hik-Connect</li>
+                      <li>View live cameras and playback recordings</li>
+                      <li>Connect PC to TV via HDMI for large display</li>
+                    </ol>
+                    <Badge className="bg-amber-100 text-amber-700 text-[10px]">Full feature access + recording playback</Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* DVR Setup Guide */}
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle className="font-outfit text-base flex items-center gap-2">
+                  <Video size={18} className="text-blue-500" />
+                  DVR Web View Setup (SSC Track Live View)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  To view live camera feeds directly in SSC Track, your DVR must be accessible from this server over the network.
+                </p>
+                <div className="p-4 border rounded-xl dark:border-stone-700 space-y-3">
+                  <h4 className="text-sm font-medium dark:text-white">Requirements:</h4>
+                  <ul className="text-xs text-muted-foreground space-y-2 pl-5 list-disc">
+                    <li><strong>Local Network:</strong> SSC Track server and DVR must be on the same network, OR the DVR must be port-forwarded to the internet</li>
+                    <li><strong>HTTP Port:</strong> Default is <code className="bg-stone-100 dark:bg-stone-700 px-1 rounded">80</code>. Check your DVR settings under Network &gt; Port Settings</li>
+                    <li><strong>RTSP Port:</strong> Default is <code className="bg-stone-100 dark:bg-stone-700 px-1 rounded">554</code>. Used for video streaming (VLC, etc.)</li>
+                    <li><strong>Authentication:</strong> Use the same username/password you use to log into the DVR web interface</li>
+                  </ul>
+                </div>
+                <div className="p-4 border rounded-xl dark:border-stone-700 space-y-3">
+                  <h4 className="text-sm font-medium dark:text-white">Troubleshooting - No Display:</h4>
+                  <ul className="text-xs text-muted-foreground space-y-2 pl-5 list-disc">
+                    <li><strong>Check DVR IP:</strong> Log into DVR locally, go to Configuration &gt; Network &gt; TCP/IP to find the IP address</li>
+                    <li><strong>Check Ports:</strong> Go to Configuration &gt; Network &gt; Port to verify HTTP port (default: 80) and RTSP port (default: 554)</li>
+                    <li><strong>Test Connection:</strong> Open <code className="bg-stone-100 dark:bg-stone-700 px-1 rounded">http://DVR_IP:HTTP_PORT</code> in a browser - you should see the Hikvision login page</li>
+                    <li><strong>Enable ISAPI:</strong> Go to Configuration &gt; Network &gt; Advanced Settings &gt; Integration Protocol &gt; Enable ISAPI</li>
+                    <li><strong>Firewall:</strong> Ensure no firewall is blocking ports 80 and 554 between this server and the DVR</li>
+                    <li><strong>Port Forwarding (Remote):</strong> If DVR is behind a router, forward HTTP and RTSP ports to the DVR's local IP</li>
+                  </ul>
+                </div>
+                <div className="p-4 border rounded-xl dark:border-stone-700 bg-blue-50 dark:bg-blue-900/10 space-y-2">
+                  <h4 className="text-sm font-medium dark:text-white flex items-center gap-1.5"><Info size={14} className="text-blue-500" />RTSP URL for VLC / External Players:</h4>
+                  <p className="text-xs text-muted-foreground">You can also view cameras using VLC Player or any RTSP-compatible player:</p>
+                  <code className="block text-xs bg-stone-900 text-green-400 p-3 rounded-lg overflow-x-auto">
+                    rtsp://USERNAME:PASSWORD@DVR_IP:554/Streaming/Channels/101
+                  </code>
+                  <p className="text-[10px] text-muted-foreground">Channel format: 101 (Camera 1 Main), 102 (Camera 1 Sub), 201 (Camera 2 Main), etc.</p>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 
@@ -584,19 +812,23 @@ export default function CCTVPage() {
                       <Input value={newDVR.ip_address} onChange={(e) => setNewDVR({ ...newDVR, ip_address: e.target.value })} placeholder="192.168.1.100" />
                     </div>
                     <div>
-                      <Label>Port</Label>
-                      <Input type="number" value={newDVR.port} onChange={(e) => setNewDVR({ ...newDVR, port: parseInt(e.target.value) })} />
+                      <Label>HTTP Port</Label>
+                      <Input type="number" value={newDVR.http_port} onChange={(e) => setNewDVR({ ...newDVR, http_port: parseInt(e.target.value), port: parseInt(e.target.value) })} placeholder="80" />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
+                      <Label>RTSP Port</Label>
+                      <Input type="number" value={newDVR.rtsp_port} onChange={(e) => setNewDVR({ ...newDVR, rtsp_port: parseInt(e.target.value) })} placeholder="554" />
+                    </div>
+                    <div>
                       <Label>Username</Label>
                       <Input value={newDVR.username} onChange={(e) => setNewDVR({ ...newDVR, username: e.target.value })} />
                     </div>
-                    <div>
-                      <Label>Password</Label>
-                      <Input type="password" value={newDVR.password} onChange={(e) => setNewDVR({ ...newDVR, password: e.target.value })} />
-                    </div>
+                  </div>
+                  <div>
+                    <Label>Password</Label>
+                    <Input type="password" value={newDVR.password} onChange={(e) => setNewDVR({ ...newDVR, password: e.target.value })} />
                   </div>
                 </>
               )}
