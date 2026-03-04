@@ -69,6 +69,14 @@ import TrendComparisonPage from "./pages/TrendComparisonPage";
 import SupplierRemindersPage from "./pages/SupplierRemindersPage";
 import StockReorderPage from "./pages/StockReorderPage";
 import EnhancedPnLPage from "./pages/EnhancedPnLPage";
+import CustomerPortalLogin from "./pages/customer-portal/CustomerPortalLogin";
+import { 
+  CustomerPortalDashboard, 
+  CustomerPortalOrders, 
+  CustomerPortalStatements, 
+  CustomerPortalInvoices, 
+  CustomerPortalLoyalty 
+} from "./pages/customer-portal/CustomerPortalPages";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
@@ -259,6 +267,14 @@ function App() {
           <Route path="/task-reminders" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><TaskRemindersPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/task-compliance" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><TaskCompliancePage /></ProtectedRoute></AuthRoute>} />
           <Route path="/activity-logs" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><ActivityLogsPage /></ProtectedRoute></AuthRoute>} />
+
+          {/* Customer Portal (no auth required - has its own auth) */}
+          <Route path="/customer-portal" element={<CustomerPortalLogin />} />
+          <Route path="/customer-portal/dashboard" element={<CustomerPortalDashboard />} />
+          <Route path="/customer-portal/orders" element={<CustomerPortalOrders />} />
+          <Route path="/customer-portal/statements" element={<CustomerPortalStatements />} />
+          <Route path="/customer-portal/invoices" element={<CustomerPortalInvoices />} />
+          <Route path="/customer-portal/loyalty" element={<CustomerPortalLoyalty />} />
         </Routes>
         </KeyboardShortcutProvider>
       </BrowserRouter>

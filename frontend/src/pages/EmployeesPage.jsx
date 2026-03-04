@@ -18,6 +18,7 @@ import { format } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
 import { BranchFilter } from '@/components/BranchFilter';
 import { BulkSalaryPayment } from '@/components/BulkSalaryPayment';
+import { useBranchStore } from '@/stores';
 
 const PAYMENT_TYPES = [
   { value: 'salary', label: 'Salary', color: 'bg-success/20 text-success' },
@@ -38,7 +39,7 @@ const LEAVE_TYPES = [
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState([]);
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches } = useBranchStore();
   const [jobTitles, setJobTitles] = useState([]);
   const [salaryPayments, setSalaryPayments] = useState([]);
   const [pendingSummary, setPendingSummary] = useState([]);
@@ -77,8 +78,9 @@ export default function EmployeesPage() {
 
   const fetchData = async () => {
     try {
-      const [empRes, brRes, spRes, pendRes, jtRes] = await Promise.all([api.get('/employees'), api.get('/branches'), api.get('/salary-payments'), api.get('/employees/pending-summary'), api.get('/job-titles')]);
-      setEmployees(empRes.data); setBranches(brRes.data); setSalaryPayments(spRes.data); setPendingSummary(pendRes.data.employees || pendRes.data); setJobTitles(jtRes.data);
+      fetchBranches();
+      const [empRes, spRes, pendRes, jtRes] = await Promise.all([api.get('/employees'), api.get('/salary-payments'), api.get('/employees/pending-summary'), api.get('/job-titles')]);
+      setEmployees(empRes.data); setSalaryPayments(spRes.data); setPendingSummary(pendRes.data.employees || pendRes.data); setJobTitles(jtRes.data);
     } catch { toast.error('Failed to fetch data'); }
     finally { setLoading(false); }
   };
