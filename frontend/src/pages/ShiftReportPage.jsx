@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, Clock, DollarSign, Users, TrendingUp, TrendingDown, ArrowUpDown, FileText, RefreshCw } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import api from '@/lib/api';
+import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -53,7 +54,7 @@ export default function ShiftReportPage() {
   const [loading, setLoading] = useState(true);
   const [report, setReport] = useState(null);
   const [rangeReport, setRangeReport] = useState(null);
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches: _fetchBr } = useBranchStore();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedBranch, setSelectedBranch] = useState('');
   const [activeTab, setActiveTab] = useState('daily');
@@ -68,8 +69,8 @@ export default function ShiftReportPage() {
 
   const fetchBranches = async () => {
     try {
-      const res = await api.get('/branches');
-      setBranches(res.data);
+      const res = await Promise.resolve({ data: [] });
+      // branches from store
     } catch { }
   };
 

@@ -467,15 +467,132 @@ async def delete_scheduled_report(report_id: str):
 @router.post("/scheduled-reports/{report_id}/send-now")
 async def send_scheduled_report_now(report_id: str):
     """Manually trigger a scheduled report to send immediately"""
+    from utils.email_service import send_email, build_report_email_html
+    
     db = get_db()
     report = await db.scheduled_reports.find_one({"id": report_id}, {"_id": 0})
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
     
-    # Update last_sent
-    await db.scheduled_reports.update_one(
-        {"id": report_id},
-        {"$set": {"last_sent": datetime.now(timezone.utc).isoformat()}}
-    )
+    recipients = report.get("email_recipients", [])
+    if not recipients:
+        raise HTTPException(status_code=400, detail="No email recipients configured")
     
-    return {"message": f"Report '{report['report_type']}' sent to {len(report.get('email_recipients', []))} recipients"}
+    # Get branding
+    branding_doc = await db.settings.find_one({"type": "branding"}, {"_id": 0})
+    branding = branding_doc or {}
+    company_name = branding.get("company_name", "SSC Track")
+    
+    # Generate PDF
+    try:
+        report_type = report["report_type"]
+        report_labels = {"sales": "Sales Summary", "expenses": "Expenses Summary", "pnl": "Profit & Loss", "supplier_aging": "Supplier Aging"}
+        title = report_labels.get(report_type, report_type.replace("_", " ").title())
+        
+        pdf_buffer = await generate_report_pdf(report_type, branding, title)
+        pdf_bytes = pdf_buffer.getvalue()
+        
+        # Send email with attachment
+        html_body = build_report_email_html(report_type, company_name)
+        filename = f"{report_type}_report_{datetime.now().strftime('%Y%m%d')}.pdf"
+        
+        success = await send_email(
+            to_emails=recipients,
+            subject=f"{company_name} - {title} Report ({datetime.now().strftime('%d %b %Y')})",
+            html_body=html_body,
+            attachments=[{"filename": filename, "content": pdf_bytes, "content_type": "application/pdf"}],
+        )
+        
+        # Update last_sent
+        await db.scheduled_reports.update_one(
+            {"id": report_id},
+            {"$set": {"last_sent": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        if success:
+            return {"message": f"Report sent to {', '.join(recipients)}", "status": "sent"}
+        else:
+            return {"message": "Report generated but email delivery failed. Check SMTP settings.", "status": "email_failed"}
+    except Exception as e:
+        return {"message": f"Error: {str(e)}", "status": "error"}
+
+
+async def generate_report_pdf(report_type: str, branding: dict, title: str):
+    """Generate a PDF report and return BytesIO buffer"""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+    
+    db = get_db()
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=100, bottomMargin=40)
+    styles = getSampleStyleSheet()
+    story = []
+    
+    # Fetch data based on report type
+    if report_type == "sales":
+        data = await db.sales.find({}, {"_id": 0}).sort("date", -1).to_list(200)
+        story.append(Paragraph(f"<b>{title}</b>", styles["Heading2"]))
+        story.append(Spacer(1, 10))
+        total = sum(s.get("amount", 0) for s in data)
+        story.append(Paragraph(f"Total Sales: SAR {total:,.2f} | Records: {len(data)}", styles["Normal"]))
+        story.append(Spacer(1, 10))
+        table_data = [["Date", "Type", "Amount", "Payment Mode"]]
+        for s in data[:50]:
+            table_data.append([
+                str(s.get("date", ""))[:10],
+                s.get("sale_type", ""),
+                f"SAR {s.get('amount', 0):,.2f}",
+                s.get("payment_details", [{}])[0].get("mode", "") if s.get("payment_details") else "",
+            ])
+    elif report_type == "expenses":
+        data = await db.expenses.find({}, {"_id": 0}).sort("date", -1).to_list(200)
+        story.append(Paragraph(f"<b>{title}</b>", styles["Heading2"]))
+        story.append(Spacer(1, 10))
+        total = sum(e.get("amount", 0) for e in data)
+        story.append(Paragraph(f"Total Expenses: SAR {total:,.2f} | Records: {len(data)}", styles["Normal"]))
+        story.append(Spacer(1, 10))
+        table_data = [["Date", "Category", "Description", "Amount"]]
+        for e in data[:50]:
+            table_data.append([
+                str(e.get("date", ""))[:10], e.get("category", ""),
+                (e.get("description", "") or "")[:30], f"SAR {e.get('amount', 0):,.2f}",
+            ])
+    elif report_type == "pnl":
+        sales = await db.sales.find({}, {"_id": 0}).to_list(1000)
+        expenses = await db.expenses.find({}, {"_id": 0}).to_list(1000)
+        total_sales = sum(s.get("amount", 0) for s in sales)
+        total_expenses = sum(e.get("amount", 0) for e in expenses)
+        net = total_sales - total_expenses
+        story.append(Paragraph(f"<b>{title}</b>", styles["Heading2"]))
+        story.append(Spacer(1, 10))
+        table_data = [["Item", "Amount"]]
+        table_data.append(["Total Revenue", f"SAR {total_sales:,.2f}"])
+        table_data.append(["Total Expenses", f"SAR {total_expenses:,.2f}"])
+        table_data.append(["Net Profit/Loss", f"SAR {net:,.2f}"])
+    else:
+        story.append(Paragraph(f"<b>{title}</b>", styles["Heading2"]))
+        table_data = [["Report", "Status"]]
+        table_data.append([report_type, "Generated"])
+    
+    if table_data:
+        t = Table(table_data, repeatRows=1)
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(branding.get("primary_color", "#10B981"))),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor("#f0fdf4")]),
+        ]))
+        story.append(t)
+    
+    def on_page(canvas, doc):
+        create_pdf_header(canvas, doc, branding, title)
+    
+    doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
+    buffer.seek(0)
+    return buffer

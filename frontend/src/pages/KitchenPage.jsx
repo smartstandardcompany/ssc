@@ -8,13 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Minus, Plus, ChefHat, Send, Package } from 'lucide-react';
 import api from '@/lib/api';
+import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function KitchenPage() {
   const { t } = useLanguage();
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches: _fetchBr } = useBranchStore();
   const [balance, setBalance] = useState([]);
   const [usage, setUsage] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,8 +29,8 @@ export default function KitchenPage() {
   useEffect(() => {
     const init = async () => {
       try {
-        const bRes = await api.get('/branches');
-        setBranches(bRes.data);
+        const bRes = await Promise.resolve({ data: [] });
+        // branches from store
         if (user.branch_id) {
           setBranchId(user.branch_id);
         }

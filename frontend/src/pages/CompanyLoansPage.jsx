@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, DollarSign, Building2 } from 'lucide-react';
 import api from '@/lib/api';
+import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { BranchFilter } from '@/components/BranchFilter';
@@ -17,7 +18,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 export default function CompanyLoansPage() {
   const { t } = useLanguage();
   const [loans, setLoans] = useState([]);
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches: _fetchBr } = useBranchStore();
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showPayDialog, setShowPayDialog] = useState(false);
@@ -28,7 +29,7 @@ export default function CompanyLoansPage() {
 
   useEffect(() => { fetchData(); }, []);
   const fetchData = async () => {
-    try { const [lR, bR] = await Promise.all([api.get('/company-loans'), api.get('/branches')]); setLoans(lR.data); setBranches(bR.data); }
+    try { const [lR] = await Promise.all([api.get('/company-loans')]); setLoans(lR.data); }
     catch { toast.error('Failed'); } finally { setLoading(false); }
   };
 

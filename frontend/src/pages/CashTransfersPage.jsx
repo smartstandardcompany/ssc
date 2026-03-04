@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, ArrowRight } from 'lucide-react';
 import api from '@/lib/api';
+import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { BranchFilter } from '@/components/BranchFilter';
@@ -18,7 +19,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 export default function CashTransfersPage() {
   const { t } = useLanguage();
   const [transfers, setTransfers] = useState([]);
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches: _fetchBr } = useBranchStore();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
@@ -30,8 +31,8 @@ export default function CashTransfersPage() {
 
   const fetchData = async () => {
     try {
-      const [tRes, bRes, eRes] = await Promise.all([api.get('/cash-transfers'), api.get('/branches'), api.get('/employees')]);
-      setTransfers(tRes.data); setBranches(bRes.data); setEmployees(eRes.data);
+      const [tRes, , eRes] = await Promise.all([api.get('/cash-transfers'), Promise.resolve({ data: [] }), api.get('/employees')]);
+      setTransfers(tRes.data); setEmployees(eRes.data);
     } catch { toast.error('Failed to fetch data'); }
     finally { setLoading(false); }
   };

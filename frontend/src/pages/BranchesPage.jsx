@@ -8,12 +8,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, Eye, ShoppingCart, Receipt, Truck, AlertTriangle } from 'lucide-react';
 import api from '@/lib/api';
+import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function BranchesPage() {
   const { t } = useLanguage();
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches: _fetchBr } = useBranchStore();
   const [summaries, setSummaries] = useState({});
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
@@ -25,8 +26,8 @@ export default function BranchesPage() {
 
   const fetchData = async () => {
     try {
-      const brRes = await api.get('/branches');
-      setBranches(brRes.data);
+      const brRes = await Promise.resolve({ data: [] });
+      // branches from store
       const sums = {};
       for (const b of brRes.data) {
         try {

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DollarSign } from 'lucide-react';
 import api from '@/lib/api';
+import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
@@ -18,7 +19,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 export default function CreditReportPage() {
   const { t } = useLanguage();
   const [reportData, setReportData] = useState(null);
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches: _fetchBr } = useBranchStore();
   const [branchFilter, setBranchFilter] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showReceiveDialog, setShowReceiveDialog] = useState(false);
@@ -31,9 +32,9 @@ export default function CreditReportPage() {
 
   const fetchReport = async () => {
     try {
-      const [res, brRes] = await Promise.all([api.get('/reports/credit-sales'), api.get('/branches')]);
+      const [res, brRes] = await Promise.all([api.get('/reports/credit-sales'), Promise.resolve({ data: [] })]);
       setReportData(res.data);
-      setBranches(brRes.data);
+      // branches from store
     } catch (error) {
       toast.error('Failed to fetch credit report');
     } finally {

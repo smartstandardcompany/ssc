@@ -790,22 +790,45 @@ export default function EmployeesPage() {
 
         {/* Settlement Dialog */}
         <Dialog open={!!settlementDialog} onOpenChange={(v) => !v && setSettlementDialog(null)}>
-          <DialogContent className="max-w-md" data-testid="settlement-dialog">
+          <DialogContent className="max-w-lg" data-testid="settlement-dialog">
             <DialogHeader><DialogTitle className="font-outfit">Final Settlement</DialogTitle></DialogHeader>
             {settlement && settlementDialog && (
               <div className="space-y-3">
-                <div className="bg-stone-50 rounded-xl p-3 space-y-2 text-sm">
+                <div className="bg-stone-50 dark:bg-stone-900 rounded-xl p-3 space-y-2 text-sm">
                   <div className="flex justify-between"><span className="text-muted-foreground">Employee</span><span className="font-medium">{settlement.employee_name}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Status</span><Badge variant="outline">{settlement.status}</Badge></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Status</span><Badge variant="outline" className="capitalize">{settlement.status}</Badge></div>
+                  {settlement.join_date && <div className="flex justify-between"><span className="text-muted-foreground">Join Date</span><span>{settlement.join_date}</span></div>}
+                  {settlement.end_date && <div className="flex justify-between"><span className="text-muted-foreground">End Date</span><span>{settlement.end_date}</span></div>}
+                  <div className="flex justify-between"><span className="text-muted-foreground">Service Period</span><span className="font-medium">{settlement.service_years} years ({settlement.service_days} days)</span></div>
                   {settlement.resignation_date && <div className="flex justify-between"><span className="text-muted-foreground">Resignation Date</span><span>{settlement.resignation_date}</span></div>}
                   {settlement.last_working_day && <div className="flex justify-between"><span className="text-muted-foreground">Last Working Day</span><span>{settlement.last_working_day}</span></div>}
-                  <hr />
-                  <div className="flex justify-between"><span className="text-muted-foreground">Pending Salary</span><span className="font-mono">SAR {settlement.pending_salary?.toFixed(2)}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Leave Balance ({settlement.leave_balance_days} days)</span><span className="font-mono text-emerald-600">+SAR {settlement.leave_encashment?.toFixed(2)}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Loan Balance</span><span className="font-mono text-red-600">-SAR {settlement.loan_balance?.toFixed(2)}</span></div>
-                  <hr />
-                  <div className="flex justify-between text-base font-bold"><span>Total Settlement</span><span className={settlement.total_settlement >= 0 ? 'text-emerald-600' : 'text-red-600'}>SAR {settlement.total_settlement?.toFixed(2)}</span></div>
                 </div>
+
+                <div className="bg-blue-50 dark:bg-blue-950/30 rounded-xl p-3 space-y-2 text-sm border border-blue-200">
+                  <h4 className="font-semibold text-blue-800 dark:text-blue-300 text-xs uppercase tracking-wide">Settlement Breakdown</h4>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Pending Salary</span><span className="font-mono">SAR {settlement.pending_salary?.toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Leave Encashment ({settlement.leave_balance_days} days)</span><span className="font-mono text-emerald-600">+SAR {settlement.leave_encashment?.toFixed(2)}</span></div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">
+                      End-of-Service Benefit
+                      <span className="text-[10px] ml-1 text-blue-600">({settlement.eos_calculation_type === 'termination' ? 'Termination' : 'Resignation'})</span>
+                    </span>
+                    <span className="font-mono text-emerald-600">+SAR {settlement.end_of_service_benefit?.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Loan Deduction</span><span className="font-mono text-red-600">-SAR {settlement.loan_balance?.toFixed(2)}</span></div>
+                  <hr className="border-blue-200" />
+                  <div className="flex justify-between text-base font-bold">
+                    <span>Total Settlement</span>
+                    <span className={settlement.total_settlement >= 0 ? 'text-emerald-600' : 'text-red-600'}>SAR {settlement.total_settlement?.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                {settlement.service_years < 2 && settlement.eos_calculation_type === 'resignation' && (
+                  <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-200">
+                    Note: End-of-service benefit is SAR 0 because service period is less than 2 years (Saudi Labor Law).
+                  </p>
+                )}
+
                 <Button className="w-full rounded-xl" data-testid="complete-exit-btn" onClick={async () => {
                   try {
                     await api.post(`/employees/${settlementDialog.id}/complete-exit`, { settlement_amount: settlement.total_settlement, paid: true, status: 'left' });

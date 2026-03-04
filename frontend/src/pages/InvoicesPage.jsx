@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, X, FileText, DollarSign, Printer, Image, Upload } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import api from '@/lib/api';
+import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
@@ -18,7 +19,7 @@ import { DateFilter } from '@/components/DateFilter';
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState([]);
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches: _fetchBr } = useBranchStore();
   const [customers, setCustomers] = useState([]);
   const [masterItems, setMasterItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,8 +49,8 @@ export default function InvoicesPage() {
 
   const fetchData = async () => {
     try {
-      const [iRes, bRes, cRes, itemsRes, coRes] = await Promise.all([api.get('/invoices'), api.get('/branches'), api.get('/customers'), api.get('/items'), api.get('/settings/company').catch(() => ({ data: {} }))]);
-      setInvoices(iRes.data); setBranches(bRes.data); setCustomers(cRes.data); setMasterItems(itemsRes.data);
+      const [iRes, , cRes, itemsRes, coRes] = await Promise.all([api.get('/invoices'), Promise.resolve({ data: [] }), api.get('/customers'), api.get('/items'), api.get('/settings/company').catch(() => ({ data: {} }))]);
+      setInvoices(iRes.data); setCustomers(cRes.data); setMasterItems(itemsRes.data);
       if (coRes.data) setCompanySettings(coRes.data);
     } catch { toast.error('Failed to fetch data'); }
     finally { setLoading(false); }

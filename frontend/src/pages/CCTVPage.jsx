@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '@/lib/api';
+import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -23,7 +24,7 @@ import { FaceRecognitionPanel, ObjectDetectionPanel, PeopleCountingPanel, Motion
 export default function CCTVPage() {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('live');
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches: _fetchBr } = useBranchStore();
   const [dvrs, setDvrs] = useState([]);
   const [cameras, setCameras] = useState([]);
   const [alerts, setAlerts] = useState([]);
@@ -51,7 +52,7 @@ export default function CCTVPage() {
     setLoading(true);
     try {
       const [branchRes, dvrRes, camRes, alertRes, analyticsRes, countRes, empRes] = await Promise.all([
-        api.get('/branches'),
+        Promise.resolve({ data: [] }),
         api.get('/cctv/dvrs'),
         api.get('/cctv/cameras'),
         api.get('/cctv/alerts?limit=20'),
@@ -59,7 +60,7 @@ export default function CCTVPage() {
         api.get('/cctv/people-count'),
         api.get('/employees')
       ]);
-      setBranches(branchRes.data);
+      // branches from store
       setDvrs(dvrRes.data);
       setCameras(camRes.data);
       setAlerts(alertRes.data);

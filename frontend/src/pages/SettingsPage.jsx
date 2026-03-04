@@ -13,10 +13,11 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useBranchStore } from '@/stores';
 
 function BranchWaButtons() {
-  const [br, setBr] = useState([]);
-  useEffect(() => { api.get('/branches').then(r => setBr(r.data)).catch(() => {}); }, []);
+  const { branches: br, fetchBranches } = useBranchStore();
+  useEffect(() => { fetchBranches(); }, []);
   return (
     <div className="flex gap-2 flex-wrap">
       <Button variant="outline" className="rounded-xl h-8 text-xs" onClick={async () => { try { const res = await api.post('/whatsapp/send-branch-report', {}); toast.success(res.data.message); } catch(e) { toast.error(e.response?.data?.detail || 'Failed'); } }}>All Branches</Button>
@@ -54,7 +55,8 @@ export default function SettingsPage() {
     cameras: [], features: ['people_counting', 'motion_detection'],
     notification_channels: ['in_app']
   });
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches: fetchBranchesStore } = useBranchStore();
+  useEffect(() => { fetchBranchesStore(); }, []);
   const [dvrs, setDvrs] = useState([]);
   const [newDVR, setNewDVR] = useState({
     branch_id: '', name: '', ip_address: '', port: 8000,
@@ -65,7 +67,7 @@ export default function SettingsPage() {
 
   const fetchSettings = async () => {
     try {
-      const [emailRes, waRes, prefRes, coRes, schedRes, logRes, hikRes, branchRes, dvrRes, monitorRes, zatcaRes, zatcaStatusRes] = await Promise.all([
+      const [emailRes, waRes, prefRes, coRes, schedRes, logRes, hikRes, _branchRes, dvrRes, monitorRes, zatcaRes, zatcaStatusRes] = await Promise.all([
         api.get('/settings/email').catch(() => ({ data: null })),
         api.get('/settings/whatsapp').catch(() => ({ data: null })),
         api.get('/settings/notifications').catch(() => ({ data: null })),
@@ -73,7 +75,7 @@ export default function SettingsPage() {
         api.get('/scheduler/config').catch(() => ({ data: [] })),
         api.get('/scheduler/logs').catch(() => ({ data: [] })),
         api.get('/cctv/hik-connect/status').catch(() => ({ data: null })),
-        api.get('/branches').catch(() => ({ data: [] })),
+        Promise.resolve({ data: [] }), // branches handled by Zustand store
         api.get('/cctv/dvrs').catch(() => ({ data: [] })),
         api.get('/cctv/monitoring/config').catch(() => ({ data: null })),
         api.get('/settings/zatca').catch(() => ({ data: null })),
@@ -86,7 +88,7 @@ export default function SettingsPage() {
       if (schedRes.data) setSchedulerJobs(schedRes.data);
       if (logRes.data) setSchedulerLogs(logRes.data);
       if (hikRes.data) setCctvSettings(prev => ({ ...prev, hik_email: hikRes.data.email || '', hik_status: hikRes.data }));
-      if (branchRes.data) setBranches(branchRes.data);
+      // branches loaded from useBranchStore
       if (dvrRes.data) setDvrs(dvrRes.data);
       if (monitorRes.data) setMonitoringConfig(prev => ({ ...prev, ...monitorRes.data }));
       if (zatcaRes.data) setZatcaSettings(prev => ({ ...prev, ...zatcaRes.data }));

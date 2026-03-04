@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TrendingUp, TrendingDown, Target, Calendar, BarChart3, PieChart as PieIcon, Download, Brain, Plus, Zap, Package, Users, ShieldAlert, AlertTriangle, Wallet, Clock, UserCheck, Bell, Truck, Crown, Activity, Layers } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
 import api from '@/lib/api';
+import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -28,7 +29,7 @@ export default function AnalyticsPage() {
   const [targetProgress, setTargetProgress] = useState(null);
   const [forecast, setForecast] = useState(null);
   const [forecastLoading, setForecastLoading] = useState(false);
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches: _fetchBr } = useBranchStore();
   const [showTargetDialog, setShowTargetDialog] = useState(false);
   const [targetForm, setTargetForm] = useState({ branch_id: '', target_amount: '' });
   const [targetMonth, setTargetMonth] = useState(new Date().toISOString().slice(0, 7));
@@ -61,10 +62,10 @@ export default function AnalyticsPage() {
         api.get('/reports/top-customers'),
         api.get('/reports/cashier-performance'),
         api.get('/reports/branch-cashbank'),
-        api.get('/branches'),
+        Promise.resolve({ data: [] }),
       ]);
       setTodayVsYest(tvyR.data); setDailySummary(dsR.data); setTopCustomers(tcR.data);
-      setCashierPerf(cpR.data); setBranchCashBank(cbR.data); setBranches(bR.data);
+      setCashierPerf(cpR.data); setBranchCashBank(cbR.data); // branches from store
       try { const tp = await api.get(`/targets/progress?month=${targetMonth}`); setTargetProgress(tp.data); } catch {}
     } catch { toast.error('Failed to load analytics'); }
     finally { setLoading(false); }

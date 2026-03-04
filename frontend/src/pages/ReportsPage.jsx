@@ -442,6 +442,7 @@ function CustomReportsTab({ branches }) {
 
 import { BranchFilter } from '@/components/BranchFilter';
 import api from '@/lib/api';
+import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -452,7 +453,7 @@ export default function ReportsPage() {
   const [sales, setSales] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [supplierPayments, setSupplierPayments] = useState([]);
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches: _fetchBr } = useBranchStore();
   const [branchCashBank, setBranchCashBank] = useState([]);
   const [loading, setLoading] = useState(true);
   const [compareMode, setCompareMode] = useState('overview');
@@ -477,8 +478,8 @@ export default function ReportsPage() {
 
   const fetchData = async () => {
     try {
-      const [sR, eR, pR, bR, cbR] = await Promise.all([api.get('/sales'), api.get('/expenses'), api.get('/supplier-payments'), api.get('/branches'), api.get('/reports/branch-cashbank')]);
-      setSales(sR.data?.data || sR.data || []); setExpenses(eR.data?.data || eR.data || []); setSupplierPayments(pR.data); setBranches(bR.data); setBranchCashBank(cbR.data);
+      const [sR, eR, pR, , cbR] = await Promise.all([api.get('/sales'), api.get('/expenses'), api.get('/supplier-payments'), Promise.resolve({ data: [] }), api.get('/reports/branch-cashbank')]);
+      setSales(sR.data?.data || sR.data || []); setExpenses(eR.data?.data || eR.data || []); setSupplierPayments(pR.data); setBranchCashBank(cbR.data);
     } catch { toast.error('Failed to fetch data'); }
     finally { setLoading(false); }
   };

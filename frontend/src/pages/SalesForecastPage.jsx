@@ -9,6 +9,7 @@ import {
   DollarSign, BarChart3, Target, ArrowUpRight, ArrowDownRight 
 } from 'lucide-react';
 import api from '@/lib/api';
+import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -16,11 +17,11 @@ export default function SalesForecastPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState('30');
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches: _fetchBr } = useBranchStore();
   const [selectedBranch, setSelectedBranch] = useState('');
 
   useEffect(() => {
-    api.get('/branches').then(res => setBranches(res.data)).catch(() => {});
+    _fetchBr();
   }, []);
 
   useEffect(() => {

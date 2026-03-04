@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Clock, ChevronLeft, ChevronRight, UserCheck, AlertTriangle, Sparkles, Loader2 } from 'lucide-react';
 import api from '@/lib/api';
+import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -37,7 +38,7 @@ function getWeekDates(weekStart) {
 
 export default function SchedulePage() {
   const { t } = useLanguage();
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches: _fetchBr } = useBranchStore();
   const [employees, setEmployees] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -58,9 +59,9 @@ export default function SchedulePage() {
   useEffect(() => {
     const init = async () => {
       try {
-        const [bR, eR, sR] = await Promise.all([api.get('/branches'), api.get('/employees'), api.get('/shifts')]);
-        setBranches(bR.data); setEmployees(eR.data); setShifts(sR.data);
-        if (bR.data.length > 0) setBranchId(bR.data[0].id);
+        const [, eR, sR] = await Promise.all([Promise.resolve({ data: [] }), api.get('/employees'), api.get('/shifts')]);
+        setEmployees(eR.data); setShifts(sR.data);
+        if (branches.length > 0) setBranchId(branches[0].id);
       } catch { toast.error('Failed to load'); }
       finally { setLoading(false); }
     };

@@ -6,11 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Download, AlertTriangle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import api from '@/lib/api';
+import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 
 export default function SupplierAgingPage() {
   const [report, setReport] = useState(null);
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches: _fetchBr } = useBranchStore();
   const [branchFilter, setBranchFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [expandedSupplier, setExpandedSupplier] = useState(null);
@@ -22,10 +23,10 @@ export default function SupplierAgingPage() {
     try {
       const [reportRes, branchesRes] = await Promise.all([
         api.get(`/suppliers/aging-report${branchFilter ? `?branch_id=${branchFilter}` : ''}`),
-        api.get('/branches'),
+        Promise.resolve({ data: [] }),
       ]);
       setReport(reportRes.data);
-      setBranches(branchesRes.data);
+      // branches from store
     } catch { toast.error('Failed to load aging report'); }
     finally { setLoading(false); }
   };

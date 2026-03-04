@@ -13,6 +13,7 @@ import {
   CreditCard, Banknote, Clock, Package
 } from 'lucide-react';
 import api from '@/lib/api';
+import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 import { format, subDays } from 'date-fns';
 
@@ -20,11 +21,11 @@ export default function DailySummaryPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches: _fetchBr } = useBranchStore();
   const [selectedBranch, setSelectedBranch] = useState('');
 
   useEffect(() => {
-    api.get('/branches').then(res => setBranches(res.data)).catch(() => {});
+    _fetchBr();
   }, []);
 
   useEffect(() => {

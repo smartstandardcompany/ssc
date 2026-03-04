@@ -123,26 +123,88 @@ async def get_settlement(emp_id: str, current_user: User = Depends(get_current_u
     emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found")
-    # Calculate: pending salary, leave encashment, loan balance
+    
     salary = emp.get("salary", 0)
     daily_rate = salary / 30
-    # Check leaves used
+    
+    # --- End-of-Service Benefits (Saudi Labor Law) ---
+    join_date_str = emp.get("join_date") or emp.get("created_at", "")
+    resignation_date_str = emp.get("resignation_date") or emp.get("last_working_day") or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    try:
+        join_date = datetime.fromisoformat(str(join_date_str).replace("Z", "+00:00"))
+        if join_date.tzinfo is None:
+            join_date = join_date.replace(tzinfo=timezone.utc)
+    except (ValueError, TypeError):
+        join_date = datetime.now(timezone.utc)
+    
+    try:
+        end_date = datetime.fromisoformat(str(resignation_date_str).replace("Z", "+00:00"))
+        if end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=timezone.utc)
+    except (ValueError, TypeError):
+        end_date = datetime.now(timezone.utc)
+    
+    service_days = (end_date - join_date).days
+    service_years = service_days / 365.25
+    service_months = service_days / 30.44
+    
+    # Saudi labor law EOS calculation:
+    # Resignation: 1/3 salary per year (2-5 years), 2/3 salary per year (5-10 years), full salary per year (10+ years)
+    # Termination: 1/2 salary per year (first 5), full salary per year (after 5)
+    status = emp.get("status", "resigned")
+    is_terminated = status in ["terminated", "fired"]
+    
+    eos_amount = 0.0
+    if is_terminated:
+        # Termination by employer
+        if service_years <= 5:
+            eos_amount = (salary / 2) * service_years
+        else:
+            eos_amount = (salary / 2) * 5 + salary * (service_years - 5)
+    else:
+        # Resignation by employee
+        if service_years < 2:
+            eos_amount = 0  # No EOS for < 2 years
+        elif service_years <= 5:
+            eos_amount = (salary / 3) * service_years
+        elif service_years <= 10:
+            eos_amount = (salary / 3) * 5 + (salary * 2 / 3) * (service_years - 5)
+        else:
+            eos_amount = (salary / 3) * 5 + (salary * 2 / 3) * 5 + salary * (service_years - 10)
+    
+    eos_amount = round(eos_amount, 2)
+    
+    # --- Leave Encashment ---
     leaves = await db.leaves.find({"employee_id": emp_id, "status": "approved"}, {"_id": 0}).to_list(1000)
     annual_used = sum(l.get("days", 0) for l in leaves if l.get("leave_type") == "annual")
     annual_entitled = emp.get("annual_leave_entitled", 30)
     leave_balance = max(0, annual_entitled - annual_used)
     leave_encashment = round(leave_balance * daily_rate, 2)
-    # Salary payments this month
+    
+    # --- Pending Salary ---
     current_month = datetime.now(timezone.utc).strftime("%Y-%m")
     paid_this_month = await db.salary_payments.find({"employee_id": emp_id, "period": current_month, "payment_type": "salary"}, {"_id": 0}).to_list(10)
     pending_salary = salary if not paid_this_month else 0
+    
+    # --- Loan Balance ---
     loan_balance = emp.get("loan_balance", 0)
-    total_settlement = round(pending_salary + leave_encashment - loan_balance, 2)
+    
+    # --- Total Settlement ---
+    total_settlement = round(pending_salary + leave_encashment + eos_amount - loan_balance, 2)
+    
     return {
         "employee_id": emp_id,
         "employee_name": emp.get("name", ""),
         "status": emp.get("status", "active"),
         "monthly_salary": salary,
+        "join_date": str(join_date_str)[:10],
+        "end_date": str(resignation_date_str)[:10],
+        "service_years": round(service_years, 2),
+        "service_months": round(service_months, 1),
+        "service_days": service_days,
+        "end_of_service_benefit": eos_amount,
+        "eos_calculation_type": "termination" if is_terminated else "resignation",
         "pending_salary": pending_salary,
         "leave_balance_days": leave_balance,
         "leave_encashment": leave_encashment,
@@ -150,6 +212,13 @@ async def get_settlement(emp_id: str, current_user: User = Depends(get_current_u
         "total_settlement": total_settlement,
         "resignation_date": emp.get("resignation_date"),
         "last_working_day": emp.get("last_working_day"),
+        "breakdown": {
+            "pending_salary": pending_salary,
+            "leave_encashment": leave_encashment,
+            "end_of_service": eos_amount,
+            "loan_deduction": -loan_balance,
+            "total": total_settlement,
+        }
     }
 
 

@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Trash2, Receipt, DollarSign, Banknote, CreditCard, FileText, Building2, RotateCcw, Upload, Image as ImageIcon, Eye } from 'lucide-react';
 import api from '@/lib/api';
+import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
@@ -21,7 +22,7 @@ export default function SupplierPaymentsPage() {
   const { t } = useLanguage();
   const [payments, setPayments] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches: _fetchBr } = useBranchStore();
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState('payment'); // 'payment' or 'bill'
@@ -54,12 +55,12 @@ export default function SupplierPaymentsPage() {
       const [paymentsRes, suppliersRes, branchesRes, returnsRes] = await Promise.all([
         api.get('/supplier-payments'),
         api.get('/suppliers'),
-        api.get('/branches'),
+        Promise.resolve({ data: [] }),
         api.get('/supplier-returns').catch(() => ({ data: [] })),
       ]);
       setPayments(paymentsRes.data);
       setSuppliers(suppliersRes.data);
-      setBranches(branchesRes.data);
+      // branches from store
       setReturns(returnsRes.data);
     } catch { toast.error('Failed to fetch data'); }
     finally { setLoading(false); }

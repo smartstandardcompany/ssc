@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Edit, Trash2, Shield, Eye, EyeOff, Pencil, Key, AlertTriangle } from 'lucide-react';
 import api from '@/lib/api';
+import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 import { BranchFilter } from '@/components/BranchFilter';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -93,7 +94,7 @@ function getDefaultPermissions(role) {
 export default function UsersPage() {
   const { t } = useLanguage();
   const [users, setUsers] = useState([]);
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches: _fetchBr } = useBranchStore();
   const [loading, setLoading] = useState(true);
   const [branchFilter, setBranchFilter] = useState([]);
   const [showDialog, setShowDialog] = useState(false);
@@ -125,10 +126,10 @@ export default function UsersPage() {
     try {
       const [usersRes, branchesRes] = await Promise.all([
         api.get('/users'),
-        api.get('/branches'),
+        Promise.resolve({ data: [] }),
       ]);
       setUsers(usersRes.data);
-      setBranches(branchesRes.data);
+      // branches from store
     } catch (error) {
       toast.error('Failed to fetch data');
     } finally {

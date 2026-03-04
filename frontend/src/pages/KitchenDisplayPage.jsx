@@ -10,6 +10,7 @@ import {
   Users, Coffee, LogOut, Volume2, VolumeX, Timer, Armchair
 } from 'lucide-react';
 import api from '@/lib/api';
+import { useBranchStore } from '@/stores';
 
 const ORDER_STATUS_COLORS = {
   preparing: 'bg-amber-100 border-amber-300 text-amber-800',
@@ -25,7 +26,7 @@ export default function KitchenDisplayPage() {
   const [pin, setPin] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [branchFilter, setBranchFilter] = useState('');
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches: _fetchBr } = useBranchStore();
 
   // Simple PIN authentication for kitchen
   const handlePinLogin = async () => {
@@ -108,11 +109,7 @@ export default function KitchenDisplayPage() {
   // Fetch branches
   const fetchBranches = useCallback(async () => {
     try {
-      const token = localStorage.getItem('cashier_token') || localStorage.getItem('token');
-      if (!token) return;
-      const headers = { Authorization: `Bearer ${token}` };
-      const { data } = await api.get('/branches', { headers });
-      setBranches(data);
+      await _fetchBr();
     } catch (err) {
       console.error('Failed to fetch branches:', err);
     }

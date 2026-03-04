@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, ArrowRight, Check, X, PackageCheck, Trash2, ArrowLeftRight, Clock } from 'lucide-react';
 import api from '@/lib/api';
+import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -24,7 +25,7 @@ const STATUS_STYLES = {
 export default function TransfersPage() {
   const { t } = useLanguage();
   const [transfers, setTransfers] = useState([]);
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches: _fetchBr } = useBranchStore();
   const [items, setItems] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [rejectDialog, setRejectDialog] = useState(null);
@@ -33,8 +34,8 @@ export default function TransfersPage() {
 
   const fetchAll = async () => {
     try {
-      const [tR, bR, iR] = await Promise.all([api.get('/stock-transfers'), api.get('/branches'), api.get('/items')]);
-      setTransfers(tR.data); setBranches(bR.data); setItems(iR.data);
+      const [tR, , iR] = await Promise.all([api.get('/stock-transfers'), Promise.resolve({ data: [] }), api.get('/items')]);
+      setTransfers(tR.data); setItems(iR.data);
     } catch {}
   };
 

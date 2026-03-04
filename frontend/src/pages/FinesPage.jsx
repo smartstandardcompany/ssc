@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Trash2, DollarSign, AlertTriangle, Upload, Download } from 'lucide-react';
 import api from '@/lib/api';
+import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
@@ -25,7 +26,7 @@ export default function FinesPage() {
   const { t } = useLanguage();
   const [fines, setFines] = useState([]);
   const [deductions, setDeductions] = useState([]);
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches: _fetchBr } = useBranchStore();
   const [employees, setEmployees] = useState([]);
   const [fineTypes, setFineTypes] = useState([]);
   const [capitalExpenses, setCapitalExpenses] = useState([]);
@@ -46,8 +47,8 @@ export default function FinesPage() {
 
   const fetchData = async () => {
     try {
-      const [fR, dR, bR, eR, catR, capR] = await Promise.all([api.get('/fines'), api.get('/salary-deductions'), api.get('/branches'), api.get('/employees'), api.get('/categories?category_type=fine'), api.get('/capital-expenses')]);
-      setFines(fR.data); setDeductions(dR.data); setBranches(bR.data); setEmployees(eR.data); setCapitalExpenses(capR.data);
+      const [fR, dR, , eR, catR, capR] = await Promise.all([api.get('/fines'), api.get('/salary-deductions'), Promise.resolve({ data: [] }), api.get('/employees'), api.get('/categories?category_type=fine'), api.get('/capital-expenses')]);
+      setFines(fR.data); setDeductions(dR.data); setEmployees(eR.data); setCapitalExpenses(capR.data);
       const defaults = ['government', 'traffic', 'labor', 'municipality', 'other'];
       const custom = catR.data.map(c => c.name.toLowerCase()).filter(n => !defaults.includes(n));
       setFineTypes([...defaults, ...custom]);

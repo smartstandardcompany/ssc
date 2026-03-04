@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import api from '@/lib/api';
+import { useBranchStore } from '@/stores';
 import { format } from 'date-fns';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -46,7 +47,7 @@ export default function AssetsPage() {
   const [assets, setAssets] = useState([]);
   const [stats, setStats] = useState(null);
   const [liabilities, setLiabilities] = useState(null);
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches: _fetchBr } = useBranchStore();
   
   const [activeTab, setActiveTab] = useState('assets');
   const [filterType, setFilterType] = useState('all');
@@ -75,12 +76,12 @@ export default function AssetsPage() {
         api.get('/assets'),
         api.get('/assets/stats'),
         api.get('/liabilities/summary'),
-        api.get('/branches'),
+        Promise.resolve({ data: [] }),
       ]);
       setAssets(assetsRes.data);
       setStats(statsRes.data);
       setLiabilities(liabRes.data);
-      setBranches(branchRes.data);
+      // branches from store
     } catch (err) {
       toast.error('Failed to load data');
     } finally {

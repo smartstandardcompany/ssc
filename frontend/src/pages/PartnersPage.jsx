@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
 import api from '@/lib/api';
+import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
@@ -25,7 +26,7 @@ const TXN_TYPES = [
 export default function PartnersPage() {
   const [partners, setPartners] = useState([]);
   const [transactions, setTransactions] = useState([]);
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches: _fetchBr } = useBranchStore();
   const [loading, setLoading] = useState(true);
   const [showPartnerDialog, setShowPartnerDialog] = useState(false);
   const [showTxnDialog, setShowTxnDialog] = useState(false);
@@ -40,8 +41,8 @@ export default function PartnersPage() {
   useEffect(() => { fetchData(); }, []);
   const fetchData = async () => {
     try {
-      const [pR, tR, bR] = await Promise.all([api.get('/partners'), api.get('/partner-transactions'), api.get('/branches')]);
-      setPartners(pR.data); setTransactions(tR.data); setBranches(bR.data);
+      const [pR, tR, bR] = await Promise.all([api.get('/partners'), api.get('/partner-transactions'), Promise.resolve({ data: [] })]);
+      setPartners(pR.data); setTransactions(tR.data); // branches from store
     } catch { toast.error('Failed'); } finally { setLoading(false); }
   };
 
