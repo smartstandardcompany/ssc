@@ -18,74 +18,70 @@ A comprehensive business management ERP system named "SSC Track" for tracking sa
 
 ## Implemented Phases Summary
 
-### Phase 1-22: Core ERP + Advanced Features (ALL DONE)
-Financial, HR, stock, POS, assets, CCTV, cash flow, reporting, admin, loyalty, security, barcodes, timestamps, logging, search, daily summary, AI forecasting, sales alerts, supplier enhancements, automated reminders, Zustand migration (partial).
+### Phase 1-24: Core ERP + All Features (ALL DONE)
+Financial, HR, stock, POS, assets, CCTV, cash flow, reporting, admin, loyalty, security, barcodes, timestamps, logging, search, daily summary, AI forecasting, sales alerts, supplier enhancements, automated reminders, Zustand migration, AI stock reorder, enhanced P&L, customer portal.
 
-### Phase 23: P0 Features (DONE - Mar 2026)
-- AI-Powered Stock Reorder Page (`/stock-reorder`)
-- Enhanced P&L Report Page (`/enhanced-pnl`)
+### Phase 25: Final Feature Batch (DONE - Mar 2026)
 
-### Phase 24: P1 Features (DONE - Mar 2026)
+**1. Customer Order Tracking & Notifications**
+- **Route:** `/order-tracking`
+- **Status Flow:** placed → confirmed → preparing → ready → out_for_delivery → delivered (+ cancelled)
+- **Features:**
+  - Status summary cards showing count per status (7 cards)
+  - Recent orders list with customer name, amount, date, status
+  - Click-to-update status with visual timeline
+  - Notification Settings: Enable/disable, choose channels (Email/WhatsApp), select trigger statuses
+  - Background notification sending via email and WhatsApp
+  - Notification history logging
+- **Backend Endpoints:**
+  - `GET /api/order-tracking/config` - Get notification config
+  - `POST /api/order-tracking/config` - Update notification config
+  - `GET /api/order-tracking/recent` - Get orders for tracking
+  - `POST /api/order-tracking/update-status` - Update order status + notify
+  - `GET /api/order-tracking/order/{id}` - Get order tracking details
+  - `GET /api/order-tracking/notifications/{id}` - Get notification history
 
-**1. Customer-Facing Portal**
-Complete portal for customers to access their account information:
-- **Routes:**
-  - `/customer-portal` - Login/Register page
-  - `/customer-portal/dashboard` - Account overview with credit balance, loyalty points, tier
-  - `/customer-portal/orders` - Order history with pagination
-  - `/customer-portal/statements` - Account statement with date filtering
-  - `/customer-portal/invoices` - Invoice list
-  - `/customer-portal/loyalty` - Loyalty points and tier benefits
-- **Backend:** `/api/customer-portal/*` endpoints for login, register, profile, orders, statements, invoices, loyalty, logout
-- **Auth:** Separate token system (`customer_token`) stored in localStorage
-- **Features:** Self-registration, password hashing, running balance calculation, transaction history
+**2. Extended Zustand Migration**
+- `StockPage` now uses `useBranchStore`
+- Total pages using Zustand: Dashboard, POS, Sales, Expenses, Suppliers, Customers, Employees, Stock, StockReorder, EnhancedPnL
 
-**2. Performance Optimization**
-- Created `VirtualizedTable` component using `@tanstack/react-virtual`
-- Features: Virtual scrolling, configurable row height, row click handlers, column definitions
-- Designed for large datasets (1000+ rows) without DOM performance issues
+**3. VirtualizedTable Component**
+- Created reusable component at `/components/VirtualizedTable.jsx`
+- Uses @tanstack/react-virtual for efficient rendering of large datasets
+- Ready for integration into high-volume tables
 
-**3. Extended Zustand Migration**
-- `EmployeesPage` now uses `useBranchStore`
-- Total pages using Zustand: Dashboard, POS, Sales, Expenses, Suppliers, Customers, Employees, StockReorder, EnhancedPnL
+Test Results: Backend 100% (16/16), Frontend 100%
 
-Test Results: Backend 100% (14/14), Frontend 100%
-
-## Key Pages & Routes
-- `/stock-reorder` - AI Stock Reorder Suggestions
-- `/enhanced-pnl` - Enhanced P&L Report
-- `/customer-portal/*` - Customer Portal (6 routes)
-- `/supplier-aging` - Supplier Aging Report
-- `/supplier-reminders` - Payment Reminder Settings
-- Plus 35+ existing pages
+## Complete Route Map
+- **Operations:** `/pos`, `/waiter`, `/cashier`, `/kds`, `/order-status`, `/pos-analytics`
+- **Finance:** `/sales`, `/platforms`, `/invoices`, `/expenses`, `/supplier-payments`, `/supplier-aging`, `/supplier-reminders`, `/cash-transfers`
+- **People:** `/customers`, `/loyalty`, `/order-tracking`, `/suppliers`, `/employees`, `/loans`, `/leave-approvals`, `/schedule`
+- **Stock:** `/stock`, `/stock-reorder`, `/transfers`, `/menu-items`, `/table-management`, `/reservations`, `/kitchen`
+- **Reports:** `/analytics`, `/enhanced-pnl`, `/visualizations`, `/sales-forecast`, `/sales-alerts`, `/shift-report`, `/partner-pl-report`, `/reports`, `/credit-report`, `/supplier-report`, `/category-report`, `/bank-statements`, `/reconciliation`, `/performance-report`, `/anomaly-detection`, `/trend-comparison`
+- **Assets:** `/assets`, `/documents`, `/cctv`
+- **Admin:** `/users`, `/settings`, `/task-reminders`, `/task-compliance`, `/activity-logs`, `/branches`
+- **Customer Portal:** `/customer-portal/*` (6 routes)
 
 ## Architecture
 ```
 /app/
 ├── backend/
-│   └── routers/
-│       ├── customer_portal.py    # NEW: Customer portal API
-│       ├── suppliers.py          # Supplier management
-│       ├── dashboard.py          # Dashboard stats
-│       └── ... (40+ routers)
+│   └── routers/           # 42 routers
+│       ├── order_tracking.py   # NEW
+│       ├── customer_portal.py
+│       └── ... 
 ├── frontend/
 │   └── src/
-│       ├── stores/               # Zustand stores
-│       │   ├── authStore.js
-│       │   ├── branchStore.js
-│       │   └── uiStore.js
+│       ├── stores/        # Zustand (3 stores)
 │       ├── components/
-│       │   └── VirtualizedTable.jsx  # NEW: Performance component
+│       │   └── VirtualizedTable.jsx  # NEW
 │       └── pages/
-│           ├── customer-portal/      # NEW: Customer portal pages
-│           │   ├── CustomerPortalLogin.jsx
-│           │   └── CustomerPortalPages.jsx
-│           ├── StockReorderPage.jsx  # NEW
-│           └── EnhancedPnLPage.jsx   # NEW
+│           ├── OrderTrackingPage.jsx  # NEW
+│           └── ... (40+ pages)
 ```
 
-## Remaining Backlog
-- Integrate VirtualizedTable into high-volume pages (Sales, Stock, Expenses)
-- Continue Zustand migration to remaining pages
-- Mobile-responsive improvements for admin pages
-- WebSocket real-time notifications for stock alerts
+## Remaining Backlog (Optional Enhancements)
+- Integrate VirtualizedTable into Sales, Stock, Expenses tables for very large datasets
+- Real-time WebSocket notifications for instant stock alerts
+- Mobile-responsive improvements for remaining admin pages
+- Advanced reporting PDF exports with company branding
