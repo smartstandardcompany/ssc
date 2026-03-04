@@ -13,10 +13,11 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ExportButtons } from '@/components/ExportButtons';
 import { AdvancedSearch, applySearchFilters } from '@/components/AdvancedSearch';
+import { useBranchStore } from '@/stores';
 
 export default function SuppliersPage() {
   const [suppliers, setSuppliers] = useState([]);
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches } = useBranchStore();
   const [categories, setCategories] = useState([]);
   const [searchFilters, setSearchFilters] = useState({});
   const [paySummaries, setPaySummaries] = useState({});
@@ -49,15 +50,15 @@ export default function SuppliersPage() {
 
   const fetchData = async () => {
     try {
-      const [suppliersRes, branchesRes, categoriesRes, summariesRes, expCatRes] = await Promise.all([
+      // Use Zustand for branches
+      fetchBranches();
+      const [suppliersRes, categoriesRes, summariesRes, expCatRes] = await Promise.all([
         api.get('/suppliers'),
-        api.get('/branches'),
         api.get('/categories?category_type=supplier'),
         api.get('/suppliers/payment-summaries'),
         api.get('/categories?category_type=expense').catch(() => ({ data: [] })),
       ]);
       setSuppliers(suppliersRes.data);
-      setBranches(branchesRes.data);
       setCategories(categoriesRes.data);
       setPaySummaries(summariesRes.data);
       setExpenseCategories(expCatRes.data || []);

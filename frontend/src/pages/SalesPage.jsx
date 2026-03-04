@@ -15,10 +15,11 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
 import { AdvancedSearch, applySearchFilters } from '@/components/AdvancedSearch';
+import { useBranchStore } from '@/stores';
 
 export default function SalesPage() {
   const [sales, setSales] = useState([]);
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches } = useBranchStore();
   const [customers, setCustomers] = useState([]);
   const [platforms, setPlatforms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -93,14 +94,14 @@ export default function SalesPage() {
 
   const fetchData = async () => {
     try {
-      const [salesRes, branchesRes, customersRes, platformsRes] = await Promise.all([
+      // Use Zustand for branches
+      fetchBranches();
+      const [salesRes, customersRes, platformsRes] = await Promise.all([
         api.get('/sales'),
-        api.get('/branches'),
         api.get('/customers'),
         api.get('/platforms').catch(() => ({ data: [] })),
       ]);
       setSales(salesRes.data?.data || salesRes.data || []);
-      setBranches(branchesRes.data);
       setCustomers(customersRes.data);
       setPlatforms(platformsRes.data || []);
     } catch (error) {

@@ -13,6 +13,7 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
+import { useBranchStore, useAuthStore } from '@/stores';
 
 // Platform colors for visual distinction
 const PLATFORM_COLORS = {
@@ -29,7 +30,10 @@ const PLATFORM_COLORS = {
 
 export default function POSPage() {
   const { t } = useLanguage();
-  const [branches, setBranches] = useState([]);
+  // Zustand stores
+  const { branches, fetchBranches } = useBranchStore();
+  const { user } = useAuthStore();
+  
   const [customers, setCustomers] = useState([]);
   const [platforms, setPlatforms] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -73,22 +77,29 @@ export default function POSPage() {
   const [expenseAmount, setExpenseAmount] = useState('');
 
   useEffect(() => {
+    // Use Zustand for branches, fetch other data normally
+    fetchBranches();
     Promise.all([
-      api.get('/branches'), 
       api.get('/customers'), 
       api.get('/categories'),
       api.get('/platforms').catch(() => ({ data: [] })),
       api.get('/suppliers/names').catch(() => ({ data: [] })),
-    ]).then(([bR, cR, catR, pR, sR]) => {
-      setBranches(bR.data);
+    ]).then(([cR, catR, pR, sR]) => {
       setCustomers(cR.data);
       setCategories(catR.data);
       setPlatforms(pR.data || []);
       setSuppliers(sR.data || []);
-      if (bR.data.length > 0) setBranch(bR.data[0].id);
     }).catch(() => {});
     refreshStats();
-  }, []);
+  }, [fetchBranches]);
+
+  // Set default branch when branches load or user has branch restriction
+  useEffect(() => {
+    if (branches.length > 0 && !branch) {
+      const userBranch = user?.branch_id;
+      setBranch(userBranch || branches[0].id);
+    }
+  }, [branches, branch, user]);
 
   const refreshStats = async () => {
     try {

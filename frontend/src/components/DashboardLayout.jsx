@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import api from '@/lib/api';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { navLabelToKey, LANGUAGES } from '@/lib/i18n';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore, useUIStore, useBranchStore } from '@/stores';
 
 const NAV_GROUPS = [
   {
@@ -194,7 +194,6 @@ export const DashboardLayout = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [stockAlerts, setStockAlerts] = useState([]);
   const [showStockAlerts, setShowStockAlerts] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('ssc_dark_mode') === 'true');
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [bottomNavItems, setBottomNavItems] = useState(() => {
     const saved = localStorage.getItem('ssc_bottom_nav');
@@ -209,10 +208,19 @@ export const DashboardLayout = ({ children }) => {
   const [showNavCustomize, setShowNavCustomize] = useState(false);
   const { t, lang, setLang, isRTL } = useLanguage();
 
+  // Zustand stores
   const { user, logout: storeLogout } = useAuthStore();
-  const currentUser = user || JSON.parse(localStorage.getItem('user') || '{}');
+  const { darkMode, toggleDarkMode } = useUIStore();
+  const { fetchBranches } = useBranchStore();
+  
+  const currentUser = user || {};
   const isEmployee = currentUser.role === 'employee';
   const userPerms = currentUser.permissions || [];
+
+  // Fetch branches on mount for global availability
+  useEffect(() => {
+    if (!isEmployee) fetchBranches();
+  }, [isEmployee, fetchBranches]);
 
   useEffect(() => {
     const fetchNotifs = async () => {
@@ -241,12 +249,6 @@ export const DashboardLayout = ({ children }) => {
     const interval = setInterval(fetchAlerts, 60000);
     return () => clearInterval(interval);
   }, []); // eslint-disable-line
-
-  // Dark mode effect
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', darkMode);
-    localStorage.setItem('ssc_dark_mode', darkMode);
-  }, [darkMode]);
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback((e) => {
@@ -345,7 +347,7 @@ export const DashboardLayout = ({ children }) => {
           <Badge className="bg-orange-50 text-orange-600 border-orange-200 capitalize text-[10px] shrink-0">{currentUser.role}</Badge>
         </div>
         <div className="flex gap-1.5 mb-1.5">
-          <button onClick={() => setDarkMode(!darkMode)} data-testid="dark-mode-toggle" className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border border-stone-200 dark:border-stone-600 text-stone-500 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 text-xs transition-colors">
+          <button onClick={toggleDarkMode} data-testid="dark-mode-toggle" className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border border-stone-200 dark:border-stone-600 text-stone-500 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 text-xs transition-colors">
             {darkMode ? <Sun size={12} /> : <Moon size={12} />}{darkMode ? t('light') : t('dark')}
           </button>
           <DropdownMenu>
@@ -399,7 +401,7 @@ export const DashboardLayout = ({ children }) => {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <button onClick={() => setDarkMode(!darkMode)} data-testid="dark-mode-toggle-mobile" className="p-1 text-stone-500 hover:text-stone-700 dark:text-stone-300">
+          <button onClick={toggleDarkMode} data-testid="dark-mode-toggle-mobile" className="p-1 text-stone-500 hover:text-stone-700 dark:text-stone-300">
             {darkMode ? <Sun size={16} /> : <Moon size={16} />}
           </button>
           {stockAlerts.length > 0 && (

@@ -16,12 +16,14 @@ import { format } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
 import { WhatsAppSendDialog } from '@/components/WhatsAppSendDialog';
 import { AdvancedSearch, applySearchFilters } from '@/components/AdvancedSearch';
+import { useBranchStore, useAuthStore } from '@/stores';
 
 export default function ExpensesPage() {
   const { t } = useLanguage();
   const [expenses, setExpenses] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches } = useBranchStore();
+  const { user } = useAuthStore();
   const [categories, setCategories] = useState([]);
   const [recurringExpenses, setRecurringExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,8 +43,7 @@ export default function ExpensesPage() {
     date: new Date().toISOString().split('T')[0], notes: ''
   });
 
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const isAdmin = user.role === 'admin' || user.role === 'manager';
+  const isAdmin = user?.role === 'admin' || user?.role === 'manager';
 
   // Category translation helper
   const catMap = {
@@ -73,8 +74,10 @@ export default function ExpensesPage() {
 
   const fetchData = async () => {
     try {
-      const [eR, sR, bR, cR, rR] = await Promise.all([api.get('/expenses'), api.get('/suppliers'), api.get('/branches'), api.get('/categories?category_type=expense'), api.get('/recurring-expenses')]);
-      setExpenses(eR.data?.data || eR.data || []); setSuppliers(sR.data); setBranches(bR.data); setCategories(cR.data); setRecurringExpenses(rR.data);
+      // Use Zustand for branches
+      fetchBranches();
+      const [eR, sR, cR, rR] = await Promise.all([api.get('/expenses'), api.get('/suppliers'), api.get('/categories?category_type=expense'), api.get('/recurring-expenses')]);
+      setExpenses(eR.data?.data || eR.data || []); setSuppliers(sR.data); setCategories(cR.data); setRecurringExpenses(rR.data);
     } catch { toast.error('Failed'); } finally { setLoading(false); }
   };
 

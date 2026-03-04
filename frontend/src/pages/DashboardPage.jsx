@@ -22,6 +22,7 @@ import GridLayout from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import DashboardTour, { resetDashboardTour } from '@/components/DashboardTour';
+import { useBranchStore, useAuthStore } from '@/stores';
 
 const Sparkline = ({ data = [], color = '#22C55E', width = 60, height = 24 }) => {
   if (!data || data.length < 2) return null;
@@ -99,6 +100,10 @@ function saveLayoutPrefs(layout) { localStorage.setItem('dashboard_layout', JSON
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  // Zustand stores
+  const { branches, fetchBranches } = useBranchStore();
+  const { user } = useAuthStore();
+  
   const [stats, setStats] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [branchDues, setBranchDues] = useState(null);
@@ -109,7 +114,6 @@ export default function DashboardPage() {
   const [theme, setTheme] = useState(localStorage.getItem('dashboard_theme') || 'default');
   const [showPaybackDialog, setShowPaybackDialog] = useState(false);
   const [paybackData, setPaybackData] = useState({ from_branch_id: '', to_branch_id: '', amount: '', payment_mode: 'cash' });
-  const [branches, setBranches] = useState([]);
   const [showWhatsApp, setShowWhatsApp] = useState(false);
   const [widgets, setWidgets] = useState(getWidgetPrefs());
   const [showWidgetSettings, setShowWidgetSettings] = useState(false);
@@ -117,7 +121,6 @@ export default function DashboardPage() {
   const [dailyTrend, setDailyTrend] = useState({ sales: [], expenses: [], profit: [] });
   const [isEditMode, setIsEditMode] = useState(false);
   const [layout, setLayout] = useState(getLayoutPrefs());
-  const [userPermissions, setUserPermissions] = useState({});
   const [predictiveData, setPredictiveData] = useState({
     lowStock: { items_at_risk: 0, forecasts: [] },
     peakHours: { peak_hours: [], total_transactions_analyzed: 0 },
@@ -127,6 +130,9 @@ export default function DashboardPage() {
   const t = THEMES[theme] || THEMES.default;
   const { t: tr, language } = useLanguage();
   const [showTour, setShowTour] = useState(false);
+
+  // User permissions from Zustand
+  const userPermissions = user?.permissions || {};
 
   // Check if should show tour on mount
   useEffect(() => {
@@ -174,6 +180,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchStats();
+    fetchBranches(); // Use Zustand for branches
     // Load user's saved layout preferences from backend
     api.get('/dashboard/layout').then(res => {
       if (res.data?.widgets) {
@@ -186,12 +193,7 @@ export default function DashboardPage() {
         saveLayoutPrefs(res.data.layout);
       }
     }).catch(() => {});
-    // Load user permissions for quick actions
-    try {
-      const userData = JSON.parse(localStorage.getItem('user') || '{}');
-      setUserPermissions(userData.permissions || {});
-    } catch {}
-  }, [branchFilter, dateFilter]);
+  }, [branchFilter, dateFilter, fetchBranches]);
 
   // Check if user has permission for a quick action
   const hasPermission = (perm) => {
@@ -217,8 +219,6 @@ export default function DashboardPage() {
       setAlerts(alertsRes.data);
       setBranchDues(duesRes.data);
       setPendingSalaries(pendRes.data);
-      const brRes = await api.get('/branches');
-      setBranches(brRes.data);
       // Fetch today vs yesterday
       try { const tvyRes = await api.get('/dashboard/today-vs-yesterday'); setTodayVsYest(tvyRes.data); } catch {}
       // Fetch daily trend for sparklines
