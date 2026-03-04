@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Building2, Palette, FileText, Save, RefreshCw, Eye } from 'lucide-react';
+import { Building2, Palette, FileText, Save, RefreshCw, Eye, Upload, Image } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -22,7 +22,8 @@ export default function BrandingSettingsPage() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [previewPdf, setPreviewPdf] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetchBranding();
@@ -51,6 +52,29 @@ export default function BrandingSettingsPage() {
     }
   };
 
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await api.post('/pdf-exports/upload-logo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setBranding(prev => ({ ...prev, logo_url: res.data.logo_url }));
+      toast.success('Logo uploaded successfully');
+    } catch (error) {
+      toast.error('Failed to upload logo');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handlePreview = async () => {
     try {
       const res = await api.post('/pdf-exports/generate', {
@@ -66,6 +90,8 @@ export default function BrandingSettingsPage() {
       toast.error('Failed to generate preview');
     }
   };
+
+  const API_BASE = process.env.REACT_APP_BACKEND_URL || '';
 
   if (loading) {
     return (
@@ -90,24 +116,83 @@ export default function BrandingSettingsPage() {
           </p>
         </div>
 
-        {/* Preview Card */}
-        <Card className="border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50">
+        {/* Live Preview Card */}
+        <Card className="border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold" style={{ color: branding.primary_color }}>
-                  {branding.company_name}
-                </h2>
-                <p className="text-sm text-stone-600">{branding.company_address || 'Company Address'}</p>
-                <p className="text-xs text-stone-500">
-                  {[branding.company_phone, branding.company_email, branding.company_vat && `VAT: ${branding.company_vat}`]
-                    .filter(Boolean)
-                    .join(' | ') || 'Contact Info'}
-                </p>
+              <div className="flex items-center gap-4">
+                {branding.logo_url ? (
+                  <img 
+                    src={`${API_BASE}${branding.logo_url}`} 
+                    alt="Logo" 
+                    className="w-14 h-14 rounded-lg object-contain bg-white border shadow-sm"
+                    data-testid="branding-logo-preview"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-lg bg-white/70 border border-dashed border-stone-300 flex items-center justify-center">
+                    <Image size={20} className="text-stone-400" />
+                  </div>
+                )}
+                <div>
+                  <h2 className="text-2xl font-bold" style={{ color: branding.primary_color }}>
+                    {branding.company_name}
+                  </h2>
+                  <p className="text-sm text-stone-600 dark:text-stone-400">{branding.company_address || 'Company Address'}</p>
+                  <p className="text-xs text-stone-500">
+                    {[branding.company_phone, branding.company_email, branding.company_vat && `VAT: ${branding.company_vat}`]
+                      .filter(Boolean)
+                      .join(' | ') || 'Contact Info'}
+                  </p>
+                </div>
               </div>
-              <Button variant="outline" onClick={handlePreview}>
+              <Button variant="outline" onClick={handlePreview} data-testid="preview-pdf-btn">
                 <Eye size={14} className="mr-1" /> Preview PDF
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Logo Upload */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Upload size={18} /> Company Logo
+            </CardTitle>
+            <CardDescription>Upload your company logo for PDF report headers</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4">
+              {branding.logo_url ? (
+                <img 
+                  src={`${API_BASE}${branding.logo_url}`} 
+                  alt="Current logo" 
+                  className="w-20 h-20 rounded-xl object-contain bg-white border shadow-sm"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-xl bg-stone-100 border-2 border-dashed border-stone-300 flex items-center justify-center">
+                  <Image size={28} className="text-stone-400" />
+                </div>
+              )}
+              <div className="space-y-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                  data-testid="logo-file-input"
+                />
+                <Button 
+                  variant="outline" 
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  data-testid="upload-logo-btn"
+                >
+                  {uploading ? <RefreshCw className="animate-spin mr-1" size={14} /> : <Upload size={14} className="mr-1" />}
+                  {uploading ? 'Uploading...' : branding.logo_url ? 'Change Logo' : 'Upload Logo'}
+                </Button>
+                <p className="text-xs text-muted-foreground">PNG, JPG or SVG. Max 2MB recommended.</p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -187,32 +272,21 @@ export default function BrandingSettingsPage() {
             <CardDescription>Customize the look of your exports</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="primary_color">Primary Color</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="primary_color"
-                    type="color"
-                    value={branding.primary_color}
-                    onChange={(e) => setBranding({ ...branding, primary_color: e.target.value })}
-                    className="w-16 h-10 p-1 cursor-pointer"
-                  />
-                  <Input
-                    value={branding.primary_color}
-                    onChange={(e) => setBranding({ ...branding, primary_color: e.target.value })}
-                    placeholder="#10B981"
-                    className="flex-1"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="logo_url">Logo URL (optional)</Label>
+            <div className="space-y-2">
+              <Label htmlFor="primary_color">Primary Color</Label>
+              <div className="flex gap-2">
                 <Input
-                  id="logo_url"
-                  value={branding.logo_url}
-                  onChange={(e) => setBranding({ ...branding, logo_url: e.target.value })}
-                  placeholder="https://yoursite.com/logo.png"
+                  id="primary_color"
+                  type="color"
+                  value={branding.primary_color}
+                  onChange={(e) => setBranding({ ...branding, primary_color: e.target.value })}
+                  className="w-16 h-10 p-1 cursor-pointer"
+                />
+                <Input
+                  value={branding.primary_color}
+                  onChange={(e) => setBranding({ ...branding, primary_color: e.target.value })}
+                  placeholder="#10B981"
+                  className="flex-1"
                 />
               </div>
             </div>

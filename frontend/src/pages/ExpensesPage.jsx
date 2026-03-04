@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, AlertTriangle, DollarSign, Settings2, MessageCircle } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle, DollarSign, Settings2, MessageCircle, FileDown } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -17,6 +17,8 @@ import { ExportButtons } from '@/components/ExportButtons';
 import { WhatsAppSendDialog } from '@/components/WhatsAppSendDialog';
 import { AdvancedSearch, applySearchFilters } from '@/components/AdvancedSearch';
 import { useBranchStore, useAuthStore } from '@/stores';
+import { VirtualizedTable } from '@/components/VirtualizedTable';
+import { PDFExportButton } from '@/components/PDFExportButton';
 
 export default function ExpensesPage() {
   const { t } = useLanguage();
@@ -138,6 +140,7 @@ export default function ExpensesPage() {
           </div>
           <div className="flex gap-2 items-center flex-wrap">
             <ExportButtons dataType="expenses" />
+            <PDFExportButton reportType="expenses" label="Branded PDF" />
             <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowWhatsApp(true)} data-testid="expenses-whatsapp-btn"><MessageCircle size={14} className="mr-1" />WhatsApp</Button>
             {isAdmin && <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowCatManager(true)}><Settings2 size={14} className="mr-1" />{t('category')}</Button>}
           </div>
@@ -332,25 +335,53 @@ export default function ExpensesPage() {
                   ))}
                   {filtered.length === 0 && <p className="text-center text-muted-foreground py-8">{t('no_data')}</p>}
                 </div>
-                {/* Desktop table */}
-                <div className="hidden sm:block overflow-x-auto">
-                <table className="w-full"><thead><tr className="border-b">
-                  <th className="text-left p-3 text-sm font-medium">{t('date')}</th><th className="text-left p-3 text-sm font-medium">{t('category')}</th><th className="text-left p-3 text-sm font-medium">{t('description')}</th><th className="text-left p-3 text-sm font-medium">{t('branch')}</th><th className="text-left p-3 text-sm font-medium">For</th><th className="text-right p-3 text-sm font-medium">{t('amount')}</th><th className="text-left p-3 text-sm font-medium">{t('payment_mode')}</th><th className="text-right p-3 text-sm font-medium">{t('actions')}</th>
-                </tr></thead><tbody>
-                  {filtered.map(e => (
-                    <tr key={e.id} className="border-b hover:bg-stone-50" data-testid={`expense-row-${e.id}`}>
-                      <td className="p-3 text-sm">{format(new Date(e.date), 'MMM dd, yyyy')}</td>
-                      <td className="p-3"><Badge variant="secondary" className="capitalize">{e.category?.replace('_',' ')}</Badge>{e.sub_category && <Badge variant="outline" className="ml-1 text-xs capitalize">{e.sub_category}</Badge>}</td>
-                      <td className="p-3 text-sm">{e.description || '-'}</td>
-                      <td className="p-3 text-sm">{branches.find(b => b.id === e.branch_id)?.name || '-'}</td>
-                      <td className="p-3 text-sm">{e.expense_for_branch_id ? <Badge variant="outline" className="bg-amber-50 border-amber-300 text-amber-700">{branches.find(b => b.id === e.expense_for_branch_id)?.name || '-'}</Badge> : <span className="text-muted-foreground">-</span>}</td>
-                      <td className="p-3 text-sm text-right font-bold">SAR {e.amount.toFixed(2)}</td>
-                      <td className="p-3"><Badge className={`capitalize ${e.payment_mode === 'cash' ? 'bg-cash/20 text-cash' : e.payment_mode === 'bank' ? 'bg-bank/20 text-bank' : 'bg-credit/20 text-credit'}`}>{e.payment_mode}</Badge></td>
-                      <td className="p-3 text-right"><Button size="sm" variant="ghost" onClick={async () => { if(window.confirm('Delete?')) { await api.delete(`/expenses/${e.id}`); fetchData(); }}} className="h-7 text-error"><Trash2 size={12} /></Button></td>
-                    </tr>
-                  ))}
-                  {filtered.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">No expenses</td></tr>}
-                </tbody></table>
+                {/* Desktop table - VirtualizedTable */}
+                <div className="hidden sm:block">
+                <VirtualizedTable
+                  data={filtered}
+                  maxHeight={600}
+                  rowHeight={52}
+                  emptyMessage="No expenses"
+                  columns={[
+                    {
+                      key: 'date', header: t('date'), width: '12%',
+                      render: (val) => <span className="text-sm">{val ? format(new Date(val), 'MMM dd, yyyy') : '-'}</span>
+                    },
+                    {
+                      key: 'category', header: t('category'), width: '16%',
+                      render: (val, row) => (
+                        <div>
+                          <Badge variant="secondary" className="capitalize text-[10px]">{val?.replace('_',' ')}</Badge>
+                          {row.sub_category && <Badge variant="outline" className="ml-1 text-[10px] capitalize">{row.sub_category}</Badge>}
+                        </div>
+                      )
+                    },
+                    {
+                      key: 'description', header: t('description'), width: '18%',
+                      render: (val) => <span className="text-sm truncate">{val || '-'}</span>
+                    },
+                    {
+                      key: 'branch_id', header: t('branch'), width: '10%',
+                      render: (val) => <span className="text-sm">{branches.find(b => b.id === val)?.name || '-'}</span>
+                    },
+                    {
+                      key: 'expense_for_branch_id', header: 'For', width: '10%',
+                      render: (val) => val ? <Badge variant="outline" className="bg-amber-50 border-amber-300 text-amber-700 text-[10px]">{branches.find(b => b.id === val)?.name || '-'}</Badge> : <span className="text-muted-foreground">-</span>
+                    },
+                    {
+                      key: 'amount', header: t('amount'), width: '12%', align: 'right',
+                      render: (val) => <span className="text-sm font-bold">SAR {(val || 0).toFixed(2)}</span>
+                    },
+                    {
+                      key: 'payment_mode', header: t('payment_mode'), width: '10%',
+                      render: (val) => <Badge className={`capitalize text-[10px] ${val === 'cash' ? 'bg-cash/20 text-cash' : val === 'bank' ? 'bg-bank/20 text-bank' : 'bg-credit/20 text-credit'}`}>{val}</Badge>
+                    },
+                    {
+                      key: 'id', header: t('actions'), width: '8%', align: 'right',
+                      render: (val) => <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); if(window.confirm('Delete?')) { api.delete(`/expenses/${val}`).then(fetchData); }}} className="h-7 text-error"><Trash2 size={12} /></Button>
+                    },
+                  ]}
+                />
                 </div>
               </CardContent>
             </Card>

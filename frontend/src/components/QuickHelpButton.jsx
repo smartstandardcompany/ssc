@@ -94,6 +94,47 @@ const PAGE_TOURS = {
       { title: 'Notifications', description: 'Configure email/WhatsApp notifications for status changes.', icon: '🔔' },
     ]
   },
+  '/supplier-payments': {
+    title: 'Supplier Payments',
+    steps: [
+      { title: 'Record Payments', description: 'Record payments made to suppliers via cash, bank, or other modes.', icon: '💸' },
+      { title: 'Track Balances', description: 'See outstanding credit balance with each supplier.', icon: '📊' },
+      { title: 'Payment History', description: 'View complete payment history with filtering options.', icon: '📋' },
+    ]
+  },
+  '/analytics': {
+    title: 'Analytics Dashboard',
+    steps: [
+      { title: 'Visual Analytics', description: 'Interactive charts showing sales trends, expense patterns, and more.', icon: '📈' },
+      { title: 'Time Comparison', description: 'Compare performance across different time periods.', icon: '📅' },
+      { title: 'Branch Analysis', description: 'Drill down into individual branch performance.', icon: '🏪' },
+    ]
+  },
+  '/enhanced-pnl': {
+    title: 'Enhanced P&L Report',
+    steps: [
+      { title: 'Profit & Loss', description: 'Comprehensive P&L breakdown by category, branch, and time period.', icon: '📊' },
+      { title: 'Margin Analysis', description: 'See gross and net profit margins with trend indicators.', icon: '💹' },
+      { title: 'Export Options', description: 'Export branded PDF reports with your company logo.', icon: '📤' },
+    ]
+  },
+  '/branding': {
+    title: 'Branding Settings',
+    steps: [
+      { title: 'Company Info', description: 'Set your company name, address, phone, email, and VAT number for PDF exports.', icon: '🏢' },
+      { title: 'Upload Logo', description: 'Upload your company logo to appear on all exported PDF reports.', icon: '🖼️' },
+      { title: 'Customize Colors', description: 'Choose a primary color that matches your brand identity.', icon: '🎨' },
+      { title: 'Preview & Export', description: 'Preview how your branded PDF will look before exporting.', icon: '👁️' },
+    ]
+  },
+  '/settings': {
+    title: 'System Settings',
+    steps: [
+      { title: 'General Settings', description: 'Configure general application settings and preferences.', icon: '⚙️' },
+      { title: 'Dark Mode', description: 'Toggle between light and dark themes for comfortable viewing.', icon: '🌙' },
+      { title: 'Language', description: 'Switch between English and Arabic (RTL support included).', icon: '🌐' },
+    ]
+  },
 };
 
 // Keyboard shortcuts reference

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Package, TrendingDown, TrendingUp, AlertTriangle, Camera, Loader2, MessageCircle, BarChart3, Barcode, Printer, Download } from 'lucide-react';
+import { Plus, Package, TrendingDown, TrendingUp, AlertTriangle, Camera, Loader2, MessageCircle, BarChart3, Barcode, Printer, Download, FileDown } from 'lucide-react';
 import { WhatsAppSendDialog } from '@/components/WhatsAppSendDialog';
 import api from '@/lib/api';
 import { toast } from 'sonner';
@@ -16,6 +16,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useBranchStore } from '@/stores';
+import { VirtualizedTable } from '@/components/VirtualizedTable';
 
 export default function StockPage() {
   const { t } = useLanguage();
@@ -462,36 +463,50 @@ export default function StockPage() {
                   {balance.length === 0 && <p className="text-center text-muted-foreground py-8">No stock data yet</p>}
                 </div>
                 {/* Desktop table */}
-                <div className="hidden sm:block overflow-x-auto">
-                <table className="w-full" data-testid="stock-balance-table">
-                  <thead><tr className="border-b">
-                    <th className="text-left p-3 text-sm font-medium">Item</th>
-                    <th className="text-left p-3 text-sm font-medium">Unit</th>
-                    <th className="text-right p-3 text-sm font-medium">Stock In</th>
-                    <th className="text-right p-3 text-sm font-medium">Used</th>
-                    <th className="text-right p-3 text-sm font-medium">Balance</th>
-                    <th className="text-right p-3 text-sm font-medium">Avg Cost</th>
-                    <th className="text-right p-3 text-sm font-medium">Value</th>
-                    <th className="text-center p-3 text-sm font-medium">Status</th>
-                  </tr></thead>
-                  <tbody>
-                    {balance.map(b => (
-                      <tr key={b.item_id} className={`border-b hover:bg-stone-50 ${b.low_stock ? 'bg-error/5' : ''}`} data-testid={`stock-row-${b.item_id}`}>
-                        <td className="p-3 text-sm font-medium">{b.item_name}</td>
-                        <td className="p-3 text-sm capitalize">{b.unit}</td>
-                        <td className="p-3 text-sm text-right text-success">{b.stock_in}</td>
-                        <td className="p-3 text-sm text-right text-error">{b.stock_used}</td>
-                        <td className="p-3 text-sm text-right font-bold">{b.balance}</td>
-                        <td className="p-3 text-sm text-right">SAR {b.avg_cost}</td>
-                        <td className="p-3 text-sm text-right font-medium">SAR {(b.avg_cost * b.balance).toFixed(2)}</td>
-                        <td className="p-3 text-center">
-                          {b.low_stock ? <Badge className="bg-error/20 text-error">Low Stock</Badge> : <Badge className="bg-success/20 text-success">OK</Badge>}
-                        </td>
-                      </tr>
-                    ))}
-                    {balance.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">No stock data yet. Add items and stock entries to get started.</td></tr>}
-                  </tbody>
-                </table>
+                <div className="hidden sm:block">
+                <VirtualizedTable
+                  data={balance}
+                  maxHeight={550}
+                  rowHeight={48}
+                  emptyMessage="No stock data yet. Add items and stock entries to get started."
+                  columns={[
+                    {
+                      key: 'item_name', header: 'Item', width: '20%',
+                      render: (val) => <span className="text-sm font-medium">{val}</span>
+                    },
+                    {
+                      key: 'unit', header: 'Unit', width: '8%',
+                      render: (val) => <span className="text-sm capitalize">{val}</span>
+                    },
+                    {
+                      key: 'stock_in', header: 'Stock In', width: '10%', align: 'right',
+                      render: (val) => <span className="text-sm text-success">{val}</span>
+                    },
+                    {
+                      key: 'stock_used', header: 'Used', width: '10%', align: 'right',
+                      render: (val) => <span className="text-sm text-error">{val}</span>
+                    },
+                    {
+                      key: 'balance', header: 'Balance', width: '10%', align: 'right',
+                      render: (val) => <span className="text-sm font-bold">{val}</span>
+                    },
+                    {
+                      key: 'avg_cost', header: 'Avg Cost', width: '12%', align: 'right',
+                      render: (val) => <span className="text-sm">SAR {val}</span>
+                    },
+                    {
+                      key: 'avg_cost', header: 'Value', width: '15%', align: 'right',
+                      render: (val, row) => <span className="text-sm font-medium">SAR {(val * row.balance).toFixed(2)}</span>
+                    },
+                    {
+                      key: 'low_stock', header: 'Status', width: '12%', align: 'center',
+                      render: (val) => val 
+                        ? <Badge className="bg-error/20 text-error text-[10px]">Low Stock</Badge> 
+                        : <Badge className="bg-success/20 text-success text-[10px]">OK</Badge>
+                    },
+                  ]}
+                  data-testid="stock-balance-table"
+                />
                 </div>
               </CardContent>
             </Card>

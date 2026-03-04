@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Response, UploadFile, File
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
@@ -6,8 +6,13 @@ from datetime import datetime, timezone
 from bson import ObjectId
 from io import BytesIO
 import os
+import uuid
+import shutil
 
 router = APIRouter(prefix="/pdf-exports", tags=["pdf-exports"])
+
+LOGO_DIR = "/app/uploads/logos"
+os.makedirs(LOGO_DIR, exist_ok=True)
 
 def get_db():
     from server import db
@@ -65,9 +70,10 @@ def hex_to_rgb(hex_color: str) -> tuple:
     return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
 def create_pdf_header(canvas, doc, branding: dict, title: str):
-    """Create branded PDF header"""
+    """Create branded PDF header with optional logo"""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.colors import HexColor
+    from reportlab.lib.utils import ImageReader
     
     width, height = A4
     primary_color = HexColor(branding.get("primary_color", "#10B981"))
@@ -76,14 +82,27 @@ def create_pdf_header(canvas, doc, branding: dict, title: str):
     canvas.setFillColor(primary_color)
     canvas.rect(0, height - 80, width, 80, fill=True, stroke=False)
     
+    # Logo (if available)
+    logo_x_offset = 40
+    logo_url = branding.get("logo_url", "")
+    if logo_url:
+        logo_path = f"/app{logo_url}" if logo_url.startswith("/uploads") else logo_url
+        if os.path.exists(logo_path):
+            try:
+                img = ImageReader(logo_path)
+                canvas.drawImage(img, 40, height - 72, width=55, height=55, preserveAspectRatio=True, mask='auto')
+                logo_x_offset = 105
+            except Exception:
+                pass
+    
     # Company name
     canvas.setFillColor(HexColor("#FFFFFF"))
-    canvas.setFont("Helvetica-Bold", 24)
-    canvas.drawString(40, height - 45, branding.get("company_name", "SSC Track"))
+    canvas.setFont("Helvetica-Bold", 22)
+    canvas.drawString(logo_x_offset, height - 45, branding.get("company_name", "SSC Track"))
     
     # Report title
-    canvas.setFont("Helvetica", 12)
-    canvas.drawString(40, height - 65, title)
+    canvas.setFont("Helvetica", 11)
+    canvas.drawString(logo_x_offset, height - 63, title)
     
     # Date on right side
     canvas.setFont("Helvetica", 10)
@@ -153,6 +172,30 @@ async def update_branding(config: BrandingConfig):
     )
     
     return {"message": "Branding updated", **config.dict()}
+
+@router.post("/upload-logo")
+async def upload_logo(file: UploadFile = File(...)):
+    """Upload company logo for PDF branding"""
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+    
+    ext = file.filename.rsplit(".", 1)[-1] if "." in file.filename else "png"
+    filename = f"logo_{uuid.uuid4().hex[:8]}.{ext}"
+    filepath = os.path.join(LOGO_DIR, filename)
+    
+    with open(filepath, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+    
+    logo_url = f"/uploads/logos/{filename}"
+    
+    db = get_db()
+    await db.settings.update_one(
+        {"type": "branding"},
+        {"$set": {"logo_url": logo_url, "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True
+    )
+    
+    return {"logo_url": logo_url, "message": "Logo uploaded successfully"}
 
 @router.post("/generate")
 async def generate_branded_pdf(request: PDFExportRequest):

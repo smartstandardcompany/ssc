@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Trash2, DollarSign, X, Truck, Store, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, DollarSign, X, Truck, Store, TrendingUp, FileDown } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -16,6 +16,8 @@ import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
 import { AdvancedSearch, applySearchFilters } from '@/components/AdvancedSearch';
 import { useBranchStore } from '@/stores';
+import { VirtualizedTable } from '@/components/VirtualizedTable';
+import { PDFExportButton } from '@/components/PDFExportButton';
 
 export default function SalesPage() {
   const [sales, setSales] = useState([]);
@@ -300,6 +302,7 @@ export default function SalesPage() {
           </div>
           <div className="flex gap-2 items-center flex-wrap">
             <ExportButtons dataType="sales" />
+            <PDFExportButton reportType="sales" label="Branded PDF" />
             <Button
             onClick={() => setShowForm(!showForm)}
             data-testid="add-sale-button"
@@ -600,104 +603,84 @@ export default function SalesPage() {
               }}
               className="mb-4"
             />
-            <div className="overflow-x-auto">
-              <table className="w-full" data-testid="sales-table">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left p-3 font-medium text-sm">Date</th>
-                    <th className="text-left p-3 font-medium text-sm">Type</th>
-                    <th className="text-left p-3 font-medium text-sm">Branch</th>
-                    <th className="text-left p-3 font-medium text-sm">Customer</th>
-                    <th className="text-right p-3 font-medium text-sm">Amount</th>
-                    <th className="text-right p-3 font-medium text-sm">Discount</th>
-                    <th className="text-right p-3 font-medium text-sm">Final</th>
-                    <th className="text-left p-3 font-medium text-sm">Payment</th>
-                    <th className="text-left p-3 font-medium text-sm">Credit</th>
-                    <th className="text-right p-3 font-medium text-sm">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {applySearchFilters(sales.map(s => ({
-                    ...s,
-                    payment_mode: s.payment_details?.[0]?.mode || 'cash'
-                  })), searchFilters).map((sale) => {
-                    const branchName = branches.find((b) => b.id === sale.branch_id)?.name || '-';
-                    const customerName = customers.find((c) => c.id === sale.customer_id)?.name || '-';
-                    const remainingCredit = getRemainingCredit(sale);
-                    const discount = sale.discount || 0;
-                    const finalAmount = sale.final_amount || (sale.amount - discount);
-                    
+            <VirtualizedTable
+              data={applySearchFilters(sales.map(s => ({
+                ...s,
+                payment_mode: s.payment_details?.[0]?.mode || 'cash'
+              })), searchFilters)}
+              maxHeight={600}
+              rowHeight={56}
+              emptyMessage="No sales recorded yet. Add your first sale above!"
+              columns={[
+                { 
+                  key: 'date', header: 'Date', width: '12%',
+                  render: (val) => <span className="text-sm">{val ? format(new Date(val), 'MMM dd, yyyy') : '-'}</span>
+                },
+                { 
+                  key: 'sale_type', header: 'Type', width: '8%',
+                  render: (val) => <span className="text-sm capitalize">{val || '-'}</span>
+                },
+                { 
+                  key: 'branch_id', header: 'Branch', width: '10%',
+                  render: (val) => <span className="text-sm">{branches.find(b => b.id === val)?.name || '-'}</span>
+                },
+                { 
+                  key: 'amount', header: 'Amount', width: '12%', align: 'right',
+                  render: (val) => <span className="text-sm font-medium">SAR {(val || 0).toFixed(2)}</span>
+                },
+                { 
+                  key: 'final_amount', header: 'Final', width: '12%', align: 'right',
+                  render: (val, row) => <span className="text-sm font-bold text-primary">SAR {(val || (row.amount - (row.discount || 0))).toFixed(2)}</span>
+                },
+                { 
+                  key: 'payment_details', header: 'Payment', width: '22%',
+                  render: (val) => (
+                    <div className="flex gap-1 flex-wrap">
+                      {(val || []).map((p, i) => (
+                        <span key={i} className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium border ${
+                          p.mode === 'cash' ? 'bg-cash/20 text-cash border-cash/30' : 
+                          p.mode === 'bank' ? 'bg-bank/20 text-bank border-bank/30' :
+                          p.mode === 'online_platform' ? 'bg-purple-100 text-purple-700 border-purple-300' :
+                          'bg-credit/20 text-credit border-credit/30'
+                        }`}>
+                          {p.mode}: {p.amount?.toFixed(0)}
+                        </span>
+                      ))}
+                    </div>
+                  )
+                },
+                { 
+                  key: 'credit_amount', header: 'Credit', width: '10%', align: 'right',
+                  render: (val, row) => {
+                    const remaining = (val || 0) - (row.credit_received || 0);
+                    return remaining > 0 ? (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-credit/20 text-credit border border-credit/30">
+                        SAR {remaining.toFixed(0)}
+                      </span>
+                    ) : <span className="text-xs text-muted-foreground">-</span>;
+                  }
+                },
+                { 
+                  key: 'id', header: 'Actions', width: '14%', align: 'right',
+                  render: (val, row) => {
+                    const remaining = (row.credit_amount || 0) - (row.credit_received || 0);
                     return (
-                      <tr key={sale.id} className="border-b border-border hover:bg-secondary/50" data-testid="sale-row">
-                        <td className="p-3 text-sm">{format(new Date(sale.date), 'MMM dd, yyyy')}</td>
-                        <td className="p-3 text-sm capitalize">{sale.sale_type}</td>
-                        <td className="p-3 text-sm">{branchName}</td>
-                        <td className="p-3 text-sm">{sale.sale_type === 'online' ? customerName : '-'}</td>
-                        <td className="p-3 text-sm text-right font-medium"> SAR {sale.amount.toFixed(2)}</td>
-                        <td className="p-3 text-sm text-right text-error">
-                          {discount > 0 ? `-SAR ${discount.toFixed(2)}` : '-'}
-                        </td>
-                        <td className="p-3 text-sm text-right font-bold text-primary"> SAR {finalAmount.toFixed(2)}</td>
-                        <td className="p-3">
-                          <div className="flex gap-1 flex-wrap">
-                            {sale.payment_details?.map((p, i) => (
-                              <span key={i} className={`inline-block px-2 py-0.5 rounded text-xs font-medium border ${
-                                p.mode === 'cash' ? 'bg-cash/20 text-cash border-cash/30' : 
-                                p.mode === 'bank' ? 'bg-bank/20 text-bank border-bank/30' :
-                                'bg-credit/20 text-credit border-credit/30'
-                              }`}>
-                                {p.mode}: SAR {p.amount.toFixed(2)}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          {remainingCredit > 0 ? (
-                            <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-credit/20 text-credit border border-credit/30">
-                              SAR {remainingCredit.toFixed(2)}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">-</span>
-                          )}
-                        </td>
-                        <td className="p-3 text-right">
-                          <div className="flex gap-2 justify-end">
-                            {remainingCredit > 0 && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => { setReceivingSale(sale); setShowReceiveDialog(true); }}
-                                data-testid="receive-credit-button"
-                                className="h-8"
-                              >
-                                <DollarSign size={14} className="mr-1" />
-                                Receive
-                              </Button>
-                            )}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleDelete(sale.id)}
-                              data-testid="delete-sale-button"
-                              className="h-8 text-error hover:text-error"
-                            >
-                              <Trash2 size={14} />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
+                      <div className="flex gap-1 justify-end">
+                        {remaining > 0 && (
+                          <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setReceivingSale(row); setShowReceiveDialog(true); }} data-testid="receive-credit-button" className="h-7 px-2 text-xs">
+                            <DollarSign size={12} className="mr-0.5" />Receive
+                          </Button>
+                        )}
+                        <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleDelete(val); }} data-testid="delete-sale-button" className="h-7 px-2 text-error hover:text-error">
+                          <Trash2 size={12} />
+                        </Button>
+                      </div>
                     );
-                  })}
-                  {sales.length === 0 && (
-                    <tr>
-                      <td colSpan={10} className="p-8 text-center text-muted-foreground">
-                        No sales recorded yet. Add your first sale above!
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  }
+                },
+              ]}
+              data-testid="sales-virtualized-table"
+            />
           </CardContent>
         </Card>
 
