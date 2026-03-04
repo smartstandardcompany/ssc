@@ -69,6 +69,7 @@ import TrendComparisonPage from "./pages/TrendComparisonPage";
 import SupplierRemindersPage from "./pages/SupplierRemindersPage";
 import StockReorderPage from "./pages/StockReorderPage";
 import EnhancedPnLPage from "./pages/EnhancedPnLPage";
+import OrderTrackingPage from "./pages/OrderTrackingPage";
 import CustomerPortalLogin from "./pages/customer-portal/CustomerPortalLogin";
 import { 
   CustomerPortalDashboard, 
@@ -222,6 +223,7 @@ function App() {
           <Route path="/loans" element={<AuthRoute><ProtectedRoute perm="employees" roles={['admin', 'manager']}><LoanManagementPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/leave-approvals" element={<AuthRoute><ProtectedRoute perm="employees" roles={['admin', 'manager']}><LeaveApprovalsPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/schedule" element={<AuthRoute><ProtectedRoute perm="shifts" roles={['admin', 'manager']}><SchedulePage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/order-tracking" element={<AuthRoute><ProtectedRoute perm="sales" roles={['admin', 'manager']}><OrderTrackingPage /></ProtectedRoute></AuthRoute>} />
 
           {/* Stock */}
           <Route path="/stock" element={<AuthRoute><ProtectedRoute perm="stock" roles={['admin', 'manager']}><StockPage /></ProtectedRoute></AuthRoute>} />

@@ -15,11 +15,12 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { useBranchStore } from '@/stores';
 
 export default function StockPage() {
   const { t } = useLanguage();
   const [items, setItems] = useState([]);
-  const [branches, setBranches] = useState([]);
+  const { branches, fetchBranches } = useBranchStore();
   const [suppliers, setSuppliers] = useState([]);
   const [balance, setBalance] = useState([]);
   const [entries, setEntries] = useState([]);
@@ -52,11 +53,12 @@ export default function StockPage() {
 
   const fetchAll = async () => {
     try {
-      const [iR, bR, sR, eR, uR] = await Promise.all([
-        api.get('/items'), api.get('/branches'), api.get('/suppliers'),
+      fetchBranches();
+      const [iR, sR, eR, uR] = await Promise.all([
+        api.get('/items'), api.get('/suppliers'),
         api.get('/stock/entries'), api.get('/stock/usage')
       ]);
-      setItems(iR.data); setBranches(bR.data); setSuppliers(sR.data);
+      setItems(iR.data); setSuppliers(sR.data);
       setEntries(eR.data); setUsage(uR.data);
     } catch { toast.error('Failed to load'); }
     finally { setLoading(false); }
