@@ -1766,3 +1766,94 @@ async def get_supplier_optimization(current_user: User = Depends(get_current_use
         },
         "recommended_schedule": schedule
     }
+
+
+@router.get("/reports/trend-comparison")
+async def get_trend_comparison(current_user: User = Depends(get_current_user)):
+    """
+    Compare this week vs last week and this month vs last month
+    for sales, expenses, and profit.
+    """
+    require_permission(current_user, "reports", "read")
+    query_base = get_branch_filter(current_user)
+    
+    now = datetime.now(timezone.utc)
+    
+    # Week boundaries
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = today - timedelta(days=today.weekday())  # Monday
+    last_week_start = week_start - timedelta(days=7)
+    
+    # Month boundaries
+    month_start = today.replace(day=1)
+    if month_start.month == 1:
+        last_month_start = month_start.replace(year=month_start.year - 1, month=12)
+    else:
+        last_month_start = month_start.replace(month=month_start.month - 1)
+    
+    async def get_period_stats(start, end):
+        date_filter = {"$gte": start.isoformat(), "$lte": end.isoformat()}
+        
+        s_query = {**query_base, "date": date_filter}
+        e_query = {**query_base, "date": date_filter}
+        
+        sales_agg = await db.sales.aggregate([
+            {"$match": s_query},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}, "count": {"$sum": 1}}}
+        ]).to_list(1)
+        
+        exp_agg = await db.expenses.aggregate([
+            {"$match": e_query},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}, "count": {"$sum": 1}}}
+        ]).to_list(1)
+        
+        sales_total = sales_agg[0]["total"] if sales_agg else 0
+        sales_count = sales_agg[0]["count"] if sales_agg else 0
+        exp_total = exp_agg[0]["total"] if exp_agg else 0
+        exp_count = exp_agg[0]["count"] if exp_agg else 0
+        
+        return {
+            "sales": sales_total, "sales_count": sales_count,
+            "expenses": exp_total, "expenses_count": exp_count,
+            "profit": sales_total - exp_total,
+        }
+    
+    this_week = await get_period_stats(week_start, now)
+    last_week = await get_period_stats(last_week_start, week_start)
+    this_month = await get_period_stats(month_start, now)
+    last_month = await get_period_stats(last_month_start, month_start)
+    
+    def calc_change(current, previous):
+        if previous == 0:
+            return 100 if current > 0 else 0
+        return round(((current - previous) / abs(previous)) * 100, 1)
+    
+    # Daily trend for chart (last 14 days)
+    daily_trend = []
+    for i in range(13, -1, -1):
+        day = today - timedelta(days=i)
+        day_end = day + timedelta(days=1)
+        stats = await get_period_stats(day, day_end)
+        daily_trend.append({
+            "date": day.strftime("%Y-%m-%d"),
+            "label": day.strftime("%d %b"),
+            **stats,
+        })
+    
+    return {
+        "weekly": {
+            "this_week": this_week,
+            "last_week": last_week,
+            "sales_change": calc_change(this_week["sales"], last_week["sales"]),
+            "expenses_change": calc_change(this_week["expenses"], last_week["expenses"]),
+            "profit_change": calc_change(this_week["profit"], last_week["profit"]),
+        },
+        "monthly": {
+            "this_month": this_month,
+            "last_month": last_month,
+            "sales_change": calc_change(this_month["sales"], last_month["sales"]),
+            "expenses_change": calc_change(this_month["expenses"], last_month["expenses"]),
+            "profit_change": calc_change(this_month["profit"], last_month["profit"]),
+        },
+        "daily_trend": daily_trend,
+    }

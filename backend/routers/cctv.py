@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 import io
+import uuid
 
 from database import db, get_current_user, ROOT_DIR
 from models import User
@@ -1607,3 +1608,107 @@ async def upload_camera_frame(camera_id: str, body: dict, current_user: User = D
         raise HTTPException(status_code=500, detail=f"Failed to save frame: {str(e)}")
     
     return {"success": True, "message": "Frame uploaded successfully", "camera_id": camera_id}
+
+
+
+# ----- CCTV Monitoring Schedules & Enhanced Alerts -----
+
+@router.get("/cctv/monitoring-schedules")
+async def get_monitoring_schedules(current_user: User = Depends(get_current_user)):
+    """Get all monitoring schedules"""
+    schedules = await db.cctv_monitoring_schedules.find({}, {"_id": 0}).to_list(100)
+    return schedules
+
+
+@router.post("/cctv/monitoring-schedules")
+async def create_monitoring_schedule(body: dict, current_user: User = Depends(get_current_user)):
+    """Create a time-based monitoring schedule"""
+    schedule = {
+        "id": str(uuid.uuid4()),
+        "name": body.get("name", "Default Schedule"),
+        "camera_ids": body.get("camera_ids", []),
+        "days": body.get("days", ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]),
+        "start_time": body.get("start_time", "00:00"),
+        "end_time": body.get("end_time", "23:59"),
+        "alert_types": body.get("alert_types", ["motion", "person", "vehicle"]),
+        "sensitivity": body.get("sensitivity", "medium"),
+        "is_active": body.get("is_active", True),
+        "notify_channels": body.get("notify_channels", ["app"]),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": current_user.id,
+    }
+    await db.cctv_monitoring_schedules.insert_one(schedule)
+    schedule.pop("_id", None)
+    return schedule
+
+
+@router.put("/cctv/monitoring-schedules/{schedule_id}")
+async def update_monitoring_schedule(schedule_id: str, body: dict, current_user: User = Depends(get_current_user)):
+    """Update a monitoring schedule"""
+    update_data = {k: v for k, v in body.items() if k != "id"}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    result = await db.cctv_monitoring_schedules.update_one(
+        {"id": schedule_id}, {"$set": update_data}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+    return {"message": "Schedule updated"}
+
+
+@router.delete("/cctv/monitoring-schedules/{schedule_id}")
+async def delete_monitoring_schedule(schedule_id: str, current_user: User = Depends(get_current_user)):
+    """Delete a monitoring schedule"""
+    result = await db.cctv_monitoring_schedules.delete_one({"id": schedule_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+    return {"message": "Schedule deleted"}
+
+
+@router.get("/cctv/motion-alerts")
+async def get_motion_alerts(
+    camera_id: Optional[str] = None,
+    alert_type: Optional[str] = None,
+    limit: int = 50,
+    current_user: User = Depends(get_current_user)
+):
+    """Get motion detection alerts"""
+    query = {}
+    if camera_id:
+        query["camera_id"] = camera_id
+    if alert_type:
+        query["alert_type"] = alert_type
+    alerts = await db.cctv_motion_alerts.find(query, {"_id": 0}).sort("timestamp", -1).to_list(limit)
+    return alerts
+
+
+@router.post("/cctv/motion-alerts")
+async def create_motion_alert(body: dict, current_user: User = Depends(get_current_user)):
+    """Record a motion detection alert (from camera integration or manual)"""
+    alert = {
+        "id": str(uuid.uuid4()),
+        "camera_id": body.get("camera_id"),
+        "camera_name": body.get("camera_name", ""),
+        "alert_type": body.get("alert_type", "motion"),  # motion, person, vehicle, intrusion
+        "severity": body.get("severity", "medium"),  # low, medium, high, critical
+        "description": body.get("description", ""),
+        "zone": body.get("zone", ""),
+        "confidence": body.get("confidence", 0),
+        "snapshot_url": body.get("snapshot_url"),
+        "acknowledged": False,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.cctv_motion_alerts.insert_one(alert)
+    alert.pop("_id", None)
+    return alert
+
+
+@router.put("/cctv/motion-alerts/{alert_id}/acknowledge")
+async def acknowledge_alert(alert_id: str, current_user: User = Depends(get_current_user)):
+    """Acknowledge a motion alert"""
+    result = await db.cctv_motion_alerts.update_one(
+        {"id": alert_id},
+        {"$set": {"acknowledged": True, "acknowledged_by": current_user.id, "acknowledged_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return {"message": "Alert acknowledged"}

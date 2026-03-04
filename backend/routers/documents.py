@@ -5,14 +5,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 import os
 
-from database import db, get_current_user, ROOT_DIR, require_permission
+from database import db, get_current_user, ROOT_DIR, require_permission, get_branch_filter_with_global
 from models import User, Document, DocumentCreate
 
 router = APIRouter()
 
 @router.get("/documents")
 async def get_documents(current_user: User = Depends(get_current_user)):
-    docs = await db.documents.find({}, {"_id": 0}).to_list(1000)
+    query = get_branch_filter_with_global(current_user)
+    docs = await db.documents.find(query, {"_id": 0}).to_list(1000)
     now = datetime.now(timezone.utc)
     for d in docs:
         for f in ['created_at', 'issue_date', 'expiry_date']:

@@ -14,8 +14,12 @@ async def get_stock_transfers(status: str = None, branch_id: str = None, current
     query = {}
     if status:
         query["status"] = status
-    if branch_id:
-        query["$or"] = [{"from_branch_id": branch_id}, {"to_branch_id": branch_id}]
+    # Apply branch filter for restricted users
+    effective_branch = branch_id
+    if not effective_branch and current_user.branch_id and current_user.role != "admin":
+        effective_branch = current_user.branch_id
+    if effective_branch:
+        query["$or"] = [{"from_branch_id": effective_branch}, {"to_branch_id": effective_branch}]
     transfers = await db.stock_transfers.find(query, {"_id": 0}).sort("requested_at", -1).to_list(500)
     # Enrich with branch names
     branches = await db.branches.find({}, {"_id": 0}).to_list(100)

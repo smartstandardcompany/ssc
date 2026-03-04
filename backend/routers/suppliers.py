@@ -885,3 +885,230 @@ def _generate_ledger_pdf(supplier_info, entries, summary, period):
     doc.build(elements)
     buffer.seek(0)
     return buffer
+
+
+@router.get("/suppliers/aging-report")
+async def get_supplier_aging_report(
+    branch_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Supplier aging report - groups outstanding credit balances by age buckets:
+    0-30 days, 31-60 days, 61-90 days, 90+ days
+    """
+    require_permission(current_user, "suppliers", "read")
+    
+    query = get_branch_filter_with_global(current_user)
+    if branch_id:
+        query["branch_id"] = branch_id
+    
+    suppliers = await db.suppliers.find(query, {"_id": 0}).to_list(1000)
+    
+    # Only suppliers with outstanding credit
+    suppliers_with_credit = [s for s in suppliers if s.get("current_credit", 0) > 0]
+    
+    now = datetime.now(timezone.utc)
+    aging_data = []
+    totals = {"0_30": 0, "31_60": 0, "61_90": 0, "90_plus": 0, "total": 0}
+    
+    for supplier in suppliers_with_credit:
+        sid = supplier["id"]
+        
+        # Get all credit purchases (unpaid) for this supplier
+        credit_expenses = await db.expenses.find(
+            {"supplier_id": sid, "payment_mode": "credit"},
+            {"_id": 0, "id": 1, "date": 1, "amount": 1, "description": 1}
+        ).sort("date", 1).to_list(5000)
+        
+        # Get all payments made to this supplier
+        payments = await db.supplier_payments.find(
+            {"supplier_id": sid, "payment_mode": {"$in": ["cash", "bank"]}},
+            {"_id": 0, "amount": 1}
+        ).to_list(5000)
+        
+        total_paid = sum(p.get("amount", 0) for p in payments)
+        
+        # Apply payments to oldest invoices first (FIFO)
+        remaining_payment = total_paid
+        buckets = {"0_30": 0, "31_60": 0, "61_90": 0, "90_plus": 0}
+        unpaid_invoices = []
+        
+        for exp in credit_expenses:
+            if remaining_payment >= exp["amount"]:
+                remaining_payment -= exp["amount"]
+                continue  # Fully paid
+            
+            unpaid_amount = exp["amount"] - remaining_payment
+            remaining_payment = 0
+            
+            # Calculate age in days
+            try:
+                if isinstance(exp.get("date"), str):
+                    exp_date = datetime.fromisoformat(exp["date"].replace("Z", "+00:00"))
+                else:
+                    exp_date = exp.get("date", now)
+                if exp_date.tzinfo is None:
+                    from datetime import timezone as tz
+                    exp_date = exp_date.replace(tzinfo=tz.utc)
+                age_days = (now - exp_date).days
+            except:
+                age_days = 0
+            
+            if age_days <= 30:
+                buckets["0_30"] += unpaid_amount
+            elif age_days <= 60:
+                buckets["31_60"] += unpaid_amount
+            elif age_days <= 90:
+                buckets["61_90"] += unpaid_amount
+            else:
+                buckets["90_plus"] += unpaid_amount
+            
+            unpaid_invoices.append({
+                "date": exp.get("date", ""),
+                "amount": exp["amount"],
+                "unpaid": unpaid_amount,
+                "age_days": age_days,
+                "description": exp.get("description", "")
+            })
+        
+        supplier_total = sum(buckets.values())
+        if supplier_total > 0:
+            aging_data.append({
+                "supplier_id": sid,
+                "supplier_name": supplier["name"],
+                "branch_id": supplier.get("branch_id"),
+                "credit_limit": supplier.get("credit_limit", 0),
+                "current_credit": supplier.get("current_credit", 0),
+                "buckets": buckets,
+                "total_outstanding": supplier_total,
+                "unpaid_invoices": unpaid_invoices[:20],  # Limit for response size
+            })
+            
+            for key in totals:
+                if key != "total":
+                    totals[key] += buckets.get(key, 0)
+            totals["total"] += supplier_total
+    
+    # Sort by total outstanding descending
+    aging_data.sort(key=lambda x: x["total_outstanding"], reverse=True)
+    
+    return {
+        "report_date": now.isoformat(),
+        "totals": totals,
+        "supplier_count": len(aging_data),
+        "suppliers": aging_data
+    }
+
+
+@router.get("/suppliers/aging-report/export")
+async def export_aging_report(
+    format: str = "pdf",
+    branch_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Export aging report as PDF or Excel"""
+    require_permission(current_user, "suppliers", "read")
+    
+    report = await get_supplier_aging_report(branch_id, current_user)
+    
+    if format == "excel":
+        import openpyxl
+        from io import BytesIO
+        from fastapi.responses import StreamingResponse
+        
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Supplier Aging Report"
+        
+        # Header
+        ws.append(["Supplier Aging Report", "", "", "", "", ""])
+        ws.append([f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}"])
+        ws.append([])
+        
+        # Totals
+        ws.append(["SUMMARY"])
+        ws.append(["0-30 Days", "31-60 Days", "61-90 Days", "90+ Days", "Total"])
+        ws.append([report["totals"]["0_30"], report["totals"]["31_60"], report["totals"]["61_90"], report["totals"]["90_plus"], report["totals"]["total"]])
+        ws.append([])
+        
+        # Detail
+        ws.append(["Supplier", "Credit Limit", "Current Credit", "0-30 Days", "31-60 Days", "61-90 Days", "90+ Days", "Total Outstanding"])
+        for s in report["suppliers"]:
+            ws.append([
+                s["supplier_name"], s["credit_limit"], s["current_credit"],
+                s["buckets"]["0_30"], s["buckets"]["31_60"], s["buckets"]["61_90"], s["buckets"]["90_plus"],
+                s["total_outstanding"]
+            ])
+        
+        # Format columns
+        for col in range(2, 9):
+            for row in range(6, ws.max_row + 1):
+                cell = ws.cell(row=row, column=col)
+                cell.number_format = '#,##0.00'
+        
+        buf = BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=aging_report.xlsx"})
+    
+    else:  # PDF
+        from io import BytesIO
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.lib import colors
+        from reportlab.lib.units import mm
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from fastapi.responses import StreamingResponse
+        
+        buf = BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=landscape(A4), topMargin=15*mm, bottomMargin=15*mm)
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        title_style = ParagraphStyle('Title', parent=styles['Title'], fontSize=16, spaceAfter=10)
+        elements.append(Paragraph("Supplier Aging Report", title_style))
+        elements.append(Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", styles['Normal']))
+        elements.append(Spacer(1, 8*mm))
+        
+        # Summary table
+        summary_data = [
+            ["0-30 Days", "31-60 Days", "61-90 Days", "90+ Days", "Total Outstanding"],
+            [f"SAR {report['totals']['0_30']:,.2f}", f"SAR {report['totals']['31_60']:,.2f}",
+             f"SAR {report['totals']['61_90']:,.2f}", f"SAR {report['totals']['90_plus']:,.2f}",
+             f"SAR {report['totals']['total']:,.2f}"],
+        ]
+        st = Table(summary_data, colWidths=[50*mm]*5)
+        st.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ]))
+        elements.append(st)
+        elements.append(Spacer(1, 8*mm))
+        
+        # Detail table
+        detail_data = [["Supplier", "Credit Limit", "0-30 Days", "31-60 Days", "61-90 Days", "90+ Days", "Total"]]
+        for s in report["suppliers"]:
+            detail_data.append([
+                s["supplier_name"][:20], f"SAR {s['credit_limit']:,.0f}",
+                f"{s['buckets']['0_30']:,.2f}", f"{s['buckets']['31_60']:,.2f}",
+                f"{s['buckets']['61_90']:,.2f}", f"{s['buckets']['90_plus']:,.2f}",
+                f"{s['total_outstanding']:,.2f}",
+            ])
+        dt = Table(detail_data, colWidths=[45*mm, 30*mm, 30*mm, 30*mm, 30*mm, 30*mm, 35*mm])
+        dt.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+        ]))
+        elements.append(dt)
+        
+        doc.build(elements)
+        buf.seek(0)
+        return StreamingResponse(buf, media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=aging_report.pdf"})

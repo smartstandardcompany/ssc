@@ -7,7 +7,7 @@ import {
   Handshake, HelpCircle, Building2, Package, ChefHat, CalendarClock,
   ArrowDownUp, Activity, PackageCheck, ChevronDown, Menu, X, Zap,
   AlertCircle, Moon, Sun, Keyboard, Globe, UtensilsCrossed, Camera, Armchair, Wallet,
-  CalendarDays, Gift, TrendingUp
+  CalendarDays, Gift, TrendingUp, Clock
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -38,6 +38,7 @@ const NAV_GROUPS = [
       { path: '/invoices', icon: FileInput, label: 'Invoices', perm: 'invoices' },
       { path: '/expenses', icon: Receipt, label: 'Expenses', perm: 'expenses' },
       { path: '/supplier-payments', icon: Receipt, label: 'Supplier Payments', perm: 'supplier_payments', roles: ['admin', 'manager'] },
+      { path: '/supplier-aging', icon: Clock, label: 'Supplier Aging', perm: 'suppliers', roles: ['admin', 'manager'] },
       { path: '/cash-transfers', icon: ArrowLeftRight, label: 'Cash Transfers', perm: 'cash_transfers', roles: ['admin', 'manager'] },
     ]
   },
@@ -81,6 +82,7 @@ const NAV_GROUPS = [
       { path: '/reconciliation', icon: ArrowDownUp, label: 'Reconciliation', perm: 'reports', roles: ['admin'] },
       { path: '/performance-report', icon: Activity, label: 'Performance Report', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/anomaly-detection', icon: AlertTriangle, label: 'Anomaly Detection', perm: 'reports', roles: ['admin', 'manager'] },
+      { path: '/trend-comparison', icon: TrendingUp, label: 'Trend Comparison', perm: 'reports', roles: ['admin', 'manager'] },
     ]
   },
   {

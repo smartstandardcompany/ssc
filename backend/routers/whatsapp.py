@@ -451,28 +451,32 @@ async def handle_chatbot_command(message: str, from_number: str) -> str:
     
     # Help command
     if message in ['help', 'مساعدة', '?']:
-        return """📋 SSC Track Chatbot Commands:
+        return """SSC Track Chatbot Commands:
 
-💰 *Sales*
-• sales today - Today's sales summary
-• sales week - This week's sales
-• sales [branch] - Sales for specific branch
+*Sales*
+- sales today - Today's sales summary
+- sales week - This week's sales
+- sales [branch] - Sales for specific branch
 
-📊 *Stock*
-• stock low - Low stock items
-• stock [item] - Check item stock
+*Stock*
+- stock low - Low stock items
+- stock [item] - Check item stock
 
-💵 *Expenses*
-• expenses today - Today's expenses
-• expenses week - This week's expenses
+*Expenses*
+- expenses today - Today's expenses
+- expenses week - This week's expenses
 
-👥 *Customers*
-• dues - Customer dues summary
-• credit [customer] - Customer credit balance
+*Suppliers*
+- supplier all - All supplier balances
+- supplier [name] - Specific supplier balance
+- aging - Supplier aging quick view
 
-📈 *Reports*
-• summary - Daily business summary
-• profit - Today's profit/loss
+*Customers*
+- dues - Customer dues summary
+
+*Reports*
+- summary - Daily business summary
+- profit - Today's profit/loss
 
 Type any command to get started!"""
 
@@ -545,9 +549,49 @@ Type any command to get started!"""
         customers = await db.customers.find({}, {"_id": 0}).to_list(500)
         total_credit = sum(c.get("current_credit", 0) for c in customers)
         with_dues = [c for c in customers if c.get("current_credit", 0) > 0]
-        response = f"👥 *Customer Dues*\n\nTotal Credit: SAR {total_credit:,.2f}\nCustomers with dues: {len(with_dues)}\n\n"
+        response = f"*Customer Dues*\n\nTotal Credit: SAR {total_credit:,.2f}\nCustomers with dues: {len(with_dues)}\n\n"
         for c in with_dues[:5]:
-            response += f"• {c['name']}: SAR {c.get('current_credit', 0):,.2f}\n"
+            response += f"- {c['name']}: SAR {c.get('current_credit', 0):,.2f}\n"
+        return response
+    
+    # Supplier balance check
+    if message.startswith('supplier') or message.startswith('balance'):
+        parts = message.split(maxsplit=1)
+        if len(parts) == 1 or parts[1] in ['dues', 'balance', 'all']:
+            suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(500)
+            total_dues = sum(s.get("current_credit", 0) for s in suppliers)
+            with_dues = [s for s in suppliers if s.get("current_credit", 0) > 0]
+            with_dues.sort(key=lambda x: x.get("current_credit", 0), reverse=True)
+            response = f"*Supplier Balances*\n\nTotal Outstanding: SAR {total_dues:,.2f}\nSuppliers with balance: {len(with_dues)}\n\n"
+            for s in with_dues[:8]:
+                response += f"- {s['name']}: SAR {s.get('current_credit', 0):,.2f}\n"
+            return response
+        else:
+            name = parts[1]
+            suppliers = await db.suppliers.find({"name": {"$regex": name, "$options": "i"}}, {"_id": 0}).to_list(10)
+            if suppliers:
+                s = suppliers[0]
+                return (
+                    f"*{s['name']}*\n\n"
+                    f"Credit Balance: SAR {s.get('current_credit', 0):,.2f}\n"
+                    f"Credit Limit: SAR {s.get('credit_limit', 0):,.2f}\n"
+                    f"Phone: {s.get('phone', '-')}"
+                )
+            return f"Supplier '{name}' not found. Try: supplier all, or supplier [name]"
+    
+    # Aging report quick view
+    if message in ['aging', 'overdue', 'supplier aging']:
+        suppliers = await db.suppliers.find({"current_credit": {"$gt": 0}}, {"_id": 0}).to_list(500)
+        if not suppliers:
+            return "*Supplier Aging*\n\nNo outstanding balances!"
+        suppliers.sort(key=lambda x: x.get("current_credit", 0), reverse=True)
+        total = sum(s.get("current_credit", 0) for s in suppliers)
+        response = f"*Supplier Aging Quick View*\n\nTotal Outstanding: SAR {total:,.2f}\nSuppliers: {len(suppliers)}\n\n"
+        for s in suppliers[:5]:
+            pct = (s.get("current_credit", 0) / s.get("credit_limit", 1)) * 100 if s.get("credit_limit", 0) > 0 else 0
+            status = "!!!" if pct > 80 else "!" if pct > 50 else ""
+            response += f"- {s['name']}: SAR {s.get('current_credit', 0):,.2f} {status}\n"
+        response += "\nType *supplier [name]* for details"
         return response
     
     # Summary command

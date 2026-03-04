@@ -12,7 +12,7 @@ from pathlib import Path
 import uuid
 import os
 
-from database import db, get_current_user, ROOT_DIR
+from database import db, get_current_user, ROOT_DIR, get_branch_filter_with_global
 from models import User
 
 router = APIRouter()
@@ -192,7 +192,7 @@ async def get_assets(
     current_user: User = Depends(get_current_user)
 ):
     """Get all company assets with optional filters"""
-    query = {}
+    query = get_branch_filter_with_global(current_user)
     if asset_type:
         query["asset_type"] = asset_type
     if status:
