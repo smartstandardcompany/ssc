@@ -66,6 +66,7 @@ import SalesForecastPage from "./pages/SalesForecastPage";
 import SalesAlertsPage from "./pages/SalesAlertsPage";
 import SupplierAgingPage from "./pages/SupplierAgingPage";
 import TrendComparisonPage from "./pages/TrendComparisonPage";
+import SupplierRemindersPage from "./pages/SupplierRemindersPage";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
@@ -236,6 +237,7 @@ function App() {
           <Route path="/performance-report" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><PerformanceReportPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/anomaly-detection" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><AnomalyDetectionPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/supplier-aging" element={<AuthRoute><ProtectedRoute perm="suppliers" roles={['admin', 'manager']}><SupplierAgingPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/supplier-reminders" element={<AuthRoute><ProtectedRoute perm="suppliers" roles={['admin', 'manager']}><SupplierRemindersPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/trend-comparison" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><TrendComparisonPage /></ProtectedRoute></AuthRoute>} />
 
           {/* Assets */}

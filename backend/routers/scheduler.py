@@ -26,6 +26,23 @@ async def _run_task_reminders():
 scheduler.add_job(_run_task_reminders, 'interval', minutes=5, id='task_reminders_job', replace_existing=True)
 
 
+async def _run_supplier_payment_reminders():
+    """Daily job to check supplier aging and send payment reminders."""
+    try:
+        config = await db.supplier_reminder_config.find_one({}, {"_id": 0})
+        if not config or not config.get("enabled"):
+            return
+        from routers.supplier_reminders import run_supplier_reminder_check
+        await run_supplier_reminder_check(is_test=False)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Supplier reminder error: {e}")
+
+
+# Schedule supplier payment reminders daily at 9:00 AM
+scheduler.add_job(_run_supplier_payment_reminders, CronTrigger(hour=9, minute=0), id='supplier_reminders_job', replace_existing=True)
+
+
 async def _build_daily_sales_report():
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     today_end = today_start + timedelta(days=1)

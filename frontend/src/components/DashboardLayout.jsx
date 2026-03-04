@@ -39,6 +39,7 @@ const NAV_GROUPS = [
       { path: '/expenses', icon: Receipt, label: 'Expenses', perm: 'expenses' },
       { path: '/supplier-payments', icon: Receipt, label: 'Supplier Payments', perm: 'supplier_payments', roles: ['admin', 'manager'] },
       { path: '/supplier-aging', icon: Clock, label: 'Supplier Aging', perm: 'suppliers', roles: ['admin', 'manager'] },
+      { path: '/supplier-reminders', icon: Bell, label: 'Payment Reminders', perm: 'suppliers', roles: ['admin', 'manager'] },
       { path: '/cash-transfers', icon: ArrowLeftRight, label: 'Cash Transfers', perm: 'cash_transfers', roles: ['admin', 'manager'] },
     ]
   },
