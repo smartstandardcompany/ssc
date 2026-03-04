@@ -504,7 +504,19 @@ export const DashboardLayout = ({ children }) => {
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-stone-900 border-t border-stone-100 dark:border-stone-700 flex items-center justify-around px-1 py-1.5 safe-area-bottom" data-testid="mobile-bottom-nav">
         {(() => {
           const iconMap = { LayoutDashboard, ShoppingCart, Receipt, Package, BarChart3, Users, Settings, Store, CreditCard, FileText, Camera };
-          return bottomNavItems.filter(item => item.enabled).slice(0, 5).map(item => {
+          // Permission map for bottom nav paths
+          const pathPerms = { '/': 'dashboard', '/sales': 'sales', '/expenses': 'expenses', '/stock': 'stock', '/reports': 'dashboard', '/customers': 'customers', '/employees': 'employees', '/analytics': 'dashboard' };
+          return bottomNavItems.filter(item => {
+            if (!item.enabled) return false;
+            // Admin sees everything
+            if (user?.role === 'admin') return true;
+            // Check permission for this path
+            const requiredPerm = pathPerms[item.path];
+            if (!requiredPerm) return true;
+            const perms = user?.permissions || {};
+            const permLevel = typeof perms === 'object' && !Array.isArray(perms) ? perms[requiredPerm] : (Array.isArray(perms) ? perms.find(p => p.module === requiredPerm)?.level : 'none');
+            return permLevel === 'read' || permLevel === 'write';
+          }).slice(0, 5).map(item => {
             const Icon = iconMap[item.icon] || LayoutDashboard;
             const isActive = location.pathname === item.path;
             return (

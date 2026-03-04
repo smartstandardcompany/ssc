@@ -2,7 +2,7 @@
   "name": "SSC Track - Business Management",
   "short_name": "SSC Track",
   "description": "Smart Standard Company - Complete Business Management ERP with AI-powered analytics, inventory management, and ZATCA compliance",
-  "start_url": "/dashboard",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#1c1917",

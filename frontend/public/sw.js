@@ -1,8 +1,8 @@
 /* eslint-disable no-restricted-globals */
 
-const CACHE_NAME = 'ssc-track-v2';
-const OFFLINE_CACHE = 'ssc-track-offline-v2';
-const API_CACHE = 'ssc-track-api-v2';
+const CACHE_NAME = 'ssc-track-v3';
+const OFFLINE_CACHE = 'ssc-track-offline-v3';
+const API_CACHE = 'ssc-track-api-v3';
 
 const STATIC_ASSETS = [
   '/',
@@ -36,10 +36,11 @@ self.addEventListener('install', function(event) {
 
 // Activate: clean old caches
 self.addEventListener('activate', function(event) {
+  const currentCaches = [CACHE_NAME, OFFLINE_CACHE, API_CACHE];
   event.waitUntil(
     caches.keys().then(function(names) {
       return Promise.all(
-        names.filter(n => !n.includes('ssc-track')).map(n => caches.delete(n))
+        names.filter(n => !currentCaches.includes(n)).map(n => caches.delete(n))
       );
     })
   );
@@ -80,21 +81,26 @@ self.addEventListener('fetch', function(event) {
     return;
   }
 
-  // For navigation requests (HTML pages), use network-first
+  // For navigation requests (HTML pages), always serve index.html (SPA routing)
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
         .then(function(response) {
-          // Cache successful navigation for offline
+          // Cache the response for offline use
           const clone = response.clone();
           caches.open(OFFLINE_CACHE).then(function(cache) {
-            cache.put(event.request, clone);
+            cache.put('/', clone);
           });
           return response;
         })
         .catch(function() {
-          return caches.match(event.request).then(function(cached) {
-            return cached || caches.match('/offline.html') || caches.match('/index.html');
+          // Offline: serve cached index.html for any navigation request
+          return caches.match('/').then(function(cached) {
+            if (cached) return cached;
+            return caches.match('/index.html').then(function(indexCached) {
+              if (indexCached) return indexCached;
+              return caches.match('/offline.html');
+            });
           });
         })
     );

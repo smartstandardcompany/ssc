@@ -201,7 +201,19 @@ function App() {
           <Route path="/" element={isAuthenticated ? (() => {
             const user = JSON.parse(localStorage.getItem('user') || '{}');
             if (user.must_change_password) return <Navigate to="/change-password?forced=true" />;
-            return user.role === 'employee' ? <Navigate to="/my-portal" /> : <DashboardPage />;
+            if (user.role === 'employee') return <Navigate to="/my-portal" />;
+            // Check dashboard permission for non-admin users
+            if (user.role !== 'admin' && !userHasAccess(user, 'dashboard')) {
+              // Redirect to first page they have access to
+              const perms = normalizePermissions(user.permissions || []);
+              if (perms.sales === 'read' || perms.sales === 'write') return <Navigate to="/pos" />;
+              if (perms.expenses === 'read' || perms.expenses === 'write') return <Navigate to="/expenses" />;
+              if (perms.invoices === 'read' || perms.invoices === 'write') return <Navigate to="/invoices" />;
+              if (perms.customers === 'read' || perms.customers === 'write') return <Navigate to="/customers" />;
+              if (perms.stock === 'read' || perms.stock === 'write') return <Navigate to="/stock" />;
+              return <AccessDeniedPage />;
+            }
+            return <DashboardPage />;
           })() : <Navigate to="/login" />} />
 
           {/* Operations */}

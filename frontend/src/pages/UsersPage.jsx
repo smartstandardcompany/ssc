@@ -80,8 +80,8 @@ function getDefaultPermissions(role) {
         defaults[m.value] = 'write';
       }
     } else {
-      // Operators get basic access
-      if (['sales', 'expenses', 'customers', 'dashboard', 'pos'].includes(m.value)) {
+      // Operators get basic access - NO dashboard by default
+      if (['sales', 'expenses', 'customers', 'pos'].includes(m.value)) {
         defaults[m.value] = 'write';
       } else {
         defaults[m.value] = 'none';

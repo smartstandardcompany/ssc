@@ -160,6 +160,10 @@ async def update_user(user_id: str, user_update: UserUpdate, current_user: User 
     else:
         update_data = {k: v for k, v in user_update.model_dump().items() if v is not None}
     
+    # Hash password if it's being updated
+    if 'password' in update_data and update_data['password']:
+        update_data['password'] = hash_password(update_data['password'])
+    
     if update_data:
         await db.users.update_one({"id": user_id}, {"$set": update_data})
     updated = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
