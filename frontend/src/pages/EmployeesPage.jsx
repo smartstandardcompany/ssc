@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, DollarSign, AlertTriangle, Eye, Calendar, FileText, Briefcase, UserX, Calculator } from 'lucide-react';
+import { Plus, Edit, Trash2, DollarSign, AlertTriangle, Eye, Calendar, FileText, Briefcase, UserX, Calculator, Mail, Send } from 'lucide-react';
 import ExportButton from '@/components/ExportButton';
 import api from '@/lib/api';
 import { toast } from 'sonner';
@@ -64,6 +64,9 @@ export default function EmployeesPage() {
   const [resignForm, setResignForm] = useState({ resignation_date: '', notice_period_days: 30, reason: '', status: 'resigned' });
   const [settlementDialog, setSettlementDialog] = useState(null);
   const [settlement, setSettlement] = useState(null);
+  const [emailDialog, setEmailDialog] = useState(null);
+  const [emailForm, setEmailForm] = useState({ subject: '', message: '' });
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   const ALL_PERMISSIONS = [
     { key: 'dashboard', label: 'Dashboard' }, { key: 'sales', label: 'Sales' }, { key: 'invoices', label: 'Invoices' },
@@ -86,11 +89,25 @@ export default function EmployeesPage() {
     finally { setLoading(false); }
   };
 
+  const handleSendEmail = async (e) => {
+    e.preventDefault();
+    if (!emailForm.subject || !emailForm.message) { toast.error('Subject and message required'); return; }
+    setSendingEmail(true);
+    try {
+      const res = await api.post(`/employees/${emailDialog.id}/send-email`, emailForm);
+      if (res.data.status === 'sent') toast.success(res.data.message);
+      else toast.error(res.data.message);
+      setEmailDialog(null);
+      setEmailForm({ subject: '', message: '' });
+    } catch (err) { toast.error(err.response?.data?.detail || 'Failed to send email'); }
+    finally { setSendingEmail(false); }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const payload = { ...formData, salary: parseFloat(formData.salary) || 0, annual_leave_entitled: parseInt(formData.annual_leave_entitled) || 30, sick_leave_entitled: parseInt(formData.sick_leave_entitled) || 15, join_date: formData.join_date ? new Date(formData.join_date).toISOString() : null, document_expiry: formData.document_expiry ? new Date(formData.document_expiry).toISOString() : null, branch_id: formData.branch_id || null };
-      if (editingEmp) { await api.put(`/employees/${editingEmp.id}`, payload); toast.success('Employee updated'); }
+      if (editingEmp) { await api.put(`/employees/${editingEmp.id}`, payload); toast.success('Employee updated (email synced to user account)'); }
       else { await api.post('/employees', payload); toast.success('Employee added'); }
       setShowDialog(false); resetForm(); fetchData();
     } catch (err) { toast.error(err.response?.data?.detail || 'Failed to save'); }
@@ -395,6 +412,13 @@ export default function EmployeesPage() {
                           <Button size="sm" variant="outline" onClick={() => { setPayingEmp(emp); setPayData(d => ({ ...d, amount: emp.salary || '', period: format(new Date(), 'MMM yyyy') })); setShowPayDialog(true); }} data-testid="pay-salary-btn" className="h-7 text-xs"><DollarSign size={12} className="mr-1" />Pay</Button>
                           <Button size="sm" variant="outline" onClick={() => { setLeaveEmp(emp); setShowLeaveDialog(true); }} data-testid="add-leave-btn" className="h-7 text-xs"><Calendar size={12} className="mr-1" />Leave</Button>
                           <Button size="sm" variant="ghost" onClick={() => handleEdit(emp)} className="h-7 text-xs"><Edit size={12} /></Button>
+                          {emp.email && (
+                            <Button size="sm" variant="ghost" className="h-7 text-xs text-blue-600" data-testid="email-employee-btn"
+                              onClick={() => { setEmailDialog(emp); setEmailForm({ subject: '', message: '' }); }}
+                              title={`Email: ${emp.email}`}>
+                              <Mail size={12} />
+                            </Button>
+                          )}
                           {(!emp.status || emp.status === 'active') && (
                             <Button size="sm" variant="ghost" className="h-7 text-xs text-amber-600" data-testid="resign-btn"
                               onClick={() => { setResignDialog(emp); setResignForm({ resignation_date: new Date().toISOString().split('T')[0], notice_period_days: 30, reason: '', status: 'resigned' }); }}>
@@ -785,6 +809,34 @@ export default function EmployeesPage() {
                 }}>Confirm</Button>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Email Employee Dialog */}
+        <Dialog open={!!emailDialog} onOpenChange={(v) => !v && setEmailDialog(null)}>
+          <DialogContent className="max-w-md" data-testid="email-employee-dialog">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2"><Mail className="text-blue-500" size={18} /> Email {emailDialog?.name}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSendEmail} className="space-y-4">
+              <div className="text-sm text-muted-foreground bg-blue-50 dark:bg-blue-950/30 p-2 rounded-lg border border-blue-200">
+                To: <span className="font-medium text-foreground">{emailDialog?.email}</span>
+              </div>
+              <div className="space-y-2">
+                <Label>Subject *</Label>
+                <Input value={emailForm.subject} onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })} placeholder="e.g., Schedule Update, Important Notice..." required data-testid="email-subject-input" />
+              </div>
+              <div className="space-y-2">
+                <Label>Message *</Label>
+                <Textarea value={emailForm.message} onChange={(e) => setEmailForm({ ...emailForm, message: e.target.value })} placeholder="Type your message here..." rows={5} required data-testid="email-message-input" />
+              </div>
+              <div className="flex gap-3">
+                <Button type="submit" disabled={sendingEmail} className="rounded-xl bg-blue-600 hover:bg-blue-700" data-testid="send-email-btn">
+                  {sendingEmail ? 'Sending...' : <><Send size={14} className="mr-1" /> Send Email</>}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setEmailDialog(null)} className="rounded-xl">Cancel</Button>
+              </div>
+            </form>
           </DialogContent>
         </Dialog>
 

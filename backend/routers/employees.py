@@ -80,13 +80,68 @@ async def link_employee_user(emp_id: str, body: dict, current_user: User = Depen
 @router.put("/employees/{emp_id}")
 async def update_employee(emp_id: str, data: EmployeeCreate, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "employees", "write")
-    result = await db.employees.find_one({"id": emp_id})
+    result = await db.employees.find_one({"id": emp_id}, {"_id": 0})
     if not result: raise HTTPException(status_code=404, detail="Employee not found")
     update = data.model_dump()
     for f in ['join_date', 'document_expiry']:
         if update.get(f): update[f] = update[f].isoformat()
     await db.employees.update_one({"id": emp_id}, {"$set": update})
+    
+    # Sync email to linked user account if employee has a user_id
+    if result.get("user_id") and update.get("email"):
+        old_email = result.get("email", "")
+        new_email = update["email"]
+        if old_email != new_email:
+            await db.users.update_one(
+                {"id": result["user_id"]},
+                {"$set": {"email": new_email}}
+            )
+    
     return await db.employees.find_one({"id": emp_id}, {"_id": 0})
+
+@router.post("/employees/{emp_id}/send-email")
+async def send_employee_email(emp_id: str, body: dict, current_user: User = Depends(get_current_user)):
+    """Send an email to an employee"""
+    require_permission(current_user, "employees", "write")
+    emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    if not emp: raise HTTPException(status_code=404, detail="Employee not found")
+    if not emp.get("email"): raise HTTPException(status_code=400, detail="Employee has no email address")
+    
+    subject = body.get("subject", "")
+    message = body.get("message", "")
+    if not subject or not message: raise HTTPException(status_code=400, detail="Subject and message required")
+    
+    from utils.email_service import send_email
+    
+    # Get company branding for email template
+    branding = await db.settings.find_one({"type": "branding"}, {"_id": 0}) or {}
+    company_name = branding.get("company_name", "SSC Track")
+    
+    html_body = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: {branding.get('primary_color', '#10B981')}; padding: 20px; border-radius: 12px 12px 0 0;">
+            <h2 style="color: white; margin: 0;">{company_name}</h2>
+        </div>
+        <div style="padding: 24px; background: #f9fafb; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+            <h3 style="color: #1f2937; margin-top: 0;">{subject}</h3>
+            <div style="color: #4b5563; white-space: pre-wrap;">{message}</div>
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;">
+            <p style="color: #9ca3af; font-size: 12px;">This email was sent from {company_name}.</p>
+        </div>
+    </div>
+    """
+    
+    success = await send_email(
+        to_emails=[emp["email"]],
+        subject=f"{company_name} - {subject}",
+        html_body=html_body,
+    )
+    
+    if success:
+        return {"message": f"Email sent to {emp['email']}", "status": "sent"}
+    else:
+        return {"message": f"Email delivery failed to {emp['email']}. Check SMTP settings.", "status": "failed"}
+
 
 @router.delete("/employees/{emp_id}")
 async def delete_employee(emp_id: str, current_user: User = Depends(get_current_user)):
