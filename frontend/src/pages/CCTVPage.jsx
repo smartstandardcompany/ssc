@@ -46,7 +46,7 @@ export default function CCTVPage() {
   const refreshIntervalRef = useRef(null);
   const [newDVR, setNewDVR] = useState({
     branch_id: '', name: '', ip_address: '', port: 80, http_port: 80, rtsp_port: 554,
-    username: 'admin', password: '', device_serial: '', is_cloud: true, channels: 4
+    username: 'admin', password: '', device_serial: '', is_cloud: false, connection_type: 'remote', channels: 4
   });
 
   useEffect(() => {
@@ -140,7 +140,7 @@ export default function CCTVPage() {
       await api.post('/cctv/dvrs', { ...newDVR, branch_name: branch?.name || '' });
       toast.success('DVR added successfully');
       setShowAddDVR(false);
-      setNewDVR({ branch_id: '', name: '', ip_address: '', port: 80, http_port: 80, rtsp_port: 554, username: 'admin', password: '', device_serial: '', is_cloud: true, channels: 4 });
+      setNewDVR({ branch_id: '', name: '', ip_address: '', port: 80, http_port: 80, rtsp_port: 554, username: 'admin', password: '', device_serial: '', is_cloud: false, connection_type: 'remote', channels: 4 });
       fetchData();
     } catch (err) {
       toast.error('Failed to add DVR');
@@ -584,8 +584,8 @@ export default function CCTVPage() {
                       <Badge variant="outline" className="text-[10px]">{dvr.branch_name}</Badge>
                     </CardTitle>
                     <div className="flex gap-2">
-                      <Badge className={dvr.is_cloud ? 'bg-info/20 text-info' : 'bg-success/20 text-success'}>
-                        {dvr.is_cloud ? 'Cloud' : 'Local'}
+                      <Badge className={dvr.connection_type === 'remote' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : dvr.is_cloud ? 'bg-info/20 text-info' : 'bg-success/20 text-success'}>
+                        {dvr.connection_type === 'remote' ? 'Remote IP' : dvr.connection_type === 'local' ? 'Local IP' : dvr.is_cloud ? 'Cloud' : 'Local'}
                       </Badge>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleDeleteDVR(dvr.id)}>
                         <Trash2 size={14} className="text-error" />
@@ -645,6 +645,67 @@ export default function CCTVPage() {
 
           {/* Setup Guide Tab */}
           <TabsContent value="guide" className="mt-4 space-y-6">
+            {/* Remote DVR Setup - Most Important */}
+            <Card className="border-orange-300 dark:border-orange-700 bg-orange-50/50 dark:bg-orange-900/10">
+              <CardHeader>
+                <CardTitle className="font-outfit text-base flex items-center gap-2">
+                  <Globe size={18} className="text-orange-500" />
+                  Remote DVR Setup (Branch DVRs with Internet)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Your DVRs are at branch locations with internet. To view them in SSC Track, you need to set up <strong>Port Forwarding</strong> on each branch's router so the DVR is accessible from the internet.
+                </p>
+                <div className="p-4 border rounded-xl dark:border-stone-700 bg-white dark:bg-stone-900 space-y-3">
+                  <h4 className="text-sm font-medium dark:text-white">Step-by-Step Port Forwarding:</h4>
+                  <ol className="text-xs text-muted-foreground space-y-3 pl-5 list-decimal">
+                    <li>
+                      <strong className="dark:text-white">Find DVR's Local IP:</strong> On the DVR, go to <code className="bg-stone-100 dark:bg-stone-700 px-1 rounded">Configuration &gt; Network &gt; TCP/IP</code>. Note the IP (e.g., 192.168.1.64)
+                    </li>
+                    <li>
+                      <strong className="dark:text-white">Find DVR's HTTP Port:</strong> Go to <code className="bg-stone-100 dark:bg-stone-700 px-1 rounded">Configuration &gt; Network &gt; Port</code>. Note the HTTP port (default: 80) and RTSP port (default: 554)
+                    </li>
+                    <li>
+                      <strong className="dark:text-white">Enable ISAPI:</strong> Go to <code className="bg-stone-100 dark:bg-stone-700 px-1 rounded">Configuration &gt; Network &gt; Advanced &gt; Integration Protocol</code>. Enable <strong>ISAPI</strong> and <strong>CGIS</strong>
+                    </li>
+                    <li>
+                      <strong className="dark:text-white">Login to Branch Router:</strong> Open your router's admin page (usually 192.168.1.1). Go to <strong>Port Forwarding</strong> or <strong>Virtual Server</strong> section
+                    </li>
+                    <li>
+                      <strong className="dark:text-white">Add Port Forward Rules:</strong>
+                      <div className="mt-1 p-2 bg-stone-100 dark:bg-stone-800 rounded text-[11px] space-y-1">
+                        <div>Rule 1: External Port <strong>80</strong> &rarr; Internal IP <strong>192.168.1.64</strong> Port <strong>80</strong> (HTTP)</div>
+                        <div>Rule 2: External Port <strong>554</strong> &rarr; Internal IP <strong>192.168.1.64</strong> Port <strong>554</strong> (RTSP)</div>
+                      </div>
+                      <p className="mt-1 text-[10px] text-amber-600 dark:text-amber-400">Tip: If port 80 is blocked by your ISP, use a different external port (e.g., 8080) and enter that as the HTTP port in SSC Track</p>
+                    </li>
+                    <li>
+                      <strong className="dark:text-white">Find Branch Public IP:</strong> On any device at the branch, visit <a href="https://whatismyip.com" target="_blank" rel="noreferrer" className="text-blue-500 underline">whatismyip.com</a> to get the public IP
+                    </li>
+                    <li>
+                      <strong className="dark:text-white">Add DVR in SSC Track:</strong> Go to Devices tab &gt; Add DVR &gt; Select "Remote IP" &gt; Enter the public IP and forwarded ports
+                    </li>
+                    <li>
+                      <strong className="dark:text-white">Test:</strong> Go to Live View tab - you should see camera feeds!
+                    </li>
+                  </ol>
+                </div>
+                <div className="p-4 border rounded-xl dark:border-stone-700 bg-white dark:bg-stone-900 space-y-3">
+                  <h4 className="text-sm font-medium dark:text-white">Alternative: Use Hikvision DDNS (No Static IP Needed)</h4>
+                  <p className="text-xs text-muted-foreground">If your branch doesn't have a static public IP, enable DDNS on the DVR:</p>
+                  <ol className="text-xs text-muted-foreground space-y-2 pl-5 list-decimal">
+                    <li>On DVR: <code className="bg-stone-100 dark:bg-stone-700 px-1 rounded">Configuration &gt; Network &gt; DDNS</code></li>
+                    <li>Enable DDNS, select "HiDDNS" as the server type</li>
+                    <li>Enter a device domain name (e.g., "mybranch-dvr")</li>
+                    <li>Your DVR will be accessible at: <code className="bg-stone-100 dark:bg-stone-700 px-1 rounded">mybranch-dvr.hik-online.com</code></li>
+                    <li>Use this domain as the IP address when adding DVR in SSC Track</li>
+                  </ol>
+                  <Badge className="bg-blue-100 text-blue-700 text-[10px]">Works even when your public IP changes</Badge>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* TV Display Guide */}
             <Card className="border-border">
               <CardHeader>
@@ -781,56 +842,79 @@ export default function CCTVPage() {
                 <Label>DVR Name</Label>
                 <Input value={newDVR.name} onChange={(e) => setNewDVR({ ...newDVR, name: e.target.value })} placeholder="Main DVR" />
               </div>
-              <div className="flex gap-2">
-                <Button 
-                  variant={newDVR.is_cloud ? "default" : "outline"} 
-                  size="sm" 
-                  className="flex-1 rounded-xl"
-                  onClick={() => setNewDVR({ ...newDVR, is_cloud: true })}
-                >
-                  <Wifi size={14} className="mr-1" /> Cloud (Hik-Connect)
-                </Button>
-                <Button 
-                  variant={!newDVR.is_cloud ? "default" : "outline"} 
-                  size="sm" 
-                  className="flex-1 rounded-xl"
-                  onClick={() => setNewDVR({ ...newDVR, is_cloud: false })}
-                >
-                  <Building2 size={14} className="mr-1" /> Local IP
-                </Button>
+              <div>
+                <Label className="mb-2 block">Connection Type</Label>
+                <div className="flex gap-2">
+                  <Button 
+                    variant={newDVR.connection_type === 'remote' ? "default" : "outline"} 
+                    size="sm" 
+                    className="flex-1 rounded-xl"
+                    onClick={() => setNewDVR({ ...newDVR, connection_type: 'remote', is_cloud: false })}
+                  >
+                    <Globe size={14} className="mr-1" /> Remote IP
+                  </Button>
+                  <Button 
+                    variant={newDVR.connection_type === 'local' ? "default" : "outline"} 
+                    size="sm" 
+                    className="flex-1 rounded-xl"
+                    onClick={() => setNewDVR({ ...newDVR, connection_type: 'local', is_cloud: false })}
+                  >
+                    <Building2 size={14} className="mr-1" /> Local IP
+                  </Button>
+                  <Button 
+                    variant={newDVR.connection_type === 'cloud' ? "default" : "outline"} 
+                    size="sm" 
+                    className="flex-1 rounded-xl"
+                    onClick={() => setNewDVR({ ...newDVR, connection_type: 'cloud', is_cloud: true })}
+                  >
+                    <Wifi size={14} className="mr-1" /> Cloud
+                  </Button>
+                </div>
+                {newDVR.connection_type === 'remote' && (
+                  <p className="text-[10px] text-muted-foreground mt-1.5">DVR at branch with internet. Requires port forwarding on branch router.</p>
+                )}
+                {newDVR.connection_type === 'local' && (
+                  <p className="text-[10px] text-muted-foreground mt-1.5">DVR on same network as this server (e.g. 192.168.x.x)</p>
+                )}
+                {newDVR.connection_type === 'cloud' && (
+                  <p className="text-[10px] text-muted-foreground mt-1.5">Hik-Connect cloud. Add public IP for live view in SSC Track.</p>
+                )}
               </div>
-              {newDVR.is_cloud ? (
+              {newDVR.connection_type === 'cloud' && (
                 <div>
                   <Label>Device Serial Number</Label>
                   <Input value={newDVR.device_serial} onChange={(e) => setNewDVR({ ...newDVR, device_serial: e.target.value })} placeholder="DS-7208HQHI-K1" />
                 </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label>IP Address</Label>
-                      <Input value={newDVR.ip_address} onChange={(e) => setNewDVR({ ...newDVR, ip_address: e.target.value })} placeholder="192.168.1.100" />
-                    </div>
-                    <div>
-                      <Label>HTTP Port</Label>
-                      <Input type="number" value={newDVR.http_port} onChange={(e) => setNewDVR({ ...newDVR, http_port: parseInt(e.target.value), port: parseInt(e.target.value) })} placeholder="80" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label>RTSP Port</Label>
-                      <Input type="number" value={newDVR.rtsp_port} onChange={(e) => setNewDVR({ ...newDVR, rtsp_port: parseInt(e.target.value) })} placeholder="554" />
-                    </div>
-                    <div>
-                      <Label>Username</Label>
-                      <Input value={newDVR.username} onChange={(e) => setNewDVR({ ...newDVR, username: e.target.value })} />
-                    </div>
-                  </div>
-                  <div>
-                    <Label>Password</Label>
-                    <Input type="password" value={newDVR.password} onChange={(e) => setNewDVR({ ...newDVR, password: e.target.value })} />
-                  </div>
-                </>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>{newDVR.connection_type === 'remote' ? 'Public IP / DDNS Domain' : 'IP Address'}</Label>
+                  <Input value={newDVR.ip_address} onChange={(e) => setNewDVR({ ...newDVR, ip_address: e.target.value })} placeholder={newDVR.connection_type === 'remote' ? '203.0.113.10 or dvr.example.com' : '192.168.1.100'} />
+                </div>
+                <div>
+                  <Label>HTTP Port</Label>
+                  <Input type="number" value={newDVR.http_port} onChange={(e) => setNewDVR({ ...newDVR, http_port: parseInt(e.target.value) || 80, port: parseInt(e.target.value) || 80 })} placeholder="80" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>RTSP Port</Label>
+                  <Input type="number" value={newDVR.rtsp_port} onChange={(e) => setNewDVR({ ...newDVR, rtsp_port: parseInt(e.target.value) || 554 })} placeholder="554" />
+                </div>
+                <div>
+                  <Label>Username</Label>
+                  <Input value={newDVR.username} onChange={(e) => setNewDVR({ ...newDVR, username: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <Label>Password</Label>
+                <Input type="password" value={newDVR.password} onChange={(e) => setNewDVR({ ...newDVR, password: e.target.value })} />
+              </div>
+              {newDVR.connection_type === 'remote' && (
+                <div className="p-3 border rounded-xl bg-amber-50 dark:bg-amber-900/10 dark:border-amber-700">
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1"><Info size={12} /> Port Forwarding Required</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">On your branch router, forward port {newDVR.http_port || 80} (HTTP) and port {newDVR.rtsp_port || 554} (RTSP) to the DVR's local IP address (usually 192.168.1.x). See Setup Guide for details.</p>
+                </div>
               )}
               <div>
                 <Label>Number of Channels</Label>

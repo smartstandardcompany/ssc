@@ -42,7 +42,8 @@ class DVRConfig(BaseModel):
     username: str = "admin"
     password: str = ""
     device_serial: Optional[str] = None
-    is_cloud: bool = True
+    is_cloud: bool = False
+    connection_type: str = "remote"  # "local", "remote", "cloud"
     channels: int = 4
 
 class CameraConfig(BaseModel):
@@ -200,7 +201,7 @@ async def get_dvrs(current_user: User = Depends(get_current_user)):
 async def add_dvr(dvr: DVRConfig, current_user: User = Depends(get_current_user)):
     """Add a new DVR/NVR"""
     dvr_dict = dvr.model_dump()
-    dvr_dict["id"] = f"dvr_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    dvr_dict["id"] = f"dvr_{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
     dvr_dict["created_at"] = datetime.now(timezone.utc).isoformat()
     dvr_dict["created_by"] = current_user.id
     
@@ -334,11 +335,11 @@ async def get_snapshot(camera_id: str, current_user: User = Depends(get_current_
     if not dvr:
         raise HTTPException(status_code=404, detail="DVR not found")
     
-    if dvr.get("is_cloud"):
-        raise HTTPException(status_code=400, detail="Live snapshots for cloud DVRs require Hik-Connect app. Use local network connection instead.")
-    
     if not dvr.get("ip_address"):
-        raise HTTPException(status_code=400, detail="DVR IP address not configured")
+        conn_type = dvr.get("connection_type", "cloud" if dvr.get("is_cloud") else "local")
+        if conn_type == "cloud" and not dvr.get("ip_address"):
+            raise HTTPException(status_code=400, detail="To view live feed, add the DVR's public IP address or DDNS domain. Go to Devices > Edit DVR and enter the public IP/domain with forwarded HTTP port.")
+        raise HTTPException(status_code=400, detail="DVR IP address or domain not configured")
     
     channel = camera.get("channel", 1)
     http_port = dvr.get("http_port", dvr.get("port", 80))
@@ -350,9 +351,8 @@ async def get_snapshot(camera_id: str, current_user: User = Depends(get_current_
     snapshot_url = f"http://{ip}:{http_port}/ISAPI/Streaming/channels/{channel}01/picture"
     
     try:
-        # Try Digest auth first (Hikvision default), then Basic
         async with httpx.AsyncClient(timeout=10.0, verify=False) as client:
-            # Attempt 1: Digest auth
+            # Attempt 1: Digest auth (Hikvision default)
             resp = await client.get(snapshot_url, auth=httpx.DigestAuth(username, password))
             if resp.status_code == 200 and b'<html' not in resp.content[:100].lower():
                 return Response(content=resp.content, media_type="image/jpeg",
@@ -364,18 +364,25 @@ async def get_snapshot(camera_id: str, current_user: User = Depends(get_current_
                 return Response(content=resp.content, media_type="image/jpeg",
                                 headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
             
-            # Attempt 3: Try alternative ISAPI path
+            # Attempt 3: Alternative ISAPI path
             alt_url = f"http://{ip}:{http_port}/Streaming/channels/{channel}01/picture"
             resp = await client.get(alt_url, auth=httpx.DigestAuth(username, password))
             if resp.status_code == 200 and b'<html' not in resp.content[:100].lower():
                 return Response(content=resp.content, media_type="image/jpeg",
                                 headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
             
-            raise HTTPException(status_code=502, detail=f"DVR responded with status {resp.status_code}. Check IP, port, and credentials.")
+            # Attempt 4: Try HTTPS (some DVRs use HTTPS when port-forwarded)
+            https_url = f"https://{ip}:{http_port}/ISAPI/Streaming/channels/{channel}01/picture"
+            resp = await client.get(https_url, auth=httpx.DigestAuth(username, password))
+            if resp.status_code == 200 and b'<html' not in resp.content[:100].lower():
+                return Response(content=resp.content, media_type="image/jpeg",
+                                headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+            
+            raise HTTPException(status_code=502, detail=f"DVR responded with status {resp.status_code}. Verify: 1) IP/domain is correct, 2) HTTP port is forwarded, 3) Username/password are correct, 4) ISAPI is enabled on DVR.")
     except httpx.ConnectError:
-        raise HTTPException(status_code=502, detail=f"Cannot connect to DVR at {ip}:{http_port}. Ensure DVR is on the same network and the IP/port are correct.")
+        raise HTTPException(status_code=502, detail=f"Cannot connect to DVR at {ip}:{http_port}. For remote DVRs: ensure port {http_port} is forwarded on the branch router to the DVR's local IP.")
     except httpx.TimeoutException:
-        raise HTTPException(status_code=504, detail=f"Connection to DVR timed out. Check network connectivity.")
+        raise HTTPException(status_code=504, detail=f"Connection to DVR at {ip}:{http_port} timed out. Check if the public IP is correct and the port is open.")
     except HTTPException:
         raise
     except Exception as e:
@@ -394,18 +401,19 @@ async def get_stream_info(camera_id: str, current_user: User = Depends(get_curre
         raise HTTPException(status_code=404, detail="DVR not found")
     
     channel = camera.get("channel", 1)
+    conn_type = dvr.get("connection_type", "cloud" if dvr.get("is_cloud") else "local")
+    ip = dvr.get("ip_address", "")
     
-    if dvr.get("is_cloud"):
+    if not ip:
         return {
-            "type": "cloud",
+            "type": conn_type,
             "device_serial": dvr.get("device_serial"),
             "channel": channel,
             "snapshot_available": False,
             "rtsp_available": False,
-            "message": "Cloud cameras: Use Hik-Connect app for live view. For web display, connect DVR to local network."
+            "message": "No IP address configured. To view live feed, edit this DVR and add the public IP address or DDNS domain with the forwarded HTTP port."
         }
     
-    ip = dvr.get("ip_address", "")
     http_port = dvr.get("http_port", dvr.get("port", 80))
     rtsp_port = dvr.get("rtsp_port", 554)
     username = dvr.get("username", "admin")
@@ -426,7 +434,7 @@ async def get_stream_info(camera_id: str, current_user: User = Depends(get_curre
         pass
     
     return {
-        "type": "local",
+        "type": conn_type,
         "channel": channel,
         "ip_address": ip,
         "http_port": http_port,
@@ -437,7 +445,7 @@ async def get_stream_info(camera_id: str, current_user: User = Depends(get_curre
         "rtsp_main": main_stream,
         "rtsp_sub": sub_stream,
         "snapshot_url": f"/api/cctv/snapshot/{camera_id}",
-        "message": "DVR reachable" if reachable else f"Cannot reach DVR at {ip}:{http_port}. Check network."
+        "message": "DVR reachable" if reachable else f"Cannot reach DVR at {ip}:{http_port}. Ensure the port is forwarded and the IP is correct."
     }
 
 # =====================================================
