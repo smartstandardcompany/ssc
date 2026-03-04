@@ -52,6 +52,7 @@ export default function EmployeePortalPage() {
   const [attendance, setAttendance] = useState([]);
   const [myLoans, setMyLoans] = useState([]);
   const [myTasks, setMyTasks] = useState([]);
+  const [salarySummary, setSalarySummary] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showLeaveForm, setShowLeaveForm] = useState(false);
   const [showRequestForm, setShowRequestForm] = useState(false);
@@ -69,13 +70,15 @@ export default function EmployeePortalPage() {
       const profRes = await api.get('/my/employee-profile');
       setProfile(profRes.data);
       setEditData({ phone: profRes.data.phone || '', email: profRes.data.email || '' });
-      const [payRes, leaveRes, reqRes, attRes, loanRes, taskRes] = await Promise.all([
+      const [payRes, leaveRes, reqRes, attRes, loanRes, taskRes, salSumRes] = await Promise.all([
         api.get('/my/payments'), api.get('/my/leaves'), api.get('/my/requests'),
         api.get('/my/attendance'), api.get('/my/loans').catch(() => ({ data: [] })),
-        api.get('/task-reminders/my-reminders').catch(() => ({ data: [] }))
+        api.get('/task-reminders/my-reminders').catch(() => ({ data: [] })),
+        api.get('/my/salary-summary').catch(() => ({ data: { summary: [] } }))
       ]);
       setPayments(payRes.data); setLeaves(leaveRes.data); setRequests(reqRes.data);
       setAttendance(attRes.data); setMyLoans(loanRes.data); setMyTasks(taskRes.data);
+      setSalarySummary(salSumRes.data?.summary || []);
       const today = new Date().toISOString().split('T')[0];
       setTodayAttendance(attRes.data.find(a => a.date === today) || null);
     } catch (err) {
@@ -253,6 +256,7 @@ export default function EmployeePortalPage() {
           <div className="overflow-x-auto">
             <TabsList className="w-full sm:w-auto">
               <TabsTrigger value="attendance" className="text-xs sm:text-sm">Attendance</TabsTrigger>
+              <TabsTrigger value="salary-record" className="text-xs sm:text-sm" data-testid="salary-record-tab">Salary Record</TabsTrigger>
               <TabsTrigger value="payments" className="text-xs sm:text-sm">Payments</TabsTrigger>
               <TabsTrigger value="leaves" className="text-xs sm:text-sm">Leaves</TabsTrigger>
               <TabsTrigger value="loans" className="text-xs sm:text-sm">Loans ({myLoans.length})</TabsTrigger>
@@ -287,6 +291,87 @@ export default function EmployeePortalPage() {
                     })}{attendance.length === 0 && <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">No records</td></tr>}</tbody>
                   </table>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="salary-record">
+            <Card className="dark:bg-stone-900 dark:border-stone-700">
+              <CardHeader>
+                <CardTitle className="font-outfit text-base dark:text-white flex items-center gap-2">
+                  <Receipt size={18} className="text-orange-500" />Monthly Salary Record
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 sm:p-6">
+                {salarySummary.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Banknote size={40} className="mx-auto mb-3 opacity-30" />
+                    <p>No salary records found</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full" data-testid="salary-record-table">
+                      <thead>
+                        <tr className="border-b dark:border-stone-700">
+                          <th className="text-left p-3 text-xs font-medium text-muted-foreground">Month</th>
+                          <th className="text-right p-3 text-xs font-medium text-muted-foreground">Salary</th>
+                          <th className="text-right p-3 text-xs font-medium text-muted-foreground">Paid</th>
+                          <th className="text-right p-3 text-xs font-medium text-muted-foreground hidden sm:table-cell">Extras</th>
+                          <th className="text-right p-3 text-xs font-medium text-muted-foreground hidden sm:table-cell">Deductions</th>
+                          <th className="text-right p-3 text-xs font-medium text-muted-foreground">Net</th>
+                          <th className="text-center p-3 text-xs font-medium text-muted-foreground">Status</th>
+                          <th className="text-left p-3 text-xs font-medium text-muted-foreground hidden sm:table-cell">Paid On</th>
+                          <th className="text-center p-3 text-xs font-medium text-muted-foreground hidden sm:table-cell">Mode</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {salarySummary.map((row) => {
+                          const extras = row.advance + row.overtime + row.bonus;
+                          return (
+                            <tr key={row.period} className="border-b dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800" data-testid={`salary-row-${row.period}`}>
+                              <td className="p-3 text-sm font-medium dark:text-white">{row.period}</td>
+                              <td className="p-3 text-sm text-right dark:text-stone-300">SAR {row.monthly_salary.toLocaleString()}</td>
+                              <td className="p-3 text-sm text-right font-medium text-emerald-600">SAR {row.salary_paid.toLocaleString()}</td>
+                              <td className="p-3 text-sm text-right dark:text-stone-300 hidden sm:table-cell">
+                                {extras > 0 ? <span className="text-blue-500">+SAR {extras.toLocaleString()}</span> : '-'}
+                              </td>
+                              <td className="p-3 text-sm text-right hidden sm:table-cell">
+                                {row.deductions > 0 ? <span className="text-red-500">-SAR {row.deductions.toLocaleString()}</span> : '-'}
+                              </td>
+                              <td className="p-3 text-sm text-right font-bold dark:text-white">SAR {row.total_received.toLocaleString()}</td>
+                              <td className="p-3 text-center">
+                                {row.status === 'paid' ? (
+                                  <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-[10px]">
+                                    <CheckCircle size={10} className="mr-0.5" />Paid
+                                  </Badge>
+                                ) : row.status === 'partial' ? (
+                                  <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px]">
+                                    <AlertTriangle size={10} className="mr-0.5" />Partial
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-[10px]">
+                                    <XCircle size={10} className="mr-0.5" />Unpaid
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="p-3 text-sm dark:text-stone-300 hidden sm:table-cell">
+                                {row.payment_date ? format(new Date(row.payment_date), 'MMM dd, yyyy') : '-'}
+                              </td>
+                              <td className="p-3 text-center hidden sm:table-cell">
+                                {row.payment_mode ? <Badge variant="secondary" className="capitalize text-[10px]">{row.payment_mode}</Badge> : '-'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                    <div className="p-4 border-t dark:border-stone-700 flex flex-wrap gap-4 text-xs text-muted-foreground">
+                      <span>Total Months: <strong className="dark:text-white">{salarySummary.length}</strong></span>
+                      <span>Total Received: <strong className="text-emerald-600">SAR {salarySummary.reduce((s, r) => s + r.total_received, 0).toLocaleString()}</strong></span>
+                      <span>Fully Paid: <strong className="dark:text-white">{salarySummary.filter(r => r.status === 'paid').length}</strong></span>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

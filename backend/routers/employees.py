@@ -667,6 +667,59 @@ async def get_my_payments(current_user: User = Depends(get_current_user)):
             if isinstance(p.get(f), str): p[f] = datetime.fromisoformat(p[f])
     return payments
 
+@router.get("/my/salary-summary")
+async def get_my_salary_summary(current_user: User = Depends(get_current_user)):
+    emp = await db.employees.find_one({"user_id": current_user.id}, {"_id": 0})
+    if not emp: raise HTTPException(status_code=404, detail="No employee profile linked")
+    payments = await db.salary_payments.find({"employee_id": emp["id"]}, {"_id": 0}).sort("date", -1).to_list(1000)
+    deductions = await db.salary_deductions.find({"employee_id": emp["id"]}, {"_id": 0}).to_list(1000)
+    salary = emp.get("salary", 0)
+    monthly = {}
+    for p in payments:
+        period = p.get("period", "Unknown")
+        if period not in monthly:
+            monthly[period] = {"salary_paid": 0, "advance": 0, "overtime": 0, "bonus": 0, "other": 0, "total": 0, "payment_date": None, "payment_mode": None, "acknowledged": True}
+        pt = p.get("payment_type", "salary")
+        amount = p.get("amount", 0)
+        if pt == "salary":
+            monthly[period]["salary_paid"] += amount
+        elif pt in monthly[period]:
+            monthly[period][pt] += amount
+        else:
+            monthly[period]["other"] += amount
+        monthly[period]["total"] += amount
+        if not monthly[period]["payment_date"]:
+            monthly[period]["payment_date"] = p.get("date", "")
+            monthly[period]["payment_mode"] = p.get("payment_mode", "cash")
+        if not p.get("acknowledged", True):
+            monthly[period]["acknowledged"] = False
+    ded_by_period = {}
+    for d in deductions:
+        period = d.get("period", "Unknown")
+        ded_by_period[period] = ded_by_period.get(period, 0) + d.get("amount", 0)
+    summary = []
+    for period, data in sorted(monthly.items(), reverse=True):
+        ded_amount = ded_by_period.get(period, 0)
+        balance = salary - data["salary_paid"]
+        status = "paid" if balance <= 0 else ("partial" if data["salary_paid"] > 0 else "unpaid")
+        summary.append({
+            "period": period,
+            "monthly_salary": salary,
+            "salary_paid": data["salary_paid"],
+            "advance": data["advance"],
+            "overtime": data["overtime"],
+            "bonus": data["bonus"],
+            "deductions": ded_amount,
+            "total_received": data["total"],
+            "balance": balance,
+            "status": status,
+            "payment_date": data["payment_date"],
+            "payment_mode": data["payment_mode"],
+            "acknowledged": data["acknowledged"]
+        })
+    return {"employee_name": emp.get("name", ""), "salary": salary, "summary": summary}
+
+
 @router.get("/my/leaves")
 async def get_my_leaves(current_user: User = Depends(get_current_user)):
     emp = await db.employees.find_one({"user_id": current_user.id}, {"_id": 0})
