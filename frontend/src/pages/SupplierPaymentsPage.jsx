@@ -25,6 +25,9 @@ export default function SupplierPaymentsPage() {
   const [suppliers, setSuppliers] = useState([]);
   const { branches, fetchBranches: _fetchBr } = useBranchStore();
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState('payment'); // 'payment' or 'bill'
   const [formData, setFormData] = useState({
@@ -51,17 +54,20 @@ export default function SupplierPaymentsPage() {
 
   useEffect(() => { fetchData(); }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (page = 1) => {
     try {
       const [paymentsRes, suppliersRes, branchesRes, returnsRes] = await Promise.all([
-        api.get('/supplier-payments'),
+        api.get(`/supplier-payments?page=${page}&limit=100`),
         api.get('/suppliers'),
         Promise.resolve({ data: [] }),
         api.get('/supplier-returns').catch(() => ({ data: [] })),
       ]);
-      setPayments(paymentsRes.data);
+      const payData = paymentsRes.data;
+      setPayments(payData.data || payData);
+      setTotalPages(payData.pages || 1);
+      setTotalRecords(payData.total || 0);
+      setCurrentPage(payData.page || 1);
       setSuppliers(suppliersRes.data);
-      // branches from store
       setReturns(returnsRes.data);
     } catch { toast.error('Failed to fetch data'); }
     finally { setLoading(false); }
@@ -540,11 +546,11 @@ export default function SupplierPaymentsPage() {
                   <tr className="border-b border-border bg-stone-50">
                     <th className="text-left p-3 font-medium text-sm">Date</th>
                     <th className="text-left p-3 font-medium text-sm">Supplier</th>
-                    <th className="text-left p-3 font-medium text-sm">Branch</th>
+                    <th className="text-left p-3 font-medium text-sm hidden md:table-cell">Branch</th>
                     <th className="text-right p-3 font-medium text-sm">Amount</th>
                     <th className="text-left p-3 font-medium text-sm">Mode</th>
-                    <th className="text-left p-3 font-medium text-sm">Notes</th>
-                    <th className="text-center p-3 font-medium text-sm">Bill</th>
+                    <th className="text-left p-3 font-medium text-sm hidden lg:table-cell">Notes</th>
+                    <th className="text-center p-3 font-medium text-sm hidden md:table-cell">Bill</th>
                     <th className="text-right p-3 font-medium text-sm">Actions</th>
                   </tr>
                 </thead>
@@ -555,7 +561,7 @@ export default function SupplierPaymentsPage() {
                       <tr key={payment.id} className="border-b border-border hover:bg-secondary/50" data-testid="payment-row">
                         <td className="p-3 text-sm">{format(new Date(payment.date), 'MMM dd, yyyy')}</td>
                         <td className="p-3 text-sm font-medium">{payment.supplier_name}</td>
-                        <td className="p-3 text-sm text-muted-foreground">{branchName}</td>
+                        <td className="p-3 text-sm text-muted-foreground hidden md:table-cell">{branchName}</td>
                         <td className="p-3 text-sm text-right font-bold">SAR {payment.amount.toFixed(2)}</td>
                         <td className="p-3">
                           <Badge variant="outline" className={`text-xs ${
@@ -569,8 +575,8 @@ export default function SupplierPaymentsPage() {
                             {payment.payment_mode}
                           </Badge>
                         </td>
-                        <td className="p-3 text-sm text-muted-foreground max-w-[200px] truncate">{payment.notes || '-'}</td>
-                        <td className="p-3">
+                        <td className="p-3 text-sm text-muted-foreground max-w-[200px] truncate hidden lg:table-cell">{payment.notes || '-'}</td>
+                        <td className="p-3 hidden md:table-cell">
                           {payment.bill_image_url ? (
                             <a href={`${process.env.REACT_APP_BACKEND_URL}${payment.bill_image_url}`} target="_blank" rel="noreferrer">
                               <Button size="sm" variant="ghost" className="h-7 text-blue-600"><Eye size={12} className="mr-0.5" />Bill</Button>
@@ -596,6 +602,19 @@ export default function SupplierPaymentsPage() {
                 </tbody>
               </table>
             </div>
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 px-2">
+                <span className="text-xs text-muted-foreground">{totalRecords} total records</span>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" disabled={currentPage <= 1}
+                    onClick={() => fetchData(currentPage - 1)} data-testid="prev-page">Previous</Button>
+                  <span className="text-sm">Page {currentPage} of {totalPages}</span>
+                  <Button size="sm" variant="outline" disabled={currentPage >= totalPages}
+                    onClick={() => fetchData(currentPage + 1)} data-testid="next-page">Next</Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Query
 from typing import List, Optional
 from datetime import datetime, timezone
 import os
@@ -136,14 +136,29 @@ async def pay_supplier_credit(supplier_id: str, payment: SupplierCreditPayment, 
     return {"message": "Credit payment recorded", "remaining_credit": new_credit}
 
 # Supplier Payment Routes
-@router.get("/supplier-payments", response_model=List[SupplierPayment])
-async def get_supplier_payments(current_user: User = Depends(get_current_user)):
+@router.get("/supplier-payments")
+async def get_supplier_payments(
+    page: int = Query(1, ge=1),
+    limit: int = Query(100, ge=1, le=500),
+    supplier_id: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
     require_permission(current_user, "supplier_payments", "read")
-    payments = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).sort("date", -1).to_list(1000)
+    query = {"supplier_id": {"$exists": True, "$ne": None}}
+    if supplier_id: query["supplier_id"] = supplier_id
+    if start_date:
+        query["date"] = query.get("date", {}); query["date"]["$gte"] = start_date
+    if end_date:
+        query.setdefault("date", {}); query["date"]["$lte"] = end_date + "T23:59:59"
+    total = await db.supplier_payments.count_documents(query)
+    skip = (page - 1) * limit
+    payments = await db.supplier_payments.find(query, {"_id": 0}).sort("date", -1).skip(skip).limit(limit).to_list(limit)
     for payment in payments:
         if isinstance(payment.get('date'), str): payment['date'] = datetime.fromisoformat(payment['date'])
         if isinstance(payment.get('created_at'), str): payment['created_at'] = datetime.fromisoformat(payment['created_at'])
-    return payments
+    return {"data": payments, "total": total, "page": page, "limit": limit, "pages": (total + limit - 1) // limit}
 
 @router.post("/supplier-payments", response_model=SupplierPayment)
 async def create_supplier_payment(payment_data: SupplierPaymentCreate, current_user: User = Depends(get_current_user)):

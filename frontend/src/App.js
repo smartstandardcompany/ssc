@@ -44,6 +44,7 @@ import CashierPOSPage from "./pages/CashierPOSPage";
 import CashierLoginPage from "./pages/CashierLoginPage";
 import KitchenDisplayPage from "./pages/KitchenDisplayPage";
 import OrderStatusPage from "./pages/OrderStatusPage";
+import PublicOrderTrackPage from "./pages/PublicOrderTrackPage";
 import MenuItemsPage from "./pages/MenuItemsPage";
 import ShiftReportPage from "./pages/ShiftReportPage";
 import CCTVPage from "./pages/CCTVPage";
@@ -293,6 +294,9 @@ function App() {
           <Route path="/customer-portal/statements" element={<CustomerPortalStatements />} />
           <Route path="/customer-portal/invoices" element={<CustomerPortalInvoices />} />
           <Route path="/customer-portal/loyalty" element={<CustomerPortalLoyalty />} />
+
+          {/* Public Order Tracking (no auth required) */}
+          <Route path="/track-order" element={<PublicOrderTrackPage />} />
         </Routes>
         </KeyboardShortcutProvider>
       </BrowserRouter>

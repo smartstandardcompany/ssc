@@ -210,32 +210,49 @@ async def update_order_status(request: OrderStatusUpdate, background_tasks: Back
 
 @router.get("/order/{order_id}")
 async def get_order_tracking(order_id: str):
-    """Get order tracking information"""
+    """Get order tracking information - public endpoint, no auth required"""
     db = get_db()
     
-    order = await db.sales.find_one({"_id": ObjectId(order_id)})
+    order = None
+    # Try lookup by id field (UUID)
+    order = await db.pos_orders.find_one({"id": order_id}, {"_id": 0})
     if not order:
-        order = await db.orders.find_one({"_id": ObjectId(order_id)})
+        order = await db.sales.find_one({"id": order_id}, {"_id": 0})
     if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
+        # Try by order_number
+        order = await db.pos_orders.find_one({"order_number": order_id}, {"_id": 0})
+    if not order:
+        try:
+            from bson import ObjectId as ObjId
+            if ObjId.is_valid(order_id):
+                raw = await db.pos_orders.find_one({"_id": ObjId(order_id)})
+                if raw: raw.pop("_id", None); order = raw
+                if not order:
+                    raw = await db.sales.find_one({"_id": ObjId(order_id)})
+                    if raw: raw.pop("_id", None); order = raw
+        except Exception:
+            pass
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found. Please check the order number.")
     
     # Get customer info
     customer = None
     customer_id = order.get("customer_id")
     if customer_id:
-        customer = await db.customers.find_one({"_id": ObjectId(customer_id)}) if ObjectId.is_valid(customer_id) else None
-        if not customer:
-            customer = await db.customers.find_one({"id": customer_id})
+        customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
     
     return {
-        "order_id": str(order["_id"]),
-        "status": order.get("order_status", "placed"),
+        "order_id": order.get("id", order_id),
+        "order_number": order.get("order_number", ""),
+        "status": order.get("order_status", order.get("status", "placed")),
         "status_history": order.get("status_history", []),
         "created_at": order.get("created_at"),
         "updated_at": order.get("status_updated_at"),
-        "customer_name": customer.get("name") if customer else None,
-        "total": order.get("amount", order.get("total", 0)),
+        "customer_name": customer.get("name") if customer else order.get("customer_name"),
+        "total": order.get("final_amount", order.get("amount", order.get("total", 0))),
         "items": order.get("items", []),
+        "table_number": order.get("table_number"),
+        "order_type": order.get("order_type", "dine_in"),
     }
 
 @router.get("/config")
