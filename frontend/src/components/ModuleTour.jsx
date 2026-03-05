@@ -76,6 +76,33 @@ const MODULE_TOURS = {
       { title: 'Loyalty Points', description: 'Earn points on every purchase and redeem them for discounts. Check your tier status and rewards history.', icon: Gift, target: null },
     ]
   },
+  '/suppliers': {
+    key: 'suppliers_tour',
+    steps: [
+      { title: 'Supplier Management', description: 'Manage all your suppliers, track purchases, payments, and credit balances in one place.', icon: Truck, target: null },
+      { title: 'View Ledger', description: 'Click on a supplier to see their full transaction ledger with branch-wise breakdown, debit/credit history, and running balance.', icon: FileText, target: null },
+      { title: 'Make Payment', description: 'Record supplier payments via cash or bank. Track payment history and outstanding balances per branch.', icon: DollarSign, target: null },
+      { title: 'Share Statement', description: 'Export or share supplier statements via Email, WhatsApp, or download as PDF/Excel.', icon: Receipt, target: null },
+    ]
+  },
+  '/advanced-analytics': {
+    key: 'advanced_analytics_tour',
+    steps: [
+      { title: 'Advanced Analytics', description: 'Your comprehensive business intelligence dashboard with KPIs, charts, and multi-dimensional analysis.', icon: BarChart3, target: null },
+      { title: 'KPI Cards', description: 'Track key metrics at a glance: Revenue, Expenses, Net Profit, Customers, and Average Order Value.', icon: TrendingUp, target: null },
+      { title: 'Analytics Tabs', description: 'Switch between Revenue, Cash Flow, Customers, Branches, and Expenses tabs for deep analysis.', icon: BarChart3, target: null },
+      { title: 'Branch Comparison', description: 'The Branches tab shows a radar chart comparing branch performance across multiple metrics.', icon: Package, target: null },
+    ]
+  },
+  '/data-management': {
+    key: 'data_management_tour',
+    steps: [
+      { title: 'Data Management', description: 'Monitor your database health, archive old records, and manage data lifecycle.', icon: Package, target: null },
+      { title: 'Smart Recommendations', description: 'AI-powered suggestions show which collections need attention based on growth rate and age analysis.', icon: TrendingUp, target: null },
+      { title: 'Archive & Restore', description: 'Archive old records to keep your database lean. Restore or permanently purge archived data anytime.', icon: FileText, target: null },
+      { title: 'Auto-Archive', description: 'Enable automated archiving on a weekly or monthly schedule. Configure per-collection thresholds.', icon: Settings, target: null },
+    ]
+  },
 };
 
 export default function ModuleTour() {

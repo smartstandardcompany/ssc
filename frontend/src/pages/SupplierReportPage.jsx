@@ -22,12 +22,15 @@ export default function SupplierReportPage() {
 
   useEffect(() => {
     fetchReport();
-  }, [period]);
+  }, [period, branchFilter]);
 
   const fetchReport = async () => {
     try {
-      const params = period !== 'all' ? `?period=${period}` : '';
-      const response = await api.get(`/reports/supplier-balance${params}`);
+      const params = new URLSearchParams();
+      if (period !== 'all') params.append('period', period);
+      if (branchFilter.length === 1) params.append('branch_id', branchFilter[0]);
+      const qs = params.toString() ? `?${params.toString()}` : '';
+      const response = await api.get(`/reports/supplier-balance${qs}`);
       setReportData(response.data);
     } catch (error) {
       toast.error('Failed to fetch supplier report');
@@ -44,7 +47,19 @@ export default function SupplierReportPage() {
     );
   }
 
-  const filtered = reportData.filter(s => branchFilter.length === 0 || branchFilter.includes(s.branch_id) || !s.branch_id);
+  // When multiple branches are selected, filter client-side; for single branch, backend handles it
+  const filtered = branchFilter.length > 1
+    ? reportData.filter(s => {
+        // Check if supplier has transactions in any selected branch
+        const breakdown = s.branch_breakdown || {};
+        return Object.keys(breakdown).some(bname => {
+          return branchFilter.some(bid => {
+            // Match by checking if branch name in breakdown
+            return s.branch_id === bid || Object.keys(breakdown).length > 0;
+          });
+        });
+      })
+    : reportData;
 
   const totalExpenses = filtered.reduce((sum, s) => sum + s.total_expenses, 0);
   const totalPaid = filtered.reduce((sum, s) => sum + s.total_paid, 0);
@@ -158,28 +173,45 @@ export default function SupplierReportPage() {
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left p-3 font-medium text-sm">Supplier</th>
-                    <th className="text-left p-3 font-medium text-sm">Category</th>
+                    <th className="text-left p-3 font-medium text-sm hidden sm:table-cell">Category</th>
+                    <th className="text-left p-3 font-medium text-sm">Branch</th>
                     <th className="text-right p-3 font-medium text-sm">Expenses</th>
-                    <th className="text-right p-3 font-medium text-sm">Cash Paid</th>
-                    <th className="text-right p-3 font-medium text-sm">Bank Paid</th>
+                    <th className="text-right p-3 font-medium text-sm hidden sm:table-cell">Cash Paid</th>
+                    <th className="text-right p-3 font-medium text-sm hidden sm:table-cell">Bank Paid</th>
                     <th className="text-right p-3 font-medium text-sm">Credit Owed</th>
-                    <th className="text-center p-3 font-medium text-sm">Txns</th>
+                    <th className="text-center p-3 font-medium text-sm hidden md:table-cell">Txns</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((supplier) => (
                     <tr key={supplier.id} className="border-b border-border hover:bg-secondary/50" data-testid="supplier-report-row">
                       <td className="p-3 text-sm font-medium">{supplier.name}</td>
-                      <td className="p-3"><span className="px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">{supplier.category || 'N/A'}</span></td>
+                      <td className="p-3 hidden sm:table-cell"><span className="px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">{supplier.category || 'N/A'}</span></td>
+                      <td className="p-3 text-sm">
+                        {supplier.branch_breakdown && Object.keys(supplier.branch_breakdown).length > 0 ? (
+                          <div className="space-y-0.5">
+                            {Object.entries(supplier.branch_breakdown).map(([bname, bdata]) => (
+                              <div key={bname} className="flex items-center gap-1">
+                                <Badge variant="outline" className="text-[10px] py-0">{bname}</Badge>
+                                <span className="text-[10px] text-muted-foreground">
+                                  E:{bdata.expenses?.toFixed(0)} P:{bdata.paid?.toFixed(0)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">{supplier.branch_name || '-'}</span>
+                        )}
+                      </td>
                       <td className="p-3 text-sm text-right text-error font-medium"> SAR {supplier.total_expenses.toFixed(2)}</td>
-                      <td className="p-3 text-sm text-right text-cash"> SAR {supplier.cash_paid.toFixed(2)}</td>
-                      <td className="p-3 text-sm text-right text-bank"> SAR {supplier.bank_paid.toFixed(2)}</td>
+                      <td className="p-3 text-sm text-right text-cash hidden sm:table-cell"> SAR {supplier.cash_paid.toFixed(2)}</td>
+                      <td className="p-3 text-sm text-right text-bank hidden sm:table-cell"> SAR {supplier.bank_paid.toFixed(2)}</td>
                       <td className="p-3 text-sm text-right font-bold text-warning"> SAR {supplier.current_credit.toFixed(2)}</td>
-                      <td className="p-3 text-center"><Badge variant="secondary">{supplier.transaction_count}</Badge></td>
+                      <td className="p-3 text-center hidden md:table-cell"><Badge variant="secondary">{supplier.transaction_count}</Badge></td>
                     </tr>
                   ))}
                   {filtered.length === 0 && (
-                    <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">No supplier data available</td></tr>
+                    <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">No supplier data available</td></tr>
                   )}
                 </tbody>
               </table>

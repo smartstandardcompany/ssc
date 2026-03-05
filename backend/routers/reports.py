@@ -82,8 +82,9 @@ async def get_branch_cashbank_report(current_user: User = Depends(get_current_us
     return branch_data
 
 @router.get("/reports/supplier-balance")
-async def get_supplier_balance_report(period: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None, current_user: User = Depends(get_current_user)):
+async def get_supplier_balance_report(period: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None, branch_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
     suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+    branches = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
     date_query = {}
     if period == "today":
         today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -98,9 +99,11 @@ async def get_supplier_balance_report(period: Optional[str] = None, start_date: 
         date_query = {"date": {"$gte": start_date, "$lte": end_date}}
     sp_query = {"supplier_id": {"$exists": True, "$ne": None}}
     if date_query: sp_query.update(date_query)
+    if branch_id: sp_query["branch_id"] = branch_id
     supplier_payments = await db.supplier_payments.find(sp_query, {"_id": 0}).to_list(10000)
     exp_query = {}
     if date_query: exp_query.update(date_query)
+    if branch_id: exp_query["branch_id"] = branch_id
     expenses = await db.expenses.find(exp_query, {"_id": 0}).to_list(10000)
     result = []
     for supplier in suppliers:
@@ -111,7 +114,37 @@ async def get_supplier_balance_report(period: Optional[str] = None, start_date: 
         credit_added = sum(p["amount"] for p in payments if p.get("payment_mode") == "credit")
         sup_expenses = [e for e in expenses if e.get("supplier_id") == sid]
         total_expenses = sum(e["amount"] for e in sup_expenses)
-        result.append({"id": sid, "name": supplier["name"], "category": supplier.get("category", "-"), "branch_id": supplier.get("branch_id"), "cash_paid": cash_paid, "bank_paid": bank_paid, "credit_added": credit_added, "total_paid": cash_paid + bank_paid, "total_expenses": total_expenses, "current_credit": supplier.get("current_credit", 0), "credit_limit": supplier.get("credit_limit", 0), "transaction_count": len(payments) + len(sup_expenses)})
+
+        # Collect branch breakdown for this supplier's transactions
+        branch_breakdown = {}
+        for p in payments:
+            bid = p.get("branch_id")
+            bname = branches.get(bid, "No Branch") if bid else "No Branch"
+            if bname not in branch_breakdown:
+                branch_breakdown[bname] = {"expenses": 0, "paid": 0}
+            branch_breakdown[bname]["paid"] += p["amount"]
+        for e in sup_expenses:
+            bid = e.get("branch_id")
+            bname = branches.get(bid, "No Branch") if bid else "No Branch"
+            if bname not in branch_breakdown:
+                branch_breakdown[bname] = {"expenses": 0, "paid": 0}
+            branch_breakdown[bname]["expenses"] += e["amount"]
+
+        # Skip suppliers with no transactions when branch filter is active
+        if branch_id and total_expenses == 0 and cash_paid + bank_paid == 0:
+            continue
+
+        result.append({
+            "id": sid, "name": supplier["name"], "category": supplier.get("category", "-"),
+            "branch_id": supplier.get("branch_id"),
+            "branch_name": branches.get(supplier.get("branch_id"), ""),
+            "cash_paid": cash_paid, "bank_paid": bank_paid, "credit_added": credit_added,
+            "total_paid": cash_paid + bank_paid, "total_expenses": total_expenses,
+            "current_credit": supplier.get("current_credit", 0),
+            "credit_limit": supplier.get("credit_limit", 0),
+            "transaction_count": len(payments) + len(sup_expenses),
+            "branch_breakdown": branch_breakdown,
+        })
     return result
 
 @router.get("/reports/branch-dues")

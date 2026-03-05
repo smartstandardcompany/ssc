@@ -688,9 +688,10 @@ export default function SuppliersPage() {
 
                 {/* Ledger Entries Table */}
                 <div className="border rounded-lg overflow-hidden">
-                  <div className="bg-stone-100 px-3 py-2 text-xs font-medium grid grid-cols-12 gap-2">
+                  <div className="bg-stone-100 px-3 py-2 text-xs font-medium grid grid-cols-14 gap-2">
                     <span className="col-span-2">Date</span>
                     <span className="col-span-2">Type</span>
+                    <span className="col-span-2">Branch</span>
                     <span className="col-span-3">Description</span>
                     <span className="col-span-2 text-right">Debit</span>
                     <span className="col-span-1 text-right">Credit</span>
@@ -698,7 +699,7 @@ export default function SuppliersPage() {
                   </div>
                   <div className="max-h-[300px] overflow-y-auto">
                     {ledgerData.entries?.map((entry, idx) => (
-                      <div key={idx} className={`px-3 py-2 text-xs grid grid-cols-12 gap-2 border-t ${
+                      <div key={idx} className={`px-3 py-2 text-xs grid grid-cols-14 gap-2 border-t ${
                         entry.type === 'purchase' ? 'bg-amber-50/30' : 'bg-blue-50/30'
                       }`} data-testid={`ledger-entry-${idx}`}>
                         <span className="col-span-2 text-muted-foreground">
@@ -714,6 +715,9 @@ export default function SuppliersPage() {
                               ? (entry.payment_mode === 'credit' ? 'Credit Purchase' : 'Paid Purchase')
                               : 'Payment'}
                           </Badge>
+                        </span>
+                        <span className="col-span-2">
+                          <Badge variant="outline" className="text-[10px] bg-stone-100 text-stone-600">{entry.branch_name || '-'}</Badge>
                         </span>
                         <span className="col-span-3 truncate" title={entry.description}>{entry.description || '-'}</span>
                         <span className={`col-span-2 text-right font-medium ${entry.debit > 0 ? 'text-amber-600' : ''}`}>

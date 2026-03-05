@@ -537,6 +537,7 @@ async def get_supplier_ledger(
     supplier_id: str,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
+    branch_id: Optional[str] = None,
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -549,6 +550,9 @@ async def get_supplier_ledger(
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
     
+    # Get branches for name lookup
+    branches = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
+    
     # Build date query
     date_query = {}
     if start_date:
@@ -560,18 +564,23 @@ async def get_supplier_ledger(
     exp_query = {"supplier_id": supplier_id}
     if date_query:
         exp_query["date"] = date_query
+    if branch_id:
+        exp_query["branch_id"] = branch_id
     expenses = await db.expenses.find(exp_query, {"_id": 0}).sort("date", 1).to_list(10000)
     
     # Get all payments to this supplier
     pay_query = {"supplier_id": supplier_id}
     if date_query:
         pay_query["date"] = date_query
+    if branch_id:
+        pay_query["branch_id"] = branch_id
     payments = await db.supplier_payments.find(pay_query, {"_id": 0}).sort("date", 1).to_list(10000)
     
     # Combine and sort by date
     ledger_entries = []
     
     for exp in expenses:
+        bid = exp.get("branch_id", "")
         ledger_entries.append({
             "date": exp.get("date", ""),
             "type": "purchase",
@@ -581,10 +590,13 @@ async def get_supplier_ledger(
             "credit": 0,
             "payment_mode": exp.get("payment_mode", ""),
             "reference": exp.get("id", "")[:8],
-            "notes": exp.get("notes", "")
+            "notes": exp.get("notes", ""),
+            "branch_id": bid,
+            "branch_name": branches.get(bid, "No Branch") if bid else "No Branch",
         })
     
     for pay in payments:
+        bid = pay.get("branch_id", "")
         ledger_entries.append({
             "date": pay.get("date", ""),
             "type": "payment",
@@ -594,7 +606,9 @@ async def get_supplier_ledger(
             "credit": pay.get("amount", 0),
             "payment_mode": pay.get("payment_mode", ""),
             "reference": pay.get("id", "")[:8],
-            "notes": pay.get("notes", "")
+            "notes": pay.get("notes", ""),
+            "branch_id": bid,
+            "branch_name": branches.get(bid, "No Branch") if bid else "No Branch",
         })
     
     # Sort by date
@@ -663,7 +677,7 @@ async def export_supplier_ledger(
     require_permission(current_user, "suppliers", "read")
     
     # Get ledger data
-    ledger = await get_supplier_ledger(supplier_id, start_date, end_date, current_user)
+    ledger = await get_supplier_ledger(supplier_id, start_date, end_date, None, current_user)
     supplier = ledger["supplier"]
     entries = ledger["entries"]
     summary = ledger["summary"]
@@ -694,7 +708,7 @@ async def export_supplier_ledger(
         ws['A7'] = f"Outstanding Balance: SAR {summary['current_outstanding']:,.2f}"
         
         # Headers
-        headers = ['Date', 'Type', 'Description', 'Debit', 'Credit', 'Balance', 'Reference']
+        headers = ['Date', 'Type', 'Branch', 'Description', 'Debit', 'Credit', 'Balance', 'Reference']
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=9, column=col, value=header)
             cell.font = Font(bold=True)
@@ -704,20 +718,22 @@ async def export_supplier_ledger(
         for row, entry in enumerate(entries, 10):
             ws.cell(row=row, column=1, value=entry['date'][:10] if entry['date'] else '')
             ws.cell(row=row, column=2, value=entry['type'].title())
-            ws.cell(row=row, column=3, value=entry['description'])
-            ws.cell(row=row, column=4, value=entry['debit'] if entry['debit'] > 0 else '')
-            ws.cell(row=row, column=5, value=entry['credit'] if entry['credit'] > 0 else '')
-            ws.cell(row=row, column=6, value=entry['balance'])
-            ws.cell(row=row, column=7, value=entry['reference'])
+            ws.cell(row=row, column=3, value=entry.get('branch_name', ''))
+            ws.cell(row=row, column=4, value=entry['description'])
+            ws.cell(row=row, column=5, value=entry['debit'] if entry['debit'] > 0 else '')
+            ws.cell(row=row, column=6, value=entry['credit'] if entry['credit'] > 0 else '')
+            ws.cell(row=row, column=7, value=entry['balance'])
+            ws.cell(row=row, column=8, value=entry['reference'])
         
         # Column widths
         ws.column_dimensions['A'].width = 12
         ws.column_dimensions['B'].width = 10
-        ws.column_dimensions['C'].width = 30
-        ws.column_dimensions['D'].width = 12
+        ws.column_dimensions['C'].width = 15
+        ws.column_dimensions['D'].width = 30
         ws.column_dimensions['E'].width = 12
         ws.column_dimensions['F'].width = 12
-        ws.column_dimensions['G'].width = 10
+        ws.column_dimensions['G'].width = 12
+        ws.column_dimensions['H'].width = 10
         
         buffer = BytesIO()
         wb.save(buffer)
@@ -765,24 +781,25 @@ async def export_supplier_ledger(
         elements.append(Spacer(1, 10*mm))
         
         # Ledger entries
-        ledger_data = [['Date', 'Type', 'Description', 'Debit', 'Credit', 'Balance']]
+        ledger_data = [['Date', 'Type', 'Branch', 'Description', 'Debit', 'Credit', 'Balance']]
         for entry in entries:
             ledger_data.append([
                 entry['date'][:10] if entry['date'] else '',
                 entry['type'].title(),
-                entry['description'][:30],
+                entry.get('branch_name', '-'),
+                entry['description'][:25],
                 f"{entry['debit']:,.2f}" if entry['debit'] > 0 else '',
                 f"{entry['credit']:,.2f}" if entry['credit'] > 0 else '',
                 f"{entry['balance']:,.2f}"
             ])
         
-        ledger_table = Table(ledger_data, colWidths=[25*mm, 20*mm, 55*mm, 25*mm, 25*mm, 25*mm])
+        ledger_table = Table(ledger_data, colWidths=[22*mm, 18*mm, 22*mm, 45*mm, 22*mm, 22*mm, 22*mm])
         ledger_table.setStyle(TableStyle([
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 8),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-            ('ALIGN', (3, 0), (-1, -1), 'RIGHT'),
+            ('ALIGN', (4, 0), (-1, -1), 'RIGHT'),
         ]))
         elements.append(ledger_table)
         
@@ -850,7 +867,7 @@ async def share_supplier_statement(
         raise HTTPException(status_code=400, detail="At least one channel (email/whatsapp) required")
     
     # Get ledger data
-    ledger = await get_supplier_ledger(supplier_id, start_date, end_date, current_user)
+    ledger = await get_supplier_ledger(supplier_id, start_date, end_date, None, current_user)
     supplier_info = ledger["supplier"]
     entries = ledger["entries"]
     summary = ledger["summary"]

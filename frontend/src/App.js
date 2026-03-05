@@ -39,6 +39,7 @@ import POSPage from "./pages/POSPage";
 import POSAnalyticsPage from "./pages/POSAnalyticsPage";
 import TransfersPage from "./pages/TransfersPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
+import AdvancedAnalyticsPage from "./pages/AdvancedAnalyticsPage";
 import VisualizationsPage from "./pages/VisualizationsPage";
 import CashierPOSPage from "./pages/CashierPOSPage";
 import CashierLoginPage from "./pages/CashierLoginPage";
@@ -251,6 +252,7 @@ function App() {
 
           {/* Reports */}
           <Route path="/analytics" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><AnalyticsPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/advanced-analytics" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><AdvancedAnalyticsPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/visualizations" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><VisualizationsPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/shift-report" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><ShiftReportPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/partner-pl-report" element={<AuthRoute><ProtectedRoute perm="partners" roles={['admin']}><PartnerPLReportPage /></ProtectedRoute></AuthRoute>} />

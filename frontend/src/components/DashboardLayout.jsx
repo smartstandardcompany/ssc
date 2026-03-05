@@ -74,6 +74,7 @@ const NAV_GROUPS = [
     label: 'Reports',
     items: [
       { path: '/analytics', icon: BarChart3, label: 'Analytics', perm: 'reports', roles: ['admin', 'manager'] },
+      { path: '/advanced-analytics', icon: Zap, label: 'Advanced Analytics', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/enhanced-pnl', icon: TrendingUp, label: 'Enhanced P&L', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/visualizations', icon: Activity, label: 'Visualizations', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/sales-forecast', icon: TrendingUp, label: 'Sales Forecast', perm: 'reports', roles: ['admin', 'manager'] },
