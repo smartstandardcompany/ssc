@@ -73,6 +73,7 @@ import EnhancedPnLPage from "./pages/EnhancedPnLPage";
 import OrderTrackingPage from "./pages/OrderTrackingPage";
 import BrandingSettingsPage from "./pages/BrandingSettingsPage";
 import ScheduledReportsPage from "./pages/ScheduledReportsPage";
+import DataManagementPage from "./pages/DataManagementPage";
 import CustomerPortalLogin from "./pages/customer-portal/CustomerPortalLogin";
 import { 
   CustomerPortalDashboard, 
@@ -286,6 +287,7 @@ function App() {
           <Route path="/task-reminders" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><TaskRemindersPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/task-compliance" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><TaskCompliancePage /></ProtectedRoute></AuthRoute>} />
           <Route path="/activity-logs" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><ActivityLogsPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/data-management" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><DataManagementPage /></ProtectedRoute></AuthRoute>} />
 
           {/* Customer Portal (no auth required - has its own auth) */}
           <Route path="/customer-portal" element={<CustomerPortalLogin />} />

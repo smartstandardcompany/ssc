@@ -313,6 +313,96 @@ async def _async_sync_scheduler():
         except:
             pass
 
+    # Sync scheduled PDF reports from scheduled_reports collection
+    pdf_schedules = await db.scheduled_reports.find({"enabled": True}, {"_id": 0}).to_list(50)
+    for sched in pdf_schedules:
+        try:
+            report_id = sched["id"]
+            time_parts = sched.get("time_of_day", "08:00").split(":")
+            h = int(time_parts[0])
+            m = int(time_parts[1]) if len(time_parts) > 1 else 0
+            freq = sched.get("frequency", "daily")
+
+            if freq == "weekly":
+                dow = sched.get("day_of_week", 0)
+                day_map = {0: "mon", 1: "tue", 2: "wed", 3: "thu", 4: "fri", 5: "sat", 6: "sun"}
+                scheduler.add_job(
+                    _run_scheduled_pdf_report, CronTrigger(day_of_week=day_map.get(dow, "mon"), hour=h, minute=m),
+                    args=[report_id], id=f"pdf_{report_id}", replace_existing=True
+                )
+            elif freq == "monthly":
+                day = sched.get("day_of_month", 1)
+                scheduler.add_job(
+                    _run_scheduled_pdf_report, CronTrigger(day=day, hour=h, minute=m),
+                    args=[report_id], id=f"pdf_{report_id}", replace_existing=True
+                )
+            else:
+                scheduler.add_job(
+                    _run_scheduled_pdf_report, CronTrigger(hour=h, minute=m),
+                    args=[report_id], id=f"pdf_{report_id}", replace_existing=True
+                )
+        except Exception:
+            pass
+
+
+async def _run_scheduled_pdf_report(report_id: str):
+    """Execute a scheduled PDF report: generate PDF and email it."""
+    try:
+        from routers.pdf_exports import generate_report_pdf
+        from utils.email_service import send_email, build_report_email_html
+
+        report = await db.scheduled_reports.find_one({"id": report_id}, {"_id": 0})
+        if not report or not report.get("enabled"):
+            return
+
+        recipients = report.get("email_recipients", [])
+        if not recipients:
+            return
+
+        branding_doc = await db.settings.find_one({"type": "branding"}, {"_id": 0})
+        branding = branding_doc or {}
+        company_name = branding.get("company_name", "SSC Track")
+
+        report_type = report["report_type"]
+        report_labels = {"sales": "Sales Summary", "expenses": "Expenses Summary", "pnl": "Profit & Loss", "supplier_aging": "Supplier Aging"}
+        title = report_labels.get(report_type, report_type.replace("_", " ").title())
+
+        pdf_buffer = await generate_report_pdf(report_type, branding, title)
+        pdf_bytes = pdf_buffer.getvalue()
+
+        html_body = build_report_email_html(report_type, company_name)
+        filename = f"{report_type}_report_{datetime.now().strftime('%Y%m%d')}.pdf"
+
+        success = await send_email(
+            to_emails=recipients,
+            subject=f"{company_name} - {title} Report ({datetime.now().strftime('%d %b %Y')})",
+            html_body=html_body,
+            attachments=[{"filename": filename, "content": pdf_bytes, "content_type": "application/pdf"}],
+        )
+
+        await db.scheduled_reports.update_one(
+            {"id": report_id},
+            {"$set": {"last_sent": datetime.now(timezone.utc).isoformat()}}
+        )
+
+        log = {
+            "job_type": f"pdf_{report_type}",
+            "triggered_at": datetime.now(timezone.utc).isoformat(),
+            "status": "completed" if success else "email_failed",
+            "recipients": recipients
+        }
+        await db.scheduler_logs.insert_one(log)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Scheduled PDF report error: {e}")
+        log = {
+            "job_type": f"pdf_{report_id}",
+            "triggered_at": datetime.now(timezone.utc).isoformat(),
+            "status": "error",
+            "error": str(e)[:200]
+        }
+        await db.scheduler_logs.insert_one(log)
+
 
 @router.get("/scheduler/config")
 async def get_scheduler_config(current_user: User = Depends(get_current_user)):
