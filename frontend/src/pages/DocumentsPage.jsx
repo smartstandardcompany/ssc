@@ -202,22 +202,22 @@ export default function DocumentsPage() {
               <table className="w-full" data-testid="documents-table">
                 <thead><tr className="border-b border-border">
                   <th className="text-left p-3 font-medium text-sm">Document</th>
-                  <th className="text-left p-3 font-medium text-sm">Type</th>
-                  <th className="text-left p-3 font-medium text-sm">Number</th>
-                  <th className="text-left p-3 font-medium text-sm">Related To</th>
+                  <th className="text-left p-3 font-medium text-sm hidden sm:table-cell">Type</th>
+                  <th className="text-left p-3 font-medium text-sm hidden md:table-cell">Number</th>
+                  <th className="text-left p-3 font-medium text-sm hidden md:table-cell">Related To</th>
                   <th className="text-left p-3 font-medium text-sm">Expiry Date</th>
                   <th className="text-center p-3 font-medium text-sm">Days Left</th>
                   <th className="text-center p-3 font-medium text-sm">Status</th>
-                  <th className="text-left p-3 font-medium text-sm">File</th>
+                  <th className="text-left p-3 font-medium text-sm hidden lg:table-cell">File</th>
                   <th className="text-right p-3 font-medium text-sm">Actions</th>
                 </tr></thead>
                 <tbody>
                   {documents.map(doc => (
                     <tr key={doc.id} className="border-b border-border hover:bg-secondary/50" data-testid="document-row">
                       <td className="p-3 text-sm font-medium">{doc.name}</td>
-                      <td className="p-3"><Badge variant="secondary" className="capitalize">{doc.document_type.replace('_', ' ')}</Badge></td>
-                      <td className="p-3 text-sm">{doc.document_number || '-'}</td>
-                      <td className="p-3 text-sm">{doc.related_to || '-'}</td>
+                      <td className="p-3 hidden sm:table-cell"><Badge variant="secondary" className="capitalize">{doc.document_type.replace('_', ' ')}</Badge></td>
+                      <td className="p-3 text-sm hidden md:table-cell">{doc.document_number || '-'}</td>
+                      <td className="p-3 text-sm hidden md:table-cell">{doc.related_to || '-'}</td>
                       <td className="p-3 text-sm">{doc.expiry_date ? format(new Date(doc.expiry_date), 'MMM dd, yyyy') : '-'}</td>
                       <td className="p-3 text-center text-sm font-bold">
                         <span className={doc.days_until_expiry < 0 ? 'text-error' : doc.days_until_expiry <= 30 ? 'text-warning' : 'text-success'}>
@@ -225,7 +225,7 @@ export default function DocumentsPage() {
                         </span>
                       </td>
                       <td className="p-3 text-center">{getStatusBadge(doc)}</td>
-                      <td className="p-3">
+                      <td className="p-3 hidden lg:table-cell">
                         {doc.file_name ? (
                           <Button size="sm" variant="outline" onClick={() => handleFileDownload(doc.id, doc.file_name)} className="h-7 text-xs" data-testid="download-file-btn">
                             <Download size={12} className="mr-1" />{doc.file_name.length > 15 ? doc.file_name.slice(0, 15) + '...' : doc.file_name}

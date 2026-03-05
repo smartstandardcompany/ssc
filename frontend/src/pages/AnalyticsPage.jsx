@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, TrendingDown, Target, Calendar, BarChart3, PieChart as PieIcon, Download, Brain, Plus, Zap, Package, Users, ShieldAlert, AlertTriangle, Wallet, Clock, UserCheck, Bell, Truck, Crown, Activity, Layers } from 'lucide-react';
+import { TrendingUp, TrendingDown, Target, Calendar, BarChart3, PieChart as PieIcon, Download, Brain, Plus, Zap, Package, Users, ShieldAlert, AlertTriangle, Wallet, Clock, UserCheck, Bell, Truck, Crown, Activity, Layers, RefreshCw } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
 import api from '@/lib/api';
 import { useBranchStore } from '@/stores';
@@ -51,6 +51,18 @@ export default function AnalyticsPage() {
   const [customerCLV, setCustomerCLV] = useState(null);
   const [peakHours, setPeakHours] = useState(null);
   const [profitDecomp, setProfitDecomp] = useState(null);
+  // AI Deep Insights
+  const [aiInsight, setAiInsight] = useState({});
+  const [aiInsightLoading, setAiInsightLoading] = useState({});
+
+  const loadAiDeepInsight = async (type) => {
+    setAiInsightLoading(prev => ({ ...prev, [type]: true }));
+    try {
+      const { data } = await api.get(`/ai-insights/${type}`);
+      setAiInsight(prev => ({ ...prev, [type]: data }));
+    } catch { toast.error('AI insight failed'); }
+    setAiInsightLoading(prev => ({ ...prev, [type]: false }));
+  };
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -130,6 +142,12 @@ export default function AnalyticsPage() {
         const { data } = await api.get('/predictions/peak-hours'); setPeakHours(data);
       } else if (section === 'profit_decomposition' && !profitDecomp) {
         const { data } = await api.get('/predictions/profit-decomposition'); setProfitDecomp(data);
+      } else if (section === 'ai_profit_analysis') {
+        loadAiDeepInsight('profit-analysis');
+      } else if (section === 'ai_churn_detection') {
+        loadAiDeepInsight('customer-churn');
+      } else if (section === 'ai_revenue_predict') {
+        loadAiDeepInsight('revenue-prediction');
       }
     } catch { toast.error('Failed to load analytics'); }
   };
@@ -362,6 +380,9 @@ export default function AnalyticsPage() {
                 <TabsTrigger value="customer_clv" className="text-xs" data-testid="ai-clv-tab"><Crown size={12} className="mr-1" />CLV</TabsTrigger>
                 <TabsTrigger value="peak_hours" className="text-xs" data-testid="ai-peak-tab"><Activity size={12} className="mr-1" />Peak Hours</TabsTrigger>
                 <TabsTrigger value="profit_decomposition" className="text-xs" data-testid="ai-profit-tab"><Layers size={12} className="mr-1" />Profit</TabsTrigger>
+                <TabsTrigger value="ai_profit_analysis" className="text-xs bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800" data-testid="ai-deep-profit-tab"><Brain size={12} className="mr-1" />AI Profit</TabsTrigger>
+                <TabsTrigger value="ai_churn_detection" className="text-xs bg-gradient-to-r from-red-100 to-pink-100 text-red-800" data-testid="ai-deep-churn-tab"><Users size={12} className="mr-1" />AI Churn</TabsTrigger>
+                <TabsTrigger value="ai_revenue_predict" className="text-xs bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800" data-testid="ai-deep-revenue-tab"><TrendingUp size={12} className="mr-1" />AI Revenue</TabsTrigger>
               </TabsList>
 
               {/* Expense Forecast */}
@@ -1125,6 +1146,114 @@ export default function AnalyticsPage() {
                   </div>
                 ) : <p className="text-center text-muted-foreground py-8">Loading profit decomposition...</p>}
               </TabsContent>
+
+              {/* AI Profit Analysis */}
+              <TabsContent value="ai_profit_analysis">
+                <div className="space-y-3" data-testid="ai-profit-analysis">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold flex items-center gap-2"><Brain size={14} className="text-amber-500" />AI Product Profitability Analysis</p>
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => loadAiDeepInsight('profit-analysis')} disabled={aiInsightLoading['profit-analysis']} data-testid="generate-profit-ai">
+                      {aiInsightLoading['profit-analysis'] ? <><RefreshCw size={12} className="mr-1 animate-spin" />Analyzing...</> : <><Brain size={12} className="mr-1" />Generate</>}
+                    </Button>
+                  </div>
+                  {aiInsight['profit-analysis'] ? (
+                    <div className="space-y-3">
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm leading-relaxed" data-testid="profit-ai-insight">{aiInsight['profit-analysis'].insight}</div>
+                      {aiInsight['profit-analysis'].items?.length > 0 && (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs" data-testid="profit-items-table">
+                            <thead><tr className="border-b bg-stone-50"><th className="text-left p-2 font-medium">Product</th><th className="text-right p-2 font-medium">Revenue</th><th className="text-right p-2 font-medium hidden sm:table-cell">Qty</th><th className="text-right p-2 font-medium">Profit</th><th className="text-right p-2 font-medium hidden sm:table-cell">Margin</th></tr></thead>
+                            <tbody>{aiInsight['profit-analysis'].items.map((item, i) => (
+                              <tr key={i} className="border-b hover:bg-stone-50">
+                                <td className="p-2 font-medium">{item.name}</td>
+                                <td className="p-2 text-right">SAR {item.revenue?.toLocaleString()}</td>
+                                <td className="p-2 text-right hidden sm:table-cell">{item.qty}</td>
+                                <td className={`p-2 text-right font-bold ${item.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>SAR {item.profit?.toLocaleString()}</td>
+                                <td className={`p-2 text-right hidden sm:table-cell ${item.margin >= 20 ? 'text-emerald-600' : item.margin >= 0 ? 'text-amber-600' : 'text-red-600'}`}>{item.margin}%</td>
+                              </tr>
+                            ))}</tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  ) : <p className="text-center text-muted-foreground py-8 text-sm">Click Generate to analyze product profitability with AI</p>}
+                </div>
+              </TabsContent>
+
+              {/* AI Customer Churn Detection */}
+              <TabsContent value="ai_churn_detection">
+                <div className="space-y-3" data-testid="ai-churn-detection">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold flex items-center gap-2"><Users size={14} className="text-red-500" />AI Customer Churn Detection</p>
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => loadAiDeepInsight('customer-churn')} disabled={aiInsightLoading['customer-churn']} data-testid="generate-churn-ai">
+                      {aiInsightLoading['customer-churn'] ? <><RefreshCw size={12} className="mr-1 animate-spin" />Analyzing...</> : <><Brain size={12} className="mr-1" />Generate</>}
+                    </Button>
+                  </div>
+                  {aiInsight['customer-churn'] ? (
+                    <div className="space-y-3">
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm leading-relaxed" data-testid="churn-ai-insight">{aiInsight['customer-churn'].insight}</div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                        {[
+                          { k: 'active', label: 'Active', color: 'emerald' },
+                          { k: 'cooling', label: 'Cooling', color: 'amber' },
+                          { k: 'at_risk', label: 'At Risk', color: 'orange' },
+                          { k: 'churned', label: 'Churned', color: 'red' },
+                        ].map(s => (
+                          <div key={s.k} className={`p-2 rounded-lg bg-${s.color}-50 border border-${s.color}-200`}>
+                            <p className={`text-lg font-bold text-${s.color}-600`}>{aiInsight['customer-churn'].summary?.[s.k] || 0}</p>
+                            <p className="text-[10px] text-muted-foreground">{s.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                      {aiInsight['customer-churn'].at_risk_customers?.length > 0 && (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs" data-testid="churn-customers-table">
+                            <thead><tr className="border-b bg-stone-50"><th className="text-left p-2 font-medium">Customer</th><th className="text-center p-2 font-medium">Status</th><th className="text-right p-2 font-medium">Total Spent</th><th className="text-left p-2 font-medium hidden sm:table-cell">Last Purchase</th><th className="text-right p-2 font-medium hidden sm:table-cell">Txns</th></tr></thead>
+                            <tbody>{aiInsight['customer-churn'].at_risk_customers.map((c, i) => (
+                              <tr key={i} className="border-b hover:bg-stone-50">
+                                <td className="p-2 font-medium">{c.name}</td>
+                                <td className="p-2 text-center"><Badge variant="outline" className={`text-[9px] ${c.status === 'churned' ? 'border-red-300 text-red-600' : 'border-orange-300 text-orange-600'}`}>{c.status}</Badge></td>
+                                <td className="p-2 text-right font-bold">SAR {c.total_spent?.toLocaleString()}</td>
+                                <td className="p-2 hidden sm:table-cell">{c.last_purchase}</td>
+                                <td className="p-2 text-right hidden sm:table-cell">{c.transactions}</td>
+                              </tr>
+                            ))}</tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  ) : <p className="text-center text-muted-foreground py-8 text-sm">Click Generate to detect customer churn patterns with AI</p>}
+                </div>
+              </TabsContent>
+
+              {/* AI Revenue Prediction */}
+              <TabsContent value="ai_revenue_predict">
+                <div className="space-y-3" data-testid="ai-revenue-prediction">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold flex items-center gap-2"><TrendingUp size={14} className="text-blue-500" />AI Revenue Prediction</p>
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => loadAiDeepInsight('revenue-prediction')} disabled={aiInsightLoading['revenue-prediction']} data-testid="generate-revenue-ai">
+                      {aiInsightLoading['revenue-prediction'] ? <><RefreshCw size={12} className="mr-1 animate-spin" />Analyzing...</> : <><Brain size={12} className="mr-1" />Generate</>}
+                    </Button>
+                  </div>
+                  {aiInsight['revenue-prediction'] ? (
+                    <div className="space-y-3">
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm leading-relaxed" data-testid="revenue-ai-insight">{aiInsight['revenue-prediction'].insight}</div>
+                      {aiInsight['revenue-prediction'].history?.length > 0 && (
+                        <ResponsiveContainer width="100%" height={200}>
+                          <BarChart data={aiInsight['revenue-prediction'].history}>
+                            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                            <XAxis dataKey="week" tick={{ fontSize: 8 }} tickFormatter={v => v.slice(5)} />
+                            <YAxis tick={{ fontSize: 9 }} />
+                            <Tooltip formatter={(v) => `SAR ${v.toLocaleString()}`} />
+                            <Bar dataKey="revenue" name="Revenue" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      )}
+                    </div>
+                  ) : <p className="text-center text-muted-foreground py-8 text-sm">Click Generate to predict revenue with AI-powered analysis</p>}
+                </div>
+              </TabsContent>
+
             </Tabs>
           </CardContent>
         </Card>

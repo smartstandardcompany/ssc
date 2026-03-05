@@ -1,0 +1,145 @@
+{
+  "summary": "Iteration 96 - Testing Deep AI Analytics (Profit Analysis, Customer Churn, Revenue Prediction), Documents page responsive columns, Stock Reorder AI card, and Sales Forecast AI card. Backend: 7/7 tests passed. Frontend: All features verified working.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Analytics Page", "issues": ["Console warning: span inside tbody hydration error - non-blocking issue caused by React iteration pattern"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration96_deep_ai_analytics.py",
+    "/app/test_reports/pytest/pytest_results_iter96.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "All 3 new AI deep analytics endpoints correctly implemented with proper response structures",
+    "Profit Analysis: Returns insight + items array with name, revenue, qty, profit, margin + total_revenue",
+    "Customer Churn: Returns insight + summary counts + at_risk_customers array + total_customers",
+    "Revenue Prediction: Returns insight + 12-week history with week, revenue, count",
+    "Documents page has proper responsive columns: Type hidden on mobile (sm:), Number/Related To hidden on tablet (md:), File hidden until desktop (lg:)",
+    "Stock Reorder page has AI Stock Analysis card with Generate button - working correctly",
+    "Sales Forecast page has AI Sales Analysis card with Generate button - working correctly",
+    "Dashboard AI Insights widget still working with all 3 buttons (Business Health, Stock Alerts, Sales Trends)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration96_deep_ai_analytics.py"
+  ],
+  "success_rate": {
+    "backend": "100% - 7/7 tests passed",
+    "frontend": "100% - All pages load correctly, AI features working"
+  },
+  "test_credentials": {
+    "admin": "email=ss@ssc.com, password=Aa147258369Ssc@"
+  },
+  "seed_data_creation": "None - used existing data",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 96 verified: 1) GET /api/ai-insights/profit-analysis returns AI insight with items array (name, revenue, qty, profit, margin) and total_revenue, 2) GET /api/ai-insights/customer-churn returns AI insight with summary counts (active, cooling, at_risk, churned) and at_risk_customers array, 3) GET /api/ai-insights/revenue-prediction returns AI insight with 12-week history data, 4) Analytics page /analytics has Predictive Hub with 3 new tabs: AI Profit (data-testid=ai-deep-profit-tab), AI Churn (data-testid=ai-deep-churn-tab), AI Revenue (data-testid=ai-deep-revenue-tab), 5) Documents page table has responsive columns (Type hidden on mobile, Number/Related To hidden on tablet, File hidden until desktop), 6) Stock Reorder page /stock-reorder has AI Stock Analysis card with Generate button, 7) Sales Forecast page /sales-forecast has AI Sales Analysis card with Generate button, 8) Dashboard AI Insights widget still works with Business Health/Stock Alerts/Sales Trends buttons. AI endpoints take 5-10 seconds to respond due to LLM call.",
+  "features_verified": {
+    "backend": {
+      "GET /api/ai-insights/profit-analysis": {
+        "status": "WORKING",
+        "response_fields": ["insight", "items", "total_revenue"],
+        "items_fields": ["name", "revenue", "qty", "profit", "margin"],
+        "note": "AI-generated product profitability analysis using GPT via Emergent LLM Key"
+      },
+      "GET /api/ai-insights/customer-churn": {
+        "status": "WORKING",
+        "response_fields": ["insight", "summary", "at_risk_customers", "total_customers"],
+        "summary_fields": ["active", "cooling", "at_risk", "churned", "never_purchased"],
+        "note": "AI-generated customer churn detection"
+      },
+      "GET /api/ai-insights/revenue-prediction": {
+        "status": "WORKING",
+        "response_fields": ["insight", "history"],
+        "history_fields": ["week", "revenue", "count"],
+        "note": "AI-generated 12-week revenue prediction with forecasting"
+      },
+      "GET /api/ai-insights/dashboard": {
+        "status": "WORKING (regression)",
+        "note": "Business health insights - existing feature still working"
+      },
+      "GET /api/ai-insights/stock": {
+        "status": "WORKING (regression)",
+        "note": "Stock management insights - existing feature still working"
+      },
+      "GET /api/ai-insights/sales-trends": {
+        "status": "WORKING (regression)",
+        "note": "Sales trend insights - existing feature still working"
+      },
+      "GET /api/documents": {
+        "status": "WORKING",
+        "note": "Documents list endpoint working correctly"
+      }
+    },
+    "frontend": {
+      "Analytics Page - AI Profit Tab": {
+        "status": "WORKING",
+        "route": "/analytics",
+        "data_testid": "ai-deep-profit-tab",
+        "content_testid": "ai-profit-analysis",
+        "generate_btn_testid": "generate-profit-ai",
+        "insight_testid": "profit-ai-insight",
+        "table_testid": "profit-items-table",
+        "note": "Shows AI insight and product profitability table"
+      },
+      "Analytics Page - AI Churn Tab": {
+        "status": "WORKING",
+        "data_testid": "ai-deep-churn-tab",
+        "content_testid": "ai-churn-detection",
+        "generate_btn_testid": "generate-churn-ai",
+        "insight_testid": "churn-ai-insight",
+        "table_testid": "churn-customers-table",
+        "note": "Shows AI insight, summary boxes (Active/Cooling/At Risk/Churned), and at-risk customers table"
+      },
+      "Analytics Page - AI Revenue Tab": {
+        "status": "WORKING",
+        "data_testid": "ai-deep-revenue-tab",
+        "content_testid": "ai-revenue-prediction",
+        "generate_btn_testid": "generate-revenue-ai",
+        "insight_testid": "revenue-ai-insight",
+        "note": "Shows AI insight and 12-week revenue bar chart"
+      },
+      "Documents Page - Responsive Columns": {
+        "status": "WORKING",
+        "route": "/documents-management",
+        "responsive_columns": {
+          "Type": "hidden sm:table-cell - hidden on mobile (< 640px)",
+          "Number": "hidden md:table-cell - hidden on mobile & tablet (< 768px)",
+          "Related To": "hidden md:table-cell - hidden on mobile & tablet (< 768px)",
+          "File": "hidden lg:table-cell - hidden until desktop (< 1024px)"
+        },
+        "note": "Table columns properly hidden on smaller screens"
+      },
+      "Stock Reorder Page": {
+        "status": "WORKING",
+        "route": "/stock-reorder",
+        "ai_card_testid": "stock-ai-insight",
+        "note": "AI Stock Analysis card with Generate button"
+      },
+      "Sales Forecast Page": {
+        "status": "WORKING",
+        "route": "/sales-forecast",
+        "ai_card_testid": "sales-ai-insight",
+        "note": "AI Sales Analysis card with Generate button"
+      },
+      "Dashboard AI Insights Widget": {
+        "status": "WORKING (regression)",
+        "data_testid": "ai-insights-widget",
+        "buttons": ["insight-btn-dashboard (Business Health)", "insight-btn-stock (Stock Alerts)", "insight-btn-sales-trends (Sales Trends)"],
+        "note": "All 3 AI insight buttons working correctly"
+      }
+    }
+  },
+  "mocked_apis": {
+    "has_mocked_apis": false
+  },
+  "console_warnings": [
+    "Hydration warning: span inside tbody - This is a non-breaking React iteration pattern issue. The app works correctly despite this warning."
+  ]
+}
