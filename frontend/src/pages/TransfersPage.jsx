@@ -130,9 +130,9 @@ export default function TransfersPage() {
   return (
     <DashboardLayout>
       <div className="space-y-4" data-testid="transfers-page">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold font-outfit" data-testid="transfers-title">Inventory Transfers</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold font-outfit" data-testid="transfers-title">Inventory Transfers</h1>
             <p className="text-sm text-muted-foreground">Transfer stock between branches</p>
           </div>
           <Button className="rounded-xl" onClick={() => setShowCreate(true)} data-testid="new-transfer-btn">
@@ -141,7 +141,7 @@ export default function TransfersPage() {
         </div>
 
         {/* Summary */}
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Card className="border-amber-100"><CardContent className="p-3 text-center">
             <p className="text-[10px] text-amber-600 font-medium">Pending</p>
             <p className="text-xl font-bold font-outfit text-amber-700">{pending.length}</p>
@@ -168,21 +168,21 @@ export default function TransfersPage() {
           </TabsList>
 
           <TabsContent value="pending">
-            <div className="grid grid-cols-2 gap-3" data-testid="pending-transfers">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" data-testid="pending-transfers">
               {pending.length === 0 && <p className="text-sm text-muted-foreground col-span-2 text-center py-8">No pending transfer requests</p>}
               {pending.map(t => <TransferCard key={t.id} t={t} showActions />)}
             </div>
           </TabsContent>
 
           <TabsContent value="approved">
-            <div className="grid grid-cols-2 gap-3" data-testid="approved-transfers">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" data-testid="approved-transfers">
               {approved.length === 0 && <p className="text-sm text-muted-foreground col-span-2 text-center py-8">No approved transfers awaiting completion</p>}
               {approved.map(t => <TransferCard key={t.id} t={t} showActions />)}
             </div>
           </TabsContent>
 
           <TabsContent value="history">
-            <div className="grid grid-cols-2 gap-3" data-testid="transfer-history">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" data-testid="transfer-history">
               {history.length === 0 && <p className="text-sm text-muted-foreground col-span-2 text-center py-8">No transfer history</p>}
               {history.map(t => <TransferCard key={t.id} t={t} showActions={false} />)}
             </div>

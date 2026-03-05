@@ -208,3 +208,120 @@ async def export_collection(collection_name: str, current_user: User = Depends(g
         "exported_at": datetime.now(timezone.utc).isoformat(),
         "data": records,
     }
+
+
+# =====================================================
+# AUTO-ARCHIVE SCHEDULING
+# =====================================================
+
+@router.get("/data-management/auto-archive-settings")
+async def get_auto_archive_settings(current_user: User = Depends(get_current_user)):
+    """Get auto-archive configuration."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    settings = await db.auto_archive_settings.find_one({}, {"_id": 0})
+    if not settings:
+        settings = {
+            "enabled": False,
+            "frequency": "monthly",
+            "day_of_month": 1,
+            "hour": 2,
+            "minute": 0,
+            "default_months": 12,
+            "collections": {name: {"enabled": False, "months": 12} for name in ARCHIVABLE_COLLECTIONS},
+            "notify_on_archive": True,
+            "last_run": None,
+        }
+    return settings
+
+
+@router.put("/data-management/auto-archive-settings")
+async def update_auto_archive_settings(body: dict, current_user: User = Depends(get_current_user)):
+    """Update auto-archive configuration."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    body["updated_at"] = datetime.now(timezone.utc).isoformat()
+    body["updated_by"] = current_user.email
+    await db.auto_archive_settings.update_one({}, {"$set": body}, upsert=True)
+
+    # Re-register the cron job
+    from routers.scheduler import scheduler
+    job_id = "ssc_auto_archive"
+    try:
+        scheduler.remove_job(job_id)
+    except Exception:
+        pass
+
+    if body.get("enabled"):
+        from apscheduler.triggers.cron import CronTrigger
+        freq = body.get("frequency", "monthly")
+        h = int(body.get("hour", 2))
+        m = int(body.get("minute", 0))
+
+        if freq == "weekly":
+            dow = body.get("day_of_week", "sun")
+            trigger = CronTrigger(day_of_week=dow, hour=h, minute=m)
+        else:
+            day = int(body.get("day_of_month", 1))
+            trigger = CronTrigger(day=day, hour=h, minute=m)
+
+        scheduler.add_job(run_auto_archive, trigger, id=job_id, replace_existing=True)
+
+    return await get_auto_archive_settings(current_user)
+
+
+async def run_auto_archive():
+    """Automated archive job that runs on schedule."""
+    settings = await db.auto_archive_settings.find_one({}, {"_id": 0})
+    if not settings or not settings.get("enabled"):
+        return
+
+    total_archived = 0
+    results = []
+
+    for coll_name, coll_settings in settings.get("collections", {}).items():
+        if not coll_settings.get("enabled") or coll_name not in ARCHIVABLE_COLLECTIONS:
+            continue
+
+        months = coll_settings.get("months", 12)
+        config = ARCHIVABLE_COLLECTIONS[coll_name]
+        date_field = config["date_field"]
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=months * 30)).isoformat()
+
+        source = db[coll_name]
+        archive = db[f"{coll_name}_archive"]
+
+        old_records = await source.find({date_field: {"$lt": cutoff}}, {"_id": 0}).to_list(50000)
+        if not old_records:
+            continue
+
+        for rec in old_records:
+            rec["archived_at"] = datetime.now(timezone.utc).isoformat()
+            rec["archived_by"] = "auto-archive"
+
+        await archive.insert_many(old_records)
+        result = await source.delete_many({date_field: {"$lt": cutoff}})
+
+        log_entry = {
+            "id": str(uuid.uuid4()),
+            "collection": coll_name,
+            "label": config["label"],
+            "months_threshold": months,
+            "cutoff_date": cutoff[:10],
+            "archived_count": result.deleted_count,
+            "archived_at": datetime.now(timezone.utc).isoformat(),
+            "archived_by": "auto-archive",
+        }
+        await db.archive_history.insert_one(log_entry)
+        total_archived += result.deleted_count
+        results.append(f"{config['label']}: {result.deleted_count}")
+
+    # Update last run
+    await db.auto_archive_settings.update_one(
+        {},
+        {"$set": {"last_run": datetime.now(timezone.utc).isoformat(), "last_result": results}}
+    )
+
+    logger.info(f"Auto-archive completed: {total_archived} total records archived across {len(results)} collections")

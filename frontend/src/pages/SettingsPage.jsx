@@ -13,6 +13,7 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ResetModuleTourButton } from '@/components/ModuleTour';
 import { useBranchStore } from '@/stores';
 
 function BranchWaButtons() {
@@ -1869,6 +1870,15 @@ export default function SettingsPage() {
                   <div className="p-3 bg-primary/5 rounded-xl border border-primary/20">
                     <p className="text-xs"><strong>Tip:</strong> Create employee accounts in Users page with appropriate permissions. Each employee logs in with their own account and only sees the modules they have access to (Sales, Kitchen, etc.)</p>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Guided Tours Reset */}
+              <Card className="border-stone-100">
+                <CardHeader><CardTitle className="font-outfit text-base">Guided Tours</CardTitle></CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-3">Reset all in-app guided tours to replay them on each module page.</p>
+                  <ResetModuleTourButton />
                 </CardContent>
               </Card>
             </div>

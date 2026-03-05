@@ -39,8 +39,8 @@ export default function NotificationsPage() {
     <DashboardLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="notifications-title">Notifications</h1>
-          <p className="text-muted-foreground">{notifications.filter(n => !n.read).length} unread</p>
+          <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-2" data-testid="notifications-title">Notifications</h1>
+          <p className="text-muted-foreground text-sm">{notifications.filter(n => !n.read).length} unread</p>
         </div>
 
         <Card className="border-border">

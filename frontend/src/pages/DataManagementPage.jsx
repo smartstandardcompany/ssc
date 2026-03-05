@@ -4,7 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Database, Archive, RotateCcw, Trash2, Download, RefreshCw, HardDrive, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Database, Archive, RotateCcw, Trash2, Download, RefreshCw, HardDrive, AlertTriangle, CheckCircle, Clock, Timer } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -13,8 +16,10 @@ export default function DataManagementPage() {
   const [archives, setArchives] = useState([]);
   const [loading, setLoading] = useState(true);
   const [archiving, setArchiving] = useState(null);
+  const [autoSettings, setAutoSettings] = useState(null);
+  const [savingAuto, setSavingAuto] = useState(false);
 
-  useEffect(() => { fetchStats(); }, []);
+  useEffect(() => { fetchStats(); fetchAutoSettings(); }, []);
 
   const fetchStats = async () => {
     try {
@@ -23,6 +28,23 @@ export default function DataManagementPage() {
       setArchives(res.data.archives || []);
     } catch { toast.error('Failed to load data stats'); }
     finally { setLoading(false); }
+  };
+
+  const fetchAutoSettings = async () => {
+    try {
+      const res = await api.get('/data-management/auto-archive-settings');
+      setAutoSettings(res.data);
+    } catch { /* silent */ }
+  };
+
+  const saveAutoSettings = async () => {
+    setSavingAuto(true);
+    try {
+      const res = await api.put('/data-management/auto-archive-settings', autoSettings);
+      setAutoSettings(res.data);
+      toast.success('Auto-archive settings saved');
+    } catch { toast.error('Failed to save settings'); }
+    finally { setSavingAuto(false); }
   };
 
   const handleArchive = async (collection, months) => {
@@ -100,6 +122,117 @@ export default function DataManagementPage() {
             />
           ))}
         </div>
+
+        {/* Auto-Archive Settings */}
+        {autoSettings && (
+          <Card data-testid="auto-archive-settings">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2"><Timer size={18} /> Auto-Archive Schedule</CardTitle>
+                  <CardDescription>Automatically archive old data on a schedule</CardDescription>
+                </div>
+                <Switch
+                  checked={autoSettings.enabled}
+                  onCheckedChange={(v) => setAutoSettings({ ...autoSettings, enabled: v })}
+                  data-testid="auto-archive-toggle"
+                />
+              </div>
+            </CardHeader>
+            {autoSettings.enabled && (
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Frequency</Label>
+                    <Select value={autoSettings.frequency || 'monthly'} onValueChange={(v) => setAutoSettings({ ...autoSettings, frequency: v })}>
+                      <SelectTrigger className="h-9" data-testid="auto-freq-select"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {autoSettings.frequency === 'monthly' && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Day of Month</Label>
+                      <Input type="number" min={1} max={28} value={autoSettings.day_of_month || 1}
+                        onChange={(e) => setAutoSettings({ ...autoSettings, day_of_month: parseInt(e.target.value) || 1 })}
+                        className="h-9" />
+                    </div>
+                  )}
+                  {autoSettings.frequency === 'weekly' && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Day of Week</Label>
+                      <Select value={autoSettings.day_of_week || 'sun'} onValueChange={(v) => setAutoSettings({ ...autoSettings, day_of_week: v })}>
+                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map(d => (
+                            <SelectItem key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Time (24h)</Label>
+                    <Input type="time" value={`${String(autoSettings.hour || 2).padStart(2, '0')}:${String(autoSettings.minute || 0).padStart(2, '0')}`}
+                      onChange={(e) => {
+                        const [h, m] = e.target.value.split(':');
+                        setAutoSettings({ ...autoSettings, hour: parseInt(h) || 0, minute: parseInt(m) || 0 });
+                      }}
+                      className="h-9" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Collections to Auto-Archive</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {Object.entries(autoSettings.collections || {}).map(([coll, config]) => {
+                      const label = stats.find(s => s.collection === coll)?.label || coll;
+                      return (
+                        <div key={coll} className="flex items-center justify-between p-2.5 rounded-lg border bg-stone-50/50 dark:bg-stone-900/30">
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={config.enabled}
+                              onCheckedChange={(v) => setAutoSettings({
+                                ...autoSettings,
+                                collections: { ...autoSettings.collections, [coll]: { ...config, enabled: v } }
+                              })}
+                              data-testid={`auto-toggle-${coll}`}
+                            />
+                            <span className="text-sm">{label}</span>
+                          </div>
+                          <Select
+                            value={String(config.months || 12)}
+                            onValueChange={(v) => setAutoSettings({
+                              ...autoSettings,
+                              collections: { ...autoSettings.collections, [coll]: { ...config, months: parseInt(v) } }
+                            })}
+                          >
+                            <SelectTrigger className="w-[90px] h-7 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="3">3 mo</SelectItem>
+                              <SelectItem value="6">6 mo</SelectItem>
+                              <SelectItem value="12">12 mo</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                {autoSettings.last_run && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Clock size={12} /> Last run: {new Date(autoSettings.last_run).toLocaleString()}
+                  </p>
+                )}
+                <Button onClick={saveAutoSettings} disabled={savingAuto} className="rounded-xl" data-testid="save-auto-archive-btn">
+                  {savingAuto ? <RefreshCw size={14} className="mr-1 animate-spin" /> : <Timer size={14} className="mr-1" />}
+                  Save Auto-Archive Settings
+                </Button>
+              </CardContent>
+            )}
+          </Card>
+        )}
 
         {/* Archive History */}
         {archives.length > 0 && (

@@ -20,6 +20,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { navLabelToKey, LANGUAGES } from '@/lib/i18n';
 import { useAuthStore, useUIStore, useBranchStore } from '@/stores';
 import { QuickHelpButton } from './QuickHelpButton';
+import ModuleTour from './ModuleTour';
 
 const NAV_GROUPS = [
   {
@@ -669,6 +670,9 @@ export const DashboardLayout = ({ children }) => {
       
       {/* Quick Help Button */}
       <QuickHelpButton />
+      
+      {/* Module-specific Guided Tours */}
+      <ModuleTour />
     </div>
   );
 };

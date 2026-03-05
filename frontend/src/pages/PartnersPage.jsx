@@ -75,8 +75,8 @@ export default function PartnersPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-start flex-wrap gap-3">
           <div>
-            <h1 className="text-4xl font-bold font-outfit mb-2">Partners</h1>
-            <p className="text-muted-foreground">Track partner investments, withdrawals & balances</p>
+            <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-2" data-testid="partners-title">Partners</h1>
+            <p className="text-muted-foreground text-sm">Track partner investments, withdrawals & balances</p>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
             <BranchFilter onChange={setBranchFilter} />
@@ -145,16 +145,16 @@ export default function PartnersPage() {
 
         {filteredTxns.length > 0 && (
           <Card className="border-stone-100"><CardHeader><CardTitle className="font-outfit text-base">Recent Transactions</CardTitle></CardHeader><CardContent>
-            <div className="overflow-x-auto"><table className="w-full"><thead><tr className="border-b"><th className="text-left p-3 text-sm font-medium">Date</th><th className="text-left p-3 text-sm font-medium">Partner</th><th className="text-left p-3 text-sm font-medium">Type</th><th className="text-left p-3 text-sm font-medium">Description</th><th className="text-left p-3 text-sm font-medium">Mode</th><th className="text-right p-3 text-sm font-medium">Amount</th><th className="text-right p-3 text-sm font-medium">Actions</th></tr></thead>
+            <div className="overflow-x-auto"><table className="w-full"><thead><tr className="border-b"><th className="text-left p-3 text-sm font-medium">Date</th><th className="text-left p-3 text-sm font-medium">Partner</th><th className="text-left p-3 text-sm font-medium hidden sm:table-cell">Type</th><th className="text-left p-3 text-sm font-medium hidden md:table-cell">Description</th><th className="text-left p-3 text-sm font-medium hidden sm:table-cell">Mode</th><th className="text-right p-3 text-sm font-medium">Amount</th><th className="text-right p-3 text-sm font-medium">Actions</th></tr></thead>
             <tbody>{filteredTxns.slice(0, 50).map(t => {
               const tc = TXN_TYPES.find(x => x.value === t.transaction_type);
               const isIn = t.transaction_type === 'investment';
               return (<tr key={t.id} className="border-b hover:bg-stone-50">
                 <td className="p-3 text-sm">{format(new Date(t.date), 'MMM dd, yyyy')}</td>
                 <td className="p-3 text-sm font-medium">{t.partner_name}</td>
-                <td className="p-3"><Badge className={tc?.color || ''}>{tc?.label || t.transaction_type}</Badge></td>
-                <td className="p-3 text-sm">{t.description || '-'}</td>
-                <td className="p-3"><Badge variant="secondary" className="capitalize">{t.payment_mode}</Badge></td>
+                <td className="p-3 hidden sm:table-cell"><Badge className={tc?.color || ''}>{tc?.label || t.transaction_type}</Badge></td>
+                <td className="p-3 text-sm hidden md:table-cell">{t.description || '-'}</td>
+                <td className="p-3 hidden sm:table-cell"><Badge variant="secondary" className="capitalize">{t.payment_mode}</Badge></td>
                 <td className={`p-3 text-sm text-right font-bold ${isIn ? 'text-success' : 'text-error'}`}>{isIn ? '+' : '-'}SAR {t.amount.toFixed(2)}</td>
                 <td className="p-3 text-right"><Button size="sm" variant="ghost" onClick={async () => { if (window.confirm('Delete?')) { await api.delete(`/partner-transactions/${t.id}`); fetchData(); } }} className="h-7 text-error"><Trash2 size={12} /></Button></td>
               </tr>);

@@ -56,7 +56,7 @@ export default function CompanyLoansPage() {
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-start flex-wrap gap-3">
-          <div><h1 className="text-4xl font-bold font-outfit mb-2">Company Loans</h1><p className="text-muted-foreground">Track bank loans, personal loans & repayments</p></div>
+          <div><h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-2" data-testid="company-loans-title">Company Loans</h1><p className="text-muted-foreground text-sm">Track bank loans, personal loans & repayments</p></div>
           <div className="flex gap-2 items-center flex-wrap">
             <BranchFilter onChange={setBranchFilter} />
             <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
@@ -102,7 +102,7 @@ export default function CompanyLoansPage() {
                       <Button size="sm" variant="ghost" className="text-error" onClick={async () => { if(window.confirm('Delete?')) { await api.delete(`/company-loans/${loan.id}`); fetchData(); }}}><Trash2 size={14} /></Button>
                     </div>
                   </div>
-                  <div className="mt-4 grid grid-cols-3 gap-4">
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="text-center p-2 bg-stone-50 rounded-lg"><div className="text-xs text-muted-foreground">Total</div><div className="font-bold">SAR {loan.total_amount.toFixed(2)}</div></div>
                     <div className="text-center p-2 bg-success/10 rounded-lg"><div className="text-xs text-muted-foreground">Paid</div><div className="font-bold text-success">SAR {(loan.paid_amount || 0).toFixed(2)}</div></div>
                     <div className="text-center p-2 bg-warning/10 rounded-lg"><div className="text-xs text-muted-foreground">Remaining</div><div className="font-bold text-warning">SAR {(loan.remaining || 0).toFixed(2)}</div></div>
