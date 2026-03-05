@@ -242,6 +242,7 @@ async def create_menu_category(body: dict, current_user: User = Depends(get_curr
 async def get_menu_items(
     category: Optional[str] = None,
     branch_id: Optional[str] = None,
+    platform_id: Optional[str] = None,
     search: Optional[str] = None,
     current_user: User = Depends(get_current_user)
 ):
@@ -255,14 +256,29 @@ async def get_menu_items(
         query["tags"] = "popular"
     
     if branch_id:
-        query["$or"] = [{"branch_id": None}, {"branch_id": branch_id}]
+        # Show items available for this branch (empty branch_ids means all branches)
+        query["$or"] = [
+            {"branch_ids": {"$size": 0}},
+            {"branch_ids": {"$exists": False}},
+            {"branch_ids": branch_id},
+            # Legacy support
+            {"branch_id": None},
+            {"branch_id": branch_id}
+        ]
+    
+    if platform_id:
+        query["platform_ids"] = platform_id
     
     if search:
-        query["$or"] = [
+        search_filter = [
             {"name": {"$regex": search, "$options": "i"}},
             {"name_ar": {"$regex": search, "$options": "i"}},
             {"description": {"$regex": search, "$options": "i"}}
         ]
+        if "$or" in query:
+            query = {"$and": [query, {"$or": search_filter}]}
+        else:
+            query["$or"] = search_filter
     
     items = await db.menu_items.find(query, {"_id": 0}).sort("display_order", 1).to_list(500)
     return items
@@ -284,6 +300,23 @@ async def create_menu_item(data: MenuItemCreate, current_user: User = Depends(ge
     await db.menu_items.insert_one(item_dict)
     return {k: v for k, v in item_dict.items() if k != '_id'}
 
+# IMPORTANT: Bulk endpoints must be defined BEFORE parameterized routes to avoid route conflicts
+@router.put("/cashier/menu/bulk-branch-assign")
+async def bulk_assign_branches(body: dict, current_user: User = Depends(get_current_user)):
+    """Bulk assign items to branches. body: {item_ids: [], branch_ids: []}"""
+    item_ids = body.get("item_ids", [])
+    branch_ids = body.get("branch_ids", [])
+    result = await db.menu_items.update_many({"id": {"$in": item_ids}}, {"$set": {"branch_ids": branch_ids}})
+    return {"success": True, "modified": result.modified_count}
+
+@router.put("/cashier/menu/bulk-platform-assign")
+async def bulk_assign_platforms(body: dict, current_user: User = Depends(get_current_user)):
+    """Bulk assign items to platforms. body: {item_ids: [], platform_ids: []}"""
+    item_ids = body.get("item_ids", [])
+    platform_ids = body.get("platform_ids", [])
+    result = await db.menu_items.update_many({"id": {"$in": item_ids}}, {"$set": {"platform_ids": platform_ids}})
+    return {"success": True, "modified": result.modified_count}
+
 @router.put("/cashier/menu/{item_id}")
 async def update_menu_item(item_id: str, data: MenuItemCreate, current_user: User = Depends(get_current_user)):
     """Update a menu item"""
@@ -302,6 +335,65 @@ async def delete_menu_item(item_id: str, current_user: User = Depends(get_curren
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Item not found")
     return {"message": "Item deleted"}
+
+
+@router.put("/cashier/menu/{item_id}/branches")
+async def update_menu_item_branches(item_id: str, body: dict, current_user: User = Depends(get_current_user)):
+    """Update which branches a menu item is available at"""
+    branch_ids = body.get("branch_ids", [])
+    result = await db.menu_items.update_one({"id": item_id}, {"$set": {"branch_ids": branch_ids}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"success": True, "branch_ids": branch_ids}
+
+@router.put("/cashier/menu/{item_id}/platforms")
+async def update_menu_item_platforms(item_id: str, body: dict, current_user: User = Depends(get_current_user)):
+    """Update which platforms a menu item is listed on"""
+    platform_ids = body.get("platform_ids", [])
+    platform_prices = body.get("platform_prices", {})
+    result = await db.menu_items.update_one({"id": item_id}, {"$set": {"platform_ids": platform_ids, "platform_prices": platform_prices}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"success": True, "platform_ids": platform_ids}
+
+@router.get("/cashier/menu/export/{platform_id}")
+async def export_menu_for_platform(platform_id: str, current_user: User = Depends(get_current_user)):
+    """Export menu items for a specific platform"""
+    platform = await db.delivery_platforms.find_one({"id": platform_id}, {"_id": 0})
+    if not platform:
+        raise HTTPException(status_code=404, detail="Platform not found")
+    
+    items = await db.menu_items.find({"is_available": True, "platform_ids": platform_id}, {"_id": 0}).sort("category", 1).to_list(500)
+    
+    export_items = []
+    for item in items:
+        platform_price = item.get("platform_prices", {}).get(platform_id, item["price"])
+        export_items.append({
+            "name": item["name"],
+            "name_ar": item.get("name_ar", ""),
+            "description": item.get("description", ""),
+            "category": item.get("category", "main"),
+            "price": platform_price,
+            "original_price": item["price"],
+            "preparation_time": item.get("preparation_time", 10),
+            "image_url": item.get("image_url", ""),
+            "tags": item.get("tags", []),
+            "modifiers": item.get("modifiers", [])
+        })
+    
+    return {
+        "platform": platform["name"],
+        "platform_ar": platform.get("name_ar", ""),
+        "total_items": len(export_items),
+        "items": export_items
+    }
+
+@router.get("/cashier/menu-all")
+async def get_all_menu_items(current_user: User = Depends(get_current_user)):
+    """Get ALL menu items including unavailable ones - for admin menu management"""
+    items = await db.menu_items.find({}, {"_id": 0}).sort("display_order", 1).to_list(500)
+    return items
+
 
 
 # =====================================================

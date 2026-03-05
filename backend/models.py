@@ -844,7 +844,10 @@ class MenuItem(BaseModel):
     image_url: Optional[str] = None
     modifiers: List[dict] = []  # List of modifier groups
     is_available: bool = True
-    branch_id: Optional[str] = None  # None = all branches
+    branch_id: Optional[str] = None  # Deprecated - use branch_ids
+    branch_ids: List[str] = []  # Empty = all branches
+    platform_ids: List[str] = []  # Which platforms this item is listed on
+    platform_prices: dict = {}  # Platform-specific prices {platform_id: price}
     preparation_time: int = 10  # minutes
     calories: Optional[int] = None
     tags: List[str] = []  # vegetarian, spicy, popular, new
@@ -862,6 +865,9 @@ class MenuItemCreate(BaseModel):
     modifiers: Optional[List[dict]] = []
     is_available: bool = True
     branch_id: Optional[str] = None
+    branch_ids: Optional[List[str]] = []
+    platform_ids: Optional[List[str]] = []
+    platform_prices: Optional[dict] = {}
     preparation_time: int = 10
     calories: Optional[int] = None
     tags: Optional[List[str]] = []
