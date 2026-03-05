@@ -4,57 +4,67 @@
 A comprehensive business management ERP system for tracking sales, expenses, supplier payments, HR operations, restaurant POS, stock management, and more.
 
 ## Core Modules
-- Financial Management, HR Management, Stock Management, Restaurant Operations, CCTV Security, Administration
+Financial Management | HR Management | Stock Management | Restaurant Operations | CCTV Security | Administration
 
-## Latest Session (Mar 5, 2026 - Session 3)
+## Session 4 (Mar 5, 2026) - All Backlog Items
 
-### Module Guided Tours (DONE)
-- 5 module-specific guided tours: Sales (4 steps), Stock (4 steps), Employees (4 steps), Analytics (4 steps), Settings (3 steps)
-- Each tour has Skip/Next/Back/Close navigation with progress bar
-- Tours track completion in localStorage, auto-trigger on first visit
-- Reset All Tours button in Settings > Deploy tab
+### Module Guided Tours - POS, Kitchen, Customer Portal (DONE)
+- POS tour: 4 steps (Point of Sale, Entry Type, Online & Regular, Recent Entries)
+- Kitchen tour: 4 steps (Kitchen Stock Usage, Select Branch, Add Items, Submit Usage)
+- Customer Portal tour: 4 steps (Customer Portal, Orders, Statements, Loyalty)
+- Total: 8 module tours across the application
 
-### Auto-Archive Scheduling (DONE)
-- Cron-based auto-archive with configurable frequency (weekly/monthly)
-- Per-collection enable/disable with customizable month thresholds (3/6/12)
-- Scheduled via APScheduler with configurable time and day
-- Auto-archive settings saved to MongoDB and synced on startup
+### Smart Archive Recommendations (DONE)
+- GET /api/data-management/recommendations endpoint
+- Health score (0-100) based on collection sizes and growth rates
+- Priority levels: critical, high, medium, low
+- Growth rate analysis (30-day vs 60-day comparison)
+- Actionable recommendations with one-click archive buttons
 
-### Data Management Automation (DONE)
-- Auto-archive settings UI with toggle, frequency, collection toggles
-- Runs automatically on schedule (monthly by default)
-- Archive history tracking with restore/purge capabilities
+### Data Management Automation Improvements (DONE)
+- Smart recommendations UI with health score badge
+- Auto-archive scheduling with cron jobs (weekly/monthly)
+- Per-collection toggle with configurable month thresholds
+- Archive history with restore/purge/status tracking
 
-### Mobile-Responsive Improvements (DONE)
-- TransfersPage: grid-cols-1 sm:grid-cols-2 for transfer cards
-- PartnersPage: hidden sm:table-cell for table columns, responsive heading
-- NotificationsPage: responsive heading text sizes
-- CompanyLoansPage: responsive heading and grid layout
+### Mobile Responsive Improvements (DONE)
+- POSAnalyticsPage: grid-cols-2 sm:grid-cols-3 lg:grid-cols-5
+- KitchenPage: responsive heading
+- PartnersPage: hidden columns on mobile, responsive heading
+- TransfersPage: responsive grid cards, responsive heading
+- NotificationsPage: responsive heading text
+- CompanyLoansPage: responsive heading and grid
 
-### Scheduled PDF Report Delivery Enhancement (DONE - Session 2)
-- APScheduler wired to scheduled_reports collection
-- PDF reports auto-send on daily/weekly/monthly schedule
-- Email blocked by external M365 auth issue
+### UI/UX Polishing (DONE)
+- Reset Tours button in Settings > Deploy tab
+- All pages with consistent heading sizes (text-2xl sm:text-4xl)
+- Overflow-x-auto on all data tables
+- data-testid attributes on all interactive elements
 
-### Previous Sessions - Completed Features
-- Employee offboarding UX, clearance checklist, settlement PDF
-- AI-powered business insights (OpenAI GPT via Emergent LLM Key)
-- Performance optimization: pagination on 4+ endpoints
-- Employee Portal access for all roles
-- SMTP bug fix (code-level, external auth block remains)
-- PWA implementation
-- Dashboard guided tour (9 steps)
+## Session 3 (Mar 5, 2026)
+- Scheduled PDF Report Delivery (DONE)
+- Data Management & Archiving page (DONE)
+- Module tours: Sales, Stock, Employees, Analytics, Settings (DONE)
+- Auto-archive backend scheduling (DONE)
+- Mobile responsive: TransfersPage, PartnersPage, NotificationsPage, CompanyLoansPage (DONE)
+
+## Session 2 (Mar 5, 2026)
+- Employee offboarding UX overhaul (DONE)
+- AI analytics & insights with OpenAI GPT (DONE)
+- Backend pagination: Cash Transfers, Invoices, Fines, Customers (DONE)
+- Employee Portal access for all roles (DONE)
+- SMTP bug fix (code-level fix, external auth block) (DONE)
+- PWA implementation (DONE)
+- Dashboard guided tour (DONE)
 
 ## Pending Issues
-- SMTP Email: Auth error 5.7.139 - user needs to check Azure AD Security Defaults
-- Analytics page: pre-existing 500 error on some analytics data loads
+- SMTP Email: Auth error 5.7.139 from Microsoft 365 - user needs Azure AD Security Defaults disabled
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
 - Operator: test@ssc.com / testtest
 
-## Backlog
-- P2: Further UI/UX polishing (additional pages)
-- P2: Email automation features (blocked on SMTP auth)
-- P2: In-app guided tours for additional modules (POS, Kitchen, Customer Portal)
-- P3: Data management archiving automation improvements
+## Remaining Backlog
+- P2: Email automation (blocked on SMTP)
+- P3: Additional guided tours for more sub-modules
+- P3: Advanced data analytics and reporting dashboards
