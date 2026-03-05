@@ -60,7 +60,7 @@ export default function StockPage() {
         api.get('/stock/entries'), api.get('/stock/usage')
       ]);
       setItems(iR.data); setSuppliers(sR.data);
-      setEntries(eR.data); setUsage(uR.data);
+      setEntries(eR.data?.data || eR.data); setUsage(uR.data?.data || uR.data);
     } catch { toast.error('Failed to load'); }
     finally { setLoading(false); }
   };

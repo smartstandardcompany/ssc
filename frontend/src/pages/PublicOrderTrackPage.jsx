@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,21 +19,35 @@ const STATUSES = [
 ];
 
 export default function PublicOrderTrackPage() {
+  const [searchParams] = useSearchParams();
   const [orderNumber, setOrderNumber] = useState('');
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleTrack = async (e) => {
-    e?.preventDefault();
-    if (!orderNumber.trim()) return;
+  // Auto-track if order ID in URL params (from QR code)
+  useEffect(() => {
+    const id = searchParams.get('id');
+    if (id) {
+      setOrderNumber(id);
+      trackOrder(id);
+    }
+  }, [searchParams]);
+
+  const trackOrder = async (id) => {
+    if (!id?.trim()) return;
     setLoading(true); setError(''); setOrder(null);
     try {
-      const { data } = await api.get(`/order-tracking/order/${orderNumber.trim()}`);
+      const { data } = await api.get(`/order-tracking/order/${id.trim()}`);
       setOrder(data);
     } catch (err) {
       setError(err.response?.data?.detail || 'Order not found. Please check your order number.');
     } finally { setLoading(false); }
+  };
+
+  const handleTrack = async (e) => {
+    e?.preventDefault();
+    trackOrder(orderNumber);
   };
 
   const getStatusIdx = (status) => STATUSES.findIndex(s => s.key === status);

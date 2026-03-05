@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import Optional
 from datetime import datetime, timezone
 import os
@@ -174,17 +174,24 @@ async def get_smart_stock_alerts(
 
 
 @router.get("/stock/entries")
-async def get_stock_entries(branch_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+async def get_stock_entries(
+    branch_id: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    limit: int = Query(100, ge=1, le=500),
+    current_user: User = Depends(get_current_user)
+):
     require_permission(current_user, "stock", "read")
     query = get_branch_filter(current_user)
     if branch_id:
         query["branch_id"] = branch_id
-    entries = await db.stock_entries.find(query, {"_id": 0}).sort("date", -1).to_list(5000)
+    total = await db.stock_entries.count_documents(query)
+    skip = (page - 1) * limit
+    entries = await db.stock_entries.find(query, {"_id": 0}).sort("date", -1).skip(skip).limit(limit).to_list(limit)
     for e in entries:
         for f in ['date', 'created_at']:
             if isinstance(e.get(f), str):
                 e[f] = datetime.fromisoformat(e[f])
-    return entries
+    return {"data": entries, "total": total, "page": page, "limit": limit, "pages": (total + limit - 1) // limit if total > 0 else 1}
 
 @router.post("/stock/entries")
 async def create_stock_entry(body: dict, current_user: User = Depends(get_current_user)):
@@ -249,17 +256,24 @@ async def create_stock_entries_bulk(body: dict, current_user: User = Depends(get
     return {"created": len(created), "entries": created}
 
 @router.get("/stock/usage")
-async def get_stock_usage(branch_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+async def get_stock_usage(
+    branch_id: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    limit: int = Query(100, ge=1, le=500),
+    current_user: User = Depends(get_current_user)
+):
     require_permission(current_user, "stock", "read")
     query = get_branch_filter(current_user)
     if branch_id:
         query["branch_id"] = branch_id
-    usage = await db.stock_usage.find(query, {"_id": 0}).sort("date", -1).to_list(5000)
+    total = await db.stock_usage.count_documents(query)
+    skip = (page - 1) * limit
+    usage = await db.stock_usage.find(query, {"_id": 0}).sort("date", -1).skip(skip).limit(limit).to_list(limit)
     for u in usage:
         for f in ['date', 'created_at']:
             if isinstance(u.get(f), str):
                 u[f] = datetime.fromisoformat(u[f])
-    return usage
+    return {"data": usage, "total": total, "page": page, "limit": limit, "pages": (total + limit - 1) // limit if total > 0 else 1}
 
 @router.post("/stock/usage")
 async def create_stock_usage(body: dict, current_user: User = Depends(get_current_user)):

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import api from '@/lib/api';
 import CashierShiftModal from '@/components/CashierShiftModal';
+import { QRCodeSVG } from 'qrcode.react';
 
 const CATEGORY_ICONS = {
   all: Grid,
@@ -765,6 +766,16 @@ export default function CashierPOSPage() {
                   <span>Type</span>
                   <span className="capitalize">{lastOrder.order_type?.replace('_', ' ')}</span>
                 </div>
+              </div>
+              {/* QR Code for Order Tracking */}
+              <div className="text-center py-3 border-t border-dashed dark:border-stone-700">
+                <QRCodeSVG 
+                  value={`${window.location.origin}/track-order?id=${lastOrder.id || lastOrder.order_number}`}
+                  size={100}
+                  className="mx-auto"
+                  data-testid="receipt-qr-code"
+                />
+                <p className="text-[10px] text-muted-foreground mt-2">Scan to track your order</p>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1" onClick={() => window.print()}>
