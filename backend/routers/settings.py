@@ -62,7 +62,8 @@ async def save_email_settings(body: dict, current_user: User = Depends(get_curre
         "smtp_port": int(body.get("smtp_port", 587)),
         "username": body.get("username", ""),
         "from_email": body.get("from_email", ""),
-        "use_tls": body.get("use_tls", True),
+        "use_tls": False,
+        "start_tls": True,
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
     if body.get("password") and body["password"] != "••••••••":
@@ -88,14 +89,18 @@ async def test_email(body: dict, current_user: User = Depends(get_current_user))
         msg["From"] = settings.get("from_email", settings["username"])
         msg["To"] = to_email
         port = int(settings.get("smtp_port", 587))
-        use_starttls = port == 587
+        # Port 587 always needs STARTTLS, port 465 needs implicit TLS
+        use_starttls = (port == 587)
+        use_implicit_tls = (port == 465)
         await aiosmtplib.send(msg, hostname=settings["smtp_host"], port=port,
                               username=settings["username"], password=settings["password"],
-                              start_tls=use_starttls, use_tls=(not use_starttls and settings.get("use_tls", False)),
+                              start_tls=use_starttls, use_tls=use_implicit_tls,
                               timeout=30)
-        return {"message": f"Test email sent to {to_email}"}
+        return {"message": f"Test email sent successfully to {to_email}"}
     except aiosmtplib.SMTPAuthenticationError as e:
-        raise HTTPException(status_code=500, detail=f"Authentication failed. Please enable SMTP AUTH for this account in M365 admin, or check your password. Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Authentication failed. Please enable 'Authenticated SMTP' for this account in Microsoft 365 Admin Center (admin.microsoft.com > Users > Mail > Email apps). If MFA is enabled, use an App Password. Error: {str(e)}")
+    except aiosmtplib.SMTPConnectTimeoutError as e:
+        raise HTTPException(status_code=500, detail=f"Connection timeout. Check that port {port} is correct and smtp server is reachable. Error: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Email failed: {str(e)}")
 
