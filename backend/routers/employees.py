@@ -160,17 +160,40 @@ async def resign_employee(emp_id: str, body: dict, current_user: User = Depends(
     resignation_date = body.get("resignation_date", datetime.now(timezone.utc).strftime("%Y-%m-%d"))
     notice_days = int(body.get("notice_period_days", 30))
     from datetime import timedelta as td
-    last_day = (datetime.fromisoformat(resignation_date) + td(days=notice_days)).strftime("%Y-%m-%d")
-    reason = body.get("reason", "Resignation")
+    last_day = body.get("last_working_day") or (datetime.fromisoformat(resignation_date) + td(days=notice_days)).strftime("%Y-%m-%d")
+    reason = body.get("reason", "")
+    status = body.get("status", "resigned")
     update = {
-        "status": body.get("status", "resigned"),
+        "status": status,
         "resignation_date": resignation_date,
-        "last_working_day": body.get("last_working_day", last_day),
+        "last_working_day": last_day,
         "notice_period_days": notice_days,
         "termination_reason": reason,
+        "exit_type": body.get("exit_type", status),  # resigned, terminated, end_of_contract
+        "clearance": body.get("clearance", {
+            "company_assets_returned": False,
+            "id_card_returned": False,
+            "laptop_returned": False,
+            "keys_returned": False,
+            "pending_work_handed_over": False,
+            "no_pending_loans": emp.get("loan_balance", 0) <= 0,
+            "exit_interview_done": False,
+        }),
     }
     await db.employees.update_one({"id": emp_id}, {"$set": update})
-    return {"message": f"Employee marked as {update['status']}", "last_working_day": update["last_working_day"]}
+    return {"message": f"Employee marked as {status}", "last_working_day": last_day}
+
+
+@router.put("/employees/{emp_id}/clearance")
+async def update_clearance(emp_id: str, body: dict, current_user: User = Depends(get_current_user)):
+    """Update clearance checklist items"""
+    emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    clearance = emp.get("clearance", {})
+    clearance.update(body)
+    await db.employees.update_one({"id": emp_id}, {"$set": {"clearance": clearance}})
+    return {"success": True, "clearance": clearance}
 
 
 @router.get("/employees/{emp_id}/settlement")
@@ -208,7 +231,8 @@ async def get_settlement(emp_id: str, current_user: User = Depends(get_current_u
     # Resignation: 1/3 salary per year (2-5 years), 2/3 salary per year (5-10 years), full salary per year (10+ years)
     # Termination: 1/2 salary per year (first 5), full salary per year (after 5)
     status = emp.get("status", "resigned")
-    is_terminated = status in ["terminated", "fired"]
+    exit_type = emp.get("exit_type", status)
+    is_terminated = status in ["terminated", "fired"] or exit_type == "end_of_contract"
     
     eos_amount = 0.0
     if is_terminated:
@@ -248,10 +272,16 @@ async def get_settlement(emp_id: str, current_user: User = Depends(get_current_u
     # --- Total Settlement ---
     total_settlement = round(pending_salary + leave_encashment + eos_amount - loan_balance, 2)
     
+    clearance = emp.get("clearance", {})
+    clearance_complete = all(clearance.values()) if clearance else False
+    
     return {
         "employee_id": emp_id,
         "employee_name": emp.get("name", ""),
         "status": emp.get("status", "active"),
+        "exit_type": exit_type,
+        "clearance": clearance,
+        "clearance_complete": clearance_complete,
         "monthly_salary": salary,
         "join_date": str(join_date_str)[:10],
         "end_date": str(resignation_date_str)[:10],
@@ -275,6 +305,156 @@ async def get_settlement(emp_id: str, current_user: User = Depends(get_current_u
             "total": total_settlement,
         }
     }
+
+
+@router.get("/employees/{emp_id}/settlement/pdf")
+async def settlement_pdf(emp_id: str, current_user: User = Depends(get_current_user)):
+    """Generate a settlement PDF for download"""
+    emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Reuse settlement calculation
+    settlement_data = await get_settlement(emp_id, current_user)
+    
+    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    co_name = company.get("company_name", "Smart Standard Company")
+    addr_parts = [company.get("address_line1",""), company.get("address_line2",""), company.get("city",""), company.get("country","")]
+    co_addr = ", ".join([p for p in addr_parts if p])
+    
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=40, bottomMargin=40, leftMargin=50, rightMargin=50)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    title_s = ParagraphStyle('T', parent=styles['Heading1'], fontSize=18, textColor=colors.HexColor('#F5841F'), alignment=1, spaceAfter=5)
+    sub_s = ParagraphStyle('Sub', parent=styles['Normal'], fontSize=9, textColor=colors.grey, alignment=1, spaceAfter=3)
+    body_s = ParagraphStyle('B', parent=styles['Normal'], fontSize=10, leading=16, spaceAfter=8)
+    
+    logo_path = ROOT_DIR / "uploads" / "logos" / "company_logo.jpg"
+    if not logo_path.exists():
+        logo_path = ROOT_DIR / "uploads" / "logos" / "company_logo.png"
+    if logo_path.exists():
+        from reportlab.platypus import Image as RLImage
+        try:
+            logo = RLImage(str(logo_path), width=1.5*inch, height=0.7*inch)
+            logo.hAlign = 'CENTER'
+            elements.append(logo)
+        except:
+            pass
+    
+    elements.append(Paragraph(co_name.upper(), title_s))
+    if co_addr:
+        elements.append(Paragraph(co_addr, sub_s))
+    elements.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#F5841F')))
+    elements.append(Spacer(1, 0.3*inch))
+    
+    # Title
+    exit_type = settlement_data.get("exit_type", settlement_data["status"])
+    exit_label = {"terminated": "Termination", "resigned": "Resignation", "end_of_contract": "End of Contract"}.get(exit_type, exit_type.replace("_", " ").title())
+    elements.append(Paragraph(f"<b>FINAL SETTLEMENT - {exit_label.upper()}</b>", ParagraphStyle('H', parent=styles['Heading2'], fontSize=14, alignment=1, spaceAfter=15)))
+    elements.append(Paragraph(f"Date: {datetime.now().strftime('%d %B %Y')}", ParagraphStyle('R', parent=styles['Normal'], fontSize=9, alignment=2)))
+    elements.append(Spacer(1, 0.15*inch))
+    
+    # Employee Info
+    info_rows = [
+        ["Employee Name:", settlement_data["employee_name"], "Document ID:", emp.get("document_id", "-")],
+        ["Position:", emp.get("position", "-"), "Join Date:", settlement_data.get("join_date", "-")],
+        ["Exit Type:", exit_label, "End Date:", settlement_data.get("end_date", "-")],
+        ["Service Period:", f"{settlement_data['service_years']} years ({settlement_data['service_days']} days)", "Monthly Salary:", f"SAR {settlement_data['monthly_salary']:,.2f}"],
+    ]
+    it = Table(info_rows, colWidths=[1.2*inch, 2*inch, 1.2*inch, 2*inch])
+    it.setStyle(TableStyle([
+        ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'), ('FONTNAME', (2,0), (2,-1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 9), ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#FAFAFA')),
+    ]))
+    elements.append(it)
+    elements.append(Spacer(1, 0.2*inch))
+    
+    # Settlement Breakdown
+    elements.append(Paragraph("<b>Settlement Breakdown</b>", ParagraphStyle('SH', parent=styles['Heading3'], fontSize=12, textColor=colors.HexColor('#F5841F'))))
+    elements.append(Spacer(1, 0.1*inch))
+    
+    bd = settlement_data["breakdown"]
+    settle_rows = [
+        ["Description", "Amount (SAR)"],
+        ["Pending Salary", f"{bd['pending_salary']:,.2f}"],
+        [f"Leave Encashment ({settlement_data['leave_balance_days']} days)", f"{bd['leave_encashment']:,.2f}"],
+        [f"End-of-Service Benefit ({settlement_data['eos_calculation_type'].title()})", f"{bd['end_of_service']:,.2f}"],
+        ["Loan Deduction", f"{bd['loan_deduction']:,.2f}"],
+        ["", ""],
+        ["TOTAL SETTLEMENT", f"{bd['total']:,.2f}"],
+    ]
+    st = Table(settle_rows, colWidths=[4.5*inch, 2*inch])
+    st.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#F5841F')),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 10),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
+        ('ALIGN', (1,0), (1,-1), 'RIGHT'),
+        ('FONTNAME', (0,-1), (-1,-1), 'Helvetica-Bold'),
+        ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor('#FFF3E0')),
+        ('FONTSIZE', (0,-1), (-1,-1), 11),
+    ]))
+    elements.append(st)
+    elements.append(Spacer(1, 0.2*inch))
+    
+    # Clearance Checklist
+    clearance = settlement_data.get("clearance", {})
+    if clearance:
+        elements.append(Paragraph("<b>Clearance Checklist</b>", ParagraphStyle('CH', parent=styles['Heading3'], fontSize=12, textColor=colors.HexColor('#F5841F'))))
+        elements.append(Spacer(1, 0.1*inch))
+        cl_rows = [["Item", "Status"]]
+        labels = {
+            "company_assets_returned": "Company Assets Returned",
+            "id_card_returned": "ID Card Returned",
+            "laptop_returned": "Laptop/Equipment Returned",
+            "keys_returned": "Keys Returned",
+            "pending_work_handed_over": "Pending Work Handed Over",
+            "no_pending_loans": "No Pending Loans",
+            "exit_interview_done": "Exit Interview Done",
+        }
+        for key, label in labels.items():
+            val = clearance.get(key, False)
+            cl_rows.append([label, "Completed" if val else "Pending"])
+        ct = Table(cl_rows, colWidths=[4.5*inch, 2*inch])
+        ct.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#F5841F')),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,-1), 9),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
+            ('ALIGN', (1,1), (1,-1), 'CENTER'),
+        ]))
+        for i, row in enumerate(cl_rows[1:], 1):
+            if row[1] == "Completed":
+                ct.setStyle(TableStyle([('TEXTCOLOR', (1,i), (1,i), colors.HexColor('#059669'))]))
+            else:
+                ct.setStyle(TableStyle([('TEXTCOLOR', (1,i), (1,i), colors.HexColor('#DC2626'))]))
+        elements.append(ct)
+        elements.append(Spacer(1, 0.3*inch))
+    
+    # Signatures
+    elements.append(Spacer(1, 0.3*inch))
+    sig_rows = [
+        ["Employee Signature:", "____________________", "HR / Manager:", "____________________"],
+        ["", "", "", ""],
+        ["Date:", "____________________", "Date:", "____________________"],
+    ]
+    sig_t = Table(sig_rows, colWidths=[1.3*inch, 2*inch, 1.3*inch, 2*inch])
+    sig_t.setStyle(TableStyle([
+        ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'), ('FONTNAME', (2,0), (2,-1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 9), ('BOTTOMPADDING', (0,0), (-1,-1), 15),
+    ]))
+    elements.append(sig_t)
+    
+    doc.build(elements)
+    buffer.seek(0)
+    fname = f"settlement_{emp['name'].replace(' ', '_')}.pdf"
+    return StreamingResponse(buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename={fname}"})
+
 
 
 @router.post("/employees/{emp_id}/complete-exit")

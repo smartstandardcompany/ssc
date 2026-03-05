@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, DollarSign, AlertTriangle, Eye, Calendar, FileText, Briefcase, UserX, Calculator, Mail, Send } from 'lucide-react';
+import { Plus, Edit, Trash2, DollarSign, AlertTriangle, Eye, Calendar, FileText, Briefcase, UserX, Calculator, Mail, Send, Download, ClipboardCheck, CheckCircle2 } from 'lucide-react';
 import ExportButton from '@/components/ExportButton';
 import api from '@/lib/api';
 import { toast } from 'sonner';
@@ -64,6 +64,7 @@ export default function EmployeesPage() {
   const [resignForm, setResignForm] = useState({ resignation_date: '', notice_period_days: 30, reason: '', status: 'resigned' });
   const [settlementDialog, setSettlementDialog] = useState(null);
   const [settlement, setSettlement] = useState(null);
+  const [clearanceUpdating, setClearanceUpdating] = useState(false);
   const [emailDialog, setEmailDialog] = useState(null);
   const [emailForm, setEmailForm] = useState({ subject: '', message: '' });
   const [sendingEmail, setSendingEmail] = useState(false);
@@ -300,7 +301,7 @@ export default function EmployeesPage() {
           </Card>
           <Card className={`border-border cursor-pointer transition-all ${statusFilter === 'left' ? 'ring-2 ring-red-400' : ''}`} onClick={() => setStatusFilter('left')} data-testid="filter-left">
             <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Left / Terminated</CardTitle></CardHeader>
-            <CardContent><div className="text-2xl font-bold font-outfit text-red-600">{employees.filter(e => ['left', 'terminated', 'resigned'].includes(e.status)).length}</div></CardContent>
+            <CardContent><div className="text-2xl font-bold font-outfit text-red-600">{employees.filter(e => ['left', 'terminated', 'resigned', 'end_of_contract'].includes(e.status)).length}</div></CardContent>
           </Card>
           <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Monthly Payroll</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-error"> SAR {totalSalary.toFixed(0)}</div></CardContent></Card>
           <Card className={`border-border cursor-pointer transition-all ${statusFilter === 'all' ? 'ring-2 ring-blue-400' : ''}`} onClick={() => setStatusFilter('all')} data-testid="filter-all">
@@ -317,19 +318,19 @@ export default function EmployeesPage() {
               {employees.filter(emp => {
                 if (branchFilter.length > 0 && !branchFilter.includes(emp.branch_id) && emp.branch_id) return false;
                 if (statusFilter === 'active') return !emp.status || emp.status === 'active';
-                if (statusFilter === 'left') return ['left', 'terminated', 'resigned', 'on_notice'].includes(emp.status);
+                if (statusFilter === 'left') return ['left', 'terminated', 'resigned', 'on_notice', 'end_of_contract'].includes(emp.status);
                 return true;
               }).map((emp) => {
                 const pend = getPending(emp.id);
                 const jt = jobTitles.find(j => j.id === emp.job_title_id);
                 return (
-                  <div key={emp.id} className={`p-3 border rounded-xl space-y-2 ${emp.status === 'resigned' || emp.status === 'on_notice' ? 'bg-amber-50/30 border-amber-200' : emp.status === 'left' || emp.status === 'terminated' ? 'bg-red-50/30 border-red-200' : 'bg-white'}`} data-testid={`employee-card-${emp.id}`}>
+                  <div key={emp.id} className={`p-3 border rounded-xl space-y-2 ${emp.status === 'resigned' || emp.status === 'on_notice' || emp.status === 'end_of_contract' ? 'bg-amber-50/30 border-amber-200' : emp.status === 'left' || emp.status === 'terminated' ? 'bg-red-50/30 border-red-200' : 'bg-white'}`} data-testid={`employee-card-${emp.id}`}>
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="text-sm font-bold">{emp.name}</p>
                         {jt && <Badge variant="outline" className="capitalize text-[10px] mt-0.5">{jt.title}</Badge>}
                         {emp.status && emp.status !== 'active' && (
-                          <Badge className={`ml-1 text-[10px] ${emp.status === 'resigned' || emp.status === 'on_notice' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{emp.status.replace('_', ' ')}</Badge>
+                          <Badge className={`ml-1 text-[10px] ${emp.status === 'resigned' || emp.status === 'on_notice' || emp.status === 'end_of_contract' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{emp.status.replace('_', ' ')}</Badge>
                         )}
                       </div>
                       <span className="text-sm font-bold text-stone-700">SAR {(emp.salary || 0).toFixed(0)}</span>
@@ -375,17 +376,17 @@ export default function EmployeesPage() {
                   {employees.filter(emp => {
                     if (branchFilter.length > 0 && !branchFilter.includes(emp.branch_id) && emp.branch_id) return false;
                     if (statusFilter === 'active') return !emp.status || emp.status === 'active';
-                    if (statusFilter === 'left') return ['left', 'terminated', 'resigned', 'on_notice'].includes(emp.status);
+                    if (statusFilter === 'left') return ['left', 'terminated', 'resigned', 'on_notice', 'end_of_contract'].includes(emp.status);
                     return true;
                   }).map((emp) => {
                     const pend = getPending(emp.id);
                     return (
-                    <tr key={emp.id} className={`border-b border-border hover:bg-secondary/50 ${emp.status === 'resigned' || emp.status === 'on_notice' ? 'bg-amber-50/30' : emp.status === 'left' || emp.status === 'terminated' ? 'bg-red-50/30' : ''}`} data-testid="employee-row">
+                    <tr key={emp.id} className={`border-b border-border hover:bg-secondary/50 ${emp.status === 'resigned' || emp.status === 'on_notice' || emp.status === 'end_of_contract' ? 'bg-amber-50/30' : emp.status === 'left' || emp.status === 'terminated' ? 'bg-red-50/30' : ''}`} data-testid="employee-row">
                       <td className="p-3 text-sm font-medium">
                         {emp.name}
                         <div className="text-xs text-muted-foreground">{emp.document_id || ''}</div>
                         {emp.status && emp.status !== 'active' && (
-                          <Badge className={`mt-0.5 text-[10px] ${emp.status === 'resigned' || emp.status === 'on_notice' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                          <Badge className={`mt-0.5 text-[10px] ${emp.status === 'resigned' || emp.status === 'on_notice' || emp.status === 'end_of_contract' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
                             {emp.status.replace('_', ' ')}
                           </Badge>
                         )}
@@ -425,7 +426,7 @@ export default function EmployeesPage() {
                               <UserX size={12} />
                             </Button>
                           )}
-                          {(emp.status === 'resigned' || emp.status === 'on_notice' || emp.status === 'terminated') && (
+                          {(emp.status === 'resigned' || emp.status === 'on_notice' || emp.status === 'terminated' || emp.status === 'end_of_contract') && (
                             <Button size="sm" variant="ghost" className="h-7 text-xs text-blue-600" data-testid="settlement-btn"
                               onClick={async () => {
                                 try {
@@ -778,35 +779,69 @@ export default function EmployeesPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Resignation Dialog */}
+        {/* Resignation / Termination Dialog */}
         <Dialog open={!!resignDialog} onOpenChange={(v) => !v && setResignDialog(null)}>
-          <DialogContent className="max-w-sm" data-testid="resign-dialog">
-            <DialogHeader><DialogTitle className="font-outfit">Employee Resignation / Exit</DialogTitle></DialogHeader>
+          <DialogContent className="max-w-md" data-testid="resign-dialog">
+            <DialogHeader><DialogTitle className="font-outfit">Employee Exit Process</DialogTitle></DialogHeader>
             {resignDialog && (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">Processing exit for <strong>{resignDialog.name}</strong></p>
+                
+                {/* Exit Type Selection */}
                 <div>
-                  <Label className="text-xs">Status</Label>
-                  <Select value={resignForm.status} onValueChange={(v) => setResignForm({ ...resignForm, status: v })}>
-                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="resigned">Resigned</SelectItem>
-                      <SelectItem value="on_notice">On Notice Period</SelectItem>
-                      <SelectItem value="terminated">Terminated</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-xs mb-2 block">Exit Type</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { value: 'resigned', label: 'Resignation', desc: 'Employee chose to leave', color: 'bg-amber-50 border-amber-300 text-amber-700' },
+                      { value: 'terminated', label: 'Termination', desc: 'Company decision', color: 'bg-red-50 border-red-300 text-red-700' },
+                      { value: 'end_of_contract', label: 'End of Contract', desc: 'Contract expired', color: 'bg-blue-50 border-blue-300 text-blue-700' },
+                    ].map(opt => (
+                      <button key={opt.value} type="button"
+                        className={`p-2 rounded-xl border text-center transition-all ${resignForm.status === opt.value ? opt.color + ' ring-2 ring-offset-1' : 'bg-white border-stone-200 dark:bg-stone-800 dark:border-stone-700'}`}
+                        onClick={() => setResignForm({ ...resignForm, status: opt.value, exit_type: opt.value })}
+                        data-testid={`exit-type-${opt.value}`}
+                      >
+                        <p className="text-xs font-medium">{opt.label}</p>
+                        <p className="text-[10px] text-muted-foreground">{opt.desc}</p>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div><Label className="text-xs">Resignation Date</Label><Input type="date" value={resignForm.resignation_date} onChange={(e) => setResignForm({ ...resignForm, resignation_date: e.target.value })} className="h-9" /></div>
-                <div><Label className="text-xs">Notice Period (days)</Label><Input type="number" value={resignForm.notice_period_days} onChange={(e) => setResignForm({ ...resignForm, notice_period_days: parseInt(e.target.value) || 0 })} className="h-9" /></div>
-                <div><Label className="text-xs">Reason</Label><Input value={resignForm.reason} onChange={(e) => setResignForm({ ...resignForm, reason: e.target.value })} placeholder="e.g. Personal reasons" className="h-9" /></div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label className="text-xs">{resignForm.status === 'terminated' ? 'Termination Date' : resignForm.status === 'end_of_contract' ? 'Contract End Date' : 'Resignation Date'}</Label>
+                    <Input type="date" value={resignForm.resignation_date} onChange={(e) => setResignForm({ ...resignForm, resignation_date: e.target.value })} className="h-9" />
+                  </div>
+                  <div><Label className="text-xs">Notice Period (days)</Label>
+                    <Input type="number" value={resignForm.notice_period_days} onChange={(e) => setResignForm({ ...resignForm, notice_period_days: parseInt(e.target.value) || 0 })} className="h-9" />
+                    {resignForm.status === 'terminated' && <p className="text-[10px] text-muted-foreground mt-0.5">Set to 0 for immediate termination</p>}
+                  </div>
+                </div>
+                <div><Label className="text-xs">Reason</Label>
+                  <Input value={resignForm.reason} onChange={(e) => setResignForm({ ...resignForm, reason: e.target.value })} 
+                    placeholder={resignForm.status === 'terminated' ? 'e.g. Performance issues, Misconduct...' : resignForm.status === 'end_of_contract' ? 'Contract period completed' : 'e.g. Personal reasons, Better opportunity...'}
+                    className="h-9" />
+                </div>
+
+                {/* EOS Info */}
+                <div className={`p-3 rounded-lg text-xs ${resignForm.status === 'terminated' ? 'bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-400 border border-red-200' : resignForm.status === 'end_of_contract' ? 'bg-blue-50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-400 border border-blue-200' : 'bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-400 border border-amber-200'}`}>
+                  {resignForm.status === 'terminated' ? (
+                    <p>Termination: Employee receives full EOS benefits (1/2 salary/year for first 5 years, full salary/year after). Saudi Labor Law.</p>
+                  ) : resignForm.status === 'end_of_contract' ? (
+                    <p>End of Contract: Full EOS benefits apply (same as termination calculation). Saudi Labor Law.</p>
+                  ) : (
+                    <p>Resignation: EOS is 0 if under 2 years, 1/3 salary/year for 2-5 years, increasing after. Saudi Labor Law.</p>
+                  )}
+                </div>
+
                 <Button className="w-full rounded-xl" data-testid="confirm-resign-btn" onClick={async () => {
                   try {
-                    await api.post(`/employees/${resignDialog.id}/resign`, resignForm);
-                    toast.success(`${resignDialog.name} marked as ${resignForm.status}`);
+                    await api.post(`/employees/${resignDialog.id}/resign`, { ...resignForm, exit_type: resignForm.status });
+                    toast.success(`${resignDialog.name} marked as ${resignForm.status.replace('_', ' ')}`);
                     setResignDialog(null);
                     const r = await api.get('/employees'); setEmployees(r.data);
                   } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
-                }}>Confirm</Button>
+                }}>Confirm Exit</Button>
               </div>
             )}
           </DialogContent>
@@ -840,22 +875,73 @@ export default function EmployeesPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Settlement Dialog */}
+        {/* Settlement Dialog with Clearance */}
         <Dialog open={!!settlementDialog} onOpenChange={(v) => !v && setSettlementDialog(null)}>
-          <DialogContent className="max-w-lg" data-testid="settlement-dialog">
-            <DialogHeader><DialogTitle className="font-outfit">Final Settlement</DialogTitle></DialogHeader>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="settlement-dialog">
+            <DialogHeader><DialogTitle className="font-outfit flex items-center gap-2"><ClipboardCheck size={18} className="text-blue-500" /> Employee Exit & Settlement</DialogTitle></DialogHeader>
             {settlement && settlementDialog && (
-              <div className="space-y-3">
+              <div className="space-y-4">
+                {/* Employee Info */}
                 <div className="bg-stone-50 dark:bg-stone-900 rounded-xl p-3 space-y-2 text-sm">
                   <div className="flex justify-between"><span className="text-muted-foreground">Employee</span><span className="font-medium">{settlement.employee_name}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Status</span><Badge variant="outline" className="capitalize">{settlement.status}</Badge></div>
-                  {settlement.join_date && <div className="flex justify-between"><span className="text-muted-foreground">Join Date</span><span>{settlement.join_date}</span></div>}
-                  {settlement.end_date && <div className="flex justify-between"><span className="text-muted-foreground">End Date</span><span>{settlement.end_date}</span></div>}
+                  <div className="flex justify-between"><span className="text-muted-foreground">Status</span><Badge variant="outline" className="capitalize">{settlement.exit_type?.replace('_', ' ') || settlement.status}</Badge></div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {settlement.join_date && <div className="flex justify-between"><span className="text-muted-foreground">Join Date</span><span>{settlement.join_date}</span></div>}
+                    {settlement.end_date && <div className="flex justify-between"><span className="text-muted-foreground">End Date</span><span>{settlement.end_date}</span></div>}
+                  </div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Service Period</span><span className="font-medium">{settlement.service_years} years ({settlement.service_days} days)</span></div>
-                  {settlement.resignation_date && <div className="flex justify-between"><span className="text-muted-foreground">Resignation Date</span><span>{settlement.resignation_date}</span></div>}
-                  {settlement.last_working_day && <div className="flex justify-between"><span className="text-muted-foreground">Last Working Day</span><span>{settlement.last_working_day}</span></div>}
                 </div>
 
+                {/* Clearance Checklist */}
+                {settlement.clearance && Object.keys(settlement.clearance).length > 0 && (
+                  <div className="border rounded-xl p-3 space-y-2" data-testid="clearance-checklist">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold flex items-center gap-1.5">
+                        <ClipboardCheck size={14} className="text-amber-500" /> Clearance Checklist
+                      </h4>
+                      {settlement.clearance_complete ? (
+                        <Badge className="bg-emerald-100 text-emerald-700 text-[10px]"><CheckCircle2 size={10} className="mr-1" />All Clear</Badge>
+                      ) : (
+                        <Badge className="bg-amber-100 text-amber-700 text-[10px]">Pending Items</Badge>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                      {[
+                        { key: 'company_assets_returned', label: 'Company Assets Returned' },
+                        { key: 'id_card_returned', label: 'ID Card Returned' },
+                        { key: 'laptop_returned', label: 'Laptop/Equipment Returned' },
+                        { key: 'keys_returned', label: 'Keys Returned' },
+                        { key: 'pending_work_handed_over', label: 'Work Handed Over' },
+                        { key: 'no_pending_loans', label: 'No Pending Loans' },
+                        { key: 'exit_interview_done', label: 'Exit Interview Done' },
+                      ].map(item => (
+                        <label key={item.key} className={`flex items-center gap-2 p-2 rounded-lg border text-xs cursor-pointer transition-all ${settlement.clearance[item.key] ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20' : 'bg-white border-stone-200 dark:bg-stone-800 dark:border-stone-700'}`} data-testid={`clearance-${item.key}`}>
+                          <input
+                            type="checkbox"
+                            checked={!!settlement.clearance[item.key]}
+                            disabled={clearanceUpdating}
+                            onChange={async (e) => {
+                              setClearanceUpdating(true);
+                              try {
+                                await api.put(`/employees/${settlementDialog.id}/clearance`, { [item.key]: e.target.checked });
+                                setSettlement(prev => ({
+                                  ...prev,
+                                  clearance: { ...prev.clearance, [item.key]: e.target.checked },
+                                  clearance_complete: Object.entries({ ...prev.clearance, [item.key]: e.target.checked }).every(([, v]) => v),
+                                }));
+                              } catch { toast.error('Failed to update clearance'); }
+                              setClearanceUpdating(false);
+                            }}
+                            className="rounded accent-emerald-600"
+                          />
+                          <span className={settlement.clearance[item.key] ? 'text-emerald-700 dark:text-emerald-400 line-through' : ''}>{item.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Settlement Breakdown */}
                 <div className="bg-blue-50 dark:bg-blue-950/30 rounded-xl p-3 space-y-2 text-sm border border-blue-200">
                   <h4 className="font-semibold text-blue-800 dark:text-blue-300 text-xs uppercase tracking-wide">Settlement Breakdown</h4>
                   <div className="flex justify-between"><span className="text-muted-foreground">Pending Salary</span><span className="font-mono">SAR {settlement.pending_salary?.toFixed(2)}</span></div>
@@ -863,7 +949,7 @@ export default function EmployeesPage() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">
                       End-of-Service Benefit
-                      <span className="text-[10px] ml-1 text-blue-600">({settlement.eos_calculation_type === 'termination' ? 'Termination' : 'Resignation'})</span>
+                      <span className="text-[10px] ml-1 text-blue-600">({settlement.eos_calculation_type === 'termination' ? 'Termination/EOC' : 'Resignation'})</span>
                     </span>
                     <span className="font-mono text-emerald-600">+SAR {settlement.end_of_service_benefit?.toFixed(2)}</span>
                   </div>
@@ -881,14 +967,29 @@ export default function EmployeesPage() {
                   </p>
                 )}
 
-                <Button className="w-full rounded-xl" data-testid="complete-exit-btn" onClick={async () => {
-                  try {
-                    await api.post(`/employees/${settlementDialog.id}/complete-exit`, { settlement_amount: settlement.total_settlement, paid: true, status: 'left' });
-                    toast.success('Employee exit completed');
-                    setSettlementDialog(null); setSettlement(null);
-                    const r = await api.get('/employees'); setEmployees(r.data);
-                  } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
-                }}>Complete Exit & Deactivate Account</Button>
+                {/* Action Buttons */}
+                <div className="flex gap-2">
+                  <Button variant="outline" className="flex-1 rounded-xl" data-testid="download-settlement-pdf" onClick={async () => {
+                    try {
+                      const response = await api.get(`/employees/${settlementDialog.id}/settlement/pdf`, { responseType: 'blob' });
+                      const url = window.URL.createObjectURL(new Blob([response.data]));
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.setAttribute('download', `settlement_${settlement.employee_name?.replace(/\s+/g, '_')}.pdf`);
+                      document.body.appendChild(link); link.click(); link.remove();
+                      window.URL.revokeObjectURL(url);
+                      toast.success('Settlement PDF downloaded');
+                    } catch { toast.error('Failed to download PDF'); }
+                  }}><Download size={14} className="mr-1.5" />Download Settlement PDF</Button>
+                  <Button className="flex-1 rounded-xl" data-testid="complete-exit-btn" onClick={async () => {
+                    try {
+                      await api.post(`/employees/${settlementDialog.id}/complete-exit`, { settlement_amount: settlement.total_settlement, paid: true, status: 'left' });
+                      toast.success('Employee exit completed');
+                      setSettlementDialog(null); setSettlement(null);
+                      const r = await api.get('/employees'); setEmployees(r.data);
+                    } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+                  }}>Complete Exit & Deactivate</Button>
+                </div>
               </div>
             )}
           </DialogContent>
