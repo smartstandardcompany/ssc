@@ -28,7 +28,7 @@ async def send_email_notification(subject: str, body_text: str, to_email: str = 
         msg["To"] = recipient
         await aiosmtplib.send(msg, hostname=settings["smtp_host"], port=settings["smtp_port"],
                               username=settings["username"], password=settings["password"],
-                              use_tls=settings.get("use_tls", True))
+                              use_tls=False, start_tls=True, timeout=30)
         return True
     except:
         return False

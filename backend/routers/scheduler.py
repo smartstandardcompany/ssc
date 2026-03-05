@@ -131,7 +131,7 @@ async def _send_email(subject: str, body_text: str):
         msg["To"] = settings.get("from_email", settings["username"])
         await aiosmtplib.send(msg, hostname=settings["smtp_host"], port=settings["smtp_port"],
                               username=settings["username"], password=settings["password"],
-                              use_tls=settings.get("use_tls", True))
+                              use_tls=False, start_tls=True, timeout=30)
     except:
         pass
 

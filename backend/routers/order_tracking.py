@@ -96,7 +96,7 @@ async def send_order_notification(customer: dict, order: dict, status: str, mess
                 msg.attach(MIMEText(html, 'html'))
                 
                 await aiosmtplib.send(msg, hostname=smtp_host, port=smtp_port, 
-                                      username=smtp_user, password=smtp_pass, start_tls=True)
+                                      username=smtp_user, password=smtp_pass, start_tls=True, timeout=30)
         except Exception as e:
             print(f"Email notification failed: {e}")
     

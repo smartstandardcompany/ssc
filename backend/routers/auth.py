@@ -336,7 +336,7 @@ SSC Track Team"""
                 port=settings["smtp_port"],
                 username=settings["username"],
                 password=settings["password"],
-                use_tls=settings.get("use_tls", True)
+                use_tls=False, start_tls=True, timeout=30
             )
     except Exception as e:
         # Log error but don't expose to user

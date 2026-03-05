@@ -220,7 +220,7 @@ async def run_supplier_reminder_check(is_test: bool = False):
                         port=email_settings["smtp_port"],
                         username=email_settings["username"],
                         password=email_settings["password"],
-                        use_tls=email_settings.get("use_tls", True))
+                        use_tls=False, start_tls=True, timeout=30)
                 
                 results["email"] = {"success": True, "sent_to": config["recipients_email"]}
             else:

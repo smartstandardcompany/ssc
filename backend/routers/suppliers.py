@@ -906,7 +906,7 @@ async def share_supplier_statement(
                         port=email_settings["smtp_port"],
                         username=email_settings["username"], 
                         password=email_settings["password"],
-                        use_tls=email_settings.get("use_tls", True))
+                        use_tls=False, start_tls=True, timeout=30)
                     results["email"] = {"success": True, "sent_to": email_to}
             except Exception as e:
                 results["email"] = {"success": False, "error": str(e)}

@@ -1673,7 +1673,7 @@ async def send_motion_notification(camera: dict, result: dict, channels: List[st
                     port=settings["smtp_port"],
                     username=settings["username"],
                     password=settings["password"],
-                    use_tls=settings.get("use_tls", True)
+                    use_tls=False, start_tls=True, timeout=30
                 )
         except Exception:
             pass
