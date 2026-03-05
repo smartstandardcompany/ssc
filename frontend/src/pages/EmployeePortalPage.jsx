@@ -130,7 +130,25 @@ export default function EmployeePortalPage() {
   };
 
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-64 text-muted-foreground">Loading...</div></DashboardLayout>;
-  if (noProfile) return <DashboardLayout><div className="flex flex-col items-center justify-center h-64 text-muted-foreground"><User size={48} className="mb-3 opacity-30" /><p>No employee profile linked. Contact admin.</p></div></DashboardLayout>;
+  if (noProfile) return (
+    <DashboardLayout>
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center px-4" data-testid="no-profile-message">
+        <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mb-4">
+          <User size={28} className="text-amber-500" />
+        </div>
+        <h2 className="text-lg font-semibold mb-2">Employee Profile Not Linked</h2>
+        <p className="text-sm text-muted-foreground max-w-md mb-4">
+          Your user account is not linked to an employee profile yet. Once linked, you'll be able to view your salary, leave balance, attendance, and more.
+        </p>
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 max-w-md text-left text-xs space-y-1">
+          <p className="font-semibold text-blue-800">Ask your admin to:</p>
+          <p className="text-blue-700">1. Go to <strong>Employees</strong> page</p>
+          <p className="text-blue-700">2. Edit your employee record</p>
+          <p className="text-blue-700">3. Link it to your user account</p>
+        </div>
+      </div>
+    </DashboardLayout>
+  );
 
   const annualUsed = leaves.filter(l => l.leave_type === 'annual' && l.status === 'approved').reduce((s, l) => s + l.days, 0);
   const sickUsed = leaves.filter(l => l.leave_type === 'sick' && l.status === 'approved').reduce((s, l) => s + l.days, 0);

@@ -327,7 +327,15 @@ export const DashboardLayout = ({ children }) => {
             })}
           </div>
         ) : (
-          NAV_GROUPS.map((group) => (
+          <>
+            {/* Prominent My Portal link for all users */}
+            <Link to="/my-portal" onClick={() => setMobileOpen(false)}
+              data-testid="nav-my-portal-top"
+              className={`flex items-center gap-2.5 px-3 py-2.5 mb-2 rounded-xl text-sm font-medium transition-all border ${location.pathname === '/my-portal' ? 'bg-orange-50 text-orange-700 border-orange-300' : 'text-stone-600 hover:bg-orange-50/50 hover:text-orange-600 border-stone-200 dark:border-stone-700 dark:text-stone-300'}`}>
+              <UserIcon size={16} strokeWidth={1.8} />
+              My Portal
+            </Link>
+            {NAV_GROUPS.map((group) => (
             <NavGroup
               key={group.label}
               group={group}
@@ -337,7 +345,8 @@ export const DashboardLayout = ({ children }) => {
               onNavigate={() => setMobileOpen(false)}
               t={t}
             />
-          ))
+          ))}
+          </>
         )}
       </nav>
 
