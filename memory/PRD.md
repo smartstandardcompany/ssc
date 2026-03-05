@@ -6,19 +6,22 @@ A comprehensive business management ERP system for tracking sales, expenses, sup
 ## Core Modules
 - Financial Management, HR Management, Stock Management, Restaurant Operations, CCTV Security, Administration
 
-## Latest Session Implementations (Mar 2026)
+## Latest Session (Mar 2026)
 1. Employee Portal - Salary Record tab
-2. CCTV Live View Fix + Remote DVR Support + TV Setup Guide
-3. Menu Management - Multi-Branch availability + Delivery Platform assignment + Export
-4. **Online Platforms Bug Fix:** Sales weren't showing on platform page. Root cause: queries filtered by payment_mode at doc level but POS only set it in payment_details array. Fixed all 7 queries to filter by platform_id only. Also added platform_status to SaleCreate model and fixed POS to set payment_mode at top level.
+2. CCTV Live View + Remote DVR + Setup Guide
+3. Menu Management (multi-branch + platform assignment + export)
+4. Online Platforms bug fix (sales not showing)
+5. **Customer Order Tracking** - Public /track-order page with real-time status timeline, no login required
+6. **Performance** - Paginated supplier payments endpoint (supports page/limit/supplier_id/date filters)
+7. **Mobile Responsive** - Supplier payments table hides Branch/Notes/Bill on mobile
 
 ## Pending Issues
-- SMTP Email Delivery (BLOCKED): User must enable SMTP AUTH in M365 admin for info@smartstandards.co
+- SMTP Email Delivery (BLOCKED): User must enable SMTP AUTH in M365 admin
 
-## Upcoming Tasks
-- Customer Order Tracking feature
-- Performance optimization for large datasets  
-- Mobile-responsive design improvements
+## Upcoming/Future Tasks
+- Further performance optimization for other pages
+- Additional mobile responsive improvements
+- AI-driven predictive analytics enhancements
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
