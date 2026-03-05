@@ -6,59 +6,42 @@ A comprehensive business management ERP system for tracking sales, expenses, sup
 ## Core Modules
 - Financial Management, HR Management, Stock Management, Restaurant Operations, CCTV Security, Administration
 
-## Latest Session Implementations (Mar 5, 2026)
+## Latest Session (Mar 5, 2026) - All Implementations
 
-### Employee Offboarding Enhancement (DONE)
-- 3 exit types: Resignation, Termination, End of Contract
-- Clearance checklist with 7 toggleable items
-- Settlement calculation per Saudi Labor Law (EOS benefits)
-- Settlement PDF download
-- Complete exit & account deactivation
-- Automated email notifications on exit/completion
-- Improved UX: visible Exit/Settlement/Review buttons with labels
+### Employee Offboarding (DONE)
+- 3 exit types, clearance checklist, settlement PDF, email notifications
+- Visible Exit/Settlement/Review buttons
 
 ### AI-Powered Business Insights (DONE)
-- Dashboard widget with 3 insight categories (Business Health, Stock Alerts, Sales Trends)
-- OpenAI GPT-4.1-mini via Emergent LLM Key
-- Endpoints: /api/ai-insights/dashboard, /api/ai-insights/stock, /api/ai-insights/sales-trends
-- Stock Reorder page: AI Stock Analysis card
-- Sales Forecast page: AI Sales Analysis card
+- **Dashboard Widget:** Business Health, Stock Alerts, Sales Trends
+- **Stock Reorder Page:** AI Stock Analysis card
+- **Sales Forecast Page:** AI Sales Analysis card
+- **Analytics Hub - 3 New AI Tabs:**
+  - AI Profit: Product profitability analysis with revenue/profit/margin table
+  - AI Churn: Customer churn detection with status breakdown (Active/Cooling/At Risk/Churned)
+  - AI Revenue: 12-week revenue prediction with bar chart
+- All using OpenAI GPT-4.1-mini via Emergent LLM Key
 
-### Performance Optimization (DONE)
+### Performance & Mobile Responsive (DONE)
 - Backend pagination: Cash Transfers, Invoices, Fines, Customers
-- All return {data, total, page, limit, pages} format
-- Frontend pages updated to handle paginated responses
+- Mobile responsive: CashTransfers, Invoices, Fines, Activity Logs, Documents
+- Customer CLV & customers-balance bug fixes
 
-### Mobile Responsive Improvements (DONE)
-- Cash Transfers: Sender/Receiver hidden on md, Notes on lg
-- Invoices: Date on sm, Items/Subtotal/Credit on md, Discount/VAT/Img on lg
-- Fines: Department on md, Description on sm, Paid on lg
-- Activity Logs: Resource on sm, Details on md, IP on lg
-
-### Bug Fixes (DONE)
-- Customer CLV prediction 500 error (KeyError 'id')
-- Customers-balance endpoint KeyError fix
+## AI Insight Endpoints
+- GET /api/ai-insights/dashboard
+- GET /api/ai-insights/stock
+- GET /api/ai-insights/sales-trends
+- GET /api/ai-insights/profit-analysis
+- GET /api/ai-insights/customer-churn
+- GET /api/ai-insights/revenue-prediction
 
 ## Pending Issues
-- SMTP Email Delivery (BLOCKED): User must enable SMTP AUTH in M365 admin for info@smartstandards.co
-
-## Key API Endpoints
-- AI: /api/ai-insights/dashboard, /api/ai-insights/stock, /api/ai-insights/sales-trends
-- Employee: /api/employees/{id}/resign, /clearance, /settlement, /settlement/pdf, /complete-exit
-- Paginated: /api/cash-transfers, /api/invoices, /api/fines, /api/customers, /api/expenses, /api/sales
+- SMTP Email Delivery (BLOCKED): User must enable SMTP AUTH in M365
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
 - Operator: test@ssc.com / testtest
-- Cashier PIN: 1234
-
-## 3rd Party Integrations
-- OpenAI GPT-4.1-mini (via Emergent LLM Key) - AI business insights
-- Twilio - WhatsApp notifications
-- httpx - Hikvision DVR integration
-- qrcode.react - QR codes on receipts
 
 ## Backlog
-- LLM-powered deeper analytics (profit prediction per product, customer churn detection)
-- Further mobile-responsive improvements
-- Email automation (blocked on SMTP AUTH)
+- SMTP email automation (blocked on user action)
+- Additional mobile responsive improvements for LoansPage, LeaveApprovalsPage, SchedulePage
