@@ -117,7 +117,7 @@ export default function KitchenPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-start flex-wrap gap-3">
           <div>
-            <h1 className="text-4xl font-bold font-outfit mb-2" data-testid="kitchen-title">Kitchen</h1>
+            <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-2" data-testid="kitchen-title">Kitchen</h1>
             <p className="text-muted-foreground">Pick items used today — stock will be updated automatically</p>
           </div>
           <div className="flex gap-2 items-center">

@@ -60,6 +60,104 @@ async def get_data_stats(current_user: User = Depends(get_current_user)):
     return {"stats": stats, "archives": archives}
 
 
+@router.get("/data-management/recommendations")
+async def get_archive_recommendations(current_user: User = Depends(get_current_user)):
+    """AI-powered smart archive recommendations based on collection growth patterns."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    recommendations = []
+    now = datetime.now(timezone.utc)
+
+    for coll_name, config in ARCHIVABLE_COLLECTIONS.items():
+        collection = db[coll_name]
+        total = await collection.count_documents({})
+
+        if total == 0:
+            continue
+
+        date_field = config["date_field"]
+
+        # Calculate growth rate (records in last 30 days vs previous 30 days)
+        thirty_days_ago = (now - timedelta(days=30)).isoformat()
+        sixty_days_ago = (now - timedelta(days=60)).isoformat()
+
+        recent_count = await collection.count_documents({date_field: {"$gte": thirty_days_ago}})
+        prev_count = await collection.count_documents({
+            date_field: {"$gte": sixty_days_ago, "$lt": thirty_days_ago}
+        })
+
+        growth_rate = ((recent_count - prev_count) / max(prev_count, 1)) * 100 if prev_count > 0 else 0
+
+        # Count old records by threshold
+        old_6m = await collection.count_documents({date_field: {"$lt": (now - timedelta(days=180)).isoformat()}})
+        old_12m = await collection.count_documents({date_field: {"$lt": (now - timedelta(days=365)).isoformat()}})
+
+        # Determine priority and recommendation
+        priority = "low"
+        action = None
+        reason = None
+        suggested_months = None
+
+        if total > 10000:
+            priority = "critical"
+            suggested_months = 6
+            reason = f"Collection has {total:,} records. Large datasets can slow down queries and increase storage costs."
+            action = f"Archive records older than 6 months ({old_6m:,} records)"
+        elif total > 5000:
+            priority = "high"
+            suggested_months = 6
+            reason = f"Collection has {total:,} records and is growing. Consider archiving to maintain performance."
+            action = f"Archive records older than 6 months ({old_6m:,} records)"
+        elif total > 1000 and old_12m > 0:
+            priority = "medium"
+            suggested_months = 12
+            reason = f"{old_12m:,} records are over 12 months old. Archiving won't affect day-to-day operations."
+            action = f"Archive records older than 12 months ({old_12m:,} records)"
+        elif growth_rate > 50:
+            priority = "medium"
+            suggested_months = 12
+            reason = f"Growth rate is {growth_rate:.0f}% month-over-month. At this rate, consider periodic archiving."
+            action = f"Enable auto-archive for this collection"
+        elif total > 500 and old_6m > total * 0.5:
+            priority = "low"
+            suggested_months = 12
+            reason = f"Over half of records ({old_6m:,}/{total:,}) are older than 6 months."
+            action = f"Archive records older than 12 months ({old_12m:,} records)"
+
+        if action:
+            recommendations.append({
+                "collection": coll_name,
+                "label": config["label"],
+                "total_records": total,
+                "priority": priority,
+                "growth_rate_pct": round(growth_rate, 1),
+                "recent_30d": recent_count,
+                "old_6_months": old_6m,
+                "old_12_months": old_12m,
+                "suggested_months": suggested_months,
+                "reason": reason,
+                "action": action,
+            })
+
+    # Sort by priority: critical > high > medium > low
+    priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+    recommendations.sort(key=lambda r: priority_order.get(r["priority"], 4))
+
+    # Overall health score (0-100, higher is better)
+    total_records = sum(r["total_records"] for r in recommendations) if recommendations else 0
+    critical_count = sum(1 for r in recommendations if r["priority"] in ("critical", "high"))
+    health_score = max(0, 100 - (critical_count * 20) - (len(recommendations) * 5) - min(total_records // 500, 30))
+
+    return {
+        "recommendations": recommendations,
+        "health_score": health_score,
+        "total_collections_analyzed": len(ARCHIVABLE_COLLECTIONS),
+        "collections_needing_attention": len(recommendations),
+        "analyzed_at": now.isoformat(),
+    }
+
+
 @router.post("/data-management/archive")
 async def archive_data(body: dict, current_user: User = Depends(get_current_user)):
     """Archive old data by moving to archive collections."""

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Database, Archive, RotateCcw, Trash2, Download, RefreshCw, HardDrive, AlertTriangle, CheckCircle, Clock, Timer } from 'lucide-react';
+import { Database, Archive, RotateCcw, Trash2, Download, RefreshCw, HardDrive, AlertTriangle, CheckCircle, Clock, Timer, Zap } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -18,8 +18,10 @@ export default function DataManagementPage() {
   const [archiving, setArchiving] = useState(null);
   const [autoSettings, setAutoSettings] = useState(null);
   const [savingAuto, setSavingAuto] = useState(false);
+  const [recommendations, setRecommendations] = useState(null);
+  const [loadingRecs, setLoadingRecs] = useState(false);
 
-  useEffect(() => { fetchStats(); fetchAutoSettings(); }, []);
+  useEffect(() => { fetchStats(); fetchAutoSettings(); fetchRecommendations(); }, []);
 
   const fetchStats = async () => {
     try {
@@ -28,6 +30,15 @@ export default function DataManagementPage() {
       setArchives(res.data.archives || []);
     } catch { toast.error('Failed to load data stats'); }
     finally { setLoading(false); }
+  };
+
+  const fetchRecommendations = async () => {
+    setLoadingRecs(true);
+    try {
+      const res = await api.get('/data-management/recommendations');
+      setRecommendations(res.data);
+    } catch { /* silent */ }
+    finally { setLoadingRecs(false); }
   };
 
   const fetchAutoSettings = async () => {
@@ -105,10 +116,68 @@ export default function DataManagementPage() {
             </h1>
             <p className="text-muted-foreground text-sm mt-1">Archive, export, and manage your business data</p>
           </div>
-          <Button variant="outline" onClick={fetchStats} data-testid="refresh-stats-btn" className="rounded-full">
+          <Button variant="outline" onClick={() => { fetchStats(); fetchRecommendations(); }} data-testid="refresh-stats-btn" className="rounded-full">
             <RefreshCw size={14} className="mr-1" /> Refresh
           </Button>
         </div>
+
+        {/* Smart Recommendations */}
+        {recommendations && recommendations.recommendations?.length > 0 && (
+          <Card className="border-orange-200 bg-gradient-to-br from-orange-50/50 to-amber-50/50 dark:from-orange-950/20 dark:to-amber-950/20" data-testid="smart-recommendations">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Zap size={18} className="text-orange-500" /> Smart Archive Recommendations
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    {recommendations.collections_needing_attention} of {recommendations.total_collections_analyzed} collections need attention
+                  </CardDescription>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-muted-foreground mb-1">Data Health</div>
+                  <div className={`text-2xl font-bold font-outfit ${
+                    recommendations.health_score >= 80 ? 'text-green-600' :
+                    recommendations.health_score >= 50 ? 'text-amber-600' : 'text-red-600'
+                  }`} data-testid="health-score">{recommendations.health_score}/100</div>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2.5">
+                {recommendations.recommendations.map(rec => (
+                  <div key={rec.collection} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 rounded-lg border bg-white/60 dark:bg-stone-900/40" data-testid={`rec-${rec.collection}`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-sm">{rec.label}</span>
+                        <Badge variant="outline" className={`text-[10px] ${
+                          rec.priority === 'critical' ? 'bg-red-100 text-red-700 border-red-200' :
+                          rec.priority === 'high' ? 'bg-orange-100 text-orange-700 border-orange-200' :
+                          rec.priority === 'medium' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                          'bg-stone-100 text-stone-700 border-stone-200'
+                        }`}>{rec.priority}</Badge>
+                        <span className="text-xs text-muted-foreground">{rec.total_records.toLocaleString()} records</span>
+                        {rec.growth_rate_pct > 0 && (
+                          <span className="text-xs text-orange-600">+{rec.growth_rate_pct}% growth</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">{rec.reason}</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs shrink-0 border-orange-200 text-orange-700 hover:bg-orange-50"
+                      onClick={() => handleArchive(rec.collection, rec.suggested_months)}
+                      data-testid={`rec-action-${rec.collection}`}
+                    >
+                      <Archive size={12} className="mr-1" /> {rec.action?.split('(')[0]}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Collection Stats */}
         <div className="grid gap-4">

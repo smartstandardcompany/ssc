@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { X, ChevronRight, ChevronLeft, ShoppingCart, Package, Users, BarChart3, Receipt, DollarSign, TrendingUp, Truck, FileText, Settings, CheckCircle, HelpCircle } from 'lucide-react';
+import { X, ChevronRight, ChevronLeft, ShoppingCart, Package, Users, BarChart3, Receipt, DollarSign, TrendingUp, Truck, FileText, Settings, CheckCircle, HelpCircle, ChefHat, UtensilsCrossed, Monitor, Gift, User } from 'lucide-react';
 
 const MODULE_TOURS = {
   '/sales': {
@@ -47,6 +47,33 @@ const MODULE_TOURS = {
       { title: 'System Settings', description: 'Configure your SSC Track system including email, WhatsApp notifications, and general preferences.', icon: Settings, target: null },
       { title: 'Email Configuration', description: 'Set up SMTP email settings to enable automated reports, notifications, and scheduled emails.', icon: FileText, target: null },
       { title: 'WhatsApp Integration', description: 'Connect your Twilio WhatsApp to receive business reports and alerts directly on WhatsApp.', icon: FileText, target: null },
+    ]
+  },
+  '/pos': {
+    key: 'pos_tour',
+    steps: [
+      { title: 'Point of Sale', description: 'Quick-entry page for recording sales, expenses, supplier payments, and customer credits in one place.', icon: Monitor, target: null },
+      { title: 'Entry Type', description: 'Switch between Sale, Expense, and Supplier Payment tabs to record different transaction types quickly.', icon: Receipt, target: null },
+      { title: 'Online & Regular Sales', description: 'For online platform sales (HungerStation, Jahez, etc.), switch to Online mode and select the platform. Commission is calculated automatically.', icon: ShoppingCart, target: null },
+      { title: 'Recent Entries', description: 'Your last entries appear at the bottom for quick reference. You can also view them in the full Sales or Expenses page.', icon: FileText, target: null },
+    ]
+  },
+  '/kitchen': {
+    key: 'kitchen_tour',
+    steps: [
+      { title: 'Kitchen Stock Usage', description: 'Track ingredient and item usage in the kitchen. Select a branch, pick items, and record how much was used.', icon: ChefHat, target: null },
+      { title: 'Select Branch', description: 'Choose your branch to see available stock items and their current balance.', icon: Package, target: null },
+      { title: 'Add Items to Cart', description: 'Use +/- buttons or type quantities directly to add items you\'ve used. The cart shows your selection before submitting.', icon: UtensilsCrossed, target: null },
+      { title: 'Submit Usage', description: 'Once you\'ve selected all items, click Submit to record the usage. Stock levels update automatically.', icon: CheckCircle, target: null },
+    ]
+  },
+  '/customer-portal/dashboard': {
+    key: 'customer_portal_tour',
+    steps: [
+      { title: 'Customer Portal', description: 'Welcome to your customer dashboard! View your account overview, order history, and loyalty points all in one place.', icon: User, target: null },
+      { title: 'Orders', description: 'Track your current and past orders. Click on any order to see detailed status and item breakdown.', icon: ShoppingCart, target: null },
+      { title: 'Statements & Invoices', description: 'View your account statements and download invoices for your records.', icon: FileText, target: null },
+      { title: 'Loyalty Points', description: 'Earn points on every purchase and redeem them for discounts. Check your tier status and rewards history.', icon: Gift, target: null },
     ]
   },
 };
