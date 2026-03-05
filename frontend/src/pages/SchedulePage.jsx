@@ -233,18 +233,18 @@ export default function SchedulePage() {
                       <thead><tr className="bg-purple-50 border-y border-purple-100">
                         <th className="text-left p-2 text-xs font-medium">Employee</th>
                         <th className="text-left p-2 text-xs font-medium">Shift</th>
-                        <th className="text-left p-2 text-xs font-medium">Day</th>
+                        <th className="text-left p-2 text-xs font-medium hidden sm:table-cell">Day</th>
                         <th className="text-left p-2 text-xs font-medium">Date</th>
-                        <th className="text-left p-2 text-xs font-medium">Reason</th>
+                        <th className="text-left p-2 text-xs font-medium hidden md:table-cell">Reason</th>
                       </tr></thead>
                       <tbody>
                         {aiRecommendations.map((rec, i) => (
                           <tr key={i} className="border-b border-stone-50 hover:bg-purple-50/30">
                             <td className="p-2 font-medium">{rec.employee_name}</td>
                             <td className="p-2"><Badge variant="outline" className="text-xs">{rec.shift_name}</Badge></td>
-                            <td className="p-2">{rec.day}</td>
+                            <td className="p-2 hidden sm:table-cell">{rec.day}</td>
                             <td className="p-2 font-mono text-xs">{rec.date}</td>
-                            <td className="p-2 text-xs text-muted-foreground">{rec.reason}</td>
+                            <td className="p-2 text-xs text-muted-foreground hidden md:table-cell">{rec.reason}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -352,9 +352,9 @@ export default function SchedulePage() {
                     <th className="text-left p-3 text-sm font-medium">Employee</th>
                     <th className="text-right p-3 text-sm font-medium">Scheduled</th>
                     <th className="text-right p-3 text-sm font-medium">Present</th>
-                    <th className="text-right p-3 text-sm font-medium">Late</th>
-                    <th className="text-right p-3 text-sm font-medium">Absent</th>
-                    <th className="text-right p-3 text-sm font-medium">Overtime (h)</th>
+                    <th className="text-right p-3 text-sm font-medium hidden sm:table-cell">Late</th>
+                    <th className="text-right p-3 text-sm font-medium hidden sm:table-cell">Absent</th>
+                    <th className="text-right p-3 text-sm font-medium hidden md:table-cell">Overtime (h)</th>
                     <th className="text-right p-3 text-sm font-medium">Attendance %</th>
                   </tr></thead>
                   <tbody>
@@ -365,9 +365,9 @@ export default function SchedulePage() {
                           <td className="p-3 text-sm font-medium">{a.employee_name}</td>
                           <td className="p-3 text-sm text-right">{a.scheduled}</td>
                           <td className="p-3 text-sm text-right text-success font-medium">{a.present}</td>
-                          <td className="p-3 text-sm text-right text-warning font-medium">{a.late}</td>
-                          <td className="p-3 text-sm text-right text-error font-medium">{a.absent}</td>
-                          <td className="p-3 text-sm text-right text-primary font-bold">{a.overtime_hours.toFixed(1)}</td>
+                          <td className="p-3 text-sm text-right text-warning font-medium hidden sm:table-cell">{a.late}</td>
+                          <td className="p-3 text-sm text-right text-error font-medium hidden sm:table-cell">{a.absent}</td>
+                          <td className="p-3 text-sm text-right text-primary font-bold hidden md:table-cell">{a.overtime_hours.toFixed(1)}</td>
                           <td className="p-3 text-right"><Badge className={pct >= 90 ? 'bg-success/20 text-success' : pct >= 70 ? 'bg-warning/20 text-warning' : 'bg-error/20 text-error'}>{pct}%</Badge></td>
                         </tr>
                       );

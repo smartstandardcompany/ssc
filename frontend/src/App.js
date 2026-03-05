@@ -83,7 +83,7 @@ import {
 } from "./pages/customer-portal/CustomerPortalPages";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/contexts/LanguageContext";
-import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import { ShortcutHelpDialog } from "@/components/ShortcutHelpDialog";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { ShieldAlert } from "lucide-react";
