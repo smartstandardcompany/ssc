@@ -181,6 +181,102 @@ async def resign_employee(emp_id: str, body: dict, current_user: User = Depends(
         }),
     }
     await db.employees.update_one({"id": emp_id}, {"$set": update})
+    
+    # --- Send automated offboarding emails ---
+    branding = await db.settings.find_one({"type": "branding"}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    co_name = company.get("company_name", branding.get("company_name", "SSC Track"))
+    primary_color = branding.get("primary_color", "#F5841F")
+    exit_label = {"resigned": "Resignation", "terminated": "Termination", "end_of_contract": "End of Contract"}.get(status, status.replace("_", " ").title())
+    
+    from utils.email_service import send_email
+    import asyncio
+    
+    email_tasks = []
+    
+    # 1. Email to departing employee
+    if emp.get("email"):
+        emp_html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: {primary_color}; padding: 20px; border-radius: 12px 12px 0 0;">
+                <h2 style="color: white; margin: 0;">{co_name}</h2>
+                <p style="color: rgba(255,255,255,0.8); margin: 4px 0 0 0;">Employee Exit Notification</p>
+            </div>
+            <div style="padding: 24px; background: #f9fafb; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+                <p style="color: #1f2937;">Dear <strong>{emp['name']}</strong>,</p>
+                <p style="color: #4b5563;">This is to inform you that your exit process has been initiated.</p>
+                <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                    <tr><td style="padding: 8px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Exit Type</td><td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #e5e7eb;">{exit_label}</td></tr>
+                    <tr><td style="padding: 8px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Effective Date</td><td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #e5e7eb;">{resignation_date}</td></tr>
+                    <tr><td style="padding: 8px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Last Working Day</td><td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #e5e7eb;">{last_day}</td></tr>
+                    <tr><td style="padding: 8px; color: #6b7280;">Notice Period</td><td style="padding: 8px; font-weight: bold;">{notice_days} days</td></tr>
+                </table>
+                <div style="background: #FFF7ED; border: 1px solid #FDBA74; border-radius: 8px; padding: 12px; margin: 16px 0;">
+                    <p style="color: #9A3412; margin: 0; font-size: 14px;"><strong>Next Steps:</strong></p>
+                    <ul style="color: #9A3412; font-size: 13px; margin: 8px 0;">
+                        <li>Complete all pending work handover</li>
+                        <li>Return company assets (laptop, ID card, keys)</li>
+                        <li>Schedule your exit interview with HR</li>
+                        <li>Your final settlement will be processed after clearance</li>
+                    </ul>
+                </div>
+                {f'<p style="color: #6b7280; font-size: 13px;"><strong>Reason:</strong> {reason}</p>' if reason else ''}
+                <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;">
+                <p style="color: #9ca3af; font-size: 12px;">This is an automated notification from {co_name}.</p>
+            </div>
+        </div>
+        """
+        email_tasks.append(send_email(
+            to_emails=[emp["email"]],
+            subject=f"{co_name} - Exit Process Initiated ({exit_label})",
+            html_body=emp_html,
+        ))
+    
+    # 2. Email to admins - clearance reminder
+    admins = await db.users.find({"role": {"$in": ["admin", "manager"]}}, {"_id": 0}).to_list(100)
+    admin_emails = [a["email"] for a in admins if a.get("email")]
+    if admin_emails:
+        clearance_items = "".join([
+            f'<li style="padding: 4px 0;">{item}</li>' for item in [
+                "Company Assets Returned", "ID Card Returned", "Laptop/Equipment Returned",
+                "Keys Returned", "Pending Work Handed Over", "No Pending Loans", "Exit Interview Done"
+            ]
+        ])
+        admin_html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: {primary_color}; padding: 20px; border-radius: 12px 12px 0 0;">
+                <h2 style="color: white; margin: 0;">{co_name}</h2>
+                <p style="color: rgba(255,255,255,0.8); margin: 4px 0 0 0;">Clearance Reminder</p>
+            </div>
+            <div style="padding: 24px; background: #f9fafb; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+                <p style="color: #1f2937;">An employee exit process has been initiated:</p>
+                <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                    <tr><td style="padding: 8px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Employee</td><td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #e5e7eb;">{emp['name']}</td></tr>
+                    <tr><td style="padding: 8px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Position</td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">{emp.get('position', '-')}</td></tr>
+                    <tr><td style="padding: 8px; color: #6b7280; border-bottom: 1px solid #e5e7eb;">Exit Type</td><td style="padding: 8px; font-weight: bold; border-bottom: 1px solid #e5e7eb;">{exit_label}</td></tr>
+                    <tr><td style="padding: 8px; color: #6b7280;">Last Working Day</td><td style="padding: 8px; font-weight: bold;">{last_day}</td></tr>
+                </table>
+                <div style="background: #EFF6FF; border: 1px solid #93C5FD; border-radius: 8px; padding: 12px; margin: 16px 0;">
+                    <p style="color: #1E40AF; margin: 0 0 8px 0; font-size: 14px;"><strong>Clearance Checklist:</strong></p>
+                    <ul style="color: #1E40AF; font-size: 13px; margin: 0;">{clearance_items}</ul>
+                </div>
+                <p style="color: #4b5563; font-size: 13px;">Please ensure all clearance items are completed before the final settlement is processed. You can manage the checklist from the Employees page.</p>
+                <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;">
+                <p style="color: #9ca3af; font-size: 12px;">This is an automated notification from {co_name}.</p>
+            </div>
+        </div>
+        """
+        email_tasks.append(send_email(
+            to_emails=admin_emails,
+            subject=f"{co_name} - Clearance Required: {emp['name']} ({exit_label})",
+            html_body=admin_html,
+        ))
+    
+    # Send emails in background (don't block the response)
+    if email_tasks:
+        for task in email_tasks:
+            asyncio.ensure_future(task)
+    
     return {"message": f"Employee marked as {status}", "last_working_day": last_day}
 
 
@@ -471,6 +567,48 @@ async def complete_exit(emp_id: str, body: dict, current_user: User = Depends(ge
     # Deactivate user account
     if emp.get("user_id"):
         await db.users.update_one({"id": emp["user_id"]}, {"$set": {"permissions": [], "active": False}})
+    
+    # --- Send settlement summary email to employee ---
+    if emp.get("email"):
+        branding = await db.settings.find_one({"type": "branding"}, {"_id": 0}) or {}
+        company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+        co_name = company.get("company_name", branding.get("company_name", "SSC Track"))
+        primary_color = branding.get("primary_color", "#F5841F")
+        
+        exit_type = emp.get("exit_type", emp.get("status", "resigned"))
+        exit_label = {"resigned": "Resignation", "terminated": "Termination", "end_of_contract": "End of Contract"}.get(exit_type, exit_type.replace("_", " ").title())
+        
+        settlement_html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: {primary_color}; padding: 20px; border-radius: 12px 12px 0 0;">
+                <h2 style="color: white; margin: 0;">{co_name}</h2>
+                <p style="color: rgba(255,255,255,0.8); margin: 4px 0 0 0;">Final Settlement</p>
+            </div>
+            <div style="padding: 24px; background: #f9fafb; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+                <p style="color: #1f2937;">Dear <strong>{emp['name']}</strong>,</p>
+                <p style="color: #4b5563;">Your exit process has been completed. Below is a summary of your final settlement:</p>
+                <div style="background: #EFF6FF; border: 1px solid #93C5FD; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr><td style="padding: 6px 0; color: #6b7280;">Exit Type</td><td style="padding: 6px 0; text-align: right; font-weight: bold;">{exit_label}</td></tr>
+                        <tr><td style="padding: 6px 0; color: #6b7280;">Last Working Day</td><td style="padding: 6px 0; text-align: right;">{emp.get('last_working_day', '-')}</td></tr>
+                        <tr style="border-top: 2px solid #93C5FD;"><td style="padding: 10px 0; font-weight: bold; font-size: 16px;">Total Settlement</td><td style="padding: 10px 0; text-align: right; font-weight: bold; font-size: 16px; color: {'#059669' if settlement_amount >= 0 else '#DC2626'};">SAR {settlement_amount:,.2f}</td></tr>
+                    </table>
+                </div>
+                <p style="color: #4b5563; font-size: 13px;">The settlement amount has been processed. If you have any questions, please contact HR.</p>
+                <p style="color: #4b5563; font-size: 13px;">We wish you all the best in your future endeavors.</p>
+                <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;">
+                <p style="color: #9ca3af; font-size: 12px;">This is an automated notification from {co_name}.</p>
+            </div>
+        </div>
+        """
+        from utils.email_service import send_email
+        import asyncio
+        asyncio.ensure_future(send_email(
+            to_emails=[emp["email"]],
+            subject=f"{co_name} - Final Settlement Processed",
+            html_body=settlement_html,
+        ))
+    
     return {"message": "Employee exit completed, account deactivated"}
 
 

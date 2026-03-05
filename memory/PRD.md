@@ -22,6 +22,11 @@ A comprehensive business management ERP system for tracking sales, expenses, sup
     - Settlement calculation per Saudi Labor Law (EOS benefits)
     - Settlement PDF download
     - Complete exit & account deactivation
+11. **Automated Offboarding Emails (DONE):**
+    - Email to departing employee on exit initiation (exit details, next steps)
+    - Email to admins/managers with clearance reminder
+    - Settlement summary email on exit completion
+    - Note: Emails are BLOCKED until user enables SMTP AUTH in M365
 
 ## Pending Issues
 - SMTP Email Delivery (BLOCKED): User must enable SMTP AUTH in M365 admin for info@smartstandards.co
