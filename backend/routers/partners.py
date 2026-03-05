@@ -285,12 +285,19 @@ async def get_loan_payments(loan_id: Optional[str] = None, current_user: User = 
 
 # Fines & Penalties Routes
 @router.get("/fines")
-async def get_fines(current_user: User = Depends(get_current_user)):
-    fines = await db.fines.find({}, {"_id": 0}).sort("fine_date", -1).to_list(1000)
+async def get_fines(
+    page: int = 1,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user)
+):
+    query = {}
+    total = await db.fines.count_documents(query)
+    skip = (page - 1) * limit
+    fines = await db.fines.find(query, {"_id": 0}).sort("fine_date", -1).skip(skip).limit(limit).to_list(limit)
     for f in fines:
         for k in ['fine_date', 'due_date', 'paid_date', 'created_at']:
             if isinstance(f.get(k), str): f[k] = datetime.fromisoformat(f[k])
-    return fines
+    return {"data": fines, "total": total, "page": page, "limit": limit, "pages": (total + limit - 1) // limit}
 
 @router.post("/fines")
 async def create_fine(data: FineCreate, current_user: User = Depends(get_current_user)):

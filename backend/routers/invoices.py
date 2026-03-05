@@ -66,15 +66,21 @@ Extract every line item. For Arabic text, translate item names to English. If qu
         raise HTTPException(status_code=500, detail=f"OCR failed: {str(e)[:100]}")
 
 @router.get("/invoices")
-async def get_invoices(current_user: User = Depends(get_current_user)):
+async def get_invoices(
+    page: int = 1,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user)
+):
     require_permission(current_user, "invoices", "read")
     query = get_branch_filter(current_user)
-    invoices = await db.invoices.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
+    total = await db.invoices.count_documents(query)
+    skip = (page - 1) * limit
+    invoices = await db.invoices.find(query, {"_id": 0}).sort("date", -1).skip(skip).limit(limit).to_list(limit)
     for inv in invoices:
         for f in ['date', 'created_at']:
             if isinstance(inv.get(f), str):
                 inv[f] = datetime.fromisoformat(inv[f])
-    return invoices
+    return {"data": invoices, "total": total, "page": page, "limit": limit, "pages": (total + limit - 1) // limit}
 
 @router.post("/invoices")
 async def create_invoice(data: InvoiceCreate, current_user: User = Depends(get_current_user)):

@@ -354,6 +354,28 @@ export default function EmployeesPage() {
                       <Button size="sm" variant="outline" onClick={() => { setPayingEmp(emp); setPayData(d => ({ ...d, amount: emp.salary || '', period: format(new Date(), 'MMM yyyy') })); setShowPayDialog(true); }} className="h-7 text-[10px] flex-1"><DollarSign size={10} className="mr-0.5" />Pay</Button>
                       <Button size="sm" variant="outline" onClick={() => { setLeaveEmp(emp); setShowLeaveDialog(true); }} className="h-7 text-[10px] flex-1"><Calendar size={10} className="mr-0.5" />Leave</Button>
                       <Button size="sm" variant="ghost" onClick={() => handleEdit(emp)} className="h-7 text-[10px]"><Edit size={10} /></Button>
+                      {(!emp.status || emp.status === 'active') && (
+                        <Button size="sm" variant="outline" className="h-7 text-[10px] text-amber-700 border-amber-300" data-testid="resign-card-btn"
+                          onClick={() => { setResignDialog(emp); setResignForm({ resignation_date: new Date().toISOString().split('T')[0], notice_period_days: 30, reason: '', status: 'resigned' }); }}>
+                          <UserX size={10} className="mr-0.5" />Exit
+                        </Button>
+                      )}
+                      {(emp.status === 'resigned' || emp.status === 'on_notice' || emp.status === 'terminated' || emp.status === 'end_of_contract') && (
+                        <Button size="sm" variant="outline" className="h-7 text-[10px] text-blue-700 border-blue-300" data-testid="settlement-card-btn"
+                          onClick={async () => {
+                            try { const { data } = await api.get(`/employees/${emp.id}/settlement`); setSettlement(data); setSettlementDialog(emp); } catch { toast.error('Failed'); }
+                          }}>
+                          <Calculator size={10} className="mr-0.5" />Settlement
+                        </Button>
+                      )}
+                      {emp.status === 'left' && (
+                        <Button size="sm" variant="outline" className="h-7 text-[10px] text-stone-500 border-stone-300" data-testid="review-card-btn"
+                          onClick={async () => {
+                            try { const { data } = await api.get(`/employees/${emp.id}/settlement`); setSettlement(data); setSettlementDialog(emp); } catch { toast.error('Failed'); }
+                          }}>
+                          <FileText size={10} className="mr-0.5" />Review
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );
@@ -421,20 +443,31 @@ export default function EmployeesPage() {
                             </Button>
                           )}
                           {(!emp.status || emp.status === 'active') && (
-                            <Button size="sm" variant="ghost" className="h-7 text-xs text-amber-600" data-testid="resign-btn"
+                            <Button size="sm" variant="outline" className="h-7 text-xs text-amber-700 border-amber-300 hover:bg-amber-50" data-testid="resign-btn"
                               onClick={() => { setResignDialog(emp); setResignForm({ resignation_date: new Date().toISOString().split('T')[0], notice_period_days: 30, reason: '', status: 'resigned' }); }}>
-                              <UserX size={12} />
+                              <UserX size={12} className="mr-1" />Exit
                             </Button>
                           )}
                           {(emp.status === 'resigned' || emp.status === 'on_notice' || emp.status === 'terminated' || emp.status === 'end_of_contract') && (
-                            <Button size="sm" variant="ghost" className="h-7 text-xs text-blue-600" data-testid="settlement-btn"
+                            <Button size="sm" variant="outline" className="h-7 text-xs text-blue-700 border-blue-300 hover:bg-blue-50" data-testid="settlement-btn"
                               onClick={async () => {
                                 try {
                                   const { data } = await api.get(`/employees/${emp.id}/settlement`);
                                   setSettlement(data); setSettlementDialog(emp);
                                 } catch { toast.error('Failed to load settlement'); }
                               }}>
-                              <Calculator size={12} className="mr-1" />Exit
+                              <Calculator size={12} className="mr-1" />Settlement
+                            </Button>
+                          )}
+                          {emp.status === 'left' && (
+                            <Button size="sm" variant="outline" className="h-7 text-xs text-stone-500 border-stone-300" data-testid="view-settlement-btn"
+                              onClick={async () => {
+                                try {
+                                  const { data } = await api.get(`/employees/${emp.id}/settlement`);
+                                  setSettlement(data); setSettlementDialog(emp);
+                                } catch { toast.error('Failed to load settlement'); }
+                              }}>
+                              <FileText size={12} className="mr-1" />Review
                             </Button>
                           )}
                           <Button size="sm" variant="ghost" onClick={() => handleDelete(emp.id)} className="h-7 text-xs text-error"><Trash2 size={12} /></Button>

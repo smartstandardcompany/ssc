@@ -47,8 +47,8 @@ export default function FinesPage() {
 
   const fetchData = async () => {
     try {
-      const [fR, dR, , eR, catR, capR] = await Promise.all([api.get('/fines'), api.get('/salary-deductions'), Promise.resolve({ data: [] }), api.get('/employees'), api.get('/categories?category_type=fine'), api.get('/capital-expenses')]);
-      setFines(fR.data); setDeductions(dR.data); setEmployees(eR.data); setCapitalExpenses(capR.data);
+      const [fR, dR, , eR, catR, capR] = await Promise.all([api.get('/fines?limit=5000'), api.get('/salary-deductions'), Promise.resolve({ data: [] }), api.get('/employees'), api.get('/categories?category_type=fine'), api.get('/capital-expenses')]);
+      setFines(fR.data?.data || fR.data || []); setDeductions(dR.data); setEmployees(eR.data?.data || eR.data || []); setCapitalExpenses(capR.data);
       const defaults = ['government', 'traffic', 'labor', 'municipality', 'other'];
       const custom = catR.data.map(c => c.name.toLowerCase()).filter(n => !defaults.includes(n));
       setFineTypes([...defaults, ...custom]);
@@ -166,16 +166,16 @@ export default function FinesPage() {
           <TabsContent value="fines">
             <Card className="border-stone-100"><CardContent className="pt-6">
               <div className="overflow-x-auto"><table className="w-full"><thead><tr className="border-b">
-                <th className="text-left p-3 text-sm font-medium">Date</th><th className="text-left p-3 text-sm font-medium">Type</th><th className="text-left p-3 text-sm font-medium">Department</th><th className="text-left p-3 text-sm font-medium">Description</th><th className="text-right p-3 text-sm font-medium">Amount</th><th className="text-right p-3 text-sm font-medium">Paid</th><th className="text-center p-3 text-sm font-medium">Status</th><th className="text-right p-3 text-sm font-medium">Actions</th>
+                <th className="text-left p-3 text-sm font-medium">Date</th><th className="text-left p-3 text-sm font-medium">Type</th><th className="text-left p-3 text-sm font-medium hidden md:table-cell">Department</th><th className="text-left p-3 text-sm font-medium hidden sm:table-cell">Description</th><th className="text-right p-3 text-sm font-medium">Amount</th><th className="text-right p-3 text-sm font-medium hidden lg:table-cell">Paid</th><th className="text-center p-3 text-sm font-medium">Status</th><th className="text-right p-3 text-sm font-medium">Actions</th>
               </tr></thead><tbody>
                 {filteredFines.map(f => (
                   <tr key={f.id} className="border-b hover:bg-stone-50" data-testid="fine-row">
                     <td className="p-3 text-sm">{format(new Date(f.fine_date), 'MMM dd, yyyy')}</td>
                     <td className="p-3"><Badge variant="secondary" className="capitalize">{f.fine_type}</Badge></td>
-                    <td className="p-3 text-sm">{f.department}</td>
-                    <td className="p-3 text-sm">{f.description}{f.employee_id && <span className="text-xs text-warning ml-1">(Employee)</span>}</td>
+                    <td className="p-3 text-sm hidden md:table-cell">{f.department}</td>
+                    <td className="p-3 text-sm hidden sm:table-cell">{f.description}{f.employee_id && <span className="text-xs text-warning ml-1">(Employee)</span>}</td>
                     <td className="p-3 text-sm text-right font-bold">SAR {f.amount.toFixed(2)}</td>
-                    <td className="p-3 text-sm text-right text-success">SAR {(f.paid_amount || 0).toFixed(2)}</td>
+                    <td className="p-3 text-sm text-right text-success hidden lg:table-cell">SAR {(f.paid_amount || 0).toFixed(2)}</td>
                     <td className="p-3 text-center"><Badge className={f.payment_status === 'paid' ? 'bg-success/20 text-success' : f.payment_status === 'partial' ? 'bg-warning/20 text-warning' : 'bg-error/20 text-error'}>{f.payment_status}</Badge></td>
                     <td className="p-3 text-right"><div className="flex gap-1 justify-end">
                       {f.file_name ? (

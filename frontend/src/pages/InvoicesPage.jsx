@@ -49,8 +49,8 @@ export default function InvoicesPage() {
 
   const fetchData = async () => {
     try {
-      const [iRes, , cRes, itemsRes, coRes] = await Promise.all([api.get('/invoices'), Promise.resolve({ data: [] }), api.get('/customers'), api.get('/items'), api.get('/settings/company').catch(() => ({ data: {} }))]);
-      setInvoices(iRes.data); setCustomers(cRes.data); setMasterItems(itemsRes.data);
+      const [iRes, , cRes, itemsRes, coRes] = await Promise.all([api.get('/invoices?limit=5000'), Promise.resolve({ data: [] }), api.get('/customers'), api.get('/items'), api.get('/settings/company').catch(() => ({ data: {} }))]);
+      setInvoices(iRes.data?.data || iRes.data || []); setCustomers(cRes.data); setMasterItems(itemsRes.data);
       if (coRes.data) setCompanySettings(coRes.data);
     } catch { toast.error('Failed to fetch data'); }
     finally { setLoading(false); }
@@ -367,16 +367,16 @@ export default function InvoicesPage() {
               <table className="w-full" data-testid="invoices-table">
                 <thead><tr className="border-b border-border">
                   <th className="text-left p-3 font-medium text-sm">Invoice #</th>
-                  <th className="text-left p-3 font-medium text-sm">Date</th>
+                  <th className="text-left p-3 font-medium text-sm hidden sm:table-cell">Date</th>
                   <th className="text-left p-3 font-medium text-sm">Customer</th>
-                  <th className="text-center p-3 font-medium text-sm">Items</th>
-                  <th className="text-right p-3 font-medium text-sm">Subtotal</th>
-                  <th className="text-right p-3 font-medium text-sm">Discount</th>
+                  <th className="text-center p-3 font-medium text-sm hidden md:table-cell">Items</th>
+                  <th className="text-right p-3 font-medium text-sm hidden md:table-cell">Subtotal</th>
+                  <th className="text-right p-3 font-medium text-sm hidden lg:table-cell">Discount</th>
                   <th className="text-right p-3 font-medium text-sm">Total</th>
-                  <th className="text-right p-3 font-medium text-sm">VAT</th>
-                  <th className="text-left p-3 font-medium text-sm">Payment</th>
-                  <th className="text-center p-3 font-medium text-sm">Img</th>
-                  <th className="text-right p-3 font-medium text-sm">Credit Due</th>
+                  <th className="text-right p-3 font-medium text-sm hidden lg:table-cell">VAT</th>
+                  <th className="text-left p-3 font-medium text-sm hidden sm:table-cell">Payment</th>
+                  <th className="text-center p-3 font-medium text-sm hidden lg:table-cell">Img</th>
+                  <th className="text-right p-3 font-medium text-sm hidden md:table-cell">Credit Due</th>
                   <th className="text-right p-3 font-medium text-sm">Actions</th>
                 </tr></thead>
                 <tbody>
@@ -385,15 +385,15 @@ export default function InvoicesPage() {
                     return (
                     <tr key={inv.id} className="border-b border-border hover:bg-secondary/50" data-testid="invoice-row">
                       <td className="p-3 text-sm font-medium text-primary">{inv.invoice_number}</td>
-                      <td className="p-3 text-sm">{format(new Date(inv.date), 'MMM dd, yyyy')}</td>
+                      <td className="p-3 text-sm hidden sm:table-cell">{format(new Date(inv.date), 'MMM dd, yyyy')}</td>
                       <td className="p-3 text-sm">{inv.customer_name || 'Walk-in'}</td>
-                      <td className="p-3 text-center"><Badge variant="secondary">{inv.items?.length || 0}</Badge></td>
-                      <td className="p-3 text-sm text-right"> SAR {inv.subtotal.toFixed(2)}</td>
-                      <td className="p-3 text-sm text-right text-error">{inv.discount > 0 ? `-SAR ${inv.discount.toFixed(2)}` : '-'}</td>
+                      <td className="p-3 text-center hidden md:table-cell"><Badge variant="secondary">{inv.items?.length || 0}</Badge></td>
+                      <td className="p-3 text-sm text-right hidden md:table-cell"> SAR {inv.subtotal.toFixed(2)}</td>
+                      <td className="p-3 text-sm text-right text-error hidden lg:table-cell">{inv.discount > 0 ? `-SAR ${inv.discount.toFixed(2)}` : '-'}</td>
                       <td className="p-3 text-sm text-right font-bold"> SAR {(inv.total_with_vat || inv.total)?.toFixed(2)}</td>
-                      <td className="p-3 text-sm text-right text-blue-600">{(inv.vat_amount || 0) > 0 ? `SAR ${inv.vat_amount.toFixed(2)}` : '-'}</td>
-                      <td className="p-3"><Badge className={inv.payment_mode === 'cash' ? 'bg-cash/20 text-cash' : inv.payment_mode === 'bank' ? 'bg-bank/20 text-bank' : 'bg-credit/20 text-credit'}>{inv.payment_mode}</Badge></td>
-                      <td className="p-3 text-center">
+                      <td className="p-3 text-sm text-right text-blue-600 hidden lg:table-cell">{(inv.vat_amount || 0) > 0 ? `SAR ${inv.vat_amount.toFixed(2)}` : '-'}</td>
+                      <td className="p-3 hidden sm:table-cell"><Badge className={inv.payment_mode === 'cash' ? 'bg-cash/20 text-cash' : inv.payment_mode === 'bank' ? 'bg-bank/20 text-bank' : 'bg-credit/20 text-credit'}>{inv.payment_mode}</Badge></td>
+                      <td className="p-3 text-center hidden lg:table-cell">
                         {inv.image_url ? (
                           <button onClick={() => setViewImage(inv)} className="inline-flex items-center justify-center" data-testid={`view-image-${inv.id}`}>
                             <img src={`${process.env.REACT_APP_BACKEND_URL}${inv.image_url}`} alt="" className="w-8 h-8 rounded object-cover border border-stone-200 hover:ring-2 hover:ring-orange-300 transition-all" />
@@ -407,7 +407,7 @@ export default function InvoicesPage() {
                           </label>
                         )}
                       </td>
-                      <td className="p-3 text-right">{creditRem > 0 ? <span className="font-bold text-warning"> SAR {creditRem.toFixed(2)}</span> : <span className="text-muted-foreground">-</span>}</td>
+                      <td className="p-3 text-right hidden md:table-cell">{creditRem > 0 ? <span className="font-bold text-warning"> SAR {creditRem.toFixed(2)}</span> : <span className="text-muted-foreground">-</span>}</td>
                       <td className="p-3 text-right">
                         <div className="flex gap-1 justify-end">
                           <Button size="sm" variant="outline" className="h-8 text-xs" data-testid="print-invoice-btn"

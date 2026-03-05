@@ -125,13 +125,20 @@ async def get_customer_clv(current_user: User = Depends(get_current_user)):
 
     results = []
     for c in customers:
-        cid = c["id"]
+        cid = c.get("id")
+        if not cid:
+            continue
         c_sales = customer_sales.get(cid, [])
         if not c_sales:
             continue
 
-        amounts = [s.get("final_amount", s["amount"] - s.get("discount", 0)) for s in c_sales]
-        dates = sorted([s.get("date", "")[:10] for s in c_sales if s.get("date")])
+        amounts = [s.get("final_amount") or (s.get("amount", 0) - s.get("discount", 0)) for s in c_sales]
+        dates = []
+        for s in c_sales:
+            d = s.get("date")
+            if d:
+                dates.append(str(d)[:10])
+        dates.sort()
 
         total_spent = sum(amounts)
         avg_order = total_spent / len(amounts)

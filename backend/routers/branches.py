@@ -82,13 +82,20 @@ async def get_branch_summary(branch_id: str, current_user: User = Depends(get_cu
 
 # Cash Transfer Routes
 @router.get("/cash-transfers")
-async def get_cash_transfers(current_user: User = Depends(get_current_user)):
-    transfers = await db.cash_transfers.find({}, {"_id": 0}).sort("date", -1).to_list(1000)
+async def get_cash_transfers(
+    page: int = 1,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user)
+):
+    query = {}
+    total = await db.cash_transfers.count_documents(query)
+    skip = (page - 1) * limit
+    transfers = await db.cash_transfers.find(query, {"_id": 0}).sort("date", -1).skip(skip).limit(limit).to_list(limit)
     for t in transfers:
         for f in ['date', 'created_at']:
             if isinstance(t.get(f), str):
                 t[f] = datetime.fromisoformat(t[f])
-    return transfers
+    return {"data": transfers, "total": total, "page": page, "limit": limit, "pages": (total + limit - 1) // limit}
 
 @router.post("/cash-transfers")
 async def create_cash_transfer(data: CashTransferCreate, current_user: User = Depends(get_current_user)):

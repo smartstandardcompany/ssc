@@ -31,8 +31,8 @@ export default function CashTransfersPage() {
 
   const fetchData = async () => {
     try {
-      const [tRes, , eRes] = await Promise.all([api.get('/cash-transfers'), Promise.resolve({ data: [] }), api.get('/employees')]);
-      setTransfers(tRes.data); setEmployees(eRes.data);
+      const [tRes, , eRes] = await Promise.all([api.get('/cash-transfers?limit=5000'), Promise.resolve({ data: [] }), api.get('/employees')]);
+      setTransfers(tRes.data?.data || tRes.data || []); setEmployees(eRes.data?.data || eRes.data || []);
     } catch { toast.error('Failed to fetch data'); }
     finally { setLoading(false); }
   };
@@ -147,10 +147,10 @@ export default function CashTransfersPage() {
                   <th className="text-center p-3 font-medium text-sm"></th>
                   <th className="text-left p-3 font-medium text-sm">To</th>
                   <th className="text-right p-3 font-medium text-sm">Amount</th>
-                  <th className="text-left p-3 font-medium text-sm">Mode</th>
-                  <th className="text-left p-3 font-medium text-sm">Sender</th>
-                  <th className="text-left p-3 font-medium text-sm">Receiver</th>
-                  <th className="text-left p-3 font-medium text-sm">Notes</th>
+                  <th className="text-left p-3 font-medium text-sm hidden sm:table-cell">Mode</th>
+                  <th className="text-left p-3 font-medium text-sm hidden md:table-cell">Sender</th>
+                  <th className="text-left p-3 font-medium text-sm hidden md:table-cell">Receiver</th>
+                  <th className="text-left p-3 font-medium text-sm hidden lg:table-cell">Notes</th>
                   <th className="text-right p-3 font-medium text-sm">Actions</th>
                 </tr></thead>
                 <tbody>
@@ -161,10 +161,10 @@ export default function CashTransfersPage() {
                       <td className="p-3 text-center"><ArrowRight size={16} className="text-primary mx-auto" /></td>
                       <td className="p-3 text-sm font-medium">{t.to_branch_name || 'Office'}</td>
                       <td className="p-3 text-sm text-right font-bold"> SAR {t.amount.toFixed(2)}</td>
-                      <td className="p-3"><Badge variant="secondary" className="capitalize">{t.transfer_mode}</Badge></td>
-                      <td className="p-3 text-sm">{t.sender_name}</td>
-                      <td className="p-3 text-sm">{t.receiver_name}</td>
-                      <td className="p-3 text-sm text-muted-foreground">{t.notes || '-'}</td>
+                      <td className="p-3 hidden sm:table-cell"><Badge variant="secondary" className="capitalize">{t.transfer_mode}</Badge></td>
+                      <td className="p-3 text-sm hidden md:table-cell">{t.sender_name}</td>
+                      <td className="p-3 text-sm hidden md:table-cell">{t.receiver_name}</td>
+                      <td className="p-3 text-sm text-muted-foreground hidden lg:table-cell">{t.notes || '-'}</td>
                       <td className="p-3 text-right"><Button size="sm" variant="outline" onClick={() => handleDelete(t.id)} className="h-8 text-error hover:text-error"><Trash2 size={14} /></Button></td>
                     </tr>
                   ))}
