@@ -131,6 +131,7 @@ class SaleCreate(BaseModel):
     payment_details: List[dict]
     date: datetime
     notes: Optional[str] = None
+    platform_status: Optional[str] = None  # pending/settled
 
 class SalePayment(BaseModel):
     payment_mode: str

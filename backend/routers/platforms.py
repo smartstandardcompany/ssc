@@ -26,8 +26,7 @@ async def get_platforms(current_user: User = Depends(get_current_user)):
     for platform in platforms:
         # Get total sales for this platform
         sales = await db.sales.find({
-            "platform_id": platform["id"],
-            "payment_mode": "online_platform"
+            "platform_id": platform["id"]
         }, {"_id": 0, "final_amount": 1, "amount": 1}).to_list(10000)
         
         total_sales = sum(s.get("final_amount", s.get("amount", 0)) for s in sales)
@@ -132,7 +131,7 @@ async def get_platform_sales(
     current_user: User = Depends(get_current_user)
 ):
     """Get all sales for a specific platform"""
-    query = {"platform_id": platform_id, "payment_mode": "online_platform"}
+    query = {"platform_id": platform_id}
     
     if start_date:
         query["date"] = {"$gte": start_date}
@@ -179,7 +178,6 @@ async def calculate_platform_payment(
     # Get sales for this platform and period
     sales = await db.sales.find({
         "platform_id": platform_id,
-        "payment_mode": "online_platform",
         "date": {"$gte": period_start, "$lte": period_end},
         "platform_status": {"$ne": "settled"}  # Only unsettled sales
     }, {"_id": 0, "branch_id": 1, "final_amount": 1, "amount": 1, "date": 1}).to_list(10000)
@@ -305,7 +303,6 @@ async def record_platform_payment(body: dict, current_user: User = Depends(get_c
         # Get sales grouped by branch for this platform and period
         sales = await db.sales.find({
             "platform_id": platform_id,
-            "payment_mode": "online_platform",
             "date": {"$gte": period_start, "$lte": period_end}
         }, {"_id": 0, "branch_id": 1, "final_amount": 1, "amount": 1}).to_list(10000)
         
@@ -364,8 +361,7 @@ async def record_platform_payment(body: dict, current_user: User = Depends(get_c
         await db.sales.update_many(
             {
                 "platform_id": platform_id,
-                "date": {"$gte": body["period_start"], "$lte": body["period_end"]},
-                "payment_mode": "online_platform"
+                "date": {"$gte": body["period_start"], "$lte": body["period_end"]}
             },
             {"$set": {"platform_status": "settled", "settlement_id": payment["id"]}}
         )
@@ -437,7 +433,7 @@ async def get_platforms_summary(
     
     for platform in platforms:
         # Sales query
-        sales_query = {"platform_id": platform["id"], "payment_mode": "online_platform"}
+        sales_query = {"platform_id": platform["id"], "sale_type": {"$in": ["online", "online_platform"]}}
         if start_date:
             sales_query["date"] = {"$gte": start_date}
         if end_date:
@@ -499,8 +495,7 @@ async def get_platform_reconciliation(
     
     # Get all sales grouped by month
     sales = await db.sales.find({
-        "platform_id": platform_id,
-        "payment_mode": "online_platform"
+        "platform_id": platform_id
     }, {"_id": 0}).sort("date", -1).to_list(5000)
     
     # Get all payments
@@ -607,8 +602,7 @@ async def get_branch_platform_summary(
             # Get sales for this branch and platform
             sales_query = {
                 "branch_id": branch["id"],
-                "platform_id": platform["id"],
-                "payment_mode": "online_platform"
+                "platform_id": platform["id"]
             }
             if start_date:
                 sales_query["date"] = {"$gte": start_date}

@@ -193,6 +193,7 @@ export default function POSPage() {
             branch_id: branch,
             notes: `${sale.platform.name} Sale`,
             date: getDateISO(),
+            payment_mode: 'online_platform',
             payment_details: [{ mode: 'online_platform', amount: sale.amount, discount: 0 }],
             platform_id: sale.platform.id,
             platform_status: 'pending',
