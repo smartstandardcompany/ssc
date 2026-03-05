@@ -14,16 +14,21 @@ from models import User, Customer, CustomerCreate
 
 router = APIRouter()
 
-@router.get("/customers", response_model=List[Customer])
-async def get_customers(current_user: User = Depends(get_current_user)):
+@router.get("/customers")
+async def get_customers(
+    page: int = 1,
+    limit: int = 200,
+    current_user: User = Depends(get_current_user)
+):
     require_permission(current_user, "customers", "read")
-    # Use centralized filter that includes branch-specific AND global (no branch) customers
     query = get_branch_filter_with_global(current_user)
-    customers = await db.customers.find(query, {"_id": 0}).to_list(1000)
+    total = await db.customers.count_documents(query)
+    skip = (page - 1) * limit
+    customers = await db.customers.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
     for customer in customers:
         if isinstance(customer.get('created_at'), str):
             customer['created_at'] = datetime.fromisoformat(customer['created_at'])
-    return customers
+    return {"data": customers, "total": total, "page": page, "limit": limit, "pages": (total + limit - 1) // limit}
 
 @router.post("/customers", response_model=Customer)
 async def create_customer(customer_data: CustomerCreate, current_user: User = Depends(get_current_user)):
@@ -143,14 +148,16 @@ async def get_all_customers_balance(current_user: User = Depends(get_current_use
     sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
     result = []
     for customer in customers:
-        cid = customer["id"]
+        cid = customer.get("id")
+        if not cid:  # Skip customers without id field
+            continue
         cust_sales = [s for s in sales if s.get("customer_id") == cid]
         total_sales = sum(s.get("final_amount", s.get("amount", 0)) for s in cust_sales)
         total_cash = sum(p["amount"] for s in cust_sales for p in s.get("payment_details", []) if p.get("mode") == "cash")
         total_bank = sum(p["amount"] for s in cust_sales for p in s.get("payment_details", []) if p.get("mode") == "bank")
         total_credit = sum(s.get("credit_amount", 0) for s in cust_sales)
         total_received = sum(s.get("credit_received", 0) for s in cust_sales)
-        result.append({"id": cid, "name": customer["name"], "phone": customer.get("phone", ""), "branch_id": customer.get("branch_id"), "total_sales": total_sales, "cash": total_cash, "bank": total_bank, "credit_given": total_credit, "credit_received": total_received, "credit_balance": total_credit - total_received, "sales_count": len(cust_sales)})
+        result.append({"id": cid, "name": customer.get("name", "Unknown"), "phone": customer.get("phone", ""), "branch_id": customer.get("branch_id"), "total_sales": total_sales, "cash": total_cash, "bank": total_bank, "credit_given": total_credit, "credit_received": total_received, "credit_balance": total_credit - total_received, "sales_count": len(cust_sales)})
     return result
 
 

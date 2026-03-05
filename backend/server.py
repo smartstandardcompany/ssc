@@ -50,6 +50,7 @@ from routers import (
     transfers,
     whatsapp,
     targets,
+    ai_insights,
 )
 
 app = FastAPI()
@@ -105,6 +106,7 @@ for module in [
     transfers,
     whatsapp,
     targets,
+    ai_insights,
 ]:
     app.include_router(module.router, prefix="/api")
 

@@ -222,9 +222,9 @@ export default function ActivityLogsPage() {
                       <th className="text-left p-3 font-medium">Timestamp</th>
                       <th className="text-left p-3 font-medium">User</th>
                       <th className="text-left p-3 font-medium">Action</th>
-                      <th className="text-left p-3 font-medium">Resource</th>
-                      <th className="text-left p-3 font-medium">Details</th>
-                      <th className="text-left p-3 font-medium">IP Address</th>
+                      <th className="text-left p-3 font-medium hidden sm:table-cell">Resource</th>
+                      <th className="text-left p-3 font-medium hidden md:table-cell">Details</th>
+                      <th className="text-left p-3 font-medium hidden lg:table-cell">IP Address</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -247,12 +247,12 @@ export default function ActivityLogsPage() {
                             {log.action?.toUpperCase()}
                           </Badge>
                         </td>
-                        <td className="p-3 text-xs capitalize">{log.resource}</td>
-                        <td className="p-3 text-xs text-muted-foreground max-w-[200px] truncate">
+                        <td className="p-3 text-xs capitalize hidden sm:table-cell">{log.resource}</td>
+                        <td className="p-3 text-xs text-muted-foreground max-w-[200px] truncate hidden md:table-cell">
                           {log.resource_id && <span className="font-mono">ID: {log.resource_id.slice(0, 8)}...</span>}
                           {log.details && <span>{JSON.stringify(log.details).slice(0, 50)}...</span>}
                         </td>
-                        <td className="p-3">
+                        <td className="p-3 hidden lg:table-cell">
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Monitor size={12} />
                             {log.ip_address || '-'}

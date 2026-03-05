@@ -1,0 +1,128 @@
+{
+  "summary": "Iteration 95 - Testing AI Insights (OpenAI GPT-4.1-mini via Emergent LLM Key), Customer Pagination, and Mobile Responsive improvements. Backend: 12/12 passed. Frontend: All pages load correctly with AI insights generating successfully.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration95_ai_insights.py",
+    "/app/test_reports/pytest/pytest_results_iter95.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "AI Insights endpoints correctly implemented in routers/ai_insights.py using litellm with gpt-4.1-mini model",
+    "Customer pagination correctly returns {data, total, page, limit, pages} format",
+    "AIInsightsWidget.jsx on Dashboard has 3 buttons (Business Health, Stock Alerts, Sales Trends) with data-testid attributes",
+    "StockReorderPage.jsx includes AI Stock Analysis card with Generate button",
+    "SalesForecastPage.jsx includes AI Sales Analysis card with Generate button",
+    "ActivityLogsPage.jsx responsive columns: Resource hidden on mobile (sm:table-cell), Details hidden on mobile/tablet (md:table-cell), IP hidden until large screens (lg:table-cell)",
+    "Fixed customers-balance endpoint KeyError by using .get() instead of direct bracket access"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration95_ai_insights.py",
+    "/app/backend/routers/customers.py"
+  ],
+  "success_rate": {
+    "backend": "100% - 12/12 tests passed",
+    "frontend": "100% - All pages load correctly with AI features working"
+  },
+  "test_credentials": {
+    "admin": "email=ss@ssc.com, password=Aa147258369Ssc@"
+  },
+  "seed_data_creation": "None - used existing data",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 95 verified: 1) GET /api/ai-insights/dashboard returns AI business insight with metrics (this_week_revenue, growth_pct, expenses, profit, outstanding_credit), 2) GET /api/ai-insights/stock returns AI stock analysis with critical_count and total_items, 3) GET /api/ai-insights/sales-trends returns AI sales trend analysis with period='30 days', 4) GET /api/customers returns paginated format {data, total, page, limit, pages}, 5) Dashboard has AIInsightsWidget with 3 buttons working correctly, 6) Sales Forecast page has AI Sales Analysis card, 7) Stock Reorder page has AI Stock Analysis card, 8) Activity Logs page has responsive columns (Resource hidden on mobile). Fixed customers-balance endpoint KeyError bug.",
+  "features_verified": {
+    "backend": {
+      "GET /api/ai-insights/dashboard": {
+        "status": "WORKING",
+        "response_fields": ["insight", "metrics"],
+        "metrics_fields": ["this_week_revenue", "last_week_revenue", "growth_pct", "expenses", "profit", "outstanding_credit"],
+        "note": "AI-generated business insights using GPT-4.1-mini"
+      },
+      "GET /api/ai-insights/stock": {
+        "status": "WORKING",
+        "response_fields": ["insight", "critical_count", "total_items"],
+        "note": "AI-generated stock analysis"
+      },
+      "GET /api/ai-insights/sales-trends": {
+        "status": "WORKING",
+        "response_fields": ["insight", "period"],
+        "note": "AI-generated sales trend analysis with 30-day period"
+      },
+      "GET /api/customers": {
+        "status": "WORKING",
+        "response_format": "{data: [], total, page, limit, pages}",
+        "note": "Paginated customer list"
+      },
+      "GET /api/customers-balance": {
+        "status": "WORKING (FIXED)",
+        "note": "Fixed KeyError by using .get() for customer id and name"
+      }
+    },
+    "frontend": {
+      "Dashboard AI Insights Widget": {
+        "status": "WORKING",
+        "data_testid": "ai-insights-widget",
+        "buttons": ["insight-btn-dashboard (Business Health)", "insight-btn-stock (Stock Alerts)", "insight-btn-sales-trends (Sales Trends)"],
+        "note": "AI insight displays after clicking button with ~5-10 second response time"
+      },
+      "Stock Reorder Page": {
+        "status": "WORKING",
+        "route": "/stock-reorder",
+        "ai_card": "AI Stock Analysis card with Generate button"
+      },
+      "Sales Forecast Page": {
+        "status": "WORKING",
+        "route": "/sales-forecast",
+        "ai_card": "AI Sales Analysis card with Refresh button"
+      },
+      "Customers Page": {
+        "status": "WORKING",
+        "route": "/customers",
+        "note": "Loads correctly with paginated customer data"
+      },
+      "Sales Page": {
+        "status": "WORKING",
+        "route": "/sales",
+        "note": "Loads correctly after customer pagination change"
+      },
+      "Invoices Page": {
+        "status": "WORKING",
+        "route": "/invoices",
+        "note": "Loads correctly after customer pagination change"
+      },
+      "POS Page": {
+        "status": "WORKING",
+        "route": "/pos",
+        "note": "Loads correctly after customer pagination change"
+      },
+      "Activity Logs Page": {
+        "status": "WORKING",
+        "route": "/activity-logs",
+        "responsive_columns": {
+          "Resource": "hidden sm:table-cell - hidden on mobile",
+          "Details": "hidden md:table-cell - hidden on mobile/tablet",
+          "IP Address": "hidden lg:table-cell - hidden until large screens"
+        }
+      }
+    }
+  },
+  "bugs_fixed": {
+    "customers_balance_endpoint": {
+      "file": "/app/backend/routers/customers.py",
+      "issue": "KeyError when customer document lacks 'id' field",
+      "fix": "Changed customer['id'] to customer.get('id') with continue for null ids, customer['name'] to customer.get('name', 'Unknown')",
+      "line": "145-159"
+    }
+  },
+  "mocked_apis": {
+    "has_mocked_apis": false
+  }
+}

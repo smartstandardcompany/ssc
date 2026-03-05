@@ -104,7 +104,7 @@ export default function SalesPage() {
         api.get('/platforms').catch(() => ({ data: [] })),
       ]);
       setSales(salesRes.data?.data || salesRes.data || []);
-      setCustomers(customersRes.data);
+      setCustomers(customersRes.data?.data || customersRes.data || []);
       setPlatforms(platformsRes.data || []);
     } catch (error) {
       toast.error('Failed to fetch data');

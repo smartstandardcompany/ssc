@@ -34,7 +34,7 @@ export default function LoyaltyProgramPage() {
       ]);
       setSettings(settingsRes.data);
       setLeaderboard(leaderboardRes.data);
-      setCustomers(customersRes.data);
+      setCustomers(customersRes.data?.data || customersRes.data || []);
     } catch (err) {
       console.error('Error fetching data:', err);
     } finally {

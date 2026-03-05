@@ -17,6 +17,7 @@ import { BranchFilter } from '@/components/BranchFilter';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DateFilter } from '@/components/DateFilter';
 import { WhatsAppSendDialog } from '@/components/WhatsAppSendDialog';
+import AIInsightsWidget from '@/components/AIInsightsWidget';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import GridLayout from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
@@ -441,6 +442,9 @@ export default function DashboardPage() {
           })}
         </div>
         )}
+
+        {/* AI Insights */}
+        {widgets.stats && <AIInsightsWidget />}
 
         {/* Branch Loss Alerts */}
         {stats?.branch_loss_alerts?.length > 0 && (

@@ -6,9 +6,32 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { 
   TrendingUp, TrendingDown, Minus, RefreshCw, Calendar, 
-  DollarSign, BarChart3, Target, ArrowUpRight, ArrowDownRight 
+  DollarSign, BarChart3, Target, ArrowUpRight, ArrowDownRight, Sparkles 
 } from 'lucide-react';
 import api from '@/lib/api';
+
+function SalesAIInsight() {
+  const [insight, setInsight] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const fetch = async () => {
+    setLoading(true);
+    try { const { data } = await api.get('/ai-insights/sales-trends'); setInsight(data); } catch { setInsight({ insight: 'Unable to load.' }); }
+    setLoading(false);
+  };
+  return (
+    <Card className="border-blue-200 bg-gradient-to-r from-blue-50/50 to-cyan-50/30" data-testid="sales-ai-insight">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2"><Sparkles size={14} className="text-blue-500" /><span className="text-sm font-semibold">AI Sales Analysis</span></div>
+          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={fetch} disabled={loading}><RefreshCw size={12} className={`mr-1 ${loading ? 'animate-spin' : ''}`} />{insight ? 'Refresh' : 'Generate'}</Button>
+        </div>
+        {loading && <p className="text-xs text-muted-foreground animate-pulse">Analyzing 30-day sales data...</p>}
+        {!loading && insight && <p className="text-sm leading-relaxed">{insight.insight}</p>}
+        {!loading && !insight && <p className="text-xs text-muted-foreground">Click Generate to get AI-powered sales trend insights</p>}
+      </CardContent>
+    </Card>
+  );
+}
 import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -118,6 +141,9 @@ export default function SalesForecastPage() {
           </Card>
         ) : data && (
           <>
+            {/* AI Insight */}
+            <SalesAIInsight />
+
             {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card className="border-emerald-200 bg-emerald-50/50">

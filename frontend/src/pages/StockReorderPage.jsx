@@ -12,6 +12,29 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useBranchStore } from '@/stores';
 
+function StockAIInsight() {
+  const [insight, setInsight] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const fetch = async () => {
+    setLoading(true);
+    try { const { data } = await api.get('/ai-insights/stock'); setInsight(data); } catch { setInsight({ insight: 'Unable to load.' }); }
+    setLoading(false);
+  };
+  return (
+    <Card className="border-purple-200 bg-gradient-to-r from-purple-50/50 to-indigo-50/30" data-testid="stock-ai-insight">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2"><Sparkles size={14} className="text-purple-500" /><span className="text-sm font-semibold">AI Stock Analysis</span></div>
+          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={fetch} disabled={loading}><RefreshCw size={12} className={`mr-1 ${loading ? 'animate-spin' : ''}`} />{insight ? 'Refresh' : 'Generate'}</Button>
+        </div>
+        {loading && <p className="text-xs text-muted-foreground animate-pulse">Analyzing inventory data...</p>}
+        {!loading && insight && <p className="text-sm leading-relaxed">{insight.insight}</p>}
+        {!loading && !insight && <p className="text-xs text-muted-foreground">Click Generate to get AI-powered stock management insights</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function StockReorderPage() {
   const { branches, fetchBranches } = useBranchStore();
   const [reorderData, setReorderData] = useState({ predictions: [], total_items: 0, items_needing_reorder: 0 });
@@ -172,6 +195,9 @@ export default function StockReorderPage() {
             )}
           </div>
         </div>
+
+        {/* AI Insight */}
+        <StockAIInsight />
 
         {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

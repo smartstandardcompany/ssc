@@ -86,7 +86,7 @@ export default function POSPage() {
       api.get('/platforms').catch(() => ({ data: [] })),
       api.get('/suppliers/names').catch(() => ({ data: [] })),
     ]).then(([cR, catR, pR, sR]) => {
-      setCustomers(cR.data);
+      setCustomers(cR.data?.data || cR.data || []);
       setCategories(catR.data);
       setPlatforms(pR.data || []);
       setSuppliers(sR.data || []);

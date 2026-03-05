@@ -38,7 +38,7 @@ export default function CustomersPage() {
       const [custRes, balRes] = await Promise.all([
         api.get('/customers'), api.get('/customers-balance')
       ]);
-      setCustomers(custRes.data); setBalances(balRes.data);
+      setCustomers(custRes.data?.data || custRes.data || []); setBalances(balRes.data);
     } catch { toast.error('Failed to fetch data'); }
     finally { setLoading(false); }
   };
