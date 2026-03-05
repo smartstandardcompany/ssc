@@ -50,9 +50,16 @@ async def send_email(
             username=SMTP_USERNAME,
             password=SMTP_PASSWORD,
             start_tls=True,
+            timeout=30,
         )
         logger.info(f"Email sent to {to_emails}")
         return True
+    except aiosmtplib.SMTPAuthenticationError as e:
+        logger.error(f"SMTP Auth failed (enable SMTP AUTH in M365 admin): {e}")
+        return False
+    except aiosmtplib.SMTPConnectTimeoutError as e:
+        logger.error(f"SMTP connect timeout: {e}")
+        return False
     except Exception as e:
         logger.error(f"Failed to send email: {e}")
         return False

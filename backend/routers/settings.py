@@ -87,10 +87,15 @@ async def test_email(body: dict, current_user: User = Depends(get_current_user))
         msg["Subject"] = "SSC Track - Test Email"
         msg["From"] = settings.get("from_email", settings["username"])
         msg["To"] = to_email
-        await aiosmtplib.send(msg, hostname=settings["smtp_host"], port=settings["smtp_port"],
+        port = int(settings.get("smtp_port", 587))
+        use_starttls = port == 587
+        await aiosmtplib.send(msg, hostname=settings["smtp_host"], port=port,
                               username=settings["username"], password=settings["password"],
-                              use_tls=settings.get("use_tls", True))
+                              start_tls=use_starttls, use_tls=(not use_starttls and settings.get("use_tls", False)),
+                              timeout=30)
         return {"message": f"Test email sent to {to_email}"}
+    except aiosmtplib.SMTPAuthenticationError as e:
+        raise HTTPException(status_code=500, detail=f"Authentication failed. Please enable SMTP AUTH for this account in M365 admin, or check your password. Error: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Email failed: {str(e)}")
 
