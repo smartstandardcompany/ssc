@@ -34,6 +34,7 @@ export default function POSPage() {
   // Zustand stores
   const { branches, fetchBranches } = useBranchStore();
   const { user } = useAuthStore();
+  const isAdmin = user?.role === 'admin' || user?.role === 'manager';
   
   const [customers, setCustomers] = useState([]);
   const [platforms, setPlatforms] = useState([]);
@@ -104,7 +105,11 @@ export default function POSPage() {
 
   const refreshStats = async () => {
     try {
-      const { data } = await api.get('/dashboard/stats');
+      // Operators only see current day stats, admins/managers see all
+      const isAdmin = user?.role === 'admin' || user?.role === 'manager';
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const params = isAdmin ? '' : `?start_date=${today}&end_date=${today}`;
+      const { data } = await api.get(`/dashboard/stats${params}`);
       setTodayStats({ 
         sales: data.total_sales || 0, 
         expenses: data.total_expenses || 0, 
@@ -465,28 +470,28 @@ export default function POSPage() {
         <div className="grid grid-cols-2 gap-2">
           <Card className="border-0 shadow-sm bg-emerald-50">
             <CardContent className="p-3 text-center">
-              <p className="text-xs text-emerald-600">Total Sales</p>
-              <p className="text-lg font-bold font-outfit text-emerald-700">SAR {todayStats.sales.toLocaleString()}</p>
+              <p className="text-xs text-emerald-600">{isAdmin ? 'Total Sales' : "Today's Sales"}</p>
+              <p className="text-lg font-bold font-outfit text-emerald-700" data-testid="pos-total-sales">SAR {todayStats.sales.toLocaleString()}</p>
             </CardContent>
           </Card>
           <Card className="border-0 shadow-sm bg-purple-50">
             <CardContent className="p-3 text-center">
               <p className="text-xs text-purple-600 flex items-center justify-center gap-1">
-                <Truck size={12} /> Online Sales
+                <Truck size={12} /> {isAdmin ? 'Online Sales' : "Today's Online"}
               </p>
-              <p className="text-lg font-bold font-outfit text-purple-700">SAR {todayStats.onlineSales.toLocaleString()}</p>
+              <p className="text-lg font-bold font-outfit text-purple-700" data-testid="pos-online-sales">SAR {todayStats.onlineSales.toLocaleString()}</p>
             </CardContent>
           </Card>
           <Card className="border-0 shadow-sm bg-red-50">
             <CardContent className="p-3 text-center">
-              <p className="text-xs text-red-600">Expenses</p>
-              <p className="text-lg font-bold font-outfit text-red-700">SAR {todayStats.expenses.toLocaleString()}</p>
+              <p className="text-xs text-red-600">{isAdmin ? 'Expenses' : "Today's Expenses"}</p>
+              <p className="text-lg font-bold font-outfit text-red-700" data-testid="pos-expenses">SAR {todayStats.expenses.toLocaleString()}</p>
             </CardContent>
           </Card>
           <Card className="border-0 shadow-sm bg-blue-50">
             <CardContent className="p-3 text-center">
-              <p className="text-xs text-blue-600">Net Profit</p>
-              <p className="text-lg font-bold font-outfit text-blue-700">SAR {(todayStats.sales - todayStats.expenses).toLocaleString()}</p>
+              <p className="text-xs text-blue-600">{isAdmin ? 'Net Profit' : "Today's Net"}</p>
+              <p className="text-lg font-bold font-outfit text-blue-700" data-testid="pos-net-profit">SAR {(todayStats.sales - todayStats.expenses).toLocaleString()}</p>
             </CardContent>
           </Card>
         </div>
