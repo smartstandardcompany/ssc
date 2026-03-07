@@ -6,29 +6,33 @@ A comprehensive business management ERP system for tracking sales, expenses, sup
 ## Core Modules
 Financial Management | HR Management | Stock Management | Restaurant Operations | CCTV Security | Administration
 
-## Session 5 (Mar 5, 2026) - Bug Fixes + Features
+## Session 6 (Mar 7, 2026) - Access Control & Delete Restrictions
 
-### Bug Fixes
-- **Supplier Ledger Branch Info (FIXED):** Ledger entries now include branch_id and branch_name. Each entry shows which branch the transaction originated from.
-- **Supplier Report Branch Filter (FIXED):** Branch filter now uses server-side filtering via branch_id query param. Report shows Branch column with per-branch expense/payment breakdown badges.
+### Delete Restrictions (DONE)
+- Per-module configurable delete policies: Admin only, Admin & Manager, Anyone, Disabled
+- 7 modules: Sales, Expenses, Supplier Payments, Stock, Customers, Invoices, Employees
+- Time-based delete limit (default 24h) - prevents deleting records older than threshold
+- Admins always bypass restrictions
 
-### Advanced Analytics Dashboard (DONE)
-- New `/advanced-analytics` page with 5 KPI cards (Revenue, Expenses, Net Profit, Customers, Avg Order)
-- 5 analysis tabs: Revenue (area chart), Cash Flow (bar chart), Customers (supplier ranking), Branches (radar chart), Expenses (pie chart + category list)
-- Branch filter integration
-- Data from existing report endpoints (kpi-gauges, revenue-trends, supplier-balance, cashflow-waterfall, branch-radar, sales-funnel, expense-treemap)
+### Role-Based Visibility (DONE)
+- Operators can't see: Total Expenses, Supplier Payments, Net Profit on Dashboard
+- POS shows "Today's Sales/Expenses/Net" for operators, "Total" for admin/managers
+- 6 configurable visibility toggles: hide financials, profit, analytics, reports, supplier credit, employee salary
+- Settings > Access Control tab for admin configuration
 
-### Additional Sub-Module Tours (DONE)
-- 3 new module tours: Suppliers (4 steps), Advanced Analytics (4 steps), Data Management (4 steps)
-- Total: 11 module-specific guided tours across the application
+### Reporting Customization (DONE)
+- Advanced Analytics dashboard with 5 KPI cards + 5 analysis tabs
+- Comparative supplier ranking with expense/payment breakdown
+- Revenue trend, cash flow waterfall, branch radar, expense category breakdown
 
-## Previous Sessions Summary
-- Session 4: Module tours (POS/Kitchen/CustomerPortal), Smart archive recommendations, Auto-archive scheduling
-- Session 3: Scheduled PDF reports, Data management page, 5 module tours, Mobile responsive
+## Previous Sessions
+- Session 5: Supplier ledger/report branch fixes, Advanced Analytics page, 3 new module tours
+- Session 4: Smart archive recommendations, Auto-archive scheduling, Module tours (POS/Kitchen/Portal)
+- Session 3: Scheduled PDF reports, Data management, Module tours, Mobile responsive
 - Session 2: Employee offboarding, AI analytics, Pagination, PWA, SMTP fix
 
 ## Pending Issues
-- SMTP Email: Auth error 5.7.139 from Microsoft 365
+- SMTP Email: Auth error 5.7.139 from Microsoft 365 (external issue)
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
@@ -36,4 +40,5 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 
 ## Remaining Backlog
 - P2: Email automation (blocked on SMTP)
-- P3: Additional reporting customization
+- P3: Custom report builder (save report templates)
+- P3: Comparative period analysis (this month vs last month)
