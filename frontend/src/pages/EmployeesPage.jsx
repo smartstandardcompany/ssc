@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, DollarSign, AlertTriangle, Eye, Calendar, FileText, Briefcase, UserX, Calculator, Mail, Send, Download, ClipboardCheck, CheckCircle2 } from 'lucide-react';
+import { Plus, Edit, Trash2, DollarSign, AlertTriangle, Eye, Calendar, FileText, Briefcase, UserX, Calculator, Mail, Send, Download, ClipboardCheck, CheckCircle2, KeyRound, Copy, RefreshCw } from 'lucide-react';
 import ExportButton from '@/components/ExportButton';
 import api from '@/lib/api';
 import { toast } from 'sonner';
@@ -58,6 +58,33 @@ export default function EmployeesPage() {
   const [formData, setFormData] = useState({ name: '', document_id: '', phone: '', email: '', position: '', job_title_id: '', branch_id: '', salary: '', pay_frequency: 'monthly', join_date: '', document_expiry: '', annual_leave_entitled: 30, sick_leave_entitled: 15, pos_role: '', notes: '' });
   const [payData, setPayData] = useState({ payment_type: 'salary', amount: '', payment_mode: 'cash', branch_id: '', period: '', date: new Date().toISOString().split('T')[0], notes: '' });
   const [leaveData, setLeaveData] = useState({ leave_type: 'annual', start_date: '', end_date: '', days: '', reason: '' });
+  const [pinLoading, setPinLoading] = useState(null);
+
+  const handleGeneratePin = async (empId, empName) => {
+    setPinLoading(empId);
+    try {
+      const res = await api.post(`/cashier/generate-pin/${empId}`);
+      toast.success(`PIN for ${empName}: ${res.data.pin}`);
+      fetchEmployees();
+    } catch { toast.error('Failed to generate PIN'); }
+    finally { setPinLoading(null); }
+  };
+
+  const handleRevokePin = async (empId, empName) => {
+    if (!window.confirm(`Revoke PIN for ${empName}? They won't be able to access Cashier/Waiter portals.`)) return;
+    setPinLoading(empId);
+    try {
+      await api.delete(`/cashier/pin/${empId}`);
+      toast.success(`PIN revoked for ${empName}`);
+      fetchEmployees();
+    } catch { toast.error('Failed to revoke PIN'); }
+    finally { setPinLoading(null); }
+  };
+
+  const copyPin = (pin) => {
+    navigator.clipboard.writeText(pin);
+    toast.success('PIN copied to clipboard');
+  };
   const [newJobTitle, setNewJobTitle] = useState({ title: '', department: '', min_salary: '', max_salary: '', permissions: [] });
   const [editingJT, setEditingJT] = useState(null);
   const [resignDialog, setResignDialog] = useState(null);
@@ -442,6 +469,26 @@ export default function EmployeesPage() {
                               <Mail size={12} />
                             </Button>
                           )}
+                          {/* PIN Management */}
+                          {emp.cashier_pin ? (
+                            <div className="flex items-center gap-0.5">
+                              <Badge className="bg-violet-100 text-violet-700 text-[10px] font-mono cursor-pointer hover:bg-violet-200" 
+                                onClick={() => copyPin(emp.cashier_pin)} title="Click to copy PIN" data-testid={`pin-badge-${emp.id}`}>
+                                <KeyRound size={10} className="mr-0.5" /> {emp.cashier_pin}
+                              </Badge>
+                              <Button size="sm" variant="ghost" className="h-5 w-5 p-0 text-red-400 hover:text-red-600" 
+                                onClick={() => handleRevokePin(emp.id, emp.name)} title="Revoke PIN" data-testid={`revoke-pin-${emp.id}`}>
+                                <Trash2 size={10} />
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button size="sm" variant="outline" className="h-7 text-xs text-violet-600 border-violet-200 hover:bg-violet-50"
+                              onClick={() => handleGeneratePin(emp.id, emp.name)} disabled={pinLoading === emp.id}
+                              data-testid={`generate-pin-${emp.id}`} title="Generate Cashier/Waiter PIN">
+                              {pinLoading === emp.id ? <RefreshCw size={12} className="animate-spin" /> : <KeyRound size={12} className="mr-1" />}
+                              {pinLoading === emp.id ? '' : 'PIN'}
+                            </Button>
+                          )}
                           {(!emp.status || emp.status === 'active') && (
                             <Button size="sm" variant="outline" className="h-7 text-xs text-amber-700 border-amber-300 hover:bg-amber-50" data-testid="resign-btn"
                               onClick={() => { setResignDialog(emp); setResignForm({ resignation_date: new Date().toISOString().split('T')[0], notice_period_days: 30, reason: '', status: 'resigned' }); }}>
@@ -564,7 +611,7 @@ export default function EmployeesPage() {
             <DialogHeader><DialogTitle className="font-outfit">Payment Summary - {empSummary?.employee?.name} {(() => { const jt = jobTitles.find(j => j.id === empSummary?.employee?.job_title_id); return jt ? <Badge variant="outline" className="ml-2 capitalize">{jt.title}</Badge> : ''; })()}</DialogTitle></DialogHeader>
             {empSummary && (
               <Tabs defaultValue="payments">
-                <TabsList className="mb-4"><TabsTrigger value="payments">Payments</TabsTrigger><TabsTrigger value="loan">Loan</TabsTrigger><TabsTrigger value="leave">Leave</TabsTrigger><TabsTrigger value="deductions">Deductions</TabsTrigger><TabsTrigger value="salary_history">Salary History</TabsTrigger><TabsTrigger value="docs">Documents</TabsTrigger></TabsList>
+                <TabsList className="mb-4"><TabsTrigger value="payments">Payments</TabsTrigger><TabsTrigger value="loan">Loan</TabsTrigger><TabsTrigger value="leave">Leave</TabsTrigger><TabsTrigger value="deductions">Deductions</TabsTrigger><TabsTrigger value="salary_history">Salary History</TabsTrigger><TabsTrigger value="docs">Documents</TabsTrigger><TabsTrigger value="pin" data-testid="pin-tab">Portal PIN</TabsTrigger></TabsList>
 
                 <TabsContent value="payments" className="space-y-4">
                   <div className="grid grid-cols-3 gap-3">
@@ -704,6 +751,62 @@ export default function EmployeesPage() {
                     ))}
                     {empDocs.length === 0 && <p className="text-center text-muted-foreground py-4">No documents added</p>}
                   </div>
+                </TabsContent>
+
+                <TabsContent value="pin" className="space-y-4">
+                  <Card className="border-violet-200 bg-violet-50/30">
+                    <CardContent className="pt-4 pb-4">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2.5 bg-violet-100 rounded-xl"><KeyRound size={20} className="text-violet-600" /></div>
+                        <div>
+                          <h3 className="font-semibold text-sm">Portal Access PIN</h3>
+                          <p className="text-xs text-muted-foreground">Used for Cashier, Waiter, and Kitchen Display login</p>
+                        </div>
+                      </div>
+                      {empSummary?.employee?.cashier_pin ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3 p-4 bg-white rounded-xl border border-violet-200">
+                            <p className="text-xs text-muted-foreground">Current PIN:</p>
+                            <span className="text-3xl font-mono font-bold tracking-[0.3em] text-violet-700" data-testid="current-pin-display">
+                              {empSummary.employee.cashier_pin}
+                            </span>
+                            <Button size="sm" variant="ghost" className="h-8 text-violet-600" onClick={() => copyPin(empSummary.employee.cashier_pin)} data-testid="copy-pin-btn">
+                              <Copy size={14} className="mr-1" /> Copy
+                            </Button>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" className="text-violet-600 border-violet-200 hover:bg-violet-50"
+                              onClick={() => handleGeneratePin(empSummary.employee.id, empSummary.employee.name)} disabled={pinLoading === empSummary.employee.id}
+                              data-testid="regenerate-pin-btn">
+                              {pinLoading === empSummary.employee.id ? <RefreshCw size={12} className="animate-spin mr-1" /> : <RefreshCw size={12} className="mr-1" />}
+                              Regenerate PIN
+                            </Button>
+                            <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50"
+                              onClick={() => handleRevokePin(empSummary.employee.id, empSummary.employee.name)} disabled={pinLoading === empSummary.employee.id}
+                              data-testid="revoke-pin-btn">
+                              <Trash2 size={12} className="mr-1" /> Revoke PIN
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-6">
+                          <KeyRound size={32} className="mx-auto text-stone-300 mb-2" />
+                          <p className="text-sm text-muted-foreground mb-3">No PIN assigned. Generate one to enable portal access.</p>
+                          <Button className="bg-violet-600 hover:bg-violet-700"
+                            onClick={() => handleGeneratePin(empSummary.employee.id, empSummary.employee.name)} disabled={pinLoading === empSummary.employee.id}
+                            data-testid="generate-pin-summary-btn">
+                            {pinLoading === empSummary.employee.id ? <RefreshCw size={14} className="animate-spin mr-1" /> : <KeyRound size={14} className="mr-1" />}
+                            Generate PIN
+                          </Button>
+                        </div>
+                      )}
+                      <div className="mt-4 p-3 bg-stone-50 rounded-lg border text-xs text-muted-foreground space-y-1">
+                        <p><strong>How PINs work:</strong></p>
+                        <p>Employees use this 4-digit PIN to log into Cashier POS, Waiter, and Kitchen Display portals.</p>
+                        <p>Each PIN is unique. Regenerating creates a new one and invalidates the old PIN.</p>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </TabsContent>
               </Tabs>
             )}
