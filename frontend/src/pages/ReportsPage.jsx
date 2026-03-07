@@ -479,7 +479,7 @@ export default function ReportsPage() {
   const fetchData = async () => {
     try {
       const [sR, eR, pR, , cbR] = await Promise.all([api.get('/sales'), api.get('/expenses'), api.get('/supplier-payments'), Promise.resolve({ data: [] }), api.get('/reports/branch-cashbank')]);
-      setSales(sR.data?.data || sR.data || []); setExpenses(eR.data?.data || eR.data || []); setSupplierPayments(pR.data); setBranchCashBank(cbR.data);
+      setSales(sR.data?.data || sR.data || []); setExpenses(eR.data?.data || eR.data || []); setSupplierPayments(pR.data?.data || pR.data || []); setBranchCashBank(cbR.data);
     } catch { toast.error('Failed to fetch data'); }
     finally { setLoading(false); }
   };
