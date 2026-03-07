@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Trash2, DollarSign, X, Truck, Store, TrendingUp, FileDown } from 'lucide-react';
+import { Plus, Trash2, DollarSign, X, Truck, Store, TrendingUp, FileDown, CalendarDays } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -43,6 +44,15 @@ export default function SalesPage() {
 
   const [receivePayment, setReceivePayment] = useState({ payment_mode: 'cash', amount: '' });
   const [searchFilters, setSearchFilters] = useState({});
+  const [searchParams] = useSearchParams();
+  const urlDateFilter = searchParams.get('date');
+
+  // When URL date param changes, auto-set the search filter 
+  useEffect(() => {
+    if (urlDateFilter) {
+      setSearchFilters(prev => ({ ...prev, date: { start: urlDateFilter, end: urlDateFilter } }));
+    }
+  }, [urlDateFilter]);
 
   // Calculate branch-wise monthly sales
   const branchMonthlySales = useMemo(() => {
@@ -573,9 +583,25 @@ export default function SalesPage() {
             <CardTitle className="font-outfit">All Sales</CardTitle>
           </CardHeader>
           <CardContent>
+            {urlDateFilter && (
+              <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-orange-50 rounded-lg border border-orange-200" data-testid="date-filter-banner">
+                <CalendarDays size={14} className="text-orange-600" />
+                <span className="text-xs font-medium text-orange-700">Filtered by date: {urlDateFilter}</span>
+                <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-orange-600 hover:text-orange-800 ml-auto"
+                  onClick={() => window.location.href = '/sales'} data-testid="clear-date-filter">
+                  Clear filter
+                </Button>
+              </div>
+            )}
             {/* Advanced Search */}
             <AdvancedSearch 
-              onSearch={setSearchFilters}
+              onSearch={(f) => {
+                if (urlDateFilter && !f.date) {
+                  setSearchFilters({ ...f, date: { start: urlDateFilter, end: urlDateFilter } });
+                } else {
+                  setSearchFilters(f);
+                }
+              }}
               config={{
                 searchFields: ['notes'],
                 placeholder: 'Search sales by notes...',

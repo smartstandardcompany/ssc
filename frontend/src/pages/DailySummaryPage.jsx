@@ -16,9 +16,11 @@ import api from '@/lib/api';
 import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 import { format, subDays } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, BarChart, Bar } from 'recharts';
 
 export default function DailySummaryPage() {
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [rangeData, setRangeData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -177,7 +179,7 @@ export default function DailySummaryPage() {
           <>
             {/* Net Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card className="border-emerald-200 bg-emerald-50/50">
+              <Card className="border-emerald-200 bg-emerald-50/50 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/sales?date=${selectedDate}`)} data-testid="card-total-sales">
                 <CardContent className="pt-4 pb-3">
                   <div className="flex items-center gap-2 mb-1">
                     <ArrowUpRight className="text-emerald-600" size={18} />
@@ -189,7 +191,7 @@ export default function DailySummaryPage() {
                   <p className="text-xs text-emerald-600">{data.sales.count} transactions</p>
                 </CardContent>
               </Card>
-              <Card className="border-red-200 bg-red-50/50">
+              <Card className="border-red-200 bg-red-50/50 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/expenses?date=${selectedDate}`)} data-testid="card-total-expenses">
                 <CardContent className="pt-4 pb-3">
                   <div className="flex items-center gap-2 mb-1">
                     <ArrowDownRight className="text-red-600" size={18} />
@@ -592,14 +594,40 @@ export default function DailySummaryPage() {
                           const net = (day.sales || 0) - (day.expenses || 0);
                           return (
                             <tr key={i} className="hover:bg-stone-50 dark:hover:bg-stone-800/50" data-testid={`daily-row-${day.date}`}>
-                              <td className="px-3 py-2.5 font-medium whitespace-nowrap">{day.date}</td>
-                              <td className="px-3 py-2.5 text-right text-emerald-700 font-semibold">{formatCurrency(day.sales)}</td>
+                              <td className="px-3 py-2.5 font-medium whitespace-nowrap">
+                                <button onClick={() => { setMode('single'); setSelectedDate(day.date); }}
+                                  className="text-orange-600 hover:underline font-medium" data-testid={`click-date-${day.date}`}>
+                                  {day.date}
+                                </button>
+                              </td>
+                              <td className="px-3 py-2.5 text-right">
+                                {day.sales > 0 ? (
+                                  <button onClick={() => navigate(`/sales?date=${day.date}`)}
+                                    className="text-emerald-700 font-semibold hover:underline cursor-pointer" data-testid={`click-sales-${day.date}`}>
+                                    {formatCurrency(day.sales)}
+                                  </button>
+                                ) : <span className="text-stone-400">{formatCurrency(0)}</span>}
+                              </td>
                               <td className="px-3 py-2.5 text-right text-emerald-600">{formatCurrency(day.sales_cash)}</td>
                               <td className="px-3 py-2.5 text-right text-emerald-600">{formatCurrency(day.sales_bank)}</td>
-                              <td className="px-3 py-2.5 text-right text-red-700 font-semibold">{formatCurrency(day.expenses)}</td>
+                              <td className="px-3 py-2.5 text-right">
+                                {day.expenses > 0 ? (
+                                  <button onClick={() => navigate(`/expenses?date=${day.date}`)}
+                                    className="text-red-700 font-semibold hover:underline cursor-pointer" data-testid={`click-exp-${day.date}`}>
+                                    {formatCurrency(day.expenses)}
+                                  </button>
+                                ) : <span className="text-stone-400">{formatCurrency(0)}</span>}
+                              </td>
                               <td className="px-3 py-2.5 text-right text-red-600">{formatCurrency(day.exp_cash)}</td>
                               <td className="px-3 py-2.5 text-right text-red-600">{formatCurrency(day.exp_bank)}</td>
-                              <td className="px-3 py-2.5 text-right text-blue-600">{formatCurrency(day.sp_total)}</td>
+                              <td className="px-3 py-2.5 text-right">
+                                {day.sp_total > 0 ? (
+                                  <button onClick={() => navigate(`/suppliers?date=${day.date}`)}
+                                    className="text-blue-600 hover:underline cursor-pointer">
+                                    {formatCurrency(day.sp_total)}
+                                  </button>
+                                ) : <span className="text-stone-400">{formatCurrency(0)}</span>}
+                              </td>
                               <td className={`px-3 py-2.5 text-right font-bold ${net >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{formatCurrency(net)}</td>
                             </tr>
                           );

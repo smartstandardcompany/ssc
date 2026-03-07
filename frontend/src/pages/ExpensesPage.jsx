@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, AlertTriangle, DollarSign, Settings2, MessageCircle, FileDown, RotateCcw } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle, DollarSign, Settings2, MessageCircle, FileDown, RotateCcw, CalendarDays } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -31,6 +32,14 @@ export default function ExpensesPage() {
   const [recurringExpenses, setRecurringExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchFilters, setSearchFilters] = useState({});
+  const [searchParams] = useSearchParams();
+  const urlDateFilter = searchParams.get('date');
+
+  useEffect(() => {
+    if (urlDateFilter) {
+      setSearchFilters(prev => ({ ...prev, date: { start: urlDateFilter, end: urlDateFilter } }));
+    }
+  }, [urlDateFilter]);
   const [showCatManager, setShowCatManager] = useState(false);
   const [showRenewDialog, setShowRenewDialog] = useState(false);
   const [renewingRec, setRenewingRec] = useState(null);
@@ -166,9 +175,25 @@ export default function ExpensesPage() {
           </div>
         </div>
 
+        {urlDateFilter && (
+          <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-orange-50 rounded-lg border border-orange-200" data-testid="date-filter-banner">
+            <CalendarDays size={14} className="text-orange-600" />
+            <span className="text-xs font-medium text-orange-700">Filtered by date: {urlDateFilter}</span>
+            <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-orange-600 hover:text-orange-800 ml-auto"
+              onClick={() => window.location.href = '/expenses'} data-testid="clear-date-filter">
+              Clear filter
+            </Button>
+          </div>
+        )}
         {/* Advanced Search */}
         <AdvancedSearch 
-          onSearch={setSearchFilters}
+          onSearch={(f) => {
+            if (urlDateFilter && !f.date) {
+              setSearchFilters({ ...f, date: { start: urlDateFilter, end: urlDateFilter } });
+            } else {
+              setSearchFilters(f);
+            }
+          }}
           config={{
             searchFields: ['description', 'notes'],
             placeholder: 'Search expenses...',
@@ -201,7 +226,7 @@ export default function ExpensesPage() {
           }}
         />
 
-        <Tabs defaultValue="add">
+        <Tabs defaultValue={urlDateFilter ? "list" : "add"}>
           <TabsList><TabsTrigger value="add">{t('add_expense')}</TabsTrigger><TabsTrigger value="list">{t('all_expenses')} ({filtered.length})</TabsTrigger><TabsTrigger value="recurring">Recurring</TabsTrigger></TabsList>
 
           {/* ADD EXPENSE - Simplified */}
