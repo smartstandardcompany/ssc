@@ -524,7 +524,7 @@ async def get_daily_summary(
             "id": s.get("id"),
             "time": s.get("date", "")[-8:] if len(s.get("date", "")) > 8 else s.get("date", ""),
             "amount": s.get("final_amount", s.get("amount", 0)),
-            "customer": customer_map.get(s.get("customer_id"), {}).get("name") if s.get("customer_id") else "Walk-in",
+            "customer": customer_map.get(s.get("customer_id"), "Walk-in") if s.get("customer_id") else "Walk-in",
             "payment_mode": s.get("payment_details", [{}])[0].get("mode", "cash") if s.get("payment_details") else "cash",
             "branch": branch_map.get(s.get("branch_id"), "Unknown")
         })
