@@ -56,6 +56,8 @@ async def update_customer(customer_id: str, customer_data: CustomerCreate, curre
 @router.delete("/customers/{customer_id}")
 async def delete_customer(customer_id: str, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "customers", "write")
+    from routers.access_policies import check_delete_permission
+    await check_delete_permission(current_user, "customers")
     result = await db.customers.delete_one({"id": customer_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Customer not found")

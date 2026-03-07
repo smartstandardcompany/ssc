@@ -40,6 +40,7 @@ import POSAnalyticsPage from "./pages/POSAnalyticsPage";
 import TransfersPage from "./pages/TransfersPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import AdvancedAnalyticsPage from "./pages/AdvancedAnalyticsPage";
+import { VisibilityProvider } from "./hooks/useVisibility";
 import VisualizationsPage from "./pages/VisualizationsPage";
 import CashierPOSPage from "./pages/CashierPOSPage";
 import CashierLoginPage from "./pages/CashierLoginPage";
@@ -177,6 +178,7 @@ function App() {
 
   return (
     <LanguageProvider>
+    <VisibilityProvider>
     <div className="App">
       <BrowserRouter>
         <KeyboardShortcutProvider>
@@ -307,6 +309,7 @@ function App() {
       <PWAInstallPrompt />
       <Toaster position="top-right" richColors />
     </div>
+    </VisibilityProvider>
     </LanguageProvider>
   );
 }

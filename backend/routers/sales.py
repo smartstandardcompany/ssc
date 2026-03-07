@@ -90,10 +90,14 @@ async def receive_credit_payment(sale_id: str, payment: SalePayment, current_use
 @router.delete("/sales/{sale_id}")
 async def delete_sale(sale_id: str, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "sales", "write")
+    sale = await db.sales.find_one({"id": sale_id}, {"_id": 0})
+    if not sale:
+        raise HTTPException(status_code=404, detail="Sale not found")
+    from routers.access_policies import check_delete_permission
+    await check_delete_permission(current_user, "sales", sale.get("date"))
     result = await db.sales.delete_one({"id": sale_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Sale not found")
-    # Log activity
     from routers.activity_logs import log_activity
     await log_activity(current_user, "delete", "sales", sale_id)
     return {"message": "Sale deleted successfully"}

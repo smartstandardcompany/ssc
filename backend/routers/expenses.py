@@ -65,10 +65,11 @@ async def create_expense(expense_data: ExpenseCreate, current_user: User = Depen
 @router.delete("/expenses/{expense_id}")
 async def delete_expense(expense_id: str, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "expenses", "write")
-    # First get the expense to check if it affects supplier credit
     expense = await db.expenses.find_one({"id": expense_id}, {"_id": 0})
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
+    from routers.access_policies import check_delete_permission
+    await check_delete_permission(current_user, "expenses", expense.get("date"))
     
     # If expense was on credit with a supplier, reduce their credit balance
     if expense.get("supplier_id") and expense.get("payment_mode") == "credit":

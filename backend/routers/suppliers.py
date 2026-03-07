@@ -186,10 +186,12 @@ async def create_supplier_payment(payment_data: SupplierPaymentCreate, current_u
 async def delete_supplier_payment(payment_id: str, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "supplier_payments", "write")
     
-    # First get the payment to check payment mode and update supplier balance
     payment = await db.supplier_payments.find_one({"id": payment_id}, {"_id": 0})
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
+    
+    from routers.access_policies import check_delete_permission
+    await check_delete_permission(current_user, "supplier_payments", payment.get("date"))
     
     supplier_id = payment.get("supplier_id")
     payment_mode = payment.get("payment_mode")

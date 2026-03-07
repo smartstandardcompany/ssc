@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Mail, MessageCircle, Bell, Send, Upload, Download, Database, Shield, Clock, Play, FileCheck, Camera, Wifi, WifiOff, Video, Users, AlertTriangle, ExternalLink, Link } from 'lucide-react';
+import { Mail, MessageCircle, Bell, Send, Upload, Download, Database, Shield, Clock, Play, FileCheck, Camera, Wifi, WifiOff, Video, Users, AlertTriangle, ExternalLink, Link, Lock, Trash2, Eye, EyeOff } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -237,6 +237,7 @@ export default function SettingsPage() {
             <TabsTrigger value="scheduler"><Clock size={14} className="mr-2" />Scheduler</TabsTrigger>
             <TabsTrigger value="cctv"><Camera size={14} className="mr-2" />CCTV</TabsTrigger>
             <TabsTrigger value="deploy"><Shield size={14} className="mr-2" />Deploy</TabsTrigger>
+            <TabsTrigger value="access" data-testid="access-policies-tab"><Lock size={14} className="mr-2" />Access Control</TabsTrigger>
             <TabsTrigger value="company">Company</TabsTrigger>
           </TabsList>
 
@@ -1743,6 +1744,12 @@ export default function SettingsPage() {
             </div>
           </TabsContent>
 
+
+          {/* Access Control Tab */}
+          <TabsContent value="access">
+            <AccessPoliciesPanel />
+          </TabsContent>
+
           <TabsContent value="deploy">
             <div className="space-y-6">
               <Card className="border-stone-100">
@@ -1886,5 +1893,151 @@ export default function SettingsPage() {
         </Tabs>
       </div>
     </DashboardLayout>
+  );
+}
+
+
+function AccessPoliciesPanel() {
+  const [policies, setPolicies] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { fetchPolicies(); }, []);
+
+  const fetchPolicies = async () => {
+    try {
+      const res = await api.get('/access-policies');
+      setPolicies(res.data);
+    } catch { }
+    finally { setLoading(false); }
+  };
+
+  const savePolicies = async () => {
+    setSaving(true);
+    try {
+      const res = await api.put('/access-policies', policies);
+      setPolicies(res.data);
+      toast.success('Access policies saved');
+    } catch { toast.error('Failed to save'); }
+    finally { setSaving(false); }
+  };
+
+  const updateDeletePolicy = (module, value) => {
+    setPolicies(prev => ({ ...prev, delete_policy: { ...prev.delete_policy, [module]: value } }));
+  };
+
+  const updateVisibility = (key, value) => {
+    setPolicies(prev => ({ ...prev, visibility: { ...prev.visibility, [key]: value } }));
+  };
+
+  if (loading || !policies) return <div className="text-center py-8 text-muted-foreground">Loading...</div>;
+
+  const DELETE_OPTIONS = [
+    { value: 'anyone', label: 'Anyone with write access' },
+    { value: 'admin_manager', label: 'Admin & Manager only' },
+    { value: 'admin_only', label: 'Admin only' },
+    { value: 'no_delete', label: 'Disabled (no one)' },
+  ];
+
+  const MODULES = [
+    { key: 'sales', label: 'Sales' },
+    { key: 'expenses', label: 'Expenses' },
+    { key: 'supplier_payments', label: 'Supplier Payments' },
+    { key: 'stock', label: 'Stock Items' },
+    { key: 'customers', label: 'Customers' },
+    { key: 'invoices', label: 'Invoices' },
+    { key: 'employees', label: 'Employees' },
+  ];
+
+  return (
+    <div className="space-y-6" data-testid="access-policies-panel">
+      {/* Delete Restrictions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-outfit text-base flex items-center gap-2"><Trash2 size={16} /> Delete Restrictions</CardTitle>
+          <CardDescription className="text-xs">Control who can delete records in each module</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            {MODULES.map(m => (
+              <div key={m.key} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg border bg-stone-50/50 dark:bg-stone-900/30" data-testid={`delete-policy-${m.key}`}>
+                <span className="text-sm font-medium">{m.label}</span>
+                <Select value={policies.delete_policy?.[m.key] || 'admin_manager'} onValueChange={(v) => updateDeletePolicy(m.key, v)}>
+                  <SelectTrigger className="w-[200px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {DELETE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+          </div>
+
+          {/* Time-based restriction */}
+          <div className="p-4 rounded-lg border bg-amber-50/50 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Time-Based Delete Limit</p>
+                <p className="text-xs text-muted-foreground">Prevent deletion of records older than a set time (except admin)</p>
+              </div>
+              <Switch
+                checked={policies.delete_time_limit_enabled || false}
+                onCheckedChange={(v) => setPolicies(prev => ({ ...prev, delete_time_limit_enabled: v }))}
+                data-testid="time-limit-toggle"
+              />
+            </div>
+            {policies.delete_time_limit_enabled && (
+              <div className="flex items-center gap-2">
+                <Label className="text-xs whitespace-nowrap">Max age (hours):</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={720}
+                  value={policies.delete_time_limit_hours || 24}
+                  onChange={(e) => setPolicies(prev => ({ ...prev, delete_time_limit_hours: parseInt(e.target.value) || 24 }))}
+                  className="w-24 h-8"
+                  data-testid="time-limit-hours"
+                />
+                <span className="text-xs text-muted-foreground">({((policies.delete_time_limit_hours || 24) / 24).toFixed(1)} days)</span>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Visibility Restrictions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-outfit text-base flex items-center gap-2"><EyeOff size={16} /> Operator Visibility</CardTitle>
+          <CardDescription className="text-xs">Control what operators can see (admins & managers always see everything)</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {[
+              { key: 'operator_hide_financials', label: 'Hide financial summaries', desc: 'Hides total sales, profit, margins on Dashboard' },
+              { key: 'operator_hide_profit', label: 'Hide profit & net figures', desc: 'Hides net profit, margins on POS and reports' },
+              { key: 'operator_hide_analytics', label: 'Hide analytics pages', desc: 'Blocks access to Analytics & Advanced Analytics' },
+              { key: 'operator_hide_reports', label: 'Hide report pages', desc: 'Blocks access to all report pages' },
+              { key: 'operator_hide_supplier_credit', label: 'Hide supplier credit info', desc: 'Hides credit limits and outstanding balances' },
+              { key: 'operator_hide_employee_salary', label: 'Hide employee salaries', desc: 'Hides salary information in employee pages' },
+            ].map(item => (
+              <div key={item.key} className="flex items-center justify-between p-3 rounded-lg border bg-stone-50/50 dark:bg-stone-900/30" data-testid={`visibility-${item.key}`}>
+                <div>
+                  <p className="text-sm font-medium">{item.label}</p>
+                  <p className="text-xs text-muted-foreground">{item.desc}</p>
+                </div>
+                <Switch
+                  checked={policies.visibility?.[item.key] || false}
+                  onCheckedChange={(v) => updateVisibility(item.key, v)}
+                />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Button onClick={savePolicies} disabled={saving} className="rounded-xl" data-testid="save-policies-btn">
+        {saving ? 'Saving...' : 'Save Access Policies'}
+      </Button>
+    </div>
   );
 }

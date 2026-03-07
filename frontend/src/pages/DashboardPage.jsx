@@ -18,6 +18,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { DateFilter } from '@/components/DateFilter';
 import { WhatsAppSendDialog } from '@/components/WhatsAppSendDialog';
 import AIInsightsWidget from '@/components/AIInsightsWidget';
+import { useVisibility } from '@/hooks/useVisibility';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import GridLayout from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
@@ -104,6 +105,7 @@ export default function DashboardPage() {
   // Zustand stores
   const { branches, fetchBranches } = useBranchStore();
   const { user } = useAuthStore();
+  const vis = useVisibility();
   
   const [stats, setStats] = useState(null);
   const [alerts, setAlerts] = useState([]);
@@ -292,7 +294,7 @@ export default function DashboardPage() {
       sparkline: dailyTrend.sales,
       sparkColor: '#22C55E',
     },
-    {
+    ...(!vis.hide_financials ? [{
       title: tr('total_expenses'),
       value: `SAR ${stats?.total_expenses?.toFixed(2) || '0.00'}`,
       prev: stats?.prev_expenses,
@@ -304,8 +306,8 @@ export default function DashboardPage() {
       testId: 'total-expenses-card',
       sparkline: dailyTrend.expenses,
       sparkColor: '#EF4444',
-    },
-    {
+    }] : []),
+    ...(!vis.hide_financials ? [{
       title: tr('supplier_payments'),
       value: `SAR ${stats?.total_supplier_payments?.toFixed(2) || '0.00'}`,
       pct: stats?.sp_pct_of_sales,
@@ -313,8 +315,8 @@ export default function DashboardPage() {
       color: 'text-info',
       bgColor: 'bg-info/10',
       testId: 'supplier-payments-card',
-    },
-    {
+    }] : []),
+    ...(!vis.hide_profit ? [{
       title: tr('net_profit'),
       value: `SAR ${stats?.net_profit?.toFixed(2) || '0.00'}`,
       prev: stats?.prev_net,
@@ -325,7 +327,7 @@ export default function DashboardPage() {
       testId: 'net-profit-card',
       sparkline: dailyTrend.profit,
       sparkColor: '#F5841F',
-    },
+    }] : []),
     {
       title: tr('pending_credits'),
       value: `SAR ${stats?.pending_credits?.toFixed(2) || '0.00'}`,

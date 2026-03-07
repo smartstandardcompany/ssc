@@ -349,7 +349,11 @@ async def delete_invoice_image(invoice_id: str, current_user: User = Depends(get
 @router.delete("/invoices/{invoice_id}")
 async def delete_invoice(invoice_id: str, current_user: User = Depends(get_current_user)):
     inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
-    if inv and inv.get("sale_id"):
+    if not inv:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    from routers.access_policies import check_delete_permission
+    await check_delete_permission(current_user, "invoices", inv.get("created_at"))
+    if inv.get("sale_id"):
         await db.sales.delete_one({"id": inv["sale_id"]})
     result = await db.invoices.delete_one({"id": invoice_id})
     if result.deleted_count == 0:
