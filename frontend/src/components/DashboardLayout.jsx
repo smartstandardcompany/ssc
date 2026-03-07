@@ -90,6 +90,7 @@ const NAV_GROUPS = [
       { path: '/performance-report', icon: Activity, label: 'Performance Report', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/anomaly-detection', icon: AlertTriangle, label: 'Anomaly Detection', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/trend-comparison', icon: TrendingUp, label: 'Trend Comparison', perm: 'reports', roles: ['admin', 'manager'] },
+      { path: '/report-builder', icon: FileText, label: 'Report Builder', perm: 'reports', roles: ['admin', 'manager'] },
     ]
   },
   {
@@ -114,6 +115,7 @@ const NAV_GROUPS = [
       { path: '/task-reminders', icon: Bell, label: 'Task Reminders', perm: 'settings', roles: ['admin'] },
       { path: '/task-compliance', icon: Shield, label: 'Compliance', perm: 'settings', roles: ['admin'] },
       { path: '/activity-logs', icon: Activity, label: 'Activity Logs', perm: 'settings', roles: ['admin'] },
+      { path: '/audit-trail', icon: Shield, label: 'Audit Trail', perm: 'settings', roles: ['admin'] },
       { path: '/data-management', icon: Database, label: 'Data Management', perm: 'settings', roles: ['admin'] },
       { path: '/notification-preferences', icon: Bell, label: 'Notif. Settings' },
       { path: '/help', icon: HelpCircle, label: 'Help & Guide' },
@@ -338,6 +340,41 @@ export const DashboardLayout = ({ children }) => {
               <UserIcon size={16} strokeWidth={1.8} />
               My Portal
             </Link>
+
+            {/* Quick Access Portals */}
+            <div className="mb-3 space-y-1" data-testid="quick-access-portals">
+              <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider px-1 mb-1">Quick Access</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { path: '/cashier', label: 'Cashier', icon: CreditCard, color: 'emerald', testId: 'qa-cashier' },
+                  { path: '/waiter', label: 'Waiter', icon: UtensilsCrossed, color: 'blue', testId: 'qa-waiter' },
+                  { path: '/kds', label: 'Kitchen', icon: ChefHat, color: 'orange', testId: 'qa-kitchen' },
+                  { path: '/order-status', label: 'Orders', icon: Clock, color: 'purple', testId: 'qa-orders' },
+                  { path: '/table-management', label: 'Tables', icon: Armchair, color: 'amber', testId: 'qa-tables' },
+                  { path: '/customer-portal', label: 'Customers', icon: Users, color: 'cyan', testId: 'qa-customers' },
+                ].map(item => {
+                  const Icon = item.icon;
+                  const colorMap = {
+                    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100',
+                    blue: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100',
+                    orange: 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100',
+                    purple: 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100',
+                    amber: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100',
+                    cyan: 'bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-100',
+                  };
+                  return (
+                    <button
+                      key={item.path}
+                      onClick={() => { window.open(item.path, '_blank'); setMobileOpen(false); }}
+                      data-testid={item.testId}
+                      className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg border text-xs font-medium transition-all ${colorMap[item.color]}`}
+                    >
+                      <Icon size={13} /> {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             {NAV_GROUPS.map((group) => (
             <NavGroup
               key={group.label}

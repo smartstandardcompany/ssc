@@ -113,9 +113,16 @@ async def update_supplier(supplier_id: str, supplier_data: SupplierCreate, curre
 @router.delete("/suppliers/{supplier_id}")
 async def delete_supplier(supplier_id: str, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "suppliers", "write")
+    supplier = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    from routers.access_policies import check_delete_permission
+    await check_delete_permission(current_user, "customers", supplier.get("created_at"), f"Supplier: {supplier.get('name', supplier_id[:8])}")
     result = await db.suppliers.delete_one({"id": supplier_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Supplier not found")
+    from routers.activity_logs import log_activity
+    await log_activity(current_user, "delete", "suppliers", supplier_id)
     return {"message": "Supplier deleted successfully"}
 
 @router.post("/suppliers/{supplier_id}/pay-credit")
@@ -191,7 +198,7 @@ async def delete_supplier_payment(payment_id: str, current_user: User = Depends(
         raise HTTPException(status_code=404, detail="Payment not found")
     
     from routers.access_policies import check_delete_permission
-    await check_delete_permission(current_user, "supplier_payments", payment.get("date"))
+    await check_delete_permission(current_user, "supplier_payments", payment.get("date"), f"Payment to {payment.get('supplier_name', '')} - SAR {amount}")
     
     supplier_id = payment.get("supplier_id")
     payment_mode = payment.get("payment_mode")

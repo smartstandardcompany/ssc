@@ -352,7 +352,7 @@ async def delete_invoice(invoice_id: str, current_user: User = Depends(get_curre
     if not inv:
         raise HTTPException(status_code=404, detail="Invoice not found")
     from routers.access_policies import check_delete_permission
-    await check_delete_permission(current_user, "invoices", inv.get("created_at"))
+    await check_delete_permission(current_user, "invoices", inv.get("created_at"), f"Invoice #{inv.get('invoice_number', invoice_id[:8])}")
     if inv.get("sale_id"):
         await db.sales.delete_one({"id": inv["sale_id"]})
     result = await db.invoices.delete_one({"id": invoice_id})

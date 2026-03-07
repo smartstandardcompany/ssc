@@ -146,8 +146,16 @@ async def send_employee_email(emp_id: str, body: dict, current_user: User = Depe
 @router.delete("/employees/{emp_id}")
 async def delete_employee(emp_id: str, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "employees", "write")
+    emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    from routers.access_policies import check_delete_permission
+    await check_delete_permission(current_user, "employees", emp.get("created_at"), f"Employee: {emp.get('name', emp_id[:8])}")
     result = await db.employees.delete_one({"id": emp_id})
-    if result.deleted_count == 0: raise HTTPException(status_code=404, detail="Employee not found")
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    from routers.activity_logs import log_activity
+    await log_activity(current_user, "delete", "employees", emp_id)
     return {"message": "Employee deleted"}
 
 

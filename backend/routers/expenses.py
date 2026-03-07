@@ -69,7 +69,7 @@ async def delete_expense(expense_id: str, current_user: User = Depends(get_curre
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
     from routers.access_policies import check_delete_permission
-    await check_delete_permission(current_user, "expenses", expense.get("date"))
+    await check_delete_permission(current_user, "expenses", expense.get("date"), f"Expense #{expense_id[:8]} - SAR {expense.get('amount', 0)} ({expense.get('category', '')})")
     
     # If expense was on credit with a supplier, reduce their credit balance
     if expense.get("supplier_id") and expense.get("payment_mode") == "credit":

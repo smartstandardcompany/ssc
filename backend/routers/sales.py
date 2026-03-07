@@ -94,7 +94,7 @@ async def delete_sale(sale_id: str, current_user: User = Depends(get_current_use
     if not sale:
         raise HTTPException(status_code=404, detail="Sale not found")
     from routers.access_policies import check_delete_permission
-    await check_delete_permission(current_user, "sales", sale.get("date"))
+    await check_delete_permission(current_user, "sales", sale.get("date"), f"Sale #{sale_id[:8]} - SAR {sale.get('amount', 0)}")
     result = await db.sales.delete_one({"id": sale_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Sale not found")

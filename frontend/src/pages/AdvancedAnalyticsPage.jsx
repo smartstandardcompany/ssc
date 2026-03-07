@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { BranchFilter } from '@/components/BranchFilter';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users, Package, ArrowUpRight, ArrowDownRight, BarChart3, Activity, RefreshCw, Target, Zap } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users, Package, ArrowUpRight, ArrowDownRight, BarChart3, Activity, RefreshCw, Target, Zap, ArrowLeftRight } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -56,8 +56,22 @@ export default function AdvancedAnalyticsPage() {
   const [branchRadar, setBranchRadar] = useState([]);
   const [salesFunnel, setSalesFunnel] = useState([]);
   const [expenseTree, setExpenseTree] = useState([]);
+  const [comparative, setComparative] = useState(null);
+  const [compPeriod, setCompPeriod] = useState('month');
+  const [compLoading, setCompLoading] = useState(false);
 
   useEffect(() => { fetchAll(); }, []);
+
+  const fetchComparative = async (period = compPeriod) => {
+    setCompLoading(true);
+    try {
+      const res = await api.get(`/reports/comparative?period=${period}`);
+      setComparative(res.data);
+    } catch { /* ignore */ }
+    finally { setCompLoading(false); }
+  };
+
+  useEffect(() => { fetchComparative(compPeriod); }, [compPeriod]);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -164,6 +178,7 @@ export default function AdvancedAnalyticsPage() {
             <TabsTrigger value="customers" className="text-xs" data-testid="tab-customers"><Users size={12} className="mr-1" /> Customers</TabsTrigger>
             <TabsTrigger value="branches" className="text-xs" data-testid="tab-branches"><Package size={12} className="mr-1" /> Branches</TabsTrigger>
             <TabsTrigger value="expenses" className="text-xs" data-testid="tab-expenses"><DollarSign size={12} className="mr-1" /> Expenses</TabsTrigger>
+            <TabsTrigger value="comparative" className="text-xs" data-testid="tab-comparative"><ArrowLeftRight size={12} className="mr-1" /> Comparison</TabsTrigger>
           </TabsList>
 
           {/* Revenue Tab */}
@@ -345,6 +360,91 @@ export default function AdvancedAnalyticsPage() {
                   </div>
                 ) : (
                   <div className="h-[280px] flex items-center justify-center text-muted-foreground text-sm">No expense data available</div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Comparative Period Analysis Tab */}
+          <TabsContent value="comparative">
+            <Card data-testid="comparative-analysis-card">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <CardTitle className="text-base font-outfit">Period Comparison</CardTitle>
+                    <CardDescription className="text-xs">Compare metrics across different time periods</CardDescription>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {['day', 'week', 'month', 'year'].map(p => (
+                      <Button key={p} variant={compPeriod === p ? 'default' : 'outline'} size="sm"
+                        className={`h-7 text-[11px] ${compPeriod === p ? 'bg-orange-500 hover:bg-orange-600' : ''}`}
+                        onClick={() => setCompPeriod(p)} data-testid={`comp-period-${p}`}>
+                        {p.charAt(0).toUpperCase() + p.slice(1)}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {compLoading ? (
+                  <div className="flex items-center justify-center h-48"><RefreshCw className="animate-spin text-orange-500" size={24} /></div>
+                ) : comparative?.metrics ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {comparative.metrics.map((m, i) => {
+                        const isUp = m.change_pct > 0;
+                        const isProfit = m.label === 'Net Profit' || m.label === 'Sales' || m.label === 'Avg Sale';
+                        const positive = isProfit ? isUp : !isUp;
+                        return (
+                          <Card key={i} className={`border ${positive ? 'border-emerald-200 bg-emerald-50/30' : m.change_pct === 0 ? 'border-stone-200' : 'border-red-200 bg-red-50/30'}`}
+                            data-testid={`comp-metric-${m.label.toLowerCase().replace(/\s+/g, '-')}`}>
+                            <CardContent className="p-4">
+                              <p className="text-xs text-muted-foreground font-medium mb-2">{m.label}</p>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <p className="text-[10px] text-muted-foreground">{comparative.current_label}</p>
+                                  <p className="text-lg font-bold font-outfit">SAR {(m.current || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                                  {m.current_count !== undefined && <p className="text-[10px] text-muted-foreground">{m.current_count} records</p>}
+                                </div>
+                                <div>
+                                  <p className="text-[10px] text-muted-foreground">{comparative.previous_label}</p>
+                                  <p className="text-lg font-bold font-outfit text-stone-500">SAR {(m.previous || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                                  {m.previous_count !== undefined && <p className="text-[10px] text-muted-foreground">{m.previous_count} records</p>}
+                                </div>
+                              </div>
+                              <div className={`mt-2 flex items-center gap-1 text-xs font-medium ${positive ? 'text-emerald-600' : m.change_pct === 0 ? 'text-stone-500' : 'text-red-600'}`}>
+                                {isUp ? <ArrowUpRight size={12} /> : m.change_pct < 0 ? <ArrowDownRight size={12} /> : null}
+                                {m.change_pct > 0 ? '+' : ''}{m.change_pct}% vs {comparative.previous_label}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                    {comparative.metrics.length > 0 && (
+                      <Card>
+                        <CardContent className="p-4">
+                          <ResponsiveContainer width="100%" height={260}>
+                            <BarChart data={comparative.metrics.map(m => ({
+                              name: m.label,
+                              [comparative.current_label]: m.current,
+                              [comparative.previous_label]: m.previous,
+                            }))}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                              <YAxis tick={{ fontSize: 11 }} />
+                              <Tooltip formatter={(v) => `SAR ${v?.toLocaleString()}`} />
+                              <Legend wrapperStyle={{ fontSize: 11 }} />
+                              <Bar dataKey={comparative.current_label} fill="#f97316" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey={comparative.previous_label} fill="#94a3b8" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                ) : (
+                  <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">No comparison data available</div>
                 )}
               </CardContent>
             </Card>

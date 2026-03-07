@@ -329,8 +329,16 @@ async def pay_fine(fine_id: str, body: dict, current_user: User = Depends(get_cu
 @router.delete("/fines/{fine_id}")
 async def delete_fine(fine_id: str, current_user: User = Depends(get_current_user)):
     fine = await db.fines.find_one({"id": fine_id}, {"_id": 0})
-    if fine and fine.get("file_path") and os.path.exists(fine["file_path"]): os.remove(fine["file_path"])
-    await db.fines.delete_one({"id": fine_id}); return {"message": "Fine deleted"}
+    if not fine:
+        raise HTTPException(status_code=404, detail="Fine not found")
+    from routers.access_policies import check_delete_permission
+    await check_delete_permission(current_user, "employees", fine.get("date"), f"Fine: {fine.get('employee_name', '')} - SAR {fine.get('amount', 0)}")
+    if fine.get("file_path") and os.path.exists(fine["file_path"]):
+        os.remove(fine["file_path"])
+    await db.fines.delete_one({"id": fine_id})
+    from routers.activity_logs import log_activity
+    await log_activity(current_user, "delete", "fines", fine_id)
+    return {"message": "Fine deleted"}
 
 @router.post("/fines/{fine_id}/upload")
 async def upload_fine_proof(fine_id: str, file: UploadFile = File(...), current_user: User = Depends(get_current_user)):

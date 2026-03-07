@@ -76,6 +76,8 @@ import OrderTrackingPage from "./pages/OrderTrackingPage";
 import BrandingSettingsPage from "./pages/BrandingSettingsPage";
 import ScheduledReportsPage from "./pages/ScheduledReportsPage";
 import DataManagementPage from "./pages/DataManagementPage";
+import AuditTrailPage from "./pages/AuditTrailPage";
+import ReportBuilderPage from "./pages/ReportBuilderPage";
 import CustomerPortalLogin from "./pages/customer-portal/CustomerPortalLogin";
 import { 
   CustomerPortalDashboard, 
@@ -273,6 +275,7 @@ function App() {
           <Route path="/trend-comparison" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><TrendComparisonPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/stock-reorder" element={<AuthRoute><ProtectedRoute perm="stock" roles={['admin', 'manager']}><StockReorderPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/enhanced-pnl" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><EnhancedPnLPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/report-builder" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><ReportBuilderPage /></ProtectedRoute></AuthRoute>} />
 
           {/* Assets */}
           <Route path="/assets" element={<AuthRoute><ProtectedRoute perm="branches" roles={['admin', 'manager']}><AssetsPage /></ProtectedRoute></AuthRoute>} />
@@ -291,6 +294,7 @@ function App() {
           <Route path="/task-reminders" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><TaskRemindersPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/task-compliance" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><TaskCompliancePage /></ProtectedRoute></AuthRoute>} />
           <Route path="/activity-logs" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><ActivityLogsPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/audit-trail" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><AuditTrailPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/data-management" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><DataManagementPage /></ProtectedRoute></AuthRoute>} />
 
           {/* Customer Portal (no auth required - has its own auth) */}

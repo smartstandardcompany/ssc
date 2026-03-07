@@ -49,9 +49,24 @@ async def update_access_policies(body: dict, current_user: User = Depends(get_cu
     return await get_access_policies(current_user)
 
 
-async def check_delete_permission(user, module: str, record_date: str = None):
+async def check_delete_permission(user, module: str, record_date: str = None, record_summary: str = None):
     """Check if user has permission to delete a record based on policies."""
+    # Always log the attempt
+    log_entry = {
+        "user_email": user.email,
+        "user_role": user.role,
+        "module": module,
+        "record_date": str(record_date)[:10] if record_date else None,
+        "record_summary": record_summary or "",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "allowed": False,
+        "reason": "",
+    }
+    
     if user.role == "admin":
+        log_entry["allowed"] = True
+        log_entry["reason"] = "Admin bypass"
+        await db.delete_audit_log.insert_one(log_entry)
         return True
     
     policies = await db.access_policies.find_one({}, {"_id": 0})
@@ -63,10 +78,16 @@ async def check_delete_permission(user, module: str, record_date: str = None):
     
     # Check role-based policy
     if module_policy == "admin_only":
+        log_entry["reason"] = f"Policy: admin_only, user role: {user.role}"
+        await db.delete_audit_log.insert_one(log_entry)
         raise HTTPException(status_code=403, detail=f"Only admins can delete {module} records")
     elif module_policy == "admin_manager" and user.role not in ("admin", "manager"):
+        log_entry["reason"] = f"Policy: admin_manager, user role: {user.role}"
+        await db.delete_audit_log.insert_one(log_entry)
         raise HTTPException(status_code=403, detail=f"Only admins and managers can delete {module} records")
     elif module_policy == "no_delete":
+        log_entry["reason"] = "Policy: no_delete (disabled for all)"
+        await db.delete_audit_log.insert_one(log_entry)
         raise HTTPException(status_code=403, detail=f"Deletion of {module} records is disabled")
     
     # Check time limit
@@ -80,6 +101,8 @@ async def check_delete_permission(user, module: str, record_date: str = None):
             
             cutoff = datetime.now(timezone.utc) - timedelta(hours=limit_hours)
             if record_dt.replace(tzinfo=timezone.utc) < cutoff:
+                log_entry["reason"] = f"Time limit exceeded: {limit_hours}h"
+                await db.delete_audit_log.insert_one(log_entry)
                 raise HTTPException(
                     status_code=403,
                     detail=f"Cannot delete records older than {limit_hours} hours. Contact admin."
@@ -87,6 +110,9 @@ async def check_delete_permission(user, module: str, record_date: str = None):
         except (ValueError, TypeError):
             pass
     
+    log_entry["allowed"] = True
+    log_entry["reason"] = f"Policy: {module_policy}, role: {user.role}"
+    await db.delete_audit_log.insert_one(log_entry)
     return True
 
 
@@ -114,3 +140,16 @@ async def get_visibility_settings(user):
 async def get_my_visibility(current_user: User = Depends(get_current_user)):
     """Get visibility settings for the current user."""
     return await get_visibility_settings(current_user)
+
+
+@router.get("/access-policies/delete-audit-log")
+async def get_delete_audit_log(page: int = 1, limit: int = 50, current_user: User = Depends(get_current_user)):
+    """Get deletion audit trail (admin only)."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    skip = (page - 1) * limit
+    total = await db.delete_audit_log.count_documents({})
+    logs = await db.delete_audit_log.find({}, {"_id": 0}).sort("timestamp", -1).skip(skip).limit(limit).to_list(limit)
+    
+    return {"data": logs, "total": total, "page": page, "pages": (total + limit - 1) // limit}
