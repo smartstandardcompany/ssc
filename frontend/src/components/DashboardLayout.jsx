@@ -374,6 +374,43 @@ export const DashboardLayout = ({ children }) => {
                   );
                 })}
               </div>
+              {/* Admin Quick Access */}
+              {currentUser.role === 'admin' && (
+                <>
+                  <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider px-1 mt-2 mb-1">Admin</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {[
+                      { path: '/settings', label: 'Settings', icon: Settings, color: 'stone', testId: 'qa-settings' },
+                      { path: '/audit-trail', label: 'Audit Trail', icon: Shield, color: 'rose', testId: 'qa-audit' },
+                      { path: '/report-builder', label: 'Reports', icon: FileText, color: 'indigo', testId: 'qa-reports' },
+                      { path: '/data-management', label: 'Data Mgmt', icon: Database, color: 'teal', testId: 'qa-data' },
+                      { path: '/activity-logs', label: 'Logs', icon: Activity, color: 'slate', testId: 'qa-logs' },
+                      { path: '/advanced-analytics', label: 'Analytics', icon: BarChart3, color: 'violet', testId: 'qa-analytics' },
+                    ].map(item => {
+                      const Icon = item.icon;
+                      const colorMap = {
+                        stone: 'bg-stone-100 text-stone-700 border-stone-300 hover:bg-stone-200',
+                        rose: 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100',
+                        indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100',
+                        teal: 'bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100',
+                        slate: 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100',
+                        violet: 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100',
+                      };
+                      return (
+                        <Link
+                          key={item.path}
+                          to={item.path}
+                          onClick={() => setMobileOpen(false)}
+                          data-testid={item.testId}
+                          className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg border text-xs font-medium transition-all ${colorMap[item.color]}`}
+                        >
+                          <Icon size={13} /> {item.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
             {NAV_GROUPS.map((group) => (
             <NavGroup
