@@ -10,52 +10,25 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 
 ### Dashboard Branch Filter Enhancement (DONE)
 - Branch filter now applies to ALL dashboard stats: supplier_dues, due_fines, today-vs-yesterday
-- Previously only sales, expenses, supplier_payments were filtered
-- Frontend passes branch_ids to today-vs-yesterday API
 
 ### Daily Summary Date Range Mode (DONE)
-- New `/api/dashboard/daily-summary-range` endpoint with start_date, end_date, branch_id
-- Returns totals with full cash/bank breakdown for sales, expenses, supplier payments
-- Returns expense_by_category and daily array with day-by-day data
-- Frontend: Toggle between "Single Day" and "Date Range" modes
-- Range mode: "Summary" view (totals + expense categories + cash/bank table)
-- Range mode: "Day by Day" view (table with date, sales, cash, bank, expenses, net)
+- Toggle between "Single Day" and "Date Range" modes
+- Range mode: Summary view + Day by Day table view with Cash/Bank breakdowns
 - Quick range presets: 7d, 30d, 90d
 
-### Guided Tours for Remaining Modules (DONE)
-- Added tours for: /daily-summary, /expenses, /customers, /invoices, /report-builder, /audit-trail
-- 7 new tours (4 steps each) with step-by-step modal overlay
-- Reset all tours via Settings page button
+### Profit Trend Chart (DONE)
+- Area chart in Date Range mode showing Sales (green), Expenses (red dashed), Profit (orange with gradient)
+- Interactive tooltips, responsive sizing
 
-### UI/UX Polishing (DONE)
-- Fixed KeyError bug in daily-summary endpoint (customers/suppliers without 'id' field)
-- Quick Access buttons now link to correct paths
-- Consistent card styling with cash/bank breakdown
+### Guided Tours for 6 New Modules (DONE)
+- daily-summary, expenses, customers, invoices, report-builder, audit-trail
 
-## Session 7 (Mar 7, 2026) - Audit Trail, Report Builder, Comparative Analysis
-
-### Quick Access Buttons (DONE)
-- 6 quick-access buttons in sidebar: Cashier, Waiter, Kitchen, Orders, Tables, Customers
-
-### Deletion Audit Trail (DONE)
-- All delete operations log to delete_audit_log via check_delete_permission()
-- Integrated into: sales, expenses, customers, suppliers, supplier_payments, invoices, employees, fines
-- Admin-only /audit-trail page with search, filter, pagination
-
-### Custom Report Builder (DONE)
-- Full CRUD for report templates at /report-builder
-- 8 data sources, configurable columns/sorting/grouping, run & CSV export
-
-### Comparative Period Analysis (DONE)
-- "Comparison" tab in Advanced Analytics with Day/Week/Month/Year selectors
-- Metric comparison cards + bar chart visualization
-
+## Session 7 - Audit Trail, Report Builder, Comparative Analysis (DONE)
 ## Session 6 - Access Control & Delete Restrictions (DONE)
-## Session 5 - Supplier Fixes, Advanced Analytics (DONE)
-## Sessions 1-4 - Core ERP, POS, Kitchen, Employee Management (DONE)
+## Sessions 1-5 - Core ERP, POS, Kitchen, Employee Management (DONE)
 
 ## Pending Issues
-- SMTP Email: Auth error 5.7.139 from Microsoft 365 (external issue - user needs to disable Security Defaults)
+- SMTP Email: Blocked on user's Microsoft 365 Security Defaults
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@

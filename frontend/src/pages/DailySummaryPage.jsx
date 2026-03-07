@@ -16,6 +16,7 @@ import api from '@/lib/api';
 import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 import { format, subDays } from 'date-fns';
+import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, BarChart, Bar } from 'recharts';
 
 export default function DailySummaryPage() {
   const [data, setData] = useState(null);
@@ -460,6 +461,52 @@ export default function DailySummaryPage() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Profit Trend Chart */}
+            {rangeData.daily?.length > 1 && (
+              <Card data-testid="profit-trend-card">
+                <CardHeader className="py-3 pb-1">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-outfit flex items-center gap-2">
+                      <TrendingUp size={16} className="text-orange-500" /> Profit Trend
+                    </CardTitle>
+                    <span className="text-[10px] text-muted-foreground">{rangeData.days_count} days</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0 pb-3">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <AreaChart data={[...rangeData.daily].reverse().map(d => ({
+                      date: d.date.slice(5),
+                      Sales: d.sales,
+                      Expenses: d.expenses,
+                      Profit: +(d.sales - d.expenses).toFixed(2),
+                    }))}>
+                      <defs>
+                        <linearGradient id="profitGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.15} />
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                      <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                      <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
+                      <Tooltip
+                        contentStyle={{ borderRadius: 10, fontSize: 12, border: '1px solid #e5e7eb' }}
+                        formatter={(v, name) => [`SAR ${v?.toLocaleString()}`, name]}
+                      />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                      <Area type="monotone" dataKey="Sales" stroke="#10b981" strokeWidth={1.5} fill="url(#salesGrad)" dot={false} />
+                      <Area type="monotone" dataKey="Expenses" stroke="#ef4444" strokeWidth={1.5} fill="none" strokeDasharray="4 2" dot={false} />
+                      <Area type="monotone" dataKey="Profit" stroke="#f97316" strokeWidth={2.5} fill="url(#profitGrad)" dot={{ r: 2, fill: '#f97316' }} activeDot={{ r: 4 }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
 
             {/* View Toggle */}
             <div className="flex items-center gap-2">
