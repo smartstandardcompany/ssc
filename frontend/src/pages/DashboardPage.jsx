@@ -223,7 +223,7 @@ export default function DashboardPage() {
       setBranchDues(duesRes.data);
       setPendingSalaries(pendRes.data);
       // Fetch today vs yesterday
-      try { const tvyRes = await api.get('/dashboard/today-vs-yesterday'); setTodayVsYest(tvyRes.data); } catch {}
+      try { const tvyRes = await api.get(`/dashboard/today-vs-yesterday${q}`); setTodayVsYest(tvyRes.data); } catch {}
       // Fetch daily trend for sparklines
       try {
         const dsRes = await api.get('/reports/daily-summary');

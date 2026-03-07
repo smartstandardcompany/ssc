@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { X, ChevronRight, ChevronLeft, ShoppingCart, Package, Users, BarChart3, Receipt, DollarSign, TrendingUp, Truck, FileText, Settings, CheckCircle, HelpCircle, ChefHat, UtensilsCrossed, Monitor, Gift, User } from 'lucide-react';
+import { X, ChevronRight, ChevronLeft, ShoppingCart, Package, Users, BarChart3, Receipt, DollarSign, TrendingUp, Truck, FileText, Settings, CheckCircle, HelpCircle, ChefHat, UtensilsCrossed, Monitor, Gift, User, Shield, CalendarDays, CreditCard, FileBarChart } from 'lucide-react';
 
 const MODULE_TOURS = {
   '/sales': {
@@ -101,6 +101,60 @@ const MODULE_TOURS = {
       { title: 'Smart Recommendations', description: 'AI-powered suggestions show which collections need attention based on growth rate and age analysis.', icon: TrendingUp, target: null },
       { title: 'Archive & Restore', description: 'Archive old records to keep your database lean. Restore or permanently purge archived data anytime.', icon: FileText, target: null },
       { title: 'Auto-Archive', description: 'Enable automated archiving on a weekly or monthly schedule. Configure per-collection thresholds.', icon: Settings, target: null },
+    ]
+  },
+  '/daily-summary': {
+    key: 'daily_summary_tour',
+    steps: [
+      { title: 'Daily & Range Summary', description: 'Get a quick overview of your business activity for any day or date range. View sales, expenses, and supplier payments with cash/bank breakdowns.', icon: CalendarDays, target: null },
+      { title: 'Single Day / Date Range', description: 'Toggle between Single Day and Date Range modes. In Date Range mode, pick start and end dates or use quick presets (7d, 30d, 90d).', icon: CalendarDays, target: '[data-testid="mode-range"]' },
+      { title: 'Summary vs Day by Day', description: 'In Date Range mode, switch between Summary (totals + cash/bank breakdown) and Day by Day (table with each date listed).', icon: BarChart3, target: '[data-testid="view-daily"]' },
+      { title: 'Branch Filter', description: 'Filter the summary by a specific branch to see that branch\'s performance in isolation.', icon: Package, target: '[data-testid="branch-select"]' },
+    ]
+  },
+  '/expenses': {
+    key: 'expenses_tour',
+    steps: [
+      { title: 'Expense Management', description: 'Track all business expenses organized by category. Filter by date, branch, category, and payment mode.', icon: Receipt, target: null },
+      { title: 'Add Expense', description: 'Record a new expense with category, amount, payment mode, and optional receipt attachment.', icon: DollarSign, target: '[data-testid="add-expense-btn"], button:has-text("Add Expense")' },
+      { title: 'Categories', description: 'Expenses are grouped by category (Salary, Rent, Supplies, etc.) for easy tracking and reporting.', icon: FileText, target: null },
+      { title: 'Export & Reports', description: 'Export expense data to CSV/PDF or view detailed expense reports in the Reports section.', icon: Receipt, target: '[data-testid="export-btn"]' },
+    ]
+  },
+  '/customers': {
+    key: 'customers_tour',
+    steps: [
+      { title: 'Customer Management', description: 'Manage your customer database, track credit balances, and view purchase history.', icon: Users, target: null },
+      { title: 'Add Customer', description: 'Register new customers with contact details, branch, and credit limit. Customers can also be created during sales.', icon: Users, target: '[data-testid="add-customer-btn"], button:has-text("Add Customer")' },
+      { title: 'Credit Tracking', description: 'Each customer has a credit balance. When they pay on credit, the balance increases; when they settle, it decreases.', icon: CreditCard, target: null },
+      { title: 'Customer Ledger', description: 'Click a customer to view their full transaction history, statements, and credit/debit breakdown.', icon: FileText, target: null },
+    ]
+  },
+  '/invoices': {
+    key: 'invoices_tour',
+    steps: [
+      { title: 'Invoice Management', description: 'Create professional invoices with VAT calculation, QR codes, and ZATCA Phase 2 compliance.', icon: FileText, target: null },
+      { title: 'Create Invoice', description: 'Generate invoices from sales or create standalone invoices. VAT is calculated automatically at 15%.', icon: DollarSign, target: '[data-testid="create-invoice-btn"], button:has-text("Create Invoice")' },
+      { title: 'Status Tracking', description: 'Track invoice status: Draft, Sent, Paid, or Overdue. Filter by status to see which need attention.', icon: CheckCircle, target: null },
+      { title: 'Download & Share', description: 'Download invoices as PDF with QR code for ZATCA compliance, or share directly via WhatsApp/Email.', icon: Receipt, target: null },
+    ]
+  },
+  '/report-builder': {
+    key: 'report_builder_tour',
+    steps: [
+      { title: 'Custom Report Builder', description: 'Create, save, and run custom report templates. Choose from 8 data sources and configure exactly what you need.', icon: FileBarChart, target: null },
+      { title: 'Create Template', description: 'Click "New Template" to define your report: select data source, pick columns, set sorting, grouping, and filters.', icon: FileBarChart, target: '[data-testid="create-template-btn"]' },
+      { title: 'Run Reports', description: 'Click "Run" on any template to generate the report instantly. Results show summary statistics and a data table.', icon: CheckCircle, target: null },
+      { title: 'Export to CSV', description: 'After running a report, export the results as CSV for further analysis in Excel or Google Sheets.', icon: Receipt, target: null },
+    ]
+  },
+  '/audit-trail': {
+    key: 'audit_trail_tour',
+    steps: [
+      { title: 'Deletion Audit Trail', description: 'Monitor all record deletion attempts across your organization. See who deleted what, when, and whether it was allowed.', icon: Shield, target: null },
+      { title: 'Filter & Search', description: 'Filter audit logs by module (Sales, Expenses, etc.) and status (Allowed/Denied). Use the search bar for quick lookups.', icon: FileText, target: '[data-testid="audit-search"]' },
+      { title: 'Status Tracking', description: 'Each entry shows whether the deletion was Allowed or Denied based on your Access Control policies.', icon: Shield, target: null },
+      { title: 'Configure Policies', description: 'To change who can delete records and time limits, go to Settings > Access Control tab.', icon: Settings, target: null },
     ]
   },
 };

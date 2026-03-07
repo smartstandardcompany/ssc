@@ -95,8 +95,15 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
     cat_agg = await db.expenses.aggregate(cat_pipeline).to_list(100)
     expense_by_category = {r["_id"] or "other": r["total"] for r in cat_agg}
 
-    # Supplier dues using aggregation
-    sup_dues_pipeline = [{"$group": {"_id": None, "total": {"$sum": "$current_credit"}}}]
+    # Supplier dues using aggregation (filtered by branch)
+    sup_dues_query = {}
+    if branch_ids:
+        bid_list = [b.strip() for b in branch_ids.split(",") if b.strip()]
+        if bid_list:
+            sup_dues_query["branch_id"] = {"$in": bid_list}
+    elif current_user.branch_id and current_user.role != "admin":
+        sup_dues_query["branch_id"] = current_user.branch_id
+    sup_dues_pipeline = [{"$match": sup_dues_query}, {"$group": {"_id": None, "total": {"$sum": "$current_credit"}}}]
     sup_dues_agg = await db.suppliers.aggregate(sup_dues_pipeline).to_list(1)
     supplier_dues = sup_dues_agg[0]["total"] if sup_dues_agg else 0
 
@@ -143,7 +150,14 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
     prev_total_expenses = sum(e["amount"] for e in prev_expenses)
     prev_net = prev_total_sales - prev_total_expenses
 
-    all_fines = await db.fines.find({"payment_status": {"$ne": "paid"}}, {"_id": 0}).to_list(1000)
+    fines_query = {"payment_status": {"$ne": "paid"}}
+    if branch_ids:
+        bid_list = [b.strip() for b in branch_ids.split(",") if b.strip()]
+        if bid_list:
+            fines_query["branch_id"] = {"$in": bid_list}
+    elif current_user.branch_id and current_user.role != "admin":
+        fines_query["branch_id"] = current_user.branch_id
+    all_fines = await db.fines.find(fines_query, {"_id": 0}).to_list(1000)
     due_fines = sum(f["amount"] - f.get("paid_amount", 0) for f in all_fines)
     due_fines_list = [{"department": f.get("department",""), "amount": f["amount"] - f.get("paid_amount",0), "type": f.get("fine_type","")} for f in all_fines[:5]]
 
@@ -208,7 +222,7 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
 
 
 @router.get("/dashboard/today-vs-yesterday")
-async def get_today_vs_yesterday(current_user: User = Depends(get_current_user)):
+async def get_today_vs_yesterday(branch_ids: Optional[str] = None, current_user: User = Depends(get_current_user)):
     """Compare today's performance vs yesterday."""
     now = datetime.now(timezone.utc)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
@@ -217,7 +231,11 @@ async def get_today_vs_yesterday(current_user: User = Depends(get_current_user))
     yest_end = today_start
 
     query = {}
-    if current_user.branch_id and current_user.role != "admin":
+    if branch_ids:
+        bid_list = [b.strip() for b in branch_ids.split(",") if b.strip()]
+        if bid_list:
+            query["branch_id"] = {"$in": bid_list}
+    elif current_user.branch_id and current_user.role != "admin":
         query["branch_id"] = current_user.branch_id
 
     today_sales = await db.sales.find({**query, "date": {"$gte": today_start, "$lt": today_end}}, {"_id": 0}).to_list(5000)
@@ -444,11 +462,11 @@ async def get_daily_summary(
     
     # Get suppliers for names
     suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
-    supplier_map = {s["id"]: s for s in suppliers}
+    supplier_map = {s["id"]: s for s in suppliers if "id" in s}
     
     # Get customers for names
     customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
-    customer_map = {c["id"]: c.get("name", "Unknown") for c in customers}
+    customer_map = {c["id"]: c.get("name", "Unknown") for c in customers if "id" in c}
     
     # === SALES SUMMARY ===
     total_sales = sum(s.get("final_amount", s.get("amount", 0)) for s in sales)
@@ -601,4 +619,128 @@ async def get_daily_summary(
             "total_in": total_sales,
             "total_out": total_expenses + supplier_payments_total
         }
+    }
+
+
+
+@router.get("/dashboard/daily-summary-range")
+async def get_daily_summary_range(
+    start_date: str,
+    end_date: str,
+    branch_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get aggregated and day-by-day summary for a date range."""
+    from datetime import date as dt_date
+
+    # Parse dates
+    start = datetime.strptime(start_date, "%Y-%m-%d")
+    end = datetime.strptime(end_date, "%Y-%m-%d")
+    
+    base_query = {"date": {"$gte": f"{start_date}T00:00:00", "$lte": f"{end_date}T23:59:59"}}
+    if branch_id:
+        base_query["branch_id"] = branch_id
+    elif current_user.branch_id and current_user.role != "admin":
+        base_query["branch_id"] = current_user.branch_id
+
+    # Fetch all data for the range
+    sales = await db.sales.find(base_query, {"_id": 0, "date": 1, "amount": 1, "final_amount": 1, "payment_details": 1, "credit_amount": 1, "credit_received": 1}).to_list(50000)
+    expenses = await db.expenses.find(base_query, {"_id": 0, "date": 1, "amount": 1, "payment_mode": 1, "category": 1}).to_list(50000)
+
+    sp_query = {"date": {"$gte": f"{start_date}T00:00:00", "$lte": f"{end_date}T23:59:59"}}
+    if branch_id:
+        sp_query["branch_id"] = branch_id
+    elif current_user.branch_id and current_user.role != "admin":
+        sp_query["branch_id"] = current_user.branch_id
+    supplier_payments = await db.supplier_payments.find(sp_query, {"_id": 0, "date": 1, "amount": 1, "payment_mode": 1}).to_list(50000)
+
+    # Compute totals
+    total_sales = sum(s.get("final_amount", s.get("amount", 0)) for s in sales)
+    total_sales_cash = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "cash")
+    total_sales_bank = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "bank")
+    total_sales_credit = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "credit")
+    total_sales_online = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") in ("online", "online_platform"))
+
+    total_expenses = sum(e.get("amount", 0) for e in expenses)
+    total_exp_cash = sum(e["amount"] for e in expenses if e.get("payment_mode") == "cash")
+    total_exp_bank = sum(e["amount"] for e in expenses if e.get("payment_mode") == "bank")
+    total_exp_credit = sum(e["amount"] for e in expenses if e.get("payment_mode") == "credit")
+
+    total_sp = sum(p.get("amount", 0) for p in supplier_payments)
+    total_sp_cash = sum(p["amount"] for p in supplier_payments if p.get("payment_mode") == "cash")
+    total_sp_bank = sum(p["amount"] for p in supplier_payments if p.get("payment_mode") == "bank")
+
+    # Expense by category
+    exp_by_cat = {}
+    for e in expenses:
+        cat = e.get("category", "Other")
+        exp_by_cat[cat] = exp_by_cat.get(cat, 0) + e.get("amount", 0)
+
+    # Day-by-day breakdown
+    daily = {}
+    for s in sales:
+        d = s.get("date", "")[:10]
+        if d not in daily:
+            daily[d] = {"date": d, "sales": 0, "sales_cash": 0, "sales_bank": 0, "sales_credit": 0, "sales_online": 0, "sales_count": 0, "expenses": 0, "exp_cash": 0, "exp_bank": 0, "exp_credit": 0, "exp_count": 0, "sp_total": 0, "sp_cash": 0, "sp_bank": 0}
+        daily[d]["sales"] += s.get("final_amount", s.get("amount", 0))
+        daily[d]["sales_count"] += 1
+        for p in s.get("payment_details", []):
+            mode = p.get("mode", "cash")
+            if mode == "cash": daily[d]["sales_cash"] += p["amount"]
+            elif mode == "bank": daily[d]["sales_bank"] += p["amount"]
+            elif mode == "credit": daily[d]["sales_credit"] += p["amount"]
+            elif mode in ("online", "online_platform"): daily[d]["sales_online"] += p["amount"]
+
+    for e in expenses:
+        d = e.get("date", "")[:10]
+        if d not in daily:
+            daily[d] = {"date": d, "sales": 0, "sales_cash": 0, "sales_bank": 0, "sales_credit": 0, "sales_online": 0, "sales_count": 0, "expenses": 0, "exp_cash": 0, "exp_bank": 0, "exp_credit": 0, "exp_count": 0, "sp_total": 0, "sp_cash": 0, "sp_bank": 0}
+        daily[d]["expenses"] += e.get("amount", 0)
+        daily[d]["exp_count"] += 1
+        mode = e.get("payment_mode", "cash")
+        if mode == "cash": daily[d]["exp_cash"] += e["amount"]
+        elif mode == "bank": daily[d]["exp_bank"] += e["amount"]
+        elif mode == "credit": daily[d]["exp_credit"] += e["amount"]
+
+    for p in supplier_payments:
+        d = p.get("date", "")[:10]
+        if d not in daily:
+            daily[d] = {"date": d, "sales": 0, "sales_cash": 0, "sales_bank": 0, "sales_credit": 0, "sales_online": 0, "sales_count": 0, "expenses": 0, "exp_cash": 0, "exp_bank": 0, "exp_credit": 0, "exp_count": 0, "sp_total": 0, "sp_cash": 0, "sp_bank": 0}
+        daily[d]["sp_total"] += p.get("amount", 0)
+        mode = p.get("payment_mode", "cash")
+        if mode == "cash": daily[d]["sp_cash"] += p["amount"]
+        elif mode == "bank": daily[d]["sp_bank"] += p["amount"]
+
+    daily_list = sorted(daily.values(), key=lambda x: x["date"], reverse=True)
+    # Round values
+    for row in daily_list:
+        for k, v in row.items():
+            if isinstance(v, float):
+                row[k] = round(v, 2)
+
+    return {
+        "start_date": start_date,
+        "end_date": end_date,
+        "totals": {
+            "sales": round(total_sales, 2),
+            "sales_cash": round(total_sales_cash, 2),
+            "sales_bank": round(total_sales_bank, 2),
+            "sales_credit": round(total_sales_credit, 2),
+            "sales_online": round(total_sales_online, 2),
+            "sales_count": len(sales),
+            "expenses": round(total_expenses, 2),
+            "exp_cash": round(total_exp_cash, 2),
+            "exp_bank": round(total_exp_bank, 2),
+            "exp_credit": round(total_exp_credit, 2),
+            "exp_count": len(expenses),
+            "supplier_payments": round(total_sp, 2),
+            "sp_cash": round(total_sp_cash, 2),
+            "sp_bank": round(total_sp_bank, 2),
+            "net_profit": round(total_sales - total_expenses, 2),
+            "net_cash": round(total_sales_cash - total_exp_cash - total_sp_cash, 2),
+            "net_bank": round(total_sales_bank - total_exp_bank - total_sp_bank, 2),
+        },
+        "expense_by_category": exp_by_cat,
+        "daily": daily_list,
+        "days_count": len(daily_list),
     }

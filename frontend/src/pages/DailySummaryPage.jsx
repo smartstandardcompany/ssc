@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   CalendarDays, TrendingUp, TrendingDown, DollarSign, ShoppingCart, 
   Receipt, Truck, RefreshCw, ArrowUpRight, ArrowDownRight, 
-  CreditCard, Banknote, Clock, Package
+  CreditCard, Banknote, Clock, Package, CalendarRange, Table, BarChart3
 } from 'lucide-react';
 import api from '@/lib/api';
 import { useBranchStore } from '@/stores';
@@ -19,18 +19,30 @@ import { format, subDays } from 'date-fns';
 
 export default function DailySummaryPage() {
   const [data, setData] = useState(null);
+  const [rangeData, setRangeData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [mode, setMode] = useState('single'); // 'single' or 'range'
+  const [startDate, setStartDate] = useState(format(subDays(new Date(), 7), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [rangeView, setRangeView] = useState('summary'); // 'summary' or 'daily'
   const { branches, fetchBranches: _fetchBr } = useBranchStore();
   const [selectedBranch, setSelectedBranch] = useState('');
 
-  useEffect(() => {
-    _fetchBr();
-  }, []);
+  useEffect(() => { _fetchBr(); }, []);
 
   useEffect(() => {
-    fetchSummary();
+    if (mode === 'single') fetchSummary();
   }, [selectedDate, selectedBranch]);
+
+  useEffect(() => {
+    if (mode === 'range') fetchRangeSummary();
+  }, [startDate, endDate, selectedBranch]);
+
+  useEffect(() => {
+    if (mode === 'single') fetchSummary();
+    else fetchRangeSummary();
+  }, [mode]);
 
   const fetchSummary = async () => {
     setLoading(true);
@@ -39,8 +51,23 @@ export default function DailySummaryPage() {
       if (selectedBranch) params.append('branch_id', selectedBranch);
       const res = await api.get(`/dashboard/daily-summary?${params.toString()}`);
       setData(res.data);
-    } catch (err) {
+    } catch {
       toast.error('Failed to load daily summary');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchRangeSummary = async () => {
+    if (!startDate || !endDate) return;
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
+      if (selectedBranch) params.append('branch_id', selectedBranch);
+      const res = await api.get(`/dashboard/daily-summary-range?${params.toString()}`);
+      setRangeData(res.data);
+    } catch {
+      toast.error('Failed to load range summary');
     } finally {
       setLoading(false);
     }
@@ -50,9 +77,14 @@ export default function DailySummaryPage() {
     setSelectedDate(format(subDays(new Date(), days), 'yyyy-MM-dd'));
   };
 
+  const quickRangeSelect = (days) => {
+    setStartDate(format(subDays(new Date(), days), 'yyyy-MM-dd'));
+    setEndDate(format(new Date(), 'yyyy-MM-dd'));
+  };
+
   const formatCurrency = (val) => `SAR ${(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  if (loading && !data) {
+  if (loading && !data && !rangeData) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
@@ -69,28 +101,58 @@ export default function DailySummaryPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-1" data-testid="daily-summary-title">
-              Daily Summary
+              {mode === 'single' ? 'Daily Summary' : 'Range Summary'}
             </h1>
             <p className="text-sm text-muted-foreground">
-              Quick overview of today's business activity
+              {mode === 'single' ? 'Quick overview of daily business activity' : `${startDate} to ${endDate}`}
             </p>
           </div>
           <div className="flex flex-wrap gap-2 items-end">
-            <div>
-              <Label className="text-xs">Date</Label>
-              <Input 
-                type="date" 
-                value={selectedDate} 
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-[150px] h-9"
-                data-testid="date-picker"
-              />
+            {/* Mode Toggle */}
+            <div className="flex gap-1 bg-stone-100 dark:bg-stone-800 p-0.5 rounded-lg">
+              <Button size="sm" variant={mode === 'single' ? 'default' : 'ghost'} onClick={() => setMode('single')}
+                className={`h-8 text-xs ${mode === 'single' ? 'bg-orange-500 hover:bg-orange-600 text-white' : ''}`} data-testid="mode-single">
+                <CalendarDays size={13} className="mr-1" /> Single Day
+              </Button>
+              <Button size="sm" variant={mode === 'range' ? 'default' : 'ghost'} onClick={() => setMode('range')}
+                className={`h-8 text-xs ${mode === 'range' ? 'bg-orange-500 hover:bg-orange-600 text-white' : ''}`} data-testid="mode-range">
+                <CalendarRange size={13} className="mr-1" /> Date Range
+              </Button>
             </div>
-            <div className="flex gap-1">
-              <Button size="sm" variant={selectedDate === format(new Date(), 'yyyy-MM-dd') ? 'default' : 'outline'} 
-                onClick={() => quickDateSelect(0)} className="h-9">Today</Button>
-              <Button size="sm" variant="outline" onClick={() => quickDateSelect(1)} className="h-9">Yesterday</Button>
-            </div>
+
+            {mode === 'single' ? (
+              <>
+                <div>
+                  <Label className="text-xs">Date</Label>
+                  <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)}
+                    className="w-[150px] h-9" data-testid="date-picker" />
+                </div>
+                <div className="flex gap-1">
+                  <Button size="sm" variant={selectedDate === format(new Date(), 'yyyy-MM-dd') ? 'default' : 'outline'}
+                    onClick={() => quickDateSelect(0)} className="h-9">Today</Button>
+                  <Button size="sm" variant="outline" onClick={() => quickDateSelect(1)} className="h-9">Yesterday</Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <Label className="text-xs">From</Label>
+                  <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
+                    className="w-[140px] h-9" data-testid="start-date-picker" />
+                </div>
+                <div>
+                  <Label className="text-xs">To</Label>
+                  <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
+                    className="w-[140px] h-9" data-testid="end-date-picker" />
+                </div>
+                <div className="flex gap-1">
+                  <Button size="sm" variant="outline" onClick={() => quickRangeSelect(7)} className="h-9 text-xs">7d</Button>
+                  <Button size="sm" variant="outline" onClick={() => quickRangeSelect(30)} className="h-9 text-xs">30d</Button>
+                  <Button size="sm" variant="outline" onClick={() => quickRangeSelect(90)} className="h-9 text-xs">90d</Button>
+                </div>
+              </>
+            )}
+
             {branches.length > 1 && (
               <Select value={selectedBranch || 'all'} onValueChange={(v) => setSelectedBranch(v === 'all' ? '' : v)}>
                 <SelectTrigger className="w-[140px] h-9" data-testid="branch-select">
@@ -102,13 +164,15 @@ export default function DailySummaryPage() {
                 </SelectContent>
               </Select>
             )}
-            <Button size="sm" variant="outline" onClick={fetchSummary} className="h-9" data-testid="refresh-btn">
+            <Button size="sm" variant="outline" onClick={mode === 'single' ? fetchSummary : fetchRangeSummary}
+              className="h-9" data-testid="refresh-btn">
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             </Button>
           </div>
         </div>
 
-        {data && (
+        {/* ============ SINGLE DAY MODE ============ */}
+        {mode === 'single' && data && (
           <>
             {/* Net Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -124,7 +188,6 @@ export default function DailySummaryPage() {
                   <p className="text-xs text-emerald-600">{data.sales.count} transactions</p>
                 </CardContent>
               </Card>
-              
               <Card className="border-red-200 bg-red-50/50">
                 <CardContent className="pt-4 pb-3">
                   <div className="flex items-center gap-2 mb-1">
@@ -137,7 +200,6 @@ export default function DailySummaryPage() {
                   <p className="text-xs text-red-600">{data.expenses.count} entries</p>
                 </CardContent>
               </Card>
-              
               <Card className="border-blue-200 bg-blue-50/50">
                 <CardContent className="pt-4 pb-3">
                   <div className="flex items-center gap-2 mb-1">
@@ -150,7 +212,6 @@ export default function DailySummaryPage() {
                   <p className="text-xs text-blue-600">Cash in - Cash out</p>
                 </CardContent>
               </Card>
-              
               <Card className={`border-${data.summary.net_profit >= 0 ? 'emerald' : 'red'}-200 bg-${data.summary.net_profit >= 0 ? 'emerald' : 'red'}-50/50`}>
                 <CardContent className="pt-4 pb-3">
                   <div className="flex items-center gap-2 mb-1">
@@ -168,98 +229,62 @@ export default function DailySummaryPage() {
             {/* Detailed Tabs */}
             <Tabs defaultValue="sales" className="space-y-4">
               <TabsList className="grid w-full grid-cols-3 max-w-md">
-                <TabsTrigger value="sales" className="gap-1" data-testid="sales-tab">
-                  <ShoppingCart size={14} />Sales
-                </TabsTrigger>
-                <TabsTrigger value="expenses" className="gap-1" data-testid="expenses-tab">
-                  <Receipt size={14} />Expenses
-                </TabsTrigger>
-                <TabsTrigger value="suppliers" className="gap-1" data-testid="suppliers-tab">
-                  <Truck size={14} />Suppliers
-                </TabsTrigger>
+                <TabsTrigger value="sales" className="gap-1" data-testid="sales-tab"><ShoppingCart size={14} />Sales</TabsTrigger>
+                <TabsTrigger value="expenses" className="gap-1" data-testid="expenses-tab"><Receipt size={14} />Expenses</TabsTrigger>
+                <TabsTrigger value="suppliers" className="gap-1" data-testid="suppliers-tab"><Truck size={14} />Suppliers</TabsTrigger>
               </TabsList>
 
-              {/* Sales Tab */}
               <TabsContent value="sales" className="space-y-4">
-                {/* Payment Mode Breakdown */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <Card className="border-stone-100">
                     <CardContent className="pt-3 pb-2">
-                      <div className="flex items-center gap-2">
-                        <Banknote className="text-emerald-600" size={16} />
-                        <span className="text-xs text-muted-foreground">Cash</span>
-                      </div>
+                      <div className="flex items-center gap-2"><Banknote className="text-emerald-600" size={16} /><span className="text-xs text-muted-foreground">Cash</span></div>
                       <p className="text-lg font-bold text-emerald-600">{formatCurrency(data.sales.cash)}</p>
                     </CardContent>
                   </Card>
                   <Card className="border-stone-100">
                     <CardContent className="pt-3 pb-2">
-                      <div className="flex items-center gap-2">
-                        <CreditCard className="text-blue-600" size={16} />
-                        <span className="text-xs text-muted-foreground">Bank</span>
-                      </div>
+                      <div className="flex items-center gap-2"><CreditCard className="text-blue-600" size={16} /><span className="text-xs text-muted-foreground">Bank</span></div>
                       <p className="text-lg font-bold text-blue-600">{formatCurrency(data.sales.bank)}</p>
                     </CardContent>
                   </Card>
                   <Card className="border-stone-100">
                     <CardContent className="pt-3 pb-2">
-                      <div className="flex items-center gap-2">
-                        <Clock className="text-amber-600" size={16} />
-                        <span className="text-xs text-muted-foreground">Credit</span>
-                      </div>
+                      <div className="flex items-center gap-2"><Clock className="text-amber-600" size={16} /><span className="text-xs text-muted-foreground">Credit</span></div>
                       <p className="text-lg font-bold text-amber-600">{formatCurrency(data.sales.credit)}</p>
                     </CardContent>
                   </Card>
                   <Card className="border-stone-100">
                     <CardContent className="pt-3 pb-2">
-                      <div className="flex items-center gap-2">
-                        <Package className="text-purple-600" size={16} />
-                        <span className="text-xs text-muted-foreground">Online</span>
-                      </div>
+                      <div className="flex items-center gap-2"><Package className="text-purple-600" size={16} /><span className="text-xs text-muted-foreground">Online</span></div>
                       <p className="text-lg font-bold text-purple-600">{formatCurrency(data.sales.online)}</p>
                     </CardContent>
                   </Card>
                 </div>
-
                 <div className="grid md:grid-cols-2 gap-4">
-                  {/* Top Items */}
                   <Card className="border-stone-100">
-                    <CardHeader className="py-3 border-b">
-                      <CardTitle className="text-sm font-outfit">Top Selling Items</CardTitle>
-                    </CardHeader>
+                    <CardHeader className="py-3 border-b"><CardTitle className="text-sm font-outfit">Top Selling Items</CardTitle></CardHeader>
                     <CardContent className="p-0">
                       {data.sales.top_items?.length > 0 ? (
                         <div className="divide-y">
                           {data.sales.top_items.map((item, i) => (
                             <div key={i} className="flex justify-between items-center px-4 py-2.5">
-                              <div>
-                                <p className="text-sm font-medium">{item.name}</p>
-                                <p className="text-xs text-muted-foreground">{item.qty} sold</p>
-                              </div>
+                              <div><p className="text-sm font-medium">{item.name}</p><p className="text-xs text-muted-foreground">{item.qty} sold</p></div>
                               <p className="font-bold text-emerald-600">{formatCurrency(item.revenue)}</p>
                             </div>
                           ))}
                         </div>
-                      ) : (
-                        <p className="text-center text-muted-foreground py-6">No sales today</p>
-                      )}
+                      ) : <p className="text-center text-muted-foreground py-6">No sales data</p>}
                     </CardContent>
                   </Card>
-
-                  {/* Recent Sales */}
                   <Card className="border-stone-100">
-                    <CardHeader className="py-3 border-b">
-                      <CardTitle className="text-sm font-outfit">Recent Sales</CardTitle>
-                    </CardHeader>
+                    <CardHeader className="py-3 border-b"><CardTitle className="text-sm font-outfit">Recent Sales</CardTitle></CardHeader>
                     <CardContent className="p-0">
                       {data.sales.recent?.length > 0 ? (
                         <div className="divide-y max-h-[280px] overflow-y-auto">
                           {data.sales.recent.map((sale, i) => (
                             <div key={i} className="flex justify-between items-center px-4 py-2.5">
-                              <div>
-                                <p className="text-sm font-medium">{sale.customer}</p>
-                                <p className="text-xs text-muted-foreground">{sale.time} • {sale.branch}</p>
-                              </div>
+                              <div><p className="text-sm font-medium">{sale.customer}</p><p className="text-xs text-muted-foreground">{sale.time} - {sale.branch}</p></div>
                               <div className="text-right">
                                 <p className="font-bold text-emerald-600">{formatCurrency(sale.amount)}</p>
                                 <Badge variant="outline" className="text-[10px]">{sale.payment_mode}</Badge>
@@ -267,19 +292,13 @@ export default function DailySummaryPage() {
                             </div>
                           ))}
                         </div>
-                      ) : (
-                        <p className="text-center text-muted-foreground py-6">No sales today</p>
-                      )}
+                      ) : <p className="text-center text-muted-foreground py-6">No sales data</p>}
                     </CardContent>
                   </Card>
                 </div>
-
-                {/* Sales by Branch */}
                 {Object.keys(data.sales.by_branch || {}).length > 0 && (
                   <Card className="border-stone-100">
-                    <CardHeader className="py-3 border-b">
-                      <CardTitle className="text-sm font-outfit">Sales by Branch</CardTitle>
-                    </CardHeader>
+                    <CardHeader className="py-3 border-b"><CardTitle className="text-sm font-outfit">Sales by Branch</CardTitle></CardHeader>
                     <CardContent className="pt-4">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {Object.entries(data.sales.by_branch).map(([branch, stats]) => (
@@ -295,146 +314,268 @@ export default function DailySummaryPage() {
                 )}
               </TabsContent>
 
-              {/* Expenses Tab */}
               <TabsContent value="expenses" className="space-y-4">
-                {/* Payment Mode Breakdown */}
                 <div className="grid grid-cols-3 gap-3">
                   <Card className="border-stone-100">
                     <CardContent className="pt-3 pb-2">
-                      <div className="flex items-center gap-2">
-                        <Banknote className="text-red-600" size={16} />
-                        <span className="text-xs text-muted-foreground">Cash</span>
-                      </div>
+                      <div className="flex items-center gap-2"><Banknote className="text-red-600" size={16} /><span className="text-xs text-muted-foreground">Cash</span></div>
                       <p className="text-lg font-bold text-red-600">{formatCurrency(data.expenses.cash)}</p>
                     </CardContent>
                   </Card>
                   <Card className="border-stone-100">
                     <CardContent className="pt-3 pb-2">
-                      <div className="flex items-center gap-2">
-                        <CreditCard className="text-red-600" size={16} />
-                        <span className="text-xs text-muted-foreground">Bank</span>
-                      </div>
+                      <div className="flex items-center gap-2"><CreditCard className="text-red-600" size={16} /><span className="text-xs text-muted-foreground">Bank</span></div>
                       <p className="text-lg font-bold text-red-600">{formatCurrency(data.expenses.bank)}</p>
                     </CardContent>
                   </Card>
                   <Card className="border-stone-100">
                     <CardContent className="pt-3 pb-2">
-                      <div className="flex items-center gap-2">
-                        <Clock className="text-amber-600" size={16} />
-                        <span className="text-xs text-muted-foreground">Credit</span>
-                      </div>
+                      <div className="flex items-center gap-2"><Clock className="text-amber-600" size={16} /><span className="text-xs text-muted-foreground">Credit</span></div>
                       <p className="text-lg font-bold text-amber-600">{formatCurrency(data.expenses.credit)}</p>
                     </CardContent>
                   </Card>
                 </div>
-
                 <div className="grid md:grid-cols-2 gap-4">
-                  {/* By Category */}
                   <Card className="border-stone-100">
-                    <CardHeader className="py-3 border-b">
-                      <CardTitle className="text-sm font-outfit">Expenses by Category</CardTitle>
-                    </CardHeader>
+                    <CardHeader className="py-3 border-b"><CardTitle className="text-sm font-outfit">Expenses by Category</CardTitle></CardHeader>
                     <CardContent className="p-0">
                       {Object.keys(data.expenses.by_category || {}).length > 0 ? (
                         <div className="divide-y">
-                          {Object.entries(data.expenses.by_category)
-                            .sort((a, b) => b[1].amount - a[1].amount)
-                            .map(([cat, stats]) => (
+                          {Object.entries(data.expenses.by_category).sort((a, b) => b[1].amount - a[1].amount).map(([cat, stats]) => (
                             <div key={cat} className="flex justify-between items-center px-4 py-2.5">
-                              <div>
-                                <p className="text-sm font-medium capitalize">{cat}</p>
-                                <p className="text-xs text-muted-foreground">{stats.count} entries</p>
-                              </div>
+                              <div><p className="text-sm font-medium capitalize">{cat}</p><p className="text-xs text-muted-foreground">{stats.count} entries</p></div>
                               <p className="font-bold text-red-600">{formatCurrency(stats.amount)}</p>
                             </div>
                           ))}
                         </div>
-                      ) : (
-                        <p className="text-center text-muted-foreground py-6">No expenses today</p>
-                      )}
+                      ) : <p className="text-center text-muted-foreground py-6">No expenses data</p>}
                     </CardContent>
                   </Card>
-
-                  {/* Recent Expenses */}
                   <Card className="border-stone-100">
-                    <CardHeader className="py-3 border-b">
-                      <CardTitle className="text-sm font-outfit">Recent Expenses</CardTitle>
-                    </CardHeader>
+                    <CardHeader className="py-3 border-b"><CardTitle className="text-sm font-outfit">Recent Expenses</CardTitle></CardHeader>
                     <CardContent className="p-0">
                       {data.expenses.recent?.length > 0 ? (
                         <div className="divide-y max-h-[280px] overflow-y-auto">
                           {data.expenses.recent.map((exp, i) => (
                             <div key={i} className="flex justify-between items-center px-4 py-2.5">
-                              <div>
-                                <p className="text-sm font-medium truncate max-w-[150px]">{exp.description || exp.category}</p>
-                                <p className="text-xs text-muted-foreground capitalize">{exp.category} • {exp.payment_mode}</p>
-                              </div>
+                              <div><p className="text-sm font-medium truncate max-w-[150px]">{exp.description || exp.category}</p><p className="text-xs text-muted-foreground capitalize">{exp.category} - {exp.payment_mode}</p></div>
                               <p className="font-bold text-red-600">{formatCurrency(exp.amount)}</p>
                             </div>
                           ))}
                         </div>
-                      ) : (
-                        <p className="text-center text-muted-foreground py-6">No expenses today</p>
-                      )}
+                      ) : <p className="text-center text-muted-foreground py-6">No expenses data</p>}
                     </CardContent>
                   </Card>
                 </div>
               </TabsContent>
 
-              {/* Suppliers Tab */}
               <TabsContent value="suppliers" className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <Card className="border-emerald-200 bg-emerald-50/50">
                     <CardContent className="pt-4 pb-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <TrendingUp className="text-emerald-600" size={18} />
-                        <p className="text-xs text-emerald-700">Payments Made</p>
-                      </div>
-                      <p className="text-2xl font-bold font-outfit text-emerald-700">
-                        {formatCurrency(data.suppliers.payments_total)}
-                      </p>
+                      <div className="flex items-center gap-2 mb-1"><TrendingUp className="text-emerald-600" size={18} /><p className="text-xs text-emerald-700">Payments Made</p></div>
+                      <p className="text-2xl font-bold font-outfit text-emerald-700">{formatCurrency(data.suppliers.payments_total)}</p>
                       <p className="text-xs text-emerald-600">{data.suppliers.payments_count} payments</p>
                     </CardContent>
                   </Card>
-                  
                   <Card className="border-amber-200 bg-amber-50/50">
                     <CardContent className="pt-4 pb-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <TrendingDown className="text-amber-600" size={18} />
-                        <p className="text-xs text-amber-700">Credit Purchases</p>
-                      </div>
-                      <p className="text-2xl font-bold font-outfit text-amber-700">
-                        {formatCurrency(data.suppliers.credit_purchases)}
-                      </p>
+                      <div className="flex items-center gap-2 mb-1"><TrendingDown className="text-amber-600" size={18} /><p className="text-xs text-amber-700">Credit Purchases</p></div>
+                      <p className="text-2xl font-bold font-outfit text-amber-700">{formatCurrency(data.suppliers.credit_purchases)}</p>
                       <p className="text-xs text-amber-600">Added to supplier balance</p>
                     </CardContent>
                   </Card>
                 </div>
-
                 <Card className="border-stone-100">
-                  <CardHeader className="py-3 border-b">
-                    <CardTitle className="text-sm font-outfit">Recent Supplier Payments</CardTitle>
-                  </CardHeader>
+                  <CardHeader className="py-3 border-b"><CardTitle className="text-sm font-outfit">Recent Supplier Payments</CardTitle></CardHeader>
                   <CardContent className="p-0">
                     {data.suppliers.recent_payments?.length > 0 ? (
                       <div className="divide-y">
                         {data.suppliers.recent_payments.map((p, i) => (
                           <div key={i} className="flex justify-between items-center px-4 py-3">
-                            <div>
-                              <p className="text-sm font-medium">{p.supplier}</p>
-                              <Badge variant="outline" className="text-[10px]">{p.payment_mode}</Badge>
-                            </div>
+                            <div><p className="text-sm font-medium">{p.supplier}</p><Badge variant="outline" className="text-[10px]">{p.payment_mode}</Badge></div>
                             <p className="font-bold text-emerald-600">{formatCurrency(p.amount)}</p>
                           </div>
                         ))}
                       </div>
-                    ) : (
-                      <p className="text-center text-muted-foreground py-6">No supplier payments today</p>
-                    )}
+                    ) : <p className="text-center text-muted-foreground py-6">No supplier payments</p>}
                   </CardContent>
                 </Card>
               </TabsContent>
             </Tabs>
+          </>
+        )}
+
+        {/* ============ DATE RANGE MODE ============ */}
+        {mode === 'range' && rangeData && (
+          <>
+            {/* Totals Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="range-summary-cards">
+              <Card className="border-emerald-200 bg-emerald-50/50">
+                <CardContent className="pt-4 pb-3">
+                  <div className="flex items-center gap-2 mb-1"><ArrowUpRight className="text-emerald-600" size={18} /><p className="text-xs text-emerald-700">Total Sales</p></div>
+                  <p className="text-2xl font-bold font-outfit text-emerald-700" data-testid="range-total-sales">{formatCurrency(rangeData.totals.sales)}</p>
+                  <div className="flex gap-3 mt-1">
+                    <span className="text-[10px] text-emerald-600"><Banknote size={10} className="inline mr-0.5" />Cash: {formatCurrency(rangeData.totals.sales_cash)}</span>
+                    <span className="text-[10px] text-blue-600"><CreditCard size={10} className="inline mr-0.5" />Bank: {formatCurrency(rangeData.totals.sales_bank)}</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{rangeData.totals.sales_count} transactions</p>
+                </CardContent>
+              </Card>
+              <Card className="border-red-200 bg-red-50/50">
+                <CardContent className="pt-4 pb-3">
+                  <div className="flex items-center gap-2 mb-1"><ArrowDownRight className="text-red-600" size={18} /><p className="text-xs text-red-700">Total Expenses</p></div>
+                  <p className="text-2xl font-bold font-outfit text-red-700" data-testid="range-total-expenses">{formatCurrency(rangeData.totals.expenses)}</p>
+                  <div className="flex gap-3 mt-1">
+                    <span className="text-[10px] text-red-600"><Banknote size={10} className="inline mr-0.5" />Cash: {formatCurrency(rangeData.totals.exp_cash)}</span>
+                    <span className="text-[10px] text-red-600"><CreditCard size={10} className="inline mr-0.5" />Bank: {formatCurrency(rangeData.totals.exp_bank)}</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{rangeData.totals.exp_count} entries</p>
+                </CardContent>
+              </Card>
+              <Card className="border-blue-200 bg-blue-50/50">
+                <CardContent className="pt-4 pb-3">
+                  <div className="flex items-center gap-2 mb-1"><Banknote className="text-blue-600" size={18} /><p className="text-xs text-blue-700">Supplier Payments</p></div>
+                  <p className="text-2xl font-bold font-outfit text-blue-700" data-testid="range-sp">{formatCurrency(rangeData.totals.supplier_payments)}</p>
+                  <div className="flex gap-3 mt-1">
+                    <span className="text-[10px] text-blue-600"><Banknote size={10} className="inline mr-0.5" />Cash: {formatCurrency(rangeData.totals.sp_cash)}</span>
+                    <span className="text-[10px] text-blue-600"><CreditCard size={10} className="inline mr-0.5" />Bank: {formatCurrency(rangeData.totals.sp_bank)}</span>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className={`${rangeData.totals.net_profit >= 0 ? 'border-emerald-200 bg-emerald-50/50' : 'border-red-200 bg-red-50/50'}`}>
+                <CardContent className="pt-4 pb-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <DollarSign className={rangeData.totals.net_profit >= 0 ? 'text-emerald-600' : 'text-red-600'} size={18} />
+                    <p className={`text-xs ${rangeData.totals.net_profit >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>Net Profit</p>
+                  </div>
+                  <p className={`text-2xl font-bold font-outfit ${rangeData.totals.net_profit >= 0 ? 'text-emerald-700' : 'text-red-700'}`} data-testid="range-net-profit">
+                    {formatCurrency(rangeData.totals.net_profit)}
+                  </p>
+                  <div className="flex gap-3 mt-1">
+                    <span className="text-[10px] text-emerald-600">Net Cash: {formatCurrency(rangeData.totals.net_cash)}</span>
+                    <span className="text-[10px] text-blue-600">Net Bank: {formatCurrency(rangeData.totals.net_bank)}</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{rangeData.days_count} days</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* View Toggle */}
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1 bg-stone-100 dark:bg-stone-800 p-0.5 rounded-lg">
+                <Button size="sm" variant={rangeView === 'summary' ? 'default' : 'ghost'} onClick={() => setRangeView('summary')}
+                  className={`h-7 text-xs ${rangeView === 'summary' ? 'bg-orange-500 hover:bg-orange-600 text-white' : ''}`} data-testid="view-summary">
+                  <BarChart3 size={12} className="mr-1" /> Summary
+                </Button>
+                <Button size="sm" variant={rangeView === 'daily' ? 'default' : 'ghost'} onClick={() => setRangeView('daily')}
+                  className={`h-7 text-xs ${rangeView === 'daily' ? 'bg-orange-500 hover:bg-orange-600 text-white' : ''}`} data-testid="view-daily">
+                  <Table size={12} className="mr-1" /> Day by Day
+                </Button>
+              </div>
+            </div>
+
+            {/* Summary View */}
+            {rangeView === 'summary' && (
+              <div className="grid md:grid-cols-2 gap-4">
+                {/* Expense by Category */}
+                <Card>
+                  <CardHeader className="py-3 border-b"><CardTitle className="text-sm font-outfit">Expenses by Category</CardTitle></CardHeader>
+                  <CardContent className="p-0">
+                    {Object.keys(rangeData.expense_by_category || {}).length > 0 ? (
+                      <div className="divide-y">
+                        {Object.entries(rangeData.expense_by_category).sort((a, b) => b[1] - a[1]).map(([cat, amount]) => (
+                          <div key={cat} className="flex justify-between items-center px-4 py-2.5">
+                            <p className="text-sm font-medium capitalize">{cat}</p>
+                            <p className="font-bold text-red-600">{formatCurrency(amount)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : <p className="text-center text-muted-foreground py-6">No expense data</p>}
+                  </CardContent>
+                </Card>
+
+                {/* Cash/Bank Summary */}
+                <Card>
+                  <CardHeader className="py-3 border-b"><CardTitle className="text-sm font-outfit">Cash & Bank Summary</CardTitle></CardHeader>
+                  <CardContent className="pt-4 space-y-3">
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div></div>
+                      <p className="text-[10px] font-semibold text-muted-foreground">CASH</p>
+                      <p className="text-[10px] font-semibold text-muted-foreground">BANK</p>
+                    </div>
+                    {[
+                      { label: 'Sales In', cash: rangeData.totals.sales_cash, bank: rangeData.totals.sales_bank, color: 'text-emerald-600' },
+                      { label: 'Expenses Out', cash: rangeData.totals.exp_cash, bank: rangeData.totals.exp_bank, color: 'text-red-600' },
+                      { label: 'Supplier Pay', cash: rangeData.totals.sp_cash, bank: rangeData.totals.sp_bank, color: 'text-blue-600' },
+                      { label: 'Net', cash: rangeData.totals.net_cash, bank: rangeData.totals.net_bank, color: 'font-bold' },
+                    ].map((row, i) => (
+                      <div key={i} className={`grid grid-cols-3 gap-2 text-center ${i === 3 ? 'border-t pt-2' : ''}`}>
+                        <p className="text-xs text-left font-medium">{row.label}</p>
+                        <p className={`text-xs font-semibold ${row.color}`}>{formatCurrency(row.cash)}</p>
+                        <p className={`text-xs font-semibold ${row.color}`}>{formatCurrency(row.bank)}</p>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Day by Day View */}
+            {rangeView === 'daily' && (
+              <Card>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs" data-testid="daily-breakdown-table">
+                      <thead className="bg-stone-50 dark:bg-stone-800 border-b sticky top-0">
+                        <tr>
+                          <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">Date</th>
+                          <th className="text-right px-3 py-2.5 font-semibold text-emerald-600">Sales</th>
+                          <th className="text-right px-3 py-2.5 font-semibold text-emerald-600">Cash</th>
+                          <th className="text-right px-3 py-2.5 font-semibold text-emerald-600">Bank</th>
+                          <th className="text-right px-3 py-2.5 font-semibold text-red-600">Expenses</th>
+                          <th className="text-right px-3 py-2.5 font-semibold text-red-600">Cash</th>
+                          <th className="text-right px-3 py-2.5 font-semibold text-red-600">Bank</th>
+                          <th className="text-right px-3 py-2.5 font-semibold text-blue-600">SP</th>
+                          <th className="text-right px-3 py-2.5 font-semibold">Net</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {rangeData.daily.map((day, i) => {
+                          const net = (day.sales || 0) - (day.expenses || 0);
+                          return (
+                            <tr key={i} className="hover:bg-stone-50 dark:hover:bg-stone-800/50" data-testid={`daily-row-${day.date}`}>
+                              <td className="px-3 py-2.5 font-medium whitespace-nowrap">{day.date}</td>
+                              <td className="px-3 py-2.5 text-right text-emerald-700 font-semibold">{formatCurrency(day.sales)}</td>
+                              <td className="px-3 py-2.5 text-right text-emerald-600">{formatCurrency(day.sales_cash)}</td>
+                              <td className="px-3 py-2.5 text-right text-emerald-600">{formatCurrency(day.sales_bank)}</td>
+                              <td className="px-3 py-2.5 text-right text-red-700 font-semibold">{formatCurrency(day.expenses)}</td>
+                              <td className="px-3 py-2.5 text-right text-red-600">{formatCurrency(day.exp_cash)}</td>
+                              <td className="px-3 py-2.5 text-right text-red-600">{formatCurrency(day.exp_bank)}</td>
+                              <td className="px-3 py-2.5 text-right text-blue-600">{formatCurrency(day.sp_total)}</td>
+                              <td className={`px-3 py-2.5 text-right font-bold ${net >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{formatCurrency(net)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot className="bg-stone-100 dark:bg-stone-800 border-t-2 font-bold">
+                        <tr>
+                          <td className="px-3 py-2.5">TOTAL</td>
+                          <td className="px-3 py-2.5 text-right text-emerald-700">{formatCurrency(rangeData.totals.sales)}</td>
+                          <td className="px-3 py-2.5 text-right text-emerald-600">{formatCurrency(rangeData.totals.sales_cash)}</td>
+                          <td className="px-3 py-2.5 text-right text-emerald-600">{formatCurrency(rangeData.totals.sales_bank)}</td>
+                          <td className="px-3 py-2.5 text-right text-red-700">{formatCurrency(rangeData.totals.expenses)}</td>
+                          <td className="px-3 py-2.5 text-right text-red-600">{formatCurrency(rangeData.totals.exp_cash)}</td>
+                          <td className="px-3 py-2.5 text-right text-red-600">{formatCurrency(rangeData.totals.exp_bank)}</td>
+                          <td className="px-3 py-2.5 text-right text-blue-600">{formatCurrency(rangeData.totals.supplier_payments)}</td>
+                          <td className={`px-3 py-2.5 text-right ${rangeData.totals.net_profit >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{formatCurrency(rangeData.totals.net_profit)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </>
         )}
       </div>
