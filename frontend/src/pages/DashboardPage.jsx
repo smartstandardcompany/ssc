@@ -133,6 +133,7 @@ export default function DashboardPage() {
   const [missingDataAlerts, setMissingDataAlerts] = useState([]);
   const [showDuesDetail, setShowDuesDetail] = useState(false);
   const [duesDetailData, setDuesDetailData] = useState([]);
+  const [bankAccountSummary, setBankAccountSummary] = useState(null);
   const t = THEMES[theme] || THEMES.default;
   const { t: tr, language } = useLanguage();
   const [showTour, setShowTour] = useState(false);
@@ -263,6 +264,8 @@ export default function DashboardPage() {
       } catch {}
       // Fetch missing data alerts
       try { const mdRes = await api.get('/dashboard/missing-data-alerts'); setMissingDataAlerts(mdRes.data?.alerts || []); } catch {}
+      // Fetch bank account summary
+      try { const baRes = await api.get('/bank-accounts/summary'); setBankAccountSummary(baRes.data); } catch {}
     } catch (error) {
       toast.error('Failed to fetch dashboard stats');
     } finally {
@@ -740,6 +743,64 @@ export default function DashboardPage() {
             </Card>
           )}
         </div>
+        )}
+
+        {/* Bank Account Summary */}
+        {bankAccountSummary && bankAccountSummary.accounts?.length > 0 && (
+          <Card className="border-blue-200 bg-gradient-to-br from-blue-50/50 to-white" data-testid="bank-account-summary">
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-center">
+                <CardTitle className="font-outfit text-base flex items-center gap-2">
+                  <Building2 size={18} className="text-blue-600" /> Bank Account Summary
+                </CardTitle>
+                <Button size="sm" variant="outline" className="rounded-xl text-xs" onClick={() => navigate('/bank-accounts')} data-testid="manage-bank-accounts-btn">
+                  Manage Accounts
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {bankAccountSummary.accounts.map(acc => (
+                  <div key={acc.id} className={`p-4 rounded-xl border transition-all ${acc.is_default ? 'bg-blue-50 border-blue-300' : 'bg-white border-stone-200'}`}
+                    data-testid={`bank-summary-${acc.id}`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                        <Building2 size={16} className="text-blue-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm truncate">{acc.name}</div>
+                        <div className="text-[10px] text-muted-foreground">{acc.assigned_branch} {acc.is_default ? '(Default)' : ''}</div>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-emerald-600">Received</span>
+                        <span className="font-bold text-emerald-700">SAR {acc.incoming.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-red-500">Paid Out</span>
+                        <span className="font-bold text-red-600">SAR {acc.outgoing.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                      </div>
+                      <div className="flex justify-between text-sm pt-1.5 border-t">
+                        <span className="font-medium">Net Balance</span>
+                        <span className={`font-bold ${acc.net >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>SAR {acc.net.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">{acc.sales_count} bank sales</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Grand Bank Total */}
+              <div className="mt-3 p-3 rounded-xl bg-blue-100/50 border border-blue-200 flex flex-wrap justify-between items-center gap-2">
+                <span className="text-sm font-semibold text-blue-800">All Banks Total</span>
+                <div className="flex gap-4 text-sm">
+                  <span className="text-emerald-700">In: <strong>SAR {bankAccountSummary.total_bank_incoming?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></span>
+                  <span className="text-red-600">Out: <strong>SAR {bankAccountSummary.total_bank_outgoing?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></span>
+                  <span className={bankAccountSummary.total_bank_net >= 0 ? 'text-emerald-700' : 'text-red-600'}>Net: <strong>SAR {bankAccountSummary.total_bank_net?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* VAT Section (toggleable) */}

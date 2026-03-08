@@ -153,3 +153,90 @@ async def get_branch_dues_detail(current_user: User = Depends(get_current_user))
     # Sort by date descending
     entries.sort(key=lambda x: x.get("date", ""), reverse=True)
     return {"entries": entries, "total": len(entries)}
+
+
+@router.get("/bank-accounts/summary")
+async def get_bank_account_summary(current_user: User = Depends(get_current_user)):
+    """Auto-calculate how much each bank account received based on branch assignment.
+    Logic: Each bank account is assigned to a branch. All bank-mode sales for that branch
+    go to its assigned bank account. Unassigned branches go to the default bank account."""
+
+    accounts = await db.bank_accounts.find({}, {"_id": 0}).to_list(50)
+    if not accounts:
+        return {"accounts": [], "total_bank": 0}
+
+    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+
+    # Build mapping: branch_id -> bank_account_id
+    branch_to_bank = {}
+    default_bank = None
+    for acc in accounts:
+        if acc.get("is_default"):
+            default_bank = acc["id"]
+        if acc.get("branch_id"):
+            branch_to_bank[acc["branch_id"]] = acc["id"]
+
+    # If no default, use first account
+    if not default_bank and accounts:
+        default_bank = accounts[0]["id"]
+
+    # Get all sales with bank payments
+    all_sales = await db.sales.find({}, {"_id": 0}).to_list(100000)
+
+    # Calculate totals per bank account
+    bank_totals = {acc["id"]: 0.0 for acc in accounts}
+    bank_sales_count = {acc["id"]: 0 for acc in accounts}
+
+    for sale in all_sales:
+        branch_id = sale.get("branch_id")
+        for pd in sale.get("payment_details", []):
+            if pd.get("mode") == "bank" and pd.get("amount", 0) > 0:
+                # Find which bank account this branch uses
+                target_bank = branch_to_bank.get(branch_id, default_bank)
+                if target_bank and target_bank in bank_totals:
+                    bank_totals[target_bank] += pd["amount"]
+                    bank_sales_count[target_bank] += 1
+
+    # Also add expenses paid by bank to each bank account (money going out)
+    all_expenses = await db.expenses.find({"payment_mode": "bank"}, {"_id": 0}).to_list(100000)
+    bank_expense_totals = {acc["id"]: 0.0 for acc in accounts}
+    for exp in all_expenses:
+        branch_id = exp.get("branch_id")
+        target_bank = branch_to_bank.get(branch_id, default_bank)
+        if target_bank and target_bank in bank_expense_totals:
+            bank_expense_totals[target_bank] += exp.get("amount", 0)
+
+    # Build response
+    result = []
+    total_bank_in = 0
+    total_bank_out = 0
+    for acc in accounts:
+        aid = acc["id"]
+        incoming = bank_totals.get(aid, 0)
+        outgoing = bank_expense_totals.get(aid, 0)
+        total_bank_in += incoming
+        total_bank_out += outgoing
+        assigned_branch = None
+        for b in branches:
+            if b["id"] == acc.get("branch_id"):
+                assigned_branch = b["name"]
+                break
+        result.append({
+            "id": aid,
+            "name": acc["name"],
+            "bank_name": acc["bank_name"],
+            "account_number": acc["account_number"],
+            "assigned_branch": assigned_branch or "All Branches",
+            "is_default": acc.get("is_default", False),
+            "incoming": round(incoming, 2),
+            "outgoing": round(outgoing, 2),
+            "net": round(incoming - outgoing, 2),
+            "sales_count": bank_sales_count.get(aid, 0),
+        })
+
+    return {
+        "accounts": result,
+        "total_bank_incoming": round(total_bank_in, 2),
+        "total_bank_outgoing": round(total_bank_out, 2),
+        "total_bank_net": round(total_bank_in - total_bank_out, 2),
+    }

@@ -43,7 +43,6 @@ export default function SalesPage() {
     customer_id: '',
     platform_id: '',
     payment_details: [{ mode: 'cash', amount: '' }],
-    bank_account_id: '',
     discount: '',
     date: new Date().toISOString().split('T')[0],
     notes: '',
@@ -227,7 +226,6 @@ export default function SalesPage() {
       customer_id: '',
       platform_id: '',
       payment_details: [{ mode: 'cash', amount: '' }],
-      bank_account_id: '',
       discount: '',
       date: new Date().toISOString().split('T')[0],
       notes: '',
@@ -545,32 +543,6 @@ export default function SalesPage() {
                                   No platforms configured. Go to Settings → Platforms to add.
                                 </p>
                               )}
-                            </div>
-                          )}
-                          
-                          {/* Bank Account Selector - show when bank payment selected */}
-                          {totals.bank > 0 && bankAccounts.length > 0 && (
-                            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
-                              <Label className="text-sm text-blue-700 dark:text-blue-300 mb-2 block">
-                                <Building2 size={14} className="inline mr-1" />
-                                Select Bank Account
-                              </Label>
-                              <Select
-                                value={formData.bank_account_id || "none"}
-                                onValueChange={(val) => setFormData({...formData, bank_account_id: val === "none" ? "" : val})}
-                              >
-                                <SelectTrigger className="bg-white dark:bg-stone-900" data-testid="sale-bank-account-select">
-                                  <SelectValue placeholder="Choose bank account..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="none">-- Not specified --</SelectItem>
-                                  {bankAccounts.map(acc => (
-                                    <SelectItem key={acc.id} value={acc.id}>
-                                      {acc.name} ({acc.account_number}) {acc.is_default ? '(Default)' : ''}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
                             </div>
                           )}
 
