@@ -67,6 +67,31 @@ async def create_expense(expense_data: ExpenseCreate, current_user: User = Depen
     await log_activity(current_user, "create", "expenses", expense.id, {"amount": expense_data.amount, "category": expense_data.category})
     return expense
 
+
+@router.get("/expenses/check-duplicate")
+async def check_duplicate_expense(
+    branch_id: str = "",
+    amount: float = 0,
+    date: str = "",
+    category: str = "",
+    current_user: User = Depends(get_current_user)
+):
+    """Check if an expense with same branch, amount, and category exists on the given date."""
+    from datetime import timedelta
+    d = datetime.strptime(date[:10], "%Y-%m-%d")
+    next_day = (d + timedelta(days=1)).strftime("%Y-%m-%d")
+    query = {"date": {"$gte": f"{date[:10]}T00:00:00", "$lt": f"{next_day}T00:00:00"}}
+    if branch_id:
+        query["branch_id"] = branch_id
+    existing = await db.expenses.find(query, {"_id": 0, "id": 1, "amount": 1, "category": 1}).to_list(200)
+    duplicates = [e for e in existing if abs(e.get("amount", 0) - amount) < 0.01]
+    if category:
+        exact = [e for e in duplicates if e.get("category", "").lower() == category.lower()]
+        if exact:
+            duplicates = exact
+    return {"has_duplicate": len(duplicates) > 0, "count": len(duplicates)}
+
+
 @router.delete("/expenses/{expense_id}")
 async def delete_expense(expense_id: str, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "expenses", "write")

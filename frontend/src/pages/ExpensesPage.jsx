@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, AlertTriangle, DollarSign, Settings2, MessageCircle, FileDown, RotateCcw, CalendarDays, ChevronDown, ChevronRight, HelpCircle } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle, DollarSign, Settings2, MessageCircle, FileDown, RotateCcw, CalendarDays, ChevronDown, ChevronRight, HelpCircle, Copy } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -40,6 +41,8 @@ export default function ExpensesPage() {
   const [totalRecords, setTotalRecords] = useState(0);
   const [expandedDates, setExpandedDates] = useState({});
   const [dateRange, setDateRange] = useState(null);
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
+  const [duplicateCount, setDuplicateCount] = useState(0);
 
   useEffect(() => {
     if (urlDateFilter) {
@@ -124,6 +127,24 @@ export default function ExpensesPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.category || !formData.amount) { toast.error('Select category and amount'); return; }
+
+    // Check for duplicates before saving
+    const amt = parseFloat(formData.amount);
+    if (formData.branch_id && amt > 0) {
+      try {
+        const checkRes = await api.get(`/expenses/check-duplicate?branch_id=${formData.branch_id}&amount=${amt}&date=${formData.date}&category=${encodeURIComponent(formData.sub_category || formData.category)}`);
+        if (checkRes.data?.has_duplicate) {
+          setDuplicateCount(checkRes.data.count);
+          setShowDuplicateWarning(true);
+          return;
+        }
+      } catch { /* proceed if check fails */ }
+    }
+
+    await submitExpense();
+  };
+
+  const submitExpense = async () => {
     try {
       await api.post('/expenses', {
         ...formData, category: formData.sub_category || formData.category,
@@ -461,6 +482,22 @@ export default function ExpensesPage() {
                     });
                     const dailyData = Object.values(grouped).sort((a, b) => new Date(b.date) - new Date(a.date));
 
+                    // Detect duplicate entries per day (same branch + same amount)
+                    dailyData.forEach(day => {
+                      const dupeKeys = {};
+                      day.items.forEach(exp => {
+                        const key = `${exp.branch_id || 'none'}_${(exp.amount || 0).toFixed(2)}`;
+                        if (!dupeKeys[key]) dupeKeys[key] = [];
+                        dupeKeys[key].push(exp.id);
+                      });
+                      const dupeIds = new Set();
+                      Object.values(dupeKeys).forEach(ids => {
+                        if (ids.length > 1) ids.forEach(id => dupeIds.add(id));
+                      });
+                      day.duplicateIds = dupeIds;
+                      day.hasDuplicates = dupeIds.size > 0;
+                    });
+
                     if (dailyData.length === 0) return <div className="text-center py-8 text-muted-foreground">{t('no_data')}</div>;
 
                     return (
@@ -486,14 +523,21 @@ export default function ExpensesPage() {
                               {/* Day Summary Row */}
                               <table className="w-full text-sm table-fixed">
                                 <tbody>
-                                  <tr className="border-b hover:bg-stone-50 cursor-pointer transition-colors"
+                                  <tr className={`border-b hover:bg-stone-50 cursor-pointer transition-colors ${day.hasDuplicates ? 'bg-orange-50/60' : ''}`}
                                     onClick={() => setExpandedDates(prev => ({ ...prev, [day.dateKey]: !prev[day.dateKey] }))}
                                     data-testid={`expense-day-row-${day.dateKey}`}>
                                     <td className="px-3 py-3 w-[4%]">
                                       {expandedDates[day.dateKey] ? <ChevronDown size={14} className="text-muted-foreground" /> : <ChevronRight size={14} className="text-muted-foreground" />}
                                     </td>
                                     <td className="px-3 py-3 w-[14%]">
-                                      <div className="font-semibold text-sm">{format(new Date(day.date), 'MMM dd, yyyy')}</div>
+                                      <div className="font-semibold text-sm flex items-center gap-1.5">
+                                        {format(new Date(day.date), 'MMM dd, yyyy')}
+                                        {day.hasDuplicates && (
+                                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 text-[10px] font-bold border border-orange-300" data-testid={`exp-duplicate-warning-${day.dateKey}`}>
+                                            <AlertTriangle size={10} /> Duplicate
+                                          </span>
+                                        )}
+                                      </div>
                                       <div className="text-[10px] text-muted-foreground">{day.count} entries</div>
                                     </td>
                                     <td className="px-3 py-3 text-right w-[12%]"><span className="text-sm font-bold text-red-600">SAR {day.total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></td>
@@ -517,10 +561,17 @@ export default function ExpensesPage() {
                                   <table className="w-full text-sm">
                                     <tbody>
                                       {day.items.map(exp => (
-                                        <tr key={exp.id} className="border-b border-stone-100 hover:bg-white/50" data-testid={`expense-detail-${exp.id}`}>
+                                        <tr key={exp.id} className={`border-b border-stone-100 hover:bg-white/50 ${day.duplicateIds.has(exp.id) ? 'bg-orange-50/80 border-l-4 border-l-orange-400' : ''}`} data-testid={`expense-detail-${exp.id}`}>
                                           <td className="px-3 py-2 pl-10 w-[18%]">
-                                            <Badge variant="secondary" className="capitalize text-[10px]">{exp.category?.replace('_',' ')}</Badge>
-                                            {exp.sub_category && <Badge variant="outline" className="ml-1 text-[10px] capitalize">{exp.sub_category}</Badge>}
+                                            <div className="flex items-center gap-1 flex-wrap">
+                                              <Badge variant="secondary" className="capitalize text-[10px]">{exp.category?.replace('_',' ')}</Badge>
+                                              {exp.sub_category && <Badge variant="outline" className="text-[10px] capitalize">{exp.sub_category}</Badge>}
+                                              {day.duplicateIds.has(exp.id) && (
+                                                <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded bg-orange-100 text-orange-700 text-[9px] font-bold border border-orange-300" data-testid={`exp-duplicate-badge-${exp.id}`}>
+                                                  <Copy size={8} /> Possible duplicate
+                                                </span>
+                                              )}
+                                            </div>
                                           </td>
                                           <td className="px-3 py-2 text-sm truncate w-[22%]">{exp.description || '-'}</td>
                                           <td className="px-3 py-2 text-sm w-[12%]">{branches.find(b => b.id === exp.branch_id)?.name || '-'}</td>
@@ -711,6 +762,30 @@ export default function ExpensesPage() {
         </Dialog>
 
         <WhatsAppSendDialog open={showWhatsApp} onClose={() => setShowWhatsApp(false)} defaultType="expense_summary" branches={branches} />
+
+        {/* Duplicate Warning Dialog */}
+        <AlertDialog open={showDuplicateWarning} onOpenChange={setShowDuplicateWarning}>
+          <AlertDialogContent data-testid="expense-duplicate-warning-dialog">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-orange-600">
+                <AlertTriangle size={20} /> Possible Duplicate Expense
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-sm">
+                <span className="font-bold text-orange-700">{duplicateCount}</span> expense(s) with the same branch and amount
+                (<span className="font-bold">SAR {parseFloat(formData.amount || 0).toFixed(2)}</span>) already exist on{' '}
+                <span className="font-bold">{formData.date}</span>.
+                <br /><br />
+                Are you sure this is <span className="font-bold">not a duplicate</span> entry?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel data-testid="cancel-exp-duplicate-btn">Cancel & Review</AlertDialogCancel>
+              <AlertDialogAction onClick={() => { setShowDuplicateWarning(false); submitExpense(); }} className="bg-orange-600 hover:bg-orange-700" data-testid="confirm-exp-duplicate-btn">
+                Yes, Save Anyway
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );

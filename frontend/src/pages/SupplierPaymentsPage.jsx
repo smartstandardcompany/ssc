@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Trash2, Receipt, DollarSign, Banknote, CreditCard, FileText, Building2, RotateCcw, Upload, Image as ImageIcon, Eye } from 'lucide-react';
+import { Plus, Trash2, Receipt, DollarSign, Banknote, CreditCard, FileText, Building2, RotateCcw, Upload, Image as ImageIcon, Eye, AlertTriangle, Copy } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import api from '@/lib/api';
 import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
@@ -50,6 +51,9 @@ export default function SupplierPaymentsPage() {
   });
   const [uploading, setUploading] = useState(false);
   const [billUploading, setBillUploading] = useState(false);
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
+  const [duplicateCount, setDuplicateCount] = useState(0);
+  const [pendingSubmitType, setPendingSubmitType] = useState(null);
   const billFileRef = useRef(null);
   const returnBillRef = useRef(null);
 
@@ -77,6 +81,25 @@ export default function SupplierPaymentsPage() {
   const handlePaymentSubmit = async (e) => {
     e.preventDefault();
     if (!formData.supplier_id) { toast.error('Please select a supplier'); return; }
+
+    // Check for duplicates before saving
+    const amt = parseFloat(formData.amount);
+    if (formData.supplier_id && amt > 0) {
+      try {
+        const checkRes = await api.get(`/supplier-payments/check-duplicate?supplier_id=${formData.supplier_id}&amount=${amt}&date=${formData.date}`);
+        if (checkRes.data?.has_duplicate) {
+          setDuplicateCount(checkRes.data.count);
+          setPendingSubmitType('payment');
+          setShowDuplicateWarning(true);
+          return;
+        }
+      } catch { /* proceed if check fails */ }
+    }
+
+    await submitPayment();
+  };
+
+  const submitPayment = async () => {
     try {
       const payload = {
         supplier_id: formData.supplier_id,
@@ -111,6 +134,25 @@ export default function SupplierPaymentsPage() {
   const handleBillSubmit = async (e) => {
     e.preventDefault();
     if (!formData.supplier_id) { toast.error('Please select a supplier'); return; }
+
+    // Check for duplicates
+    const amt = parseFloat(formData.amount);
+    if (formData.supplier_id && amt > 0) {
+      try {
+        const checkRes = await api.get(`/supplier-payments/check-duplicate?supplier_id=${formData.supplier_id}&amount=${amt}&date=${formData.date}`);
+        if (checkRes.data?.has_duplicate) {
+          setDuplicateCount(checkRes.data.count);
+          setPendingSubmitType('bill');
+          setShowDuplicateWarning(true);
+          return;
+        }
+      } catch { /* proceed if check fails */ }
+    }
+
+    await submitBill();
+  };
+
+  const submitBill = async () => {
     try {
       const supplierName = suppliers.find(s => s.id === formData.supplier_id)?.name || 'supplier';
       await api.post('/expenses', {
@@ -212,6 +254,21 @@ export default function SupplierPaymentsPage() {
     }
     return true;
   });
+
+  // Detect duplicates: same supplier + same amount on same day
+  const spDuplicateIds = new Set();
+  (() => {
+    const dupeKeys = {};
+    filteredPayments.forEach(p => {
+      const dateKey = p.date ? p.date.substring(0, 10) : 'unknown';
+      const key = `${dateKey}_${p.supplier_id || 'none'}_${(p.amount || 0).toFixed(2)}`;
+      if (!dupeKeys[key]) dupeKeys[key] = [];
+      dupeKeys[key].push(p.id);
+    });
+    Object.values(dupeKeys).forEach(ids => {
+      if (ids.length > 1) ids.forEach(id => spDuplicateIds.add(id));
+    });
+  })();
 
   if (loading) {
     return (<DashboardLayout><div className="flex items-center justify-center h-64">Loading...</div></DashboardLayout>);
@@ -578,8 +635,17 @@ export default function SupplierPaymentsPage() {
                     const branchName = branches.find(b => b.id === payment.branch_id)?.name || '-';
                     const expForName = payment.expense_for_branch_id ? branches.find(b => b.id === payment.expense_for_branch_id)?.name : null;
                     return (
-                      <tr key={payment.id} className="border-b border-border hover:bg-secondary/50" data-testid="payment-row">
-                        <td className="p-3 text-sm">{format(new Date(payment.date), 'MMM dd, yyyy')}</td>
+                      <tr key={payment.id} className={`border-b border-border hover:bg-secondary/50 ${spDuplicateIds.has(payment.id) ? 'bg-orange-50/80 border-l-4 border-l-orange-400' : ''}`} data-testid="payment-row">
+                        <td className="p-3 text-sm">
+                          <div className="flex items-center gap-1">
+                            {format(new Date(payment.date), 'MMM dd, yyyy')}
+                            {spDuplicateIds.has(payment.id) && (
+                              <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded bg-orange-100 text-orange-700 text-[9px] font-bold border border-orange-300" data-testid={`sp-duplicate-badge-${payment.id}`}>
+                                <Copy size={8} /> Duplicate
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="p-3 text-sm font-medium">{payment.supplier_name}</td>
                         <td className="p-3 text-sm text-muted-foreground hidden md:table-cell">{branchName}</td>
                         <td className="p-3 text-sm hidden md:table-cell">{expForName ? <Badge variant="outline" className="bg-amber-50 border-amber-300 text-amber-700 text-[10px]">{expForName}</Badge> : <span className="text-muted-foreground">-</span>}</td>
@@ -639,6 +705,30 @@ export default function SupplierPaymentsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Duplicate Warning Dialog */}
+      <AlertDialog open={showDuplicateWarning} onOpenChange={setShowDuplicateWarning}>
+        <AlertDialogContent data-testid="sp-duplicate-warning-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-orange-600">
+              <AlertTriangle size={20} /> Possible Duplicate Entry
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
+              <span className="font-bold text-orange-700">{duplicateCount}</span> payment(s) with the same supplier and amount
+              (<span className="font-bold">SAR {parseFloat(formData.amount || 0).toFixed(2)}</span>) already exist on{' '}
+              <span className="font-bold">{formData.date}</span>.
+              <br /><br />
+              Are you sure this is <span className="font-bold">not a duplicate</span> entry?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="cancel-sp-duplicate-btn">Cancel & Review</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setShowDuplicateWarning(false); pendingSubmitType === 'bill' ? submitBill() : submitPayment(); }} className="bg-orange-600 hover:bg-orange-700" data-testid="confirm-sp-duplicate-btn">
+              Yes, Save Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }

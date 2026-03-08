@@ -167,6 +167,26 @@ async def get_supplier_payments(
         if isinstance(payment.get('created_at'), str): payment['created_at'] = datetime.fromisoformat(payment['created_at'])
     return {"data": payments, "total": total, "page": page, "limit": limit, "pages": (total + limit - 1) // limit}
 
+
+@router.get("/supplier-payments/check-duplicate")
+async def check_duplicate_supplier_payment(
+    supplier_id: str = "",
+    amount: float = 0,
+    date: str = "",
+    current_user: User = Depends(get_current_user)
+):
+    """Check if a supplier payment with same supplier and amount exists on the given date."""
+    from datetime import timedelta
+    d = datetime.strptime(date[:10], "%Y-%m-%d")
+    next_day = (d + timedelta(days=1)).strftime("%Y-%m-%d")
+    query = {"date": {"$gte": f"{date[:10]}T00:00:00", "$lt": f"{next_day}T00:00:00"}}
+    if supplier_id:
+        query["supplier_id"] = supplier_id
+    existing = await db.supplier_payments.find(query, {"_id": 0, "id": 1, "amount": 1}).to_list(200)
+    duplicates = [e for e in existing if abs(e.get("amount", 0) - amount) < 0.01]
+    return {"has_duplicate": len(duplicates) > 0, "count": len(duplicates)}
+
+
 @router.post("/supplier-payments", response_model=SupplierPayment)
 async def create_supplier_payment(payment_data: SupplierPaymentCreate, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "supplier_payments", "write")
