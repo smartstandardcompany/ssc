@@ -586,12 +586,16 @@ export default function DailySummaryPage() {
                           <th className="text-right px-3 py-2.5 font-semibold text-red-600">Cash</th>
                           <th className="text-right px-3 py-2.5 font-semibold text-red-600">Bank</th>
                           <th className="text-right px-3 py-2.5 font-semibold text-blue-600">SP</th>
+                          <th className="text-right px-3 py-2.5 font-semibold text-teal-600 bg-teal-50/50">Net Cash</th>
+                          <th className="text-right px-3 py-2.5 font-semibold text-indigo-600 bg-indigo-50/50">Net Bank</th>
                           <th className="text-right px-3 py-2.5 font-semibold">Net</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
                         {rangeData.daily.map((day, i) => {
                           const net = (day.sales || 0) - (day.expenses || 0);
+                          const netCash = day.net_cash != null ? day.net_cash : ((day.sales_cash || 0) - (day.exp_cash || 0));
+                          const netBank = day.net_bank != null ? day.net_bank : ((day.sales_bank || 0) - (day.exp_bank || 0));
                           return (
                             <tr key={i} className="hover:bg-stone-50 dark:hover:bg-stone-800/50" data-testid={`daily-row-${day.date}`}>
                               <td className="px-3 py-2.5 font-medium whitespace-nowrap">
@@ -628,6 +632,12 @@ export default function DailySummaryPage() {
                                   </button>
                                 ) : <span className="text-stone-400">{formatCurrency(0)}</span>}
                               </td>
+                              <td className={`px-3 py-2.5 text-right font-bold bg-teal-50/30 ${netCash >= 0 ? 'text-teal-700' : 'text-red-600'}`} data-testid={`net-cash-${day.date}`}>
+                                {formatCurrency(netCash)}
+                              </td>
+                              <td className={`px-3 py-2.5 text-right font-bold bg-indigo-50/30 ${netBank >= 0 ? 'text-indigo-700' : 'text-red-600'}`} data-testid={`net-bank-${day.date}`}>
+                                {formatCurrency(netBank)}
+                              </td>
                               <td className={`px-3 py-2.5 text-right font-bold ${net >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{formatCurrency(net)}</td>
                             </tr>
                           );
@@ -643,6 +653,8 @@ export default function DailySummaryPage() {
                           <td className="px-3 py-2.5 text-right text-red-600">{formatCurrency(rangeData.totals.exp_cash)}</td>
                           <td className="px-3 py-2.5 text-right text-red-600">{formatCurrency(rangeData.totals.exp_bank)}</td>
                           <td className="px-3 py-2.5 text-right text-blue-600">{formatCurrency(rangeData.totals.supplier_payments)}</td>
+                          <td className={`px-3 py-2.5 text-right bg-teal-50/30 ${rangeData.totals.net_cash >= 0 ? 'text-teal-700' : 'text-red-700'}`}>{formatCurrency(rangeData.totals.net_cash)}</td>
+                          <td className={`px-3 py-2.5 text-right bg-indigo-50/30 ${rangeData.totals.net_bank >= 0 ? 'text-indigo-700' : 'text-red-700'}`}>{formatCurrency(rangeData.totals.net_bank)}</td>
                           <td className={`px-3 py-2.5 text-right ${rangeData.totals.net_profit >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{formatCurrency(rangeData.totals.net_profit)}</td>
                         </tr>
                       </tfoot>

@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Plus, Trash2, DollarSign, X, Truck, Store, TrendingUp, FileDown, CalendarDays, Building2, AlertTriangle, Copy } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -55,6 +56,8 @@ export default function SalesPage() {
   const [searchFilters, setSearchFilters] = useState({});
   const [searchParams] = useSearchParams();
   const urlDateFilter = searchParams.get('date');
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
+  const [duplicateCount, setDuplicateCount] = useState(0);
 
   // When URL date param changes, auto-set the search filter 
   useEffect(() => {
@@ -194,6 +197,25 @@ export default function SalesPage() {
       toast.error('Please select a delivery platform for online sales');
       return;
     }
+
+    // Check for duplicates before saving
+    if (formData.branch_id && totals.total > 0) {
+      try {
+        const checkRes = await api.get(`/sales/check-duplicate?branch_id=${formData.branch_id}&amount=${totals.total}&date=${formData.date}`);
+        if (checkRes.data?.has_duplicate) {
+          setDuplicateCount(checkRes.data.count);
+          setShowDuplicateWarning(true);
+          return;
+        }
+      } catch { /* proceed if check fails */ }
+    }
+
+    await submitSale();
+  };
+
+  const submitSale = async () => {
+    const totals = calculateTotals();
+    const hasOnlinePayment = formData.payment_details.some(p => p.mode === 'online_platform' && parseFloat(p.amount) > 0);
 
     try {
       const payload = {
@@ -927,6 +949,30 @@ export default function SalesPage() {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Duplicate Warning Dialog */}
+        <AlertDialog open={showDuplicateWarning} onOpenChange={setShowDuplicateWarning}>
+          <AlertDialogContent data-testid="duplicate-warning-dialog">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-orange-600">
+                <AlertTriangle size={20} /> Possible Duplicate Entry
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-sm">
+                <span className="font-bold text-orange-700">{duplicateCount}</span> sale(s) with the same branch and amount
+                (<span className="font-bold">SAR {calculateTotals().total.toFixed(2)}</span>) already exist on{' '}
+                <span className="font-bold">{formData.date}</span>.
+                <br /><br />
+                Are you sure this is <span className="font-bold">not a duplicate</span> entry?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel data-testid="cancel-duplicate-btn">Cancel & Review</AlertDialogCancel>
+              <AlertDialogAction onClick={() => { setShowDuplicateWarning(false); submitSale(); }} className="bg-orange-600 hover:bg-orange-700" data-testid="confirm-duplicate-btn">
+                Yes, Save Anyway
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );

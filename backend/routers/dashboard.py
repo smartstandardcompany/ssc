@@ -712,8 +712,10 @@ async def get_daily_summary_range(
         elif mode == "bank": daily[d]["sp_bank"] += p["amount"]
 
     daily_list = sorted(daily.values(), key=lambda x: x["date"], reverse=True)
-    # Round values
+    # Round values and add net cash/bank per day
     for row in daily_list:
+        row["net_cash"] = round((row.get("sales_cash", 0) or 0) - (row.get("exp_cash", 0) or 0), 2)
+        row["net_bank"] = round((row.get("sales_bank", 0) or 0) - (row.get("exp_bank", 0) or 0), 2)
         for k, v in row.items():
             if isinstance(v, float):
                 row[k] = round(v, 2)

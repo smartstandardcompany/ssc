@@ -70,6 +70,26 @@ async def create_sale(sale_data: SaleCreate, current_user: User = Depends(get_cu
     await log_activity(current_user, "create", "sales", sale.id, {"amount": final_amount})
     return sale
 
+
+@router.get("/sales/check-duplicate")
+async def check_duplicate_sale(
+    branch_id: str,
+    amount: float,
+    date: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Check if a sale with the same branch and amount exists on the given date."""
+    date_start = date[:10] + "T00:00:00"
+    date_end = date[:10] + "T23:59:59"
+    query = {
+        "branch_id": branch_id,
+        "date": {"$gte": date_start, "$lte": date_end},
+    }
+    existing = await db.sales.find(query, {"_id": 0, "id": 1, "amount": 1, "final_amount": 1}).to_list(100)
+    duplicates = [s for s in existing if abs((s.get("final_amount") or s.get("amount", 0)) - amount) < 0.01]
+    return {"has_duplicate": len(duplicates) > 0, "count": len(duplicates)}
+
+
 @router.post("/sales/{sale_id}/receive-credit")
 async def receive_credit_payment(sale_id: str, payment: SalePayment, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "sales", "write")

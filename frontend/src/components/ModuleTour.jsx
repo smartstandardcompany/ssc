@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { X, ChevronRight, ChevronLeft, ShoppingCart, Package, Users, BarChart3, Receipt, DollarSign, TrendingUp, Truck, FileText, Settings, CheckCircle, HelpCircle, ChefHat, UtensilsCrossed, Monitor, Gift, User, Shield, CalendarDays, CreditCard, FileBarChart } from 'lucide-react';
+import { X, ChevronRight, ChevronLeft, ShoppingCart, Package, Users, BarChart3, Receipt, DollarSign, TrendingUp, Truck, FileText, Settings, CheckCircle, HelpCircle, ChefHat, UtensilsCrossed, Monitor, Gift, User, Shield, CalendarDays, CreditCard, FileBarChart, ArrowDownUp, Building2, Camera, Banknote, Briefcase, HandCoins, CalendarClock, ArrowLeftRight, FileSpreadsheet, PieChart } from 'lucide-react';
 
 const MODULE_TOURS = {
   '/sales': {
@@ -10,6 +10,7 @@ const MODULE_TOURS = {
     steps: [
       { title: 'Sales Management', description: 'Record all your business transactions here. Filter by date, branch, and payment mode to find specific sales.', icon: ShoppingCart, target: null },
       { title: 'Add New Sale', description: 'Click this button to record a new sale. You can add multiple payment methods (split payment) for a single transaction.', icon: DollarSign, target: '[data-testid="add-sale-btn"], [data-testid="new-sale-btn"], button:has-text("Add Sale"), button:has-text("New Sale")' },
+      { title: 'Duplicate Detection', description: 'Days with possible duplicate entries (same branch + same amount) are flagged with an orange "Duplicate" badge. The system also warns you before saving duplicates.', icon: Shield, target: null },
       { title: 'Filter & Search', description: 'Use the date filter and branch selector to narrow down your sales records. You can also search by customer name.', icon: FileText, target: '[data-testid="date-filter"]' },
       { title: 'Export Data', description: 'Export your sales data as CSV or PDF for reporting and accounting purposes.', icon: Receipt, target: '[data-testid="export-btn"]' },
     ]
@@ -29,6 +30,7 @@ const MODULE_TOURS = {
       { title: 'Employee Management', description: 'Manage your team\'s information, salary payments, leaves, and offboarding process from this page.', icon: Users, target: null },
       { title: 'Add Employee', description: 'Add new team members with their salary, department, and contact details. You can also link them to user accounts for portal access.', icon: Users, target: '[data-testid="add-employee-btn"], button:has-text("Add Employee")' },
       { title: 'Salary Payments', description: 'Record individual or bulk salary payments. Track payment history and generate payslips.', icon: DollarSign, target: '[data-testid="pay-salary-btn"]' },
+      { title: 'PIN Management', description: 'Generate or regenerate cashier PINs for employees. Use the refresh icon to reset a PIN, or trash icon to revoke access.', icon: Shield, target: null },
       { title: 'Offboarding', description: 'For departing employees, use the Exit/Terminate buttons to initiate the offboarding process with clearance checklists and settlement calculations.', icon: FileText, target: null },
     ]
   },
@@ -108,7 +110,7 @@ const MODULE_TOURS = {
     steps: [
       { title: 'Daily & Range Summary', description: 'Get a quick overview of your business activity for any day or date range. View sales, expenses, and supplier payments with cash/bank breakdowns.', icon: CalendarDays, target: null },
       { title: 'Single Day / Date Range', description: 'Toggle between Single Day and Date Range modes. In Date Range mode, pick start and end dates or use quick presets (7d, 30d, 90d).', icon: CalendarDays, target: '[data-testid="mode-range"]' },
-      { title: 'Summary vs Day by Day', description: 'In Date Range mode, switch between Summary (totals + cash/bank breakdown) and Day by Day (table with each date listed).', icon: BarChart3, target: '[data-testid="view-daily"]' },
+      { title: 'Net Cash & Net Bank', description: 'In the Day by Day view, the Net Cash and Net Bank columns show your remaining cash and bank balance after expenses for each day.', icon: Banknote, target: '[data-testid="view-daily"]' },
       { title: 'Branch Filter', description: 'Filter the summary by a specific branch to see that branch\'s performance in isolation.', icon: Package, target: '[data-testid="branch-select"]' },
     ]
   },
@@ -155,6 +157,136 @@ const MODULE_TOURS = {
       { title: 'Filter & Search', description: 'Filter audit logs by module (Sales, Expenses, etc.) and status (Allowed/Denied). Use the search bar for quick lookups.', icon: FileText, target: '[data-testid="audit-search"]' },
       { title: 'Status Tracking', description: 'Each entry shows whether the deletion was Allowed or Denied based on your Access Control policies.', icon: Shield, target: null },
       { title: 'Configure Policies', description: 'To change who can delete records and time limits, go to Settings > Access Control tab.', icon: Settings, target: null },
+    ]
+  },
+  '/platform-reconciliation': {
+    key: 'platform_recon_tour',
+    steps: [
+      { title: 'Platform Reconciliation', description: 'Track payments from delivery platforms (HungerStation, Keeta, etc.) vs your actual online sales. Spot overcharges and missing payments.', icon: ArrowDownUp, target: null },
+      { title: 'Auto Fee Calculator', description: 'When recording a received payment, the system auto-calculates the expected amount based on the platform\'s commission rate and shows you exactly what you should receive.', icon: DollarSign, target: null },
+      { title: 'Fee Settings', description: 'Click the gear icon on any platform card to set its commission rate and processing fee. These rates are used to calculate expected fees automatically.', icon: Settings, target: null },
+      { title: 'Monthly Report', description: 'Click "Monthly Report" to see a month-by-month breakdown of platform fees, variances, and identify platforms that may be overcharging you.', icon: FileBarChart, target: '[data-testid="monthly-report-btn"]' },
+    ]
+  },
+  '/monthly-recon-report': {
+    key: 'monthly_recon_report_tour',
+    steps: [
+      { title: 'Monthly Platform Report', description: 'Analyze platform fees month by month. Compare expected fees (based on commission rates) vs actual platform cuts to spot overcharges.', icon: FileBarChart, target: null },
+      { title: 'Grand Totals', description: 'The top cards show your total sales, received amounts, expected fees, actual cuts, and overall variance across all months.', icon: TrendingUp, target: null },
+      { title: 'Monthly Cards', description: 'Click on any month to expand and see per-platform details: commission rate, order count, sales, expected fees, and variance.', icon: CalendarDays, target: null },
+      { title: 'Overpaying Alert', description: 'Months where the actual cut exceeds the expected fee are flagged with an "Overpaying" badge so you can investigate.', icon: Shield, target: null },
+    ]
+  },
+  '/bank-accounts': {
+    key: 'bank_accounts_tour',
+    steps: [
+      { title: 'Bank Account Management', description: 'Manage your company bank accounts. Each account can be linked to specific branches and set as default for automatic assignment.', icon: Banknote, target: null },
+      { title: 'Add Bank Account', description: 'Register your bank accounts with account number, bank name, and assign branches. Bank sales are automatically linked to the branch\'s default account.', icon: DollarSign, target: null },
+      { title: 'Default Account', description: 'Mark one account as default. When recording bank sales, the system auto-assigns the payment to the branch\'s default bank account.', icon: CheckCircle, target: null },
+    ]
+  },
+  '/branches': {
+    key: 'branches_tour',
+    steps: [
+      { title: 'Branch Management', description: 'Create and manage your business branches/locations. Each branch has its own sales, expenses, stock, and employee tracking.', icon: Building2, target: null },
+      { title: 'Add Branch', description: 'Set up new branches with name, address, and contact information. Branches are used throughout the system for data segregation.', icon: Building2, target: null },
+      { title: 'Branch Performance', description: 'Each branch card shows key metrics. Click to drill down into branch-specific sales and expense data on the dashboard.', icon: TrendingUp, target: null },
+    ]
+  },
+  '/cctv': {
+    key: 'cctv_tour',
+    steps: [
+      { title: 'CCTV Monitoring', description: 'Monitor live CCTV feeds from your branches. Configure camera streams using RTSP URLs for real-time surveillance.', icon: Camera, target: null },
+      { title: 'Add Camera', description: 'Set up cameras by providing the stream URL, branch, and location name. Supports RTSP and HTTP streams.', icon: Camera, target: null },
+      { title: 'Live View', description: 'View live feeds from all configured cameras. Toggle between grid and single-camera views.', icon: Monitor, target: null },
+    ]
+  },
+  '/documents': {
+    key: 'documents_tour',
+    steps: [
+      { title: 'Document Manager', description: 'Upload and organize important business documents like contracts, licenses, and compliance certificates.', icon: FileText, target: null },
+      { title: 'Upload Documents', description: 'Upload files with categories and expiry dates. Get notified before documents expire so you can renew them on time.', icon: FileText, target: null },
+      { title: 'Expiry Alerts', description: 'Documents nearing expiration are flagged automatically. Never miss a license renewal or contract deadline.', icon: Shield, target: null },
+    ]
+  },
+  '/fines': {
+    key: 'fines_tour',
+    steps: [
+      { title: 'Fines & Penalties', description: 'Track employee fines and penalties. Maintain a transparent record for payroll deductions.', icon: Receipt, target: null },
+      { title: 'Record Fine', description: 'Add fines with amount, reason, and the employee. Fines can be deducted from salary automatically.', icon: DollarSign, target: null },
+      { title: 'Fine History', description: 'View complete fine history per employee. Track patterns and use data for performance reviews.', icon: FileText, target: null },
+    ]
+  },
+  '/partners': {
+    key: 'partners_tour',
+    steps: [
+      { title: 'Partner Management', description: 'Manage business partners and their profit-sharing arrangements. Track partner investments, withdrawals, and profit distribution.', icon: Briefcase, target: null },
+      { title: 'Add Partner', description: 'Register partners with their ownership percentage and investment details. The system calculates profit shares automatically.', icon: Users, target: null },
+      { title: 'Profit Distribution', description: 'View each partner\'s share of profits based on their ownership percentage. Generate partner P&L statements.', icon: TrendingUp, target: null },
+    ]
+  },
+  '/company-loans': {
+    key: 'company_loans_tour',
+    steps: [
+      { title: 'Company Loans', description: 'Track loans taken by or given to the company. Monitor repayment schedules and outstanding balances.', icon: HandCoins, target: null },
+      { title: 'Record Loan', description: 'Add loan details including amount, interest rate, lender/borrower, and repayment terms.', icon: DollarSign, target: null },
+      { title: 'Repayment Tracking', description: 'Record loan repayments as they happen. View outstanding balance and payment history.', icon: FileText, target: null },
+    ]
+  },
+  '/schedule': {
+    key: 'schedule_tour',
+    steps: [
+      { title: 'Staff Scheduling', description: 'Create and manage employee work schedules across branches. Assign shifts and track attendance.', icon: CalendarClock, target: null },
+      { title: 'Create Schedule', description: 'Set up weekly or monthly schedules. Assign employees to shifts and branches with drag-and-drop ease.', icon: CalendarDays, target: null },
+      { title: 'Shift Management', description: 'Define shift templates (Morning, Evening, Night) and assign them to employees. Track actual hours vs scheduled.', icon: CalendarClock, target: null },
+    ]
+  },
+  '/transfers': {
+    key: 'transfers_tour',
+    steps: [
+      { title: 'Stock Transfers', description: 'Transfer inventory between branches. Create transfer requests with approval workflows for secure stock movement.', icon: ArrowLeftRight, target: null },
+      { title: 'Create Transfer', description: 'Select source and destination branches, pick items and quantities. The receiving branch must approve the transfer.', icon: Package, target: null },
+      { title: 'Track Status', description: 'Monitor transfers through their lifecycle: Requested, Approved, In Transit, Received. Both branches see the same status.', icon: TrendingUp, target: null },
+    ]
+  },
+  '/bank-statements': {
+    key: 'bank_statements_tour',
+    steps: [
+      { title: 'Bank Statements', description: 'Upload bank statements and reconcile them against your recorded transactions. Spot discrepancies quickly.', icon: FileSpreadsheet, target: null },
+      { title: 'Upload Statement', description: 'Import bank statements in CSV or Excel format. The system parses transactions and matches them with your records.', icon: FileText, target: null },
+      { title: 'Reconciliation', description: 'Compare bank transactions with your sales and expense records. Unmatched items are flagged for review.', icon: ArrowDownUp, target: null },
+    ]
+  },
+  '/credit-report': {
+    key: 'credit_report_tour',
+    steps: [
+      { title: 'Credit Report', description: 'View all outstanding customer credits. Track aging, overdue amounts, and generate collection reports.', icon: CreditCard, target: null },
+      { title: 'Customer Balances', description: 'See each customer\'s total credit balance, recent payments, and overdue aging breakdown.', icon: DollarSign, target: null },
+      { title: 'Collection Priorities', description: 'Customers are sorted by outstanding amount. Focus collection efforts on the highest balances first.', icon: TrendingUp, target: null },
+    ]
+  },
+  '/supplier-report': {
+    key: 'supplier_report_tour',
+    steps: [
+      { title: 'Supplier Report', description: 'Comprehensive view of all supplier transactions, balances, and payment history across branches.', icon: Truck, target: null },
+      { title: 'Supplier Balances', description: 'See each supplier\'s outstanding balance, total purchases, and payment summary by branch.', icon: DollarSign, target: null },
+      { title: 'Payment Trends', description: 'Analyze payment patterns and supplier credit utilization over time.', icon: TrendingUp, target: null },
+    ]
+  },
+  '/category-report': {
+    key: 'category_report_tour',
+    steps: [
+      { title: 'Category Report', description: 'Analyze expenses by category to understand where your money goes. Compare spending across branches and time periods.', icon: PieChart, target: null },
+      { title: 'Category Breakdown', description: 'Each expense category shows total spend, percentage of total, and trend compared to previous periods.', icon: BarChart3, target: null },
+      { title: 'Branch Comparison', description: 'Compare category spending across branches to identify operational differences and optimization opportunities.', icon: Building2, target: null },
+    ]
+  },
+  '/reconciliation': {
+    key: 'reconciliation_tour',
+    steps: [
+      { title: 'Bank Reconciliation', description: 'Match your recorded transactions with bank records. Identify discrepancies and ensure your books are accurate.', icon: ArrowDownUp, target: null },
+      { title: 'Match Transactions', description: 'System auto-matches transactions by amount and date. Manually match remaining items by clicking on them.', icon: CheckCircle, target: null },
+      { title: 'Discrepancy Report', description: 'View unmatched bank entries and system entries. Investigate and resolve differences to keep books clean.', icon: Shield, target: null },
     ]
   },
 };
