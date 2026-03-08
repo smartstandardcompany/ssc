@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,6 +37,7 @@ export default function SalesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [dateRange, setDateRange] = useState(null);
+  const [expandedSalesDates, setExpandedSalesDates] = useState({});
 
   const [formData, setFormData] = useState({
     sale_type: 'branch',
@@ -695,83 +697,141 @@ export default function SalesPage() {
                 </div>
               );
             })()}
-            <VirtualizedTable
-              data={(() => {
-                const filteredSales = applySearchFilters(sales.map(s => ({
-                  ...s,
-                  payment_mode: s.payment_details?.[0]?.mode || 'cash'
-                })), searchFilters);
-                // Group sales by date
-                const grouped = {};
-                filteredSales.forEach(sale => {
-                  const dateKey = sale.date ? format(new Date(sale.date), 'yyyy-MM-dd') : 'unknown';
-                  if (!grouped[dateKey]) {
-                    grouped[dateKey] = { date: sale.date, dateKey, cash: 0, bank: 0, credit: 0, online: 0, total: 0, discount: 0, final: 0, creditRemaining: 0, branches: {}, count: 0 };
-                  }
-                  const g = grouped[dateKey];
-                  g.count++;
-                  (sale.payment_details || []).forEach(p => {
-                    const amt = p.amount || 0;
-                    if (p.mode === 'cash') g.cash += amt;
-                    else if (p.mode === 'bank') g.bank += amt;
-                    else if (p.mode === 'credit') g.credit += amt;
-                    else if (p.mode === 'online_platform' || p.mode === 'online') g.online += amt;
-                  });
-                  g.total += sale.amount || 0;
-                  g.discount += sale.discount || 0;
-                  g.final += sale.final_amount || (sale.amount - (sale.discount || 0));
-                  g.creditRemaining += Math.max(0, (sale.credit_amount || 0) - (sale.credit_received || 0));
-                  const bName = branches.find(b => b.id === sale.branch_id)?.name || 'Other';
-                  g.branches[bName] = (g.branches[bName] || 0) + (sale.final_amount || sale.amount || 0);
+            {/* Sales Daily Grouped Table with Expandable Rows */}
+            {(() => {
+              const filteredSales = applySearchFilters(sales.map(s => ({
+                ...s,
+                payment_mode: s.payment_details?.[0]?.mode || 'cash'
+              })), searchFilters);
+              const grouped = {};
+              filteredSales.forEach(sale => {
+                const dateKey = sale.date ? format(new Date(sale.date), 'yyyy-MM-dd') : 'unknown';
+                if (!grouped[dateKey]) {
+                  grouped[dateKey] = { date: sale.date, dateKey, cash: 0, bank: 0, credit: 0, online: 0, total: 0, final: 0, branches: {}, count: 0, items: [] };
+                }
+                const g = grouped[dateKey];
+                g.count++;
+                g.items.push(sale);
+                (sale.payment_details || []).forEach(p => {
+                  const amt = p.amount || 0;
+                  if (p.mode === 'cash') g.cash += amt;
+                  else if (p.mode === 'bank') g.bank += amt;
+                  else if (p.mode === 'credit') g.credit += amt;
+                  else g.online += amt;
                 });
-                return Object.values(grouped).sort((a, b) => new Date(b.date) - new Date(a.date));
-              })()}
-              maxHeight={600}
-              rowHeight={72}
-              emptyMessage="No sales recorded yet. Add your first sale above!"
-              columns={[
-                { 
-                  key: 'date', header: 'Date', width: '14%',
-                  render: (val, row) => (
-                    <div>
-                      <div className="font-semibold text-sm">{val ? format(new Date(val), 'MMM dd, yyyy') : '-'}</div>
-                      <div className="text-[10px] text-muted-foreground">{row.count} entries</div>
-                    </div>
-                  )
-                },
-                { 
-                  key: 'final', header: 'Total', width: '12%', align: 'right',
-                  render: (val) => <span className="text-sm font-bold text-primary">SAR {(val || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                },
-                { 
-                  key: 'cash', header: 'Cash', width: '12%', align: 'right',
-                  render: (val) => val > 0 ? <span className="inline-block px-2 py-1 rounded bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200">SAR {val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span> : <span className="text-xs text-muted-foreground">-</span>
-                },
-                { 
-                  key: 'bank', header: 'Bank', width: '12%', align: 'right',
-                  render: (val) => val > 0 ? <span className="inline-block px-2 py-1 rounded bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-200">SAR {val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span> : <span className="text-xs text-muted-foreground">-</span>
-                },
-                { 
-                  key: 'online', header: 'Online', width: '12%', align: 'right',
-                  render: (val) => val > 0 ? <span className="inline-block px-2 py-1 rounded bg-purple-50 text-purple-700 text-xs font-semibold border border-purple-200">SAR {val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span> : <span className="text-xs text-muted-foreground">-</span>
-                },
-                { 
-                  key: 'credit', header: 'Credit', width: '12%', align: 'right',
-                  render: (val) => val > 0 ? <span className="inline-block px-2 py-1 rounded bg-amber-50 text-amber-700 text-xs font-semibold border border-amber-200">SAR {val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span> : <span className="text-xs text-muted-foreground">-</span>
-                },
-                {
-                  key: 'branches', header: 'Branches', width: '26%',
-                  render: (val) => (
-                    <div className="flex gap-1 flex-wrap">
-                      {Object.entries(val || {}).map(([name, amt]) => (
-                        <span key={name} className="text-[10px] px-1.5 py-0.5 bg-stone-100 text-stone-700 rounded border border-stone-200">{name}: {amt.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
-                      ))}
-                    </div>
-                  )
-                },
-              ]}
-              data-testid="sales-daily-table"
-            />
+                g.total += sale.amount || 0;
+                g.final += sale.final_amount || (sale.amount - (sale.discount || 0));
+                const bName = branches.find(b => b.id === sale.branch_id)?.name || 'Other';
+                g.branches[bName] = (g.branches[bName] || 0) + (sale.final_amount || sale.amount || 0);
+              });
+              const dailyData = Object.values(grouped).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+              if (dailyData.length === 0) return <div className="text-center py-8 text-muted-foreground">No sales recorded yet. Add your first sale above!</div>;
+
+              return (
+                <div className="border rounded-lg overflow-hidden" data-testid="sales-daily-table">
+                  <div className="bg-stone-50 dark:bg-stone-800">
+                    <table className="w-full text-sm table-fixed">
+                      <thead><tr>
+                        <th className="px-3 py-3 text-left font-medium text-stone-600 w-[4%]"></th>
+                        <th className="px-3 py-3 text-left font-medium text-stone-600 w-[14%]">Date</th>
+                        <th className="px-3 py-3 text-right font-medium text-stone-600 w-[12%]">Total</th>
+                        <th className="px-3 py-3 text-right font-medium text-stone-600 w-[12%]">Cash</th>
+                        <th className="px-3 py-3 text-right font-medium text-stone-600 w-[12%]">Bank</th>
+                        <th className="px-3 py-3 text-right font-medium text-stone-600 w-[12%]">Online</th>
+                        <th className="px-3 py-3 text-right font-medium text-stone-600 w-[12%]">Credit</th>
+                        <th className="px-3 py-3 text-left font-medium text-stone-600 w-[22%]">Branches</th>
+                      </tr></thead>
+                    </table>
+                  </div>
+                  <div className="max-h-[600px] overflow-y-auto">
+                    {dailyData.map(day => (
+                      <div key={day.dateKey}>
+                        <table className="w-full text-sm table-fixed">
+                          <tbody>
+                            <tr className="border-b hover:bg-stone-50 cursor-pointer transition-colors"
+                              onClick={() => setExpandedSalesDates(prev => ({ ...prev, [day.dateKey]: !prev[day.dateKey] }))}
+                              data-testid={`sales-day-row-${day.dateKey}`}>
+                              <td className="px-3 py-3 w-[4%]">
+                                {expandedSalesDates[day.dateKey]
+                                  ? <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted-foreground"><polyline points="6 9 12 15 18 9"/></svg>
+                                  : <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted-foreground"><polyline points="9 18 15 12 9 6"/></svg>
+                                }
+                              </td>
+                              <td className="px-3 py-3 w-[14%]">
+                                <div className="font-semibold text-sm">{day.date ? format(new Date(day.date), 'MMM dd, yyyy') : '-'}</div>
+                                <div className="text-[10px] text-muted-foreground">{day.count} entries</div>
+                              </td>
+                              <td className="px-3 py-3 text-right w-[12%]"><span className="text-sm font-bold text-primary">SAR {day.final.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></td>
+                              <td className="px-3 py-3 text-right w-[12%]">{day.cash > 0 ? <span className="inline-block px-2 py-1 rounded bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200">SAR {day.cash.toLocaleString(undefined, {minimumFractionDigits: 2})}</span> : <span className="text-xs text-muted-foreground">-</span>}</td>
+                              <td className="px-3 py-3 text-right w-[12%]">{day.bank > 0 ? <span className="inline-block px-2 py-1 rounded bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-200">SAR {day.bank.toLocaleString(undefined, {minimumFractionDigits: 2})}</span> : <span className="text-xs text-muted-foreground">-</span>}</td>
+                              <td className="px-3 py-3 text-right w-[12%]">{day.online > 0 ? <span className="inline-block px-2 py-1 rounded bg-purple-50 text-purple-700 text-xs font-semibold border border-purple-200">SAR {day.online.toLocaleString(undefined, {minimumFractionDigits: 2})}</span> : <span className="text-xs text-muted-foreground">-</span>}</td>
+                              <td className="px-3 py-3 text-right w-[12%]">{day.credit > 0 ? <span className="inline-block px-2 py-1 rounded bg-amber-50 text-amber-700 text-xs font-semibold border border-amber-200">SAR {day.credit.toLocaleString(undefined, {minimumFractionDigits: 2})}</span> : <span className="text-xs text-muted-foreground">-</span>}</td>
+                              <td className="px-3 py-3 w-[22%]">
+                                <div className="flex gap-1 flex-wrap">
+                                  {Object.entries(day.branches || {}).map(([name, amt]) => (
+                                    <span key={name} className="text-[10px] px-1.5 py-0.5 bg-stone-100 text-stone-700 rounded border border-stone-200">{name}: {amt.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+                                  ))}
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                        {/* Expanded Individual Entries */}
+                        {expandedSalesDates[day.dateKey] && (
+                          <div className="bg-stone-50/50 border-b">
+                            <table className="w-full text-sm">
+                              <tbody>
+                                {day.items.map(sale => {
+                                  const remaining = (sale.credit_amount || 0) - (sale.credit_received || 0);
+                                  return (
+                                    <tr key={sale.id} className="border-b border-stone-100 hover:bg-white/50" data-testid={`sale-detail-${sale.id}`}>
+                                      <td className="px-3 py-2 pl-10 w-[14%]">
+                                        <Badge variant="secondary" className="capitalize text-[10px]">{sale.sale_type}</Badge>
+                                      </td>
+                                      <td className="px-3 py-2 text-sm w-[14%]">{branches.find(b => b.id === sale.branch_id)?.name || '-'}</td>
+                                      <td className="px-3 py-2 text-right font-bold text-sm w-[12%]">SAR {(sale.final_amount || sale.amount || 0).toFixed(2)}</td>
+                                      <td className="px-3 py-2 w-[22%]">
+                                        <div className="flex gap-1 flex-wrap">
+                                          {(sale.payment_details || []).map((p, i) => (
+                                            <span key={i} className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium border ${
+                                              p.mode === 'cash' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                              p.mode === 'bank' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                              p.mode === 'online_platform' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                                              'bg-amber-50 text-amber-700 border-amber-200'
+                                            }`}>{p.mode}: {p.amount?.toFixed(0)}</span>
+                                          ))}
+                                        </div>
+                                      </td>
+                                      <td className="px-3 py-2 text-sm text-muted-foreground truncate w-[14%]">{sale.notes || '-'}</td>
+                                      <td className="px-3 py-2 text-right w-[12%]">
+                                        <div className="flex gap-1 justify-end">
+                                          {remaining > 0 && (
+                                            <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setReceivingSale(sale); setShowReceiveDialog(true); }} className="h-7 px-2 text-xs" data-testid="receive-credit-button">
+                                              <DollarSign size={12} className="mr-0.5" />Receive
+                                            </Button>
+                                          )}
+                                          <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleDelete(sale.id); }} className="h-7 px-2 text-error hover:text-error" data-testid="delete-sale-button">
+                                            <Trash2 size={12} />
+                                          </Button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="px-3 py-2 text-xs text-muted-foreground bg-stone-50 border-t">
+                    Showing {filteredSales.length.toLocaleString()} sales across {dailyData.length} days — click a day to expand & manage entries
+                  </div>
+                </div>
+              );
+            })()}
             {/* Pagination Controls */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between mt-4 px-2">

@@ -87,6 +87,7 @@ const NAV_GROUPS = [
       { path: '/category-report', icon: Tags, label: 'Category Report', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/bank-statements', icon: FileText, label: 'Bank Statements', perm: 'reports', roles: ['admin'] },
       { path: '/bank-accounts', icon: Building2, label: 'Bank Accounts', perm: 'settings', roles: ['admin'] },
+      { path: '/platform-reconciliation', icon: ArrowDownUp, label: 'Platform Reconciliation', perm: 'sales', roles: ['admin'] },
       { path: '/reconciliation', icon: ArrowDownUp, label: 'Reconciliation', perm: 'reports', roles: ['admin'] },
       { path: '/performance-report', icon: Activity, label: 'Performance Report', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/anomaly-detection', icon: AlertTriangle, label: 'Anomaly Detection', perm: 'reports', roles: ['admin', 'manager'] },
