@@ -6,46 +6,42 @@ A comprehensive business management ERP system for tracking sales, expenses, sup
 ## Core Modules
 Financial Management | HR Management | Stock Management | Restaurant Operations | CCTV Security | Administration
 
-## Session 15 (Mar 8, 2026) - PIN Fix, Platform Fee Calculator
+## Session 16 (Mar 8, 2026) - Duplicate Detection, Monthly Reconciliation Report, Fee Calculator
 
-### PIN Regeneration Fix (DONE)
-- Verified PIN regeneration works from the employee list (refresh icon next to PIN badge)
-- Backend POST /cashier/generate-pin/{id} generates new PIN even if one exists
-- Both desktop table and summary dialog have regenerate/revoke buttons
+### Duplicate Sale Entry Detection (DONE)
+- Sales page now detects entries with same branch + same amount on the same day
+- Day rows with duplicates get orange background + "Duplicate" warning badge
+- Expanded duplicate entries get orange left border + "Possible duplicate" badge
+- Tested against real data: correctly flagged duplicates on 6 different dates
+
+### Monthly Reconciliation Summary Report (DONE)
+- New page at /monthly-recon-report
+- Backend endpoint: GET /api/platform-reconciliation/monthly-report?months=N
+- Grand totals: Total Sales, Total Received, Expected Fees, Actual Cut, Variance
+- Monthly expandable cards with per-platform breakdown (rate, orders, sales, fees, variance)
+- "Overpaying" badge on months where actual cut exceeds expected
+- Accessible from Reports hub (new card) and Platform Reconciliation page (button)
+
+### PIN Regeneration Fix (DONE - verified)
+- PIN regeneration works from the employee list view
 
 ### Automatic Platform Fee Calculator (DONE)
-- Backend: Fixed reconciliation endpoint to use `db.delivery_platforms` (was `db.platforms` - empty)
-- Backend: Fixed sale filter to match actual types (`online`, `online_platform`) not just `online_delivery`
-- Backend: Added `processing_fee` field to platform CRUD
-- Backend: Reconciliation summary now returns `expected_fee`, `expected_received`, `commission_rate`, `processing_fee` per platform + `total_expected_fee`
-- Frontend: 4 summary cards (Total Online Sales, Total Received, Expected Fees, Actual Platform Cut with variance)
-- Frontend: Commission rate badges on platform cards
-- Frontend: Expected Fee and Variance columns
-- Frontend: Auto Fee Calculator in Record Payment dialog (auto-fill remaining amount)
-- Frontend: Fee Settings dialog (gear icon) to edit commission_rate and processing_fee per platform
-
-## Session 14 (Mar 8, 2026) - Sales Delete Fix, Bank Accounts, Platform Reconciliation
-
-### Sales Delete Button Fix (DONE)
-- Sales date rows are now expandable (click to see individual entries)
-- Each entry has DELETE (red trash) and RECEIVE (for credit sales) buttons
-
-### Sample Bank Accounts Added (DONE)
-- Alinma Bank - Branch A, Bank Al Bilad - Branch B, Al Rajhi - Main (default)
-
-### Platform Reconciliation (DONE)
-- New page: /platform-reconciliation
-- Tracks HungerStation, Keeta, and other online platform sales vs received payments
-- Auto-calculates platform commission/cuts
-- Payment History tab with delete capability
+- Fixed reconciliation endpoint to use correct DB collection (delivery_platforms)
+- Fixed sale type filter to match actual types (online, online_platform)
+- Added processing_fee to platform CRUD
+- Auto Fee Calculator in Record Payment dialog
+- Fee Settings dialog per platform
+- Expected fee vs actual cut variance indicators
 
 ## Previous Sessions Summary
+- Session 15: PIN Fix, Platform Fee Calculator
+- Session 14: Sales Delete Fix, Bank Accounts, Platform Reconciliation
 - Session 13: Auto Bank Account Tracking
-- Session 12: Bank Account Management (CRUD), Dashboard Dues Drill-Down
+- Session 12: Bank Account Management, Dashboard Dues Drill-Down
 - Session 11: Date Quick Filter, Summary Bars, UI Polish, Tours
 - Session 10: Sales & Expenses Daily Grouping, Pagination Fix
-- Session 9: Cross-Branch Payments, Reports Hub, Data Alerts, Invoice Upload
-- Sessions 1-8: Core ERP, POS, Kitchen, Dashboard, Reports, Access Control (ALL DONE)
+- Session 9: Cross-Branch Payments, Reports Hub, Data Alerts
+- Sessions 1-8: Core ERP, POS, Kitchen, Dashboard, Reports, Access Control
 
 ## Pending Issues
 - SMTP Email: Blocked on user's Microsoft 365 Security Defaults
