@@ -78,6 +78,7 @@ import ScheduledReportsPage from "./pages/ScheduledReportsPage";
 import DataManagementPage from "./pages/DataManagementPage";
 import AuditTrailPage from "./pages/AuditTrailPage";
 import ReportBuilderPage from "./pages/ReportBuilderPage";
+import BankAccountsPage from "./pages/finance/BankAccountsPage";
 import CustomerPortalLogin from "./pages/customer-portal/CustomerPortalLogin";
 import { 
   CustomerPortalDashboard, 
@@ -265,6 +266,7 @@ function App() {
           <Route path="/supplier-report" element={<AuthRoute><ProtectedRoute perm="supplier_report" roles={['admin', 'manager']}><SupplierReportPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/category-report" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><CategoryReportPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/bank-statements" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin']}><BankStatementsPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/bank-accounts" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><BankAccountsPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/reconciliation" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin']}><ReconciliationPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/sales-forecast" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><SalesForecastPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/sales-alerts" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><SalesAlertsPage /></ProtectedRoute></AuthRoute>} />

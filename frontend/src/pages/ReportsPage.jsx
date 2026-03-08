@@ -18,6 +18,7 @@ const reportSections = [
       { path: '/credit-report', icon: CreditCard, label: 'Credit Report', desc: 'Customer credit balances & aging' },
       { path: '/supplier-report', icon: FileText, label: 'Supplier Report', desc: 'Supplier transactions & balances' },
       { path: '/bank-statements', icon: FileSpreadsheet, label: 'Bank Statements', desc: 'Upload & reconcile bank statements' },
+      { path: '/bank-accounts', icon: FileSpreadsheet, label: 'Bank Accounts', desc: 'Manage company bank accounts' },
       { path: '/reconciliation', icon: ArrowDownUp, label: 'Reconciliation', desc: 'Match transactions with bank records' },
     ]
   },

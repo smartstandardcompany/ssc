@@ -131,12 +131,22 @@ export default function DashboardPage() {
     profitTrend: { summary: {}, daily_breakdown: [] }
   });
   const [missingDataAlerts, setMissingDataAlerts] = useState([]);
+  const [showDuesDetail, setShowDuesDetail] = useState(false);
+  const [duesDetailData, setDuesDetailData] = useState([]);
   const t = THEMES[theme] || THEMES.default;
   const { t: tr, language } = useLanguage();
   const [showTour, setShowTour] = useState(false);
 
   // User permissions from Zustand
   const userPermissions = user?.permissions || {};
+
+  const handleViewDuesDetail = async () => {
+    try {
+      const res = await api.get('/reports/branch-dues-detail');
+      setDuesDetailData(res.data?.entries || []);
+      setShowDuesDetail(true);
+    } catch { toast.error('Failed to load dues detail'); }
+  };
 
   // Check if should show tour on mount - only show if explicitly enabled
   useEffect(() => {
@@ -699,19 +709,24 @@ export default function DashboardPage() {
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-center">
                   <CardTitle className="font-outfit text-base">Branch-to-Branch Dues</CardTitle>
-                  <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowPaybackDialog(true)}><ArrowLeftRight size={14} className="mr-1" />Record Payback</Button>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="rounded-xl" onClick={handleViewDuesDetail} data-testid="view-dues-detail-btn">View Details</Button>
+                    <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowPaybackDialog(true)}><ArrowLeftRight size={14} className="mr-1" />Record Payback</Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   {Object.entries(branchDues.dues || {}).map(([key, amt]) => (
-                    <div key={key} className="flex justify-between items-center p-3 bg-error/5 rounded-lg border border-error/20" data-testid="branch-due-item">
+                    <div key={key} className="flex justify-between items-center p-3 bg-error/5 rounded-lg border border-error/20 cursor-pointer hover:bg-error/10 transition-colors"
+                      onClick={handleViewDuesDetail} data-testid="branch-due-item">
                       <span className="text-sm font-medium">{key}</span>
                       <span className="font-bold text-error"> SAR {amt.toFixed(2)}</span>
                     </div>
                   ))}
                   {Object.entries(branchDues.paybacks || {}).map(([key, amt]) => (
-                    <div key={key} className="flex justify-between items-center p-3 bg-success/5 rounded-lg border border-success/20">
+                    <div key={key} className="flex justify-between items-center p-3 bg-success/5 rounded-lg border border-success/20 cursor-pointer hover:bg-success/10 transition-colors"
+                      onClick={handleViewDuesDetail}>
                       <span className="text-sm font-medium">{key}</span>
                       <span className="font-bold text-success"> SAR {amt.toFixed(2)}</span>
                     </div>
@@ -1084,6 +1099,55 @@ export default function DashboardPage() {
             language={language}
           />
         )}
+
+        {/* Branch Dues Detail Dialog */}
+        <Dialog open={showDuesDetail} onOpenChange={setShowDuesDetail}>
+          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto" data-testid="dues-detail-dialog">
+            <DialogHeader>
+              <DialogTitle className="font-outfit">Branch Dues - Transaction Details</DialogTitle>
+            </DialogHeader>
+            {duesDetailData.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">No cross-branch transactions found</p>
+            ) : (
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-stone-50">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-medium">Date</th>
+                      <th className="text-left px-3 py-2 font-medium">Type</th>
+                      <th className="text-left px-3 py-2 font-medium">From Branch</th>
+                      <th className="text-left px-3 py-2 font-medium">To Branch</th>
+                      <th className="text-right px-3 py-2 font-medium">Amount</th>
+                      <th className="text-left px-3 py-2 font-medium">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {duesDetailData.map((entry, i) => (
+                      <tr key={i} className="border-t hover:bg-stone-50/50" data-testid={`dues-entry-${i}`}>
+                        <td className="px-3 py-2 text-xs">{entry.date ? new Date(entry.date).toLocaleDateString() : '-'}</td>
+                        <td className="px-3 py-2">
+                          <Badge variant="outline" className={`text-[10px] capitalize ${
+                            entry.type === 'transfer' ? 'bg-blue-50 border-blue-200 text-blue-700' :
+                            entry.type === 'expense' ? 'bg-red-50 border-red-200 text-red-700' :
+                            entry.type === 'salary' ? 'bg-purple-50 border-purple-200 text-purple-700' :
+                            'bg-amber-50 border-amber-200 text-amber-700'
+                          }`}>{entry.type.replace('_', ' ')}</Badge>
+                        </td>
+                        <td className="px-3 py-2 text-sm font-medium">{entry.from_branch}</td>
+                        <td className="px-3 py-2 text-sm">{entry.to_branch}</td>
+                        <td className="px-3 py-2 text-right font-bold text-sm">SAR {entry.amount?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground truncate max-w-[200px]">{entry.description}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="px-3 py-2 bg-stone-50 text-xs text-muted-foreground border-t">
+                  {duesDetailData.length} cross-branch transactions
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

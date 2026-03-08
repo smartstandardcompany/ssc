@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Trash2, DollarSign, X, Truck, Store, TrendingUp, FileDown, CalendarDays } from 'lucide-react';
+import { Plus, Trash2, DollarSign, X, Truck, Store, TrendingUp, FileDown, CalendarDays, Building2 } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -43,10 +43,12 @@ export default function SalesPage() {
     customer_id: '',
     platform_id: '',
     payment_details: [{ mode: 'cash', amount: '' }],
+    bank_account_id: '',
     discount: '',
     date: new Date().toISOString().split('T')[0],
     notes: '',
   });
+  const [bankAccounts, setBankAccounts] = useState([]);
 
   const [receivePayment, setReceivePayment] = useState({ payment_mode: 'cash', amount: '' });
   const [searchFilters, setSearchFilters] = useState({});
@@ -118,10 +120,11 @@ export default function SalesPage() {
       if (dateRange) {
         salesUrl += `&start_date=${dateRange.start}&end_date=${dateRange.end}`;
       }
-      const [salesRes, customersRes, platformsRes] = await Promise.all([
+      const [salesRes, customersRes, platformsRes, bankAccRes] = await Promise.all([
         api.get(salesUrl),
         api.get('/customers'),
         api.get('/platforms').catch(() => ({ data: [] })),
+        api.get('/bank-accounts').catch(() => ({ data: [] })),
       ]);
       const salesData = salesRes.data;
       setSales(salesData.data || salesData || []);
@@ -130,6 +133,7 @@ export default function SalesPage() {
       setTotalRecords(salesData.total || 0);
       setCustomers(customersRes.data?.data || customersRes.data || []);
       setPlatforms(platformsRes.data || []);
+      setBankAccounts(bankAccRes.data || []);
     } catch (error) {
       toast.error('Failed to fetch data');
     } finally {
@@ -223,6 +227,7 @@ export default function SalesPage() {
       customer_id: '',
       platform_id: '',
       payment_details: [{ mode: 'cash', amount: '' }],
+      bank_account_id: '',
       discount: '',
       date: new Date().toISOString().split('T')[0],
       notes: '',
@@ -543,6 +548,32 @@ export default function SalesPage() {
                             </div>
                           )}
                           
+                          {/* Bank Account Selector - show when bank payment selected */}
+                          {totals.bank > 0 && bankAccounts.length > 0 && (
+                            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                              <Label className="text-sm text-blue-700 dark:text-blue-300 mb-2 block">
+                                <Building2 size={14} className="inline mr-1" />
+                                Select Bank Account
+                              </Label>
+                              <Select
+                                value={formData.bank_account_id || "none"}
+                                onValueChange={(val) => setFormData({...formData, bank_account_id: val === "none" ? "" : val})}
+                              >
+                                <SelectTrigger className="bg-white dark:bg-stone-900" data-testid="sale-bank-account-select">
+                                  <SelectValue placeholder="Choose bank account..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">-- Not specified --</SelectItem>
+                                  {bankAccounts.map(acc => (
+                                    <SelectItem key={acc.id} value={acc.id}>
+                                      {acc.name} ({acc.account_number}) {acc.is_default ? '(Default)' : ''}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+
                           <div className="space-y-2 pt-2 border-t">
                             <div className="flex justify-between text-sm">
                               <span>Subtotal:</span>

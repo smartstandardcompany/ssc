@@ -97,14 +97,36 @@ class CustomerCreate(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
 
+class BankAccount(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str  # Display name e.g. "Al Rajhi - Main"
+    bank_name: str  # e.g. "Al Rajhi Bank"
+    account_number: str
+    iban: Optional[str] = None
+    branch_id: Optional[str] = None  # Assigned branch (optional)
+    is_default: bool = False
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class BankAccountCreate(BaseModel):
+    name: str
+    bank_name: str
+    account_number: str
+    iban: Optional[str] = None
+    branch_id: Optional[str] = None
+    is_default: bool = False
+    notes: Optional[str] = None
+
 class Sale(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     sale_type: str
     branch_id: Optional[str] = None
     customer_id: Optional[str] = None
-    platform_id: Optional[str] = None  # For online delivery platform sales
-    payment_mode: Optional[str] = None  # cash, card, online_platform, etc.
+    platform_id: Optional[str] = None
+    payment_mode: Optional[str] = None
+    bank_account_id: Optional[str] = None
     amount: float
     discount: float = 0
     final_amount: float = 0
@@ -115,7 +137,7 @@ class Sale(BaseModel):
     notes: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     created_by: str
-    platform_status: Optional[str] = None  # pending/settled - for tracking platform payment status
+    platform_status: Optional[str] = None
     payment_status: Optional[str] = None
     received_mode: Optional[str] = None
     updated_at: Optional[str] = None
@@ -124,14 +146,15 @@ class SaleCreate(BaseModel):
     sale_type: str
     branch_id: Optional[str] = None
     customer_id: Optional[str] = None
-    platform_id: Optional[str] = None  # For online delivery platform sales
-    payment_mode: Optional[str] = None  # cash, card, online_platform, etc.
+    platform_id: Optional[str] = None
+    payment_mode: Optional[str] = None
+    bank_account_id: Optional[str] = None
     amount: float
     discount: Optional[float] = 0
     payment_details: List[dict]
     date: datetime
     notes: Optional[str] = None
-    platform_status: Optional[str] = None  # pending/settled
+    platform_status: Optional[str] = None
 
 class SalePayment(BaseModel):
     payment_mode: str
