@@ -476,6 +476,11 @@ export default function EmployeesPage() {
                                 onClick={() => copyPin(emp.cashier_pin)} title="Click to copy PIN" data-testid={`pin-badge-${emp.id}`}>
                                 <KeyRound size={10} className="mr-0.5" /> {emp.cashier_pin}
                               </Badge>
+                              <Button size="sm" variant="ghost" className="h-5 w-5 p-0 text-violet-400 hover:text-violet-600" 
+                                onClick={() => handleGeneratePin(emp.id, emp.name)} title="Regenerate PIN" data-testid={`regenerate-pin-${emp.id}`}
+                                disabled={pinLoading === emp.id}>
+                                <RefreshCw size={10} />
+                              </Button>
                               <Button size="sm" variant="ghost" className="h-5 w-5 p-0 text-red-400 hover:text-red-600" 
                                 onClick={() => handleRevokePin(emp.id, emp.name)} title="Revoke PIN" data-testid={`revoke-pin-${emp.id}`}>
                                 <Trash2 size={10} />
