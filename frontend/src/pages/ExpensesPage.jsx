@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, AlertTriangle, DollarSign, Settings2, MessageCircle, FileDown, RotateCcw, CalendarDays } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle, DollarSign, Settings2, MessageCircle, FileDown, RotateCcw, CalendarDays, ChevronDown, ChevronRight } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -34,6 +34,10 @@ export default function ExpensesPage() {
   const [searchFilters, setSearchFilters] = useState({});
   const [searchParams] = useSearchParams();
   const urlDateFilter = searchParams.get('date');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [expandedDates, setExpandedDates] = useState({});
 
   useEffect(() => {
     if (urlDateFilter) {
@@ -86,12 +90,17 @@ export default function ExpensesPage() {
 
   useEffect(() => { fetchData(); }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (page = 1) => {
     try {
       // Use Zustand for branches
       fetchBranches();
-      const [eR, sR, cR, rR] = await Promise.all([api.get('/expenses'), api.get('/suppliers'), api.get('/categories?category_type=expense'), api.get('/recurring-expenses')]);
-      setExpenses(eR.data?.data || eR.data || []); setSuppliers(sR.data); setCategories(cR.data); setRecurringExpenses(rR.data);
+      const [eR, sR, cR, rR] = await Promise.all([api.get(`/expenses?page=${page}&limit=200`), api.get('/suppliers'), api.get('/categories?category_type=expense'), api.get('/recurring-expenses')]);
+      const expData = eR.data;
+      setExpenses(expData.data || expData || []);
+      setCurrentPage(expData.page || 1);
+      setTotalPages(expData.pages || 1);
+      setTotalRecords(expData.total || 0);
+      setSuppliers(sR.data); setCategories(cR.data); setRecurringExpenses(rR.data);
     } catch { toast.error('Failed'); } finally { setLoading(false); }
   };
 
@@ -392,53 +401,129 @@ export default function ExpensesPage() {
                   ))}
                   {filtered.length === 0 && <p className="text-center text-muted-foreground py-8">{t('no_data')}</p>}
                 </div>
-                {/* Desktop table - VirtualizedTable */}
+                {/* Desktop: Daily Grouped View */}
                 <div className="hidden sm:block">
-                <VirtualizedTable
-                  data={filtered}
-                  maxHeight={600}
-                  rowHeight={52}
-                  emptyMessage="No expenses"
-                  columns={[
-                    {
-                      key: 'date', header: t('date'), width: '12%',
-                      render: (val) => <span className="text-sm">{val ? format(new Date(val), 'MMM dd, yyyy') : '-'}</span>
-                    },
-                    {
-                      key: 'category', header: t('category'), width: '16%',
-                      render: (val, row) => (
-                        <div>
-                          <Badge variant="secondary" className="capitalize text-[10px]">{val?.replace('_',' ')}</Badge>
-                          {row.sub_category && <Badge variant="outline" className="ml-1 text-[10px] capitalize">{row.sub_category}</Badge>}
+                  {(() => {
+                    // Group expenses by date
+                    const grouped = {};
+                    filtered.forEach(exp => {
+                      const dateKey = exp.date ? format(new Date(exp.date), 'yyyy-MM-dd') : 'unknown';
+                      if (!grouped[dateKey]) {
+                        grouped[dateKey] = { date: exp.date, dateKey, cash: 0, bank: 0, credit: 0, total: 0, categories: {}, branches: {}, items: [], count: 0 };
+                      }
+                      const g = grouped[dateKey];
+                      g.count++;
+                      g.total += exp.amount || 0;
+                      if (exp.payment_mode === 'cash') g.cash += exp.amount || 0;
+                      else if (exp.payment_mode === 'bank') g.bank += exp.amount || 0;
+                      else g.credit += exp.amount || 0;
+                      const cat = exp.category || 'Other';
+                      g.categories[cat] = (g.categories[cat] || 0) + (exp.amount || 0);
+                      const bName = branches.find(b => b.id === exp.branch_id)?.name || 'Other';
+                      g.branches[bName] = (g.branches[bName] || 0) + (exp.amount || 0);
+                      g.items.push(exp);
+                    });
+                    const dailyData = Object.values(grouped).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                    if (dailyData.length === 0) return <div className="text-center py-8 text-muted-foreground">{t('no_data')}</div>;
+
+                    return (
+                      <div className="border rounded-lg overflow-hidden">
+                        {/* Header */}
+                        <div className="bg-stone-50 dark:bg-stone-800">
+                          <table className="w-full text-sm table-fixed">
+                            <thead><tr>
+                              <th className="px-3 py-3 text-left font-medium text-stone-600 w-[4%]"></th>
+                              <th className="px-3 py-3 text-left font-medium text-stone-600 w-[14%]">Date</th>
+                              <th className="px-3 py-3 text-right font-medium text-stone-600 w-[12%]">Total</th>
+                              <th className="px-3 py-3 text-right font-medium text-stone-600 w-[12%]">Cash</th>
+                              <th className="px-3 py-3 text-right font-medium text-stone-600 w-[12%]">Bank</th>
+                              <th className="px-3 py-3 text-right font-medium text-stone-600 w-[12%]">Credit</th>
+                              <th className="px-3 py-3 text-left font-medium text-stone-600 w-[34%]">Categories</th>
+                            </tr></thead>
+                          </table>
                         </div>
-                      )
-                    },
-                    {
-                      key: 'description', header: t('description'), width: '18%',
-                      render: (val) => <span className="text-sm truncate">{val || '-'}</span>
-                    },
-                    {
-                      key: 'branch_id', header: 'Paid By', width: '10%',
-                      render: (val) => <span className="text-sm">{branches.find(b => b.id === val)?.name || '-'}</span>
-                    },
-                    {
-                      key: 'expense_for_branch_id', header: 'Expense For', width: '10%',
-                      render: (val) => val ? <Badge variant="outline" className="bg-amber-50 border-amber-300 text-amber-700 text-[10px]">{branches.find(b => b.id === val)?.name || '-'}</Badge> : <span className="text-muted-foreground">-</span>
-                    },
-                    {
-                      key: 'amount', header: t('amount'), width: '12%', align: 'right',
-                      render: (val) => <span className="text-sm font-bold">SAR {(val || 0).toFixed(2)}</span>
-                    },
-                    {
-                      key: 'payment_mode', header: t('payment_mode'), width: '10%',
-                      render: (val) => <Badge className={`capitalize text-[10px] ${val === 'cash' ? 'bg-cash/20 text-cash' : val === 'bank' ? 'bg-bank/20 text-bank' : 'bg-credit/20 text-credit'}`}>{val}</Badge>
-                    },
-                    {
-                      key: 'id', header: t('actions'), width: '8%', align: 'right',
-                      render: (val) => <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); if(window.confirm('Delete?')) { api.delete(`/expenses/${val}`).then(fetchData); }}} className="h-7 text-error"><Trash2 size={12} /></Button>
-                    },
-                  ]}
-                />
+                        {/* Body */}
+                        <div className="max-h-[600px] overflow-y-auto">
+                          {dailyData.map(day => (
+                            <div key={day.dateKey}>
+                              {/* Day Summary Row */}
+                              <table className="w-full text-sm table-fixed">
+                                <tbody>
+                                  <tr className="border-b hover:bg-stone-50 cursor-pointer transition-colors"
+                                    onClick={() => setExpandedDates(prev => ({ ...prev, [day.dateKey]: !prev[day.dateKey] }))}
+                                    data-testid={`expense-day-row-${day.dateKey}`}>
+                                    <td className="px-3 py-3 w-[4%]">
+                                      {expandedDates[day.dateKey] ? <ChevronDown size={14} className="text-muted-foreground" /> : <ChevronRight size={14} className="text-muted-foreground" />}
+                                    </td>
+                                    <td className="px-3 py-3 w-[14%]">
+                                      <div className="font-semibold text-sm">{format(new Date(day.date), 'MMM dd, yyyy')}</div>
+                                      <div className="text-[10px] text-muted-foreground">{day.count} entries</div>
+                                    </td>
+                                    <td className="px-3 py-3 text-right w-[12%]"><span className="text-sm font-bold text-red-600">SAR {day.total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></td>
+                                    <td className="px-3 py-3 text-right w-[12%]">{day.cash > 0 ? <span className="inline-block px-2 py-1 rounded bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200">SAR {day.cash.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span> : <span className="text-xs text-muted-foreground">-</span>}</td>
+                                    <td className="px-3 py-3 text-right w-[12%]">{day.bank > 0 ? <span className="inline-block px-2 py-1 rounded bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-200">SAR {day.bank.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span> : <span className="text-xs text-muted-foreground">-</span>}</td>
+                                    <td className="px-3 py-3 text-right w-[12%]">{day.credit > 0 ? <span className="inline-block px-2 py-1 rounded bg-amber-50 text-amber-700 text-xs font-semibold border border-amber-200">SAR {day.credit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span> : <span className="text-xs text-muted-foreground">-</span>}</td>
+                                    <td className="px-3 py-3 w-[34%]">
+                                      <div className="flex gap-1 flex-wrap">
+                                        {Object.entries(day.categories).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([cat, amt]) => (
+                                          <span key={cat} className="text-[10px] px-1.5 py-0.5 bg-stone-100 text-stone-700 rounded border border-stone-200">{cat}: {amt.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+                                        ))}
+                                        {Object.keys(day.categories).length > 4 && <span className="text-[10px] text-muted-foreground">+{Object.keys(day.categories).length - 4} more</span>}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                              {/* Expanded Individual Entries */}
+                              {expandedDates[day.dateKey] && (
+                                <div className="bg-stone-50/50 border-b">
+                                  <table className="w-full text-sm">
+                                    <tbody>
+                                      {day.items.map(exp => (
+                                        <tr key={exp.id} className="border-b border-stone-100 hover:bg-white/50" data-testid={`expense-detail-${exp.id}`}>
+                                          <td className="px-3 py-2 pl-10 w-[18%]">
+                                            <Badge variant="secondary" className="capitalize text-[10px]">{exp.category?.replace('_',' ')}</Badge>
+                                            {exp.sub_category && <Badge variant="outline" className="ml-1 text-[10px] capitalize">{exp.sub_category}</Badge>}
+                                          </td>
+                                          <td className="px-3 py-2 text-sm truncate w-[22%]">{exp.description || '-'}</td>
+                                          <td className="px-3 py-2 text-sm w-[12%]">{branches.find(b => b.id === exp.branch_id)?.name || '-'}</td>
+                                          <td className="px-3 py-2 text-right w-[12%]"><span className="font-bold text-sm">SAR {exp.amount.toFixed(2)}</span></td>
+                                          <td className="px-3 py-2 w-[10%]">
+                                            <Badge className={`capitalize text-[10px] ${exp.payment_mode === 'cash' ? 'bg-cash/20 text-cash' : exp.payment_mode === 'bank' ? 'bg-bank/20 text-bank' : 'bg-credit/20 text-credit'}`}>{exp.payment_mode}</Badge>
+                                          </td>
+                                          <td className="px-3 py-2 text-right w-[8%]">
+                                            <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); if(window.confirm('Delete?')) { api.delete(`/expenses/${exp.id}`).then(fetchData); }}} className="h-7 text-error"><Trash2 size={12} /></Button>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        {/* Footer */}
+                        <div className="px-3 py-2 text-xs text-muted-foreground bg-stone-50 border-t">
+                          Showing {filtered.length.toLocaleString()} expenses across {dailyData.length} days
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-4 px-2">
+                      <span className="text-xs text-muted-foreground">{totalRecords} total records</span>
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" variant="outline" disabled={currentPage <= 1}
+                          onClick={() => fetchData(currentPage - 1)} data-testid="expenses-prev-page">Previous</Button>
+                        <span className="text-sm">Page {currentPage} of {totalPages}</span>
+                        <Button size="sm" variant="outline" disabled={currentPage >= totalPages}
+                          onClick={() => fetchData(currentPage + 1)} data-testid="expenses-next-page">Next</Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

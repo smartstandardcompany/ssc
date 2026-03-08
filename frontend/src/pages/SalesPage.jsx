@@ -30,6 +30,9 @@ export default function SalesPage() {
   const [showReceiveDialog, setShowReceiveDialog] = useState(false);
   const [receivingSale, setReceivingSale] = useState(null);
   const [activeTab, setActiveTab] = useState('branch');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
 
   const [formData, setFormData] = useState({
     sale_type: 'branch',
@@ -104,16 +107,20 @@ export default function SalesPage() {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (page = 1) => {
     try {
       // Use Zustand for branches
       fetchBranches();
       const [salesRes, customersRes, platformsRes] = await Promise.all([
-        api.get('/sales'),
+        api.get(`/sales?page=${page}&limit=200`),
         api.get('/customers'),
         api.get('/platforms').catch(() => ({ data: [] })),
       ]);
-      setSales(salesRes.data?.data || salesRes.data || []);
+      const salesData = salesRes.data;
+      setSales(salesData.data || salesData || []);
+      setCurrentPage(salesData.page || 1);
+      setTotalPages(salesData.pages || 1);
+      setTotalRecords(salesData.total || 0);
       setCustomers(customersRes.data?.data || customersRes.data || []);
       setPlatforms(platformsRes.data || []);
     } catch (error) {
@@ -630,83 +637,95 @@ export default function SalesPage() {
               className="mb-4"
             />
             <VirtualizedTable
-              data={applySearchFilters(sales.map(s => ({
-                ...s,
-                payment_mode: s.payment_details?.[0]?.mode || 'cash'
-              })), searchFilters)}
+              data={(() => {
+                const filteredSales = applySearchFilters(sales.map(s => ({
+                  ...s,
+                  payment_mode: s.payment_details?.[0]?.mode || 'cash'
+                })), searchFilters);
+                // Group sales by date
+                const grouped = {};
+                filteredSales.forEach(sale => {
+                  const dateKey = sale.date ? format(new Date(sale.date), 'yyyy-MM-dd') : 'unknown';
+                  if (!grouped[dateKey]) {
+                    grouped[dateKey] = { date: sale.date, dateKey, cash: 0, bank: 0, credit: 0, online: 0, total: 0, discount: 0, final: 0, creditRemaining: 0, branches: {}, count: 0 };
+                  }
+                  const g = grouped[dateKey];
+                  g.count++;
+                  (sale.payment_details || []).forEach(p => {
+                    const amt = p.amount || 0;
+                    if (p.mode === 'cash') g.cash += amt;
+                    else if (p.mode === 'bank') g.bank += amt;
+                    else if (p.mode === 'credit') g.credit += amt;
+                    else if (p.mode === 'online_platform' || p.mode === 'online') g.online += amt;
+                  });
+                  g.total += sale.amount || 0;
+                  g.discount += sale.discount || 0;
+                  g.final += sale.final_amount || (sale.amount - (sale.discount || 0));
+                  g.creditRemaining += Math.max(0, (sale.credit_amount || 0) - (sale.credit_received || 0));
+                  const bName = branches.find(b => b.id === sale.branch_id)?.name || 'Other';
+                  g.branches[bName] = (g.branches[bName] || 0) + (sale.final_amount || sale.amount || 0);
+                });
+                return Object.values(grouped).sort((a, b) => new Date(b.date) - new Date(a.date));
+              })()}
               maxHeight={600}
-              rowHeight={56}
+              rowHeight={72}
               emptyMessage="No sales recorded yet. Add your first sale above!"
               columns={[
                 { 
-                  key: 'date', header: 'Date', width: '12%',
-                  render: (val) => <span className="text-sm">{val ? format(new Date(val), 'MMM dd, yyyy') : '-'}</span>
-                },
-                { 
-                  key: 'sale_type', header: 'Type', width: '8%',
-                  render: (val) => <span className="text-sm capitalize">{val || '-'}</span>
-                },
-                { 
-                  key: 'branch_id', header: 'Branch', width: '10%',
-                  render: (val) => <span className="text-sm">{branches.find(b => b.id === val)?.name || '-'}</span>
-                },
-                { 
-                  key: 'amount', header: 'Amount', width: '12%', align: 'right',
-                  render: (val) => <span className="text-sm font-medium">SAR {(val || 0).toFixed(2)}</span>
-                },
-                { 
-                  key: 'final_amount', header: 'Final', width: '12%', align: 'right',
-                  render: (val, row) => <span className="text-sm font-bold text-primary">SAR {(val || (row.amount - (row.discount || 0))).toFixed(2)}</span>
-                },
-                { 
-                  key: 'payment_details', header: 'Payment', width: '22%',
-                  render: (val) => (
-                    <div className="flex gap-1 flex-wrap">
-                      {(val || []).map((p, i) => (
-                        <span key={i} className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium border ${
-                          p.mode === 'cash' ? 'bg-cash/20 text-cash border-cash/30' : 
-                          p.mode === 'bank' ? 'bg-bank/20 text-bank border-bank/30' :
-                          p.mode === 'online_platform' ? 'bg-purple-100 text-purple-700 border-purple-300' :
-                          'bg-credit/20 text-credit border-credit/30'
-                        }`}>
-                          {p.mode}: {p.amount?.toFixed(0)}
-                        </span>
-                      ))}
+                  key: 'date', header: 'Date', width: '14%',
+                  render: (val, row) => (
+                    <div>
+                      <div className="font-semibold text-sm">{val ? format(new Date(val), 'MMM dd, yyyy') : '-'}</div>
+                      <div className="text-[10px] text-muted-foreground">{row.count} entries</div>
                     </div>
                   )
                 },
                 { 
-                  key: 'credit_amount', header: 'Credit', width: '10%', align: 'right',
-                  render: (val, row) => {
-                    const remaining = (val || 0) - (row.credit_received || 0);
-                    return remaining > 0 ? (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-credit/20 text-credit border border-credit/30">
-                        SAR {remaining.toFixed(0)}
-                      </span>
-                    ) : <span className="text-xs text-muted-foreground">-</span>;
-                  }
+                  key: 'final', header: 'Total', width: '12%', align: 'right',
+                  render: (val) => <span className="text-sm font-bold text-primary">SAR {(val || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                 },
                 { 
-                  key: 'id', header: 'Actions', width: '14%', align: 'right',
-                  render: (val, row) => {
-                    const remaining = (row.credit_amount || 0) - (row.credit_received || 0);
-                    return (
-                      <div className="flex gap-1 justify-end">
-                        {remaining > 0 && (
-                          <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setReceivingSale(row); setShowReceiveDialog(true); }} data-testid="receive-credit-button" className="h-7 px-2 text-xs">
-                            <DollarSign size={12} className="mr-0.5" />Receive
-                          </Button>
-                        )}
-                        <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleDelete(val); }} data-testid="delete-sale-button" className="h-7 px-2 text-error hover:text-error">
-                          <Trash2 size={12} />
-                        </Button>
-                      </div>
-                    );
-                  }
+                  key: 'cash', header: 'Cash', width: '12%', align: 'right',
+                  render: (val) => val > 0 ? <span className="inline-block px-2 py-1 rounded bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200">SAR {val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span> : <span className="text-xs text-muted-foreground">-</span>
+                },
+                { 
+                  key: 'bank', header: 'Bank', width: '12%', align: 'right',
+                  render: (val) => val > 0 ? <span className="inline-block px-2 py-1 rounded bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-200">SAR {val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span> : <span className="text-xs text-muted-foreground">-</span>
+                },
+                { 
+                  key: 'online', header: 'Online', width: '12%', align: 'right',
+                  render: (val) => val > 0 ? <span className="inline-block px-2 py-1 rounded bg-purple-50 text-purple-700 text-xs font-semibold border border-purple-200">SAR {val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span> : <span className="text-xs text-muted-foreground">-</span>
+                },
+                { 
+                  key: 'credit', header: 'Credit', width: '12%', align: 'right',
+                  render: (val) => val > 0 ? <span className="inline-block px-2 py-1 rounded bg-amber-50 text-amber-700 text-xs font-semibold border border-amber-200">SAR {val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span> : <span className="text-xs text-muted-foreground">-</span>
+                },
+                {
+                  key: 'branches', header: 'Branches', width: '26%',
+                  render: (val) => (
+                    <div className="flex gap-1 flex-wrap">
+                      {Object.entries(val || {}).map(([name, amt]) => (
+                        <span key={name} className="text-[10px] px-1.5 py-0.5 bg-stone-100 text-stone-700 rounded border border-stone-200">{name}: {amt.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+                      ))}
+                    </div>
+                  )
                 },
               ]}
-              data-testid="sales-virtualized-table"
+              data-testid="sales-daily-table"
             />
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 px-2">
+                <span className="text-xs text-muted-foreground">{totalRecords} total records</span>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" disabled={currentPage <= 1}
+                    onClick={() => fetchData(currentPage - 1)} data-testid="sales-prev-page">Previous</Button>
+                  <span className="text-sm">Page {currentPage} of {totalPages}</span>
+                  <Button size="sm" variant="outline" disabled={currentPage >= totalPages}
+                    onClick={() => fetchData(currentPage + 1)} data-testid="sales-next-page">Next</Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
