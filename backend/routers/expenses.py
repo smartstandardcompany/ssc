@@ -1,11 +1,16 @@
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, UploadFile, File
 from typing import Optional
 from datetime import datetime, timezone
+import os
+import shutil
 
 from database import db, get_current_user, require_permission, get_branch_filter
 from models import User, Expense, ExpenseCreate, RecurringExpense, RecurringExpenseCreate
 
 import uuid
+
+EXPENSE_BILL_DIR = "/app/uploads/bills"
+os.makedirs(EXPENSE_BILL_DIR, exist_ok=True)
 
 router = APIRouter()
 
@@ -38,7 +43,7 @@ async def get_expenses(
 async def create_expense(expense_data: ExpenseCreate, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "expenses", "write")
     data = expense_data.model_dump()
-    for f in ['branch_id', 'supplier_id', 'sub_category', 'expense_for_branch_id']:
+    for f in ['branch_id', 'supplier_id', 'sub_category', 'expense_for_branch_id', 'bill_image_url']:
         if data.get(f) == '': data[f] = None
     if data.get('supplier_id') and expense_data.payment_mode == "credit":
         supplier = await db.suppliers.find_one({"id": data['supplier_id']}, {"_id": 0})
@@ -267,3 +272,17 @@ async def renew_pay_recurring(rec_id: str, body: dict, current_user: User = Depe
     else: new_due = due.replace(month=due.month % 12 + 1) if due.month < 12 else due.replace(year=due.year + 1, month=1)
     await db.recurring_expenses.update_one({"id": rec_id}, {"$set": {"next_due_date": new_due.isoformat(), "amount": amount}})
     return {"message": f"Paid SAR {amount:.2f} & renewed. Next due: {new_due.strftime('%d %b %Y')}"}
+
+
+
+@router.post("/expenses/upload-bill")
+async def upload_expense_bill(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+    """Upload a bill/invoice image for an expense. Returns the URL to attach."""
+    if not file.content_type or not (file.content_type.startswith("image/") or file.content_type == "application/pdf"):
+        raise HTTPException(status_code=400, detail="File must be an image or PDF")
+    ext = file.filename.rsplit(".", 1)[-1] if "." in file.filename else "png"
+    filename = f"exp_{uuid.uuid4().hex[:8]}.{ext}"
+    filepath = os.path.join(EXPENSE_BILL_DIR, filename)
+    with open(filepath, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+    return {"bill_url": f"/uploads/bills/{filename}", "message": "Bill uploaded"}

@@ -130,6 +130,7 @@ export default function DashboardPage() {
     customerCLV: { high_value_customers: [], total_projected_revenue: 0 },
     profitTrend: { summary: {}, daily_breakdown: [] }
   });
+  const [missingDataAlerts, setMissingDataAlerts] = useState([]);
   const t = THEMES[theme] || THEMES.default;
   const { t: tr, language } = useLanguage();
   const [showTour, setShowTour] = useState(false);
@@ -250,6 +251,8 @@ export default function DashboardPage() {
           profitTrend: profitRes.data,
         });
       } catch {}
+      // Fetch missing data alerts
+      try { const mdRes = await api.get('/dashboard/missing-data-alerts'); setMissingDataAlerts(mdRes.data?.alerts || []); } catch {}
     } catch (error) {
       toast.error('Failed to fetch dashboard stats');
     } finally {
@@ -460,6 +463,38 @@ export default function DashboardPage() {
                   <Badge className="bg-error/20 text-error text-sm">Loss: SAR {Math.abs(a.profit).toFixed(2)}</Badge>
                 </div>
               ))}</div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Missing Data Alerts */}
+        {missingDataAlerts.length > 0 && (
+          <Card className="border-amber-300/50 bg-amber-50/50" data-testid="missing-data-alerts">
+            <CardHeader className="pb-2">
+              <CardTitle className="font-outfit flex items-center gap-2 text-amber-700 text-base">
+                <AlertCircle size={18} /> Data Entry Alerts
+                <Badge className="bg-amber-100 text-amber-800 text-xs ml-auto">{missingDataAlerts.length} alerts</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {missingDataAlerts.map((alert, i) => (
+                  <div key={i} className={`flex items-center gap-3 p-3 rounded-lg border ${alert.is_today ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${alert.is_today ? 'bg-red-500 animate-pulse' : 'bg-amber-500'}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{alert.branch_name}</div>
+                      <div className="text-[11px] text-muted-foreground">
+                        No <span className="font-semibold text-amber-800">{alert.missing.join(' or ')}</span> for {alert.is_today ? 'today' : alert.date}
+                      </div>
+                    </div>
+                    <Button size="sm" variant="outline" className="h-7 text-xs shrink-0"
+                      onClick={() => navigate(alert.missing.includes('sales') ? '/sales' : '/expenses')}
+                      data-testid={`alert-action-${i}`}>
+                      Enter
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         )}

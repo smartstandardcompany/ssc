@@ -174,6 +174,7 @@ class SupplierPayment(BaseModel):
     amount: float
     payment_mode: str
     branch_id: Optional[str] = None
+    expense_for_branch_id: Optional[str] = None
     date: datetime
     notes: Optional[str] = None
     bill_image_url: Optional[str] = None
@@ -185,6 +186,7 @@ class SupplierPaymentCreate(BaseModel):
     amount: float
     payment_mode: str
     branch_id: Optional[str] = None
+    expense_for_branch_id: Optional[str] = None
     date: datetime
     notes: Optional[str] = None
     bill_image_url: Optional[str] = None
@@ -207,6 +209,7 @@ class Expense(BaseModel):
     supplier_id: Optional[str] = None
     date: datetime
     notes: Optional[str] = None
+    bill_image_url: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     created_by: str
 
@@ -221,6 +224,7 @@ class ExpenseCreate(BaseModel):
     supplier_id: Optional[str] = None
     date: datetime
     notes: Optional[str] = None
+    bill_image_url: Optional[str] = None
 
 class DashboardStats(BaseModel):
     total_sales: float

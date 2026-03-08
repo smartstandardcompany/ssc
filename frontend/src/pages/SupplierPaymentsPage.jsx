@@ -35,6 +35,7 @@ export default function SupplierPaymentsPage() {
     amount: '',
     payment_mode: 'cash',
     branch_id: '',
+    expense_for_branch_id: '',
     date: new Date().toISOString().split('T')[0],
     notes: '',
     category: 'Supplier Purchase',
@@ -82,6 +83,7 @@ export default function SupplierPaymentsPage() {
         amount: parseFloat(formData.amount),
         payment_mode: formData.payment_mode,
         branch_id: formData.branch_id || null,
+        expense_for_branch_id: formData.expense_for_branch_id || null,
         date: new Date(formData.date).toISOString(),
         notes: formData.notes,
       };
@@ -95,6 +97,7 @@ export default function SupplierPaymentsPage() {
         payment_mode: formData.payment_mode,
         supplier_id: formData.supplier_id,
         branch_id: formData.branch_id || '',
+        expense_for_branch_id: formData.expense_for_branch_id || '',
         date: new Date(formData.date).toISOString(),
       }).catch(() => {}); // Don't fail if expense recording fails
       
@@ -117,6 +120,7 @@ export default function SupplierPaymentsPage() {
         payment_mode: formData.payment_mode,
         supplier_id: formData.supplier_id,
         branch_id: formData.branch_id || '',
+        expense_for_branch_id: formData.expense_for_branch_id || '',
         date: new Date(formData.date).toISOString(),
       });
       
@@ -133,7 +137,7 @@ export default function SupplierPaymentsPage() {
   const resetForm = () => {
     setFormData({
       supplier_id: '', amount: '', payment_mode: formType === 'bill' ? 'credit' : 'cash',
-      branch_id: '', date: new Date().toISOString().split('T')[0], notes: '', category: 'Supplier Purchase',
+      branch_id: '', expense_for_branch_id: '', date: new Date().toISOString().split('T')[0], notes: '', category: 'Supplier Purchase',
     });
   };
 
@@ -193,7 +197,7 @@ export default function SupplierPaymentsPage() {
     setFormType(type);
     setFormData({
       supplier_id: '', amount: '', payment_mode: type === 'bill' ? 'credit' : 'cash',
-      branch_id: '', date: new Date().toISOString().split('T')[0], notes: '', category: 'Supplier Purchase',
+      branch_id: '', expense_for_branch_id: '', date: new Date().toISOString().split('T')[0], notes: '', category: 'Supplier Purchase',
     });
     setShowForm(true);
   };
@@ -332,7 +336,7 @@ export default function SupplierPaymentsPage() {
                     </div>
 
                     <div>
-                      <Label>Branch</Label>
+                      <Label>Paid By (Branch)</Label>
                       <Select value={formData.branch_id || "all"} onValueChange={(val) => setFormData({ ...formData, branch_id: val === "all" ? "" : val })}>
                         <SelectTrigger data-testid="sp-branch-select"><SelectValue placeholder="Select branch" /></SelectTrigger>
                         <SelectContent>
@@ -342,6 +346,20 @@ export default function SupplierPaymentsPage() {
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+
+                    <div>
+                      <Label>Expense For (Branch)</Label>
+                      <Select value={formData.expense_for_branch_id || "none"} onValueChange={(val) => setFormData({ ...formData, expense_for_branch_id: val === "none" ? "" : val })}>
+                        <SelectTrigger data-testid="sp-expense-for-branch"><SelectValue placeholder="Same as Paid By" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Same as Paid By</SelectItem>
+                          {branches.filter(b => b.id !== formData.branch_id).map((branch) => (
+                            <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-0.5">Select if a different branch bears this expense</p>
                     </div>
 
                     <div>
@@ -546,7 +564,8 @@ export default function SupplierPaymentsPage() {
                   <tr className="border-b border-border bg-stone-50">
                     <th className="text-left p-3 font-medium text-sm">Date</th>
                     <th className="text-left p-3 font-medium text-sm">Supplier</th>
-                    <th className="text-left p-3 font-medium text-sm hidden md:table-cell">Branch</th>
+                    <th className="text-left p-3 font-medium text-sm hidden md:table-cell">Paid By</th>
+                    <th className="text-left p-3 font-medium text-sm hidden md:table-cell">Expense For</th>
                     <th className="text-right p-3 font-medium text-sm">Amount</th>
                     <th className="text-left p-3 font-medium text-sm">Mode</th>
                     <th className="text-left p-3 font-medium text-sm hidden lg:table-cell">Notes</th>
@@ -557,11 +576,13 @@ export default function SupplierPaymentsPage() {
                 <tbody>
                   {filteredPayments.map((payment) => {
                     const branchName = branches.find(b => b.id === payment.branch_id)?.name || '-';
+                    const expForName = payment.expense_for_branch_id ? branches.find(b => b.id === payment.expense_for_branch_id)?.name : null;
                     return (
                       <tr key={payment.id} className="border-b border-border hover:bg-secondary/50" data-testid="payment-row">
                         <td className="p-3 text-sm">{format(new Date(payment.date), 'MMM dd, yyyy')}</td>
                         <td className="p-3 text-sm font-medium">{payment.supplier_name}</td>
                         <td className="p-3 text-sm text-muted-foreground hidden md:table-cell">{branchName}</td>
+                        <td className="p-3 text-sm hidden md:table-cell">{expForName ? <Badge variant="outline" className="bg-amber-50 border-amber-300 text-amber-700 text-[10px]">{expForName}</Badge> : <span className="text-muted-foreground">-</span>}</td>
                         <td className="p-3 text-sm text-right font-bold">SAR {payment.amount.toFixed(2)}</td>
                         <td className="p-3">
                           <Badge variant="outline" className={`text-xs ${

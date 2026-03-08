@@ -2,198 +2,152 @@
 The user initially requested a data entry application to track sales, expenses, and supplier payments. This has evolved into a comprehensive business management ERP system named SSC Track.
 
 **LATEST USER REQUESTS (This session):**
-- **New Feature:** Show salary payment history in the employee portal. (COMPLETED)
-- **Bug Fix:** Live camera view in the CCTV module was not displaying anything. (COMPLETED)
-- **Bug Fix:** Online platform sales were not appearing on the 'Online Platforms' report page. (COMPLETED)
-- **Improvement:** Add support for remote DVRs that are not on the local network. (COMPLETED)
-- **Improvement:** Provide instructions on how to display CCTV feeds on a TV. (COMPLETED)
-- **Improvement:** Implement branch-level control for POS menu items and allow assigning items to delivery platforms like HungerStation. (COMPLETED)
-- **Improvement:** Add pagination to pages with large datasets to improve performance. (COMPLETED)
-- **Improvement:** Add a QR code to receipts for easy order tracking. (COMPLETED)
-- **Improvement:** Enhance the employee offboarding process for terminated/resigned staff. (IN PROGRESS)
-
-**PRODUCT REQUIREMENTS:**
-- **Financial Management:** Sales (Bank/Cash/Online/Credit), Expenses (with returns), Supplier Payments (with returns and bill image uploads), Customer Credit Management, ZATCA-compliant Invoicing, Item-level Profit & Loss (P&L) reporting, Online Platform Sales & Commission Management, Supplier Aging Reports, automated payment reminders.
-- **HR Management:** Employee database (with offboarding status, End of Service), salary payments, leave tracking, loan management, and an Employee Self-Service Portal with salary payment history.
-- **Staff Management:** Manual and AI-driven Staff Shift Scheduling, Cashier shift management.
-- **Stock Management:** Inventory tracking, stock-in/out, multi-branch transfers, real-time low-stock alerts, and AI-powered stock reordering suggestions.
-- **CCTV & Security:** Integration with Hikvision DVRs for live camera snapshots, supporting both local and remote (port-forwarded) devices.
-- **Restaurant Operations:** A mobile-optimized Point-of-Sale (POS) page, Kitchen Display System (KDS), Customer-Facing Order Status Display, Table Management, Table Reservations, and Customer Order Tracking (including a public tracking page). Branch-level and platform-specific menu management.
-- **Asset & Liability Tracking:** A unified module for company assets and liabilities (loans, fines), including document management with expiry alerts.
-- **Reporting & Analytics:** Customizable dashboards, advanced reporting (including sales trends, P&L, Supplier Aging), scheduled PDF report delivery via email, and AI-driven predictive analytics.
-- **Administration & UI/UX:** Role-based access control, branding (for UI and PDF reports), data management, dark mode, multi-language support, PWA capabilities, and in-app guided tours.
+- **Feature:** Enhance the main dashboard so that the branch filter applies to all displayed statistics. (COMPLETED)
+- **Feature:** Enhance the Daily Summary page to support both a single-day view and a date-range view. (COMPLETED)
+- **Feature:** Add a Profit Trend chart to the Daily Summary's date-range view. (COMPLETED)
+- **Feature:** Add a UI for admins to generate, view, and revoke PINs for employees to access portals like the Cashier and Waiter views. (COMPLETED)
+- **Feature:** Make the summary numbers on the Daily Summary page clickable, so users can navigate directly to the filtered list of corresponding records (e.g., click sales total to see sales for that day). (COMPLETED)
+- **Bug Fix:** The application shows a blank white screen after login. (FIXED - a recurring tour overlay was blocking the UI).
+- **Bug Fix:** The Reports page is blank/crashes on load. (FIXED - a frontend state bug).
+- **Bug Fix:** The Daily Summary page shows incorrect data or fails to load. (FIXED - a backend bug was causing a server error for certain dates).
+- **Feature Request:** Make the invoice file upload an optional field when adding new expenses and supplier payments. (PENDING)
+- **Usability:** The Expenses page has two Branch selectors, which is confusing. Clarify their purpose. (PENDING)
 
 **User's preferred language**: English
 
 **what currently exists?**
-A comprehensive ERP application named SSC Track. This session focused on implementing several user-requested features and fixing critical bugs. Key accomplishments include: implementing a salary history view for employees, fixing the CCTV live view by adding proper Hikvision digest authentication and support for remote DVRs, resolving a major bug in online sales reporting, adding advanced POS menu management for branches and platforms, and improving performance with pagination and mobile responsiveness. A public order tracking page was also created, accessible via QR codes on receipts. The employee offboarding process is currently being enhanced.
+An advanced, feature-rich ERP system named SSC Track. This session successfully completed a large batch of features that were in progress from the previous session, including a comprehensive deletion audit trail, a custom report builder, and a comparative period analysis tool.
+
+Following that, the agent implemented several new user-requested features, significantly enhancing the reporting capabilities with a new date-range mode and profit trend chart on the Daily Summary page. A key usability improvement was making reports interactive, allowing users to click summary figures to drill down into the underlying data. A full UI for managing employee PINs was also added.
+
+Crucially, the agent diagnosed and fixed several critical, show-stopper bugs, including a blank screen issue on login, a data accuracy bug in financial reports, and a crash on the main Reports page.
 
 **Last working item**:
-    - Last item agent was working: Enhancing the employee offboarding process. The user was not aware of the existing resign/terminate options, so the agent planned to improve the UX by adding an End of Contract status, a clearance checklist, a settlement PDF download, and a guided UI. The agent was in the process of implementing these changes.
-    - Status: IN PROGRESS
+    - Last item agent was working: The agent was about to start working on the user's latest request:
+        1.  Make the invoice upload field **optional** for Expenses and Supplier Payments.
+        2.  Clarify the two confusing Branch dropdowns on the Expenses page.
+    - Status: NOT STARTED
     - Agent Testing Done: N
     - Which testing method agent to use? both
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - **Issue 1**: SMTP Email Delivery Failure (Priority: HIGH)
-     - **Description**: The email sending feature (for scheduled reports and direct employee emails) is configured for Microsoft 365, but connections are rejected due to an authentication error.
-     - **Attempted fixes**: The agent correctly identified this as a configuration issue on the user's end. The credentials provided are correct, but Microsoft 365 requires SMTP AUTH to be explicitly enabled for the  account.
+  - **Issue 1**: Implement optional invoice upload and clarify branch fields in Expenses (Priority: P0)
+     - **Description**: The user wants to add expenses and supplier payments without being forced to upload an invoice file. They are also confused by two branch dropdowns on the Expenses page.
+     - **Attempted fixes**: None. The agent was viewing the relevant files (, ) to gather context before implementation.
      - **Next debug checklist**:
-        1. Inform the user they need to log in to their Microsoft 365 admin center.
-        2. Instruct them to navigate to the user settings for .
-        3. Guide them to find the Mail apps or similar section and enable the Authenticated SMTP setting.
-        4. Once enabled, test the Send Now feature on a scheduled report to confirm it works.
-     - **Why fix this issue and what will be achieved with the fix?**: This is blocking all email-related functionality, including automated reports. Fixing it will enable a key automation feature.
-     - **Status**:  BLOCKED (Awaiting user action on their M365 account)
-     - **Is recurring issue?**: Y
-     - **Should Test frontend/backend/both after fix?**: backend
+        1.  **Backend Routers**: Modify the  and  endpoints in  and  to handle an optional  file (e.g., ).
+        2.  **Expenses Page ():**
+            - Remove the  validation from the invoice .
+            - Locate the two  components. Add clear labels to differentiate them, for example, Filter List by Branch for the one controlling the view and Expense Branch for the one inside the Add Expense form.
+        3.  **Supplier Payments Page ():**
+            - Remove the  validation from the invoice .
+     - **Why fix this issue and what will be achieved with the fix?**: This will improve usability by removing a mandatory step that is not always necessary and will reduce user confusion on the Expenses page.
+     - **Status**: NOT STARTED
+     - **Is recurring issue?**: N
+     - **Should Test frontend/backend/both after fix?**: both
      - **Blocked on other issue**: None
 
 **In progress Task List**:
-  - **Task 1**: Enhance Employee Offboarding Process (Priority: P0)
-     - **Where to resume**: The backend models () need to be updated to include fields for the clearance checklist. The frontend  needs to be modified to include the improved dialog with End of Contract status, the clearance checklist, and a button to download the settlement PDF.
-     - **What will be achieved with this?**: A complete, user-friendly, and robust system for managing employee departures, including terminations, resignations, and end-of-contract scenarios.
-     - **Status**:  IN PROGRESS
-     - **Should Test frontend/backend/both after fix?**: both
-     - **Blocked on something**: None
+- None.
 
 **Upcoming and Future Tasks**
-- **Upcoming Tasks:**
-    - **P1:** AI-driven analytics enhancements, such as AI stock reordering suggestions and sales forecasting.
 - **Future Tasks:**
-    - Continued performance optimization for any remaining pages that handle very large datasets.
-    - Further mobile-responsive design improvements for any pages not yet optimized.
+    - **P3:** Scheduled PDF report delivery via email (currently blocked by the SMTP issue).
+    - **P3:** Further UI/UX polishing across the application.
+    - **P3:** Guided tours for remaining sub-modules (POS, Kitchen, Customer Portal, etc.). This is low priority as the user was previously frustrated by the tours.
 
 **Completed work in this session**
-- **Employee Salary History (DONE):** Added a  endpoint and a Salary Record tab to the employee portal ().
-- **CCTV Integration Overhaul (DONE):**
-    - Fixed the blank display by implementing a backend snapshot proxy with  digest authentication in .
-    - Added support for remote DVRs by allowing  (local, remote, cloud) and updating the UI in .
-    - Created a Setup Guide tab with instructions for port forwarding and TV display.
-- **Online Platform Sales Bug (FIXED):** Resolved an issue where online sales didn't show on reports. The agent corrected the query logic in  to filter by  instead of a missing  field and ran a script to fix historical data.
-- **Advanced POS Menu Management (DONE):**
-    - Updated  and  to support assigning menu items to specific branches () and delivery platforms ().
-    - Overhauled  with a new UI for managing branch availability and platform assignments.
-    - Added a  endpoint.
-- **Performance & Mobile Optimization (DONE):**
-    - Implemented backend pagination for Supplier Payments, Stock Entries, Stock Usage, and Employees (, , ).
-    - Updated the  frontend to use the new pagination controls.
-    - Added responsive column hiding () to tables on pages like .
-- **Public Order Tracking & QR Codes (DONE):**
-    - Created a new public page  (route: ) for unauthenticated order status tracking.
-    - Added a QR code to the POS receipt () that links to the tracking page with the order ID.
-    - Updated the backend order tracking endpoint in  to be more flexible.
+- **Multi-Feature Implementation (DONE):** Completed the in-progress work from the last session, delivering a full deletion audit trail, a custom report builder, and a comparative period analysis tool, with corresponding frontend pages and backend logic.
+- **Dashboard & Daily Summary Enhancements (DONE):**
+    - The main dashboard's branch filter now correctly filters all KPI cards.
+    - The Daily Summary page was completely rewritten to support a date-range view, including a new Profit Trend chart.
+- **Interactive Reports (DONE):** Made the Daily Summary page's data cells clickable, allowing users to navigate to a filtered view of the corresponding sales or expense records.
+- **PIN Management UI (DONE):** Built a complete UI on the Employees page for administrators to generate, view, and revoke PINs for employee portal access.
+- **Critical Bug Fixes (DONE):**
+    - **Blank Screen on Load:** Resolved a major issue where aggressive tour overlays would block the UI. All tours are now disabled by default and must be opted into.
+    - **Daily Summary Data Accuracy:** Fixed a backend server error that occurred when fetching daily summaries for dates with customer-linked sales.
+    - **Reports Page Crash:** Fixed a frontend crash on the main Reports page caused by incorrect state handling of an API response.
 
 **Earlier issues found/mentioned but not fixed**
-   - None.
+   - **Issue 1: SMTP Email Delivery Failure**
+     - **Debug checklist**: This is an external configuration issue with the user's Microsoft 365 / Azure AD tenant. The user needs to disable Security Defaults for the email account being used.
+     - **Why to solve this issue and what will be achieved with this?**: This is a major blocker for all email-related functionality, such as scheduled reports.
+     - **Should Test frontend/backend/both after fix**: backend
+     - **Is recurring issue?**: Y
 
 **Known issue recurrence from previous fork**
   - **Issue recurrence in previous fork**: SMTP Email Delivery Failure.
   - **Recurrence count**: High
-  - **Status**: BLOCKED
+  - **Status**: BLOCKED (Awaiting user action)
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Digest Authentication:** Used  with  to connect to Hikvision DVRs, a more secure method than basic auth.
-- **Backend Pagination:** Implemented a consistent pagination pattern across multiple endpoints, returning .
-- **Public Frontend Routes:** Created a route in  that does not require authentication for the customer-facing order tracking page.
-- **Component-based State Management:** Utilized  and  extensively for managing complex forms and data fetching logic in pages like  and .
-- **Database Migration/Fix:** The agent ran a one-time  script via  to correct historical sales records in MongoDB.
-- **QR Code Generation:** Used the  library on the frontend to generate QR codes dynamically.
+- **Interactive Data Navigation:** Implemented a UX pattern where summary report numbers are clickable. This uses 's  and  to pass context (like a date) to detail pages, which then read the URL params to pre-apply filters on load.
+- **Defensive Programming:** Diagnosed and fixed several critical runtime bugs by analyzing browser console errors and backend logs. Fixes included disabling a problematic feature (tours) by default and correcting data handling on both the frontend (state updates) and backend (type errors).
+- **Controlled vs. Uncontrolled Components:** Resolved a filter bug by modifying a parent page to manage filtering state derived from URL params, ensuring that child component actions () don't override the intended filter context.
 
 **key DB schema**
-  - **dvr_configs**: added .
-  - **menu_items**: added .
-  - **sales**:  is now correctly set to  for such sales, and  is included.
-
-**changes in tech stack**
-  - ****: Added to frontend for generating QR codes.
+  - **audit_logs**: Now actively being populated with detailed deletion records, including a  of the deleted item.
+  - **employees**: The  field is now actively managed via the UI and used for portal authentication.
 
 **All files of reference**
-- **New Files:**
-    - 
-- **Modified Files (Key Changes):**
-    - 
-    - 
-    - 
-    - 
-    - 
-    - 
-    - 
-    - 
-    - 
-    - 
-    - 
-    - 
+- **Backend:** , , , 
+- **Frontend:** , , , , , 
 
 **Areas that need refactoring**:
-- None. The agent performed targeted additions and fixes.
+- The tour system consists of two separate implementations ( context and a standalone ). These could be unified into a single system if the user decides they want tours back in the future.
 
 **key api endpoints**
-- **New/Enhanced Endpoints:**
-    - : Gets salary history for the logged-in employee.
-    - : Now uses digest auth and supports remote DVRs.
-    - : Now filters by branch.
-    - , : New bulk assignment endpoints.
-    - : New endpoint to export menus for 3rd party apps.
-    - : New public endpoint to find an order by its number.
-- **Paginated Endpoints:**
-    - , , ,  now all accept  and  query parameters.
+- : **(NEW)** Fetches summary data for a specified date range.
+- : **(NEW)** Generates a new portal PIN for an employee.
+- : **(NEW)** Revokes an employee's portal PIN.
+- : **(MODIFIED)** Bug causing 500 server error was fixed.
+- , : **(MODIFIED)** Endpoints now correctly filter data based on the provided .
 
 **Critical Info for New Agent**
-- **SMTP is Blocked:** The highest priority issue is the email functionality, which is blocked until the user enables SMTP AUTH on their Microsoft 365 account for . You must communicate this to the user before proceeding with any email-related tasks.
-- **Remote DVRs Require Port Forwarding:** The CCTV feature now supports remote DVRs, but it relies on the user correctly configuring port forwarding on their branch routers. The Setup Guide tab on the CCTV page explains this. Do not attempt to debug connection issues without first confirming the user has done this.
-- **Testing Agent is Effective:** The testing agent was used successfully multiple times in this session and even caught and fixed bugs (e.g., a route ordering issue in , a DVR ID collision bug). Rely on it after significant changes.
+- **Immediate Priority:** Your first task is to address the user's latest request: make invoice uploads optional and clarify the two Branch selectors on the Expenses page.
+- **Tours Are Disabled:** Do not attempt to re-enable the guided tours. They were intentionally disabled as they were causing a blank screen issue and frustrating the user. Any tour functionality should only be triggered by explicit user action (e.g., clicking a Reset Tours button).
+- **SMTP Is Blocked:** Do not work on any email-related features. The problem is external and requires the user to change their Microsoft 365 security settings.
 
 **documents and test reports created in this job**
-  -  to  (approx.)
   -  (Updated)
+  - Multiple test reports in  (e.g., , )
 
-**Last 10 User Messages and any pending HUMAN messages** 
-- 10.  - User approved plan to implement pagination, QR codes, and other improvements.
-- 9.  - User reported the bug with online sales not showing up. (FIXED)
-- 8.  - User approved plan to fix POS menu issues.
-- 7.  - User reported issues with the POS menu and asked about multi-branch/platform support. (ADDRESSED)
-- 6.  - User approved plan to start on P1 tasks.
-- 5.  - User clarified that their DVRs are remote, leading to the remote DVR feature implementation. (ADDRESSED)
-- 4.  - User reported the initial CCTV bug where the live view was blank. (FIXED)
-- 3.  - User approved the plan to implement new features.
-- 2.  - User asked the agent to work on P0 and P1 priority tasks.
-- 1.  - User stated that the employee offboarding options were not visible or clear, prompting the current enhancement task.
+**Last 10 User Messages and any pending HUMAN messages**
+- 10. : Requests optional invoices and clarification on confusing branch selectors. (PENDING)
+- 9. : Reports a blank screen and incorrect data in Daily Summary. (FIXED)
+- 8. : Requests removal of Quick Access panels from the sidebar. (COMPLETED)
+- 7. : Asks how to manage portal PINs, revealing the feature's UI was missing. (COMPLETED)
+- 6. : Requests admin-specific quick access links. (COMPLETED, then reverted by a later request).
+- 5. : Requests a profit trend chart in the daily summary. (COMPLETED)
+- 4. : Requests dashboard filters apply globally and Daily Summary gets a date range option. (COMPLETED)
+- 3. : Reports data inaccuracy in daily summary and requests clickable cells to drill down into data. (COMPLETED)
+- 2. : Reports that the main Reports page is blank. (FIXED)
+- 1. : Reports data discrepancy in the daily summary. (FIXED)
 
 **Project Health Check:**
-- **Broken:** Email sending functionality is completely blocked pending user action on their Microsoft 365 account.
+- **Broken:** All email-related functionality is blocked due to the external SMTP configuration issue.
 - **Mocked:** None.
-- **Needs Attention:** The remote CCTV functionality is dependent on the user's network configuration (port forwarding).
 
 **3rd Party Integrations**
-- **OpenAI Vision (GPT-4o)**: For AI CCTV features. Uses **Emergent LLM Key**.
-- **Twilio** : For WhatsApp notifications & chatbot. Uses User API Key.
-- **aiosmtplib**: For sending SMTP emails. User provided credentials, but the integration is blocked by the provider's security settings.
-- **react-select**: For searchable dropdowns in the frontend.
-- **qrcode.react**: For generating QR codes on the frontend.
-- **Zustand, react-window, reportlab, httpx, etc.**: All other existing integrations are stable.
+- **OpenAI GPT-4o**: For AI analytics and insights. Uses **Emergent LLM Key**.
+- **Twilio**: For WhatsApp notifications & chatbot. Uses User API Key.
+- **aiosmtplib**: For sending SMTP emails. Integration is coded but **BLOCKED** by user's external configuration.
+- **recharts**: Charting library used for the new Profit Trend chart.
 
 **Testing status**
-  - Testing agent used after significant changes: YES (Used after every major feature/bug fix with a 100% success rate reported each time).
+  - Testing agent used after significant changes: YES. The agent successfully used the testing agent multiple times after major feature delivery and bug fixes, receiving 100% pass rates.
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: []
-  - Known regressions: The testing agent found and fixed a route ordering bug and a DVR ID collision bug during its runs, preventing potential regressions.
+  - Known regressions: None.
 
 **Credentials to test flow:**
-- **Admin:**
-  - **Email:** 
-  - **Password:** 
-- **Operator (restricted user):**
-  - **Email:** 
-  - **Password:** 
-- **Cashier/KDS/Waiter PIN:**
-  - **Default PIN:** 
-- **Customer Portal (New User):**
-  - Use the registration page at  to create a new customer.
+- **Admin:** Email: , Password: 
+- **Operator (restricted user):** Email: , Password: 
+- **Cashier/KDS/Waiter PIN:**  (Can be managed/changed via the Employees page).
 
 **What agent forgot to execute**
-- The agent listed AI Analytics enhancements as a P1 task in a plan but was diverted to other user requests. This task has not been started and should be considered for the upcoming work plan.</analysis>
+- The agent was interrupted before it could start the user's latest request. The work is pending, not forgotten.</analysis>

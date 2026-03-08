@@ -54,7 +54,7 @@ export default function ExpensesPage() {
   const [formData, setFormData] = useState({
     category: '', sub_category: '', description: '', amount: '',
     payment_mode: 'cash', branch_id: '', expense_for_branch_id: '', supplier_id: '',
-    date: new Date().toISOString().split('T')[0], notes: ''
+    date: new Date().toISOString().split('T')[0], notes: '', bill_image_url: ''
   });
 
   const isAdmin = user?.role === 'admin' || user?.role === 'manager';
@@ -283,7 +283,7 @@ export default function ExpensesPage() {
                       />
                     </div>
                     <div>
-                      <Label>{t('branch')}</Label>
+                      <Label>Paid By (Branch)</Label>
                       <Select value={formData.branch_id || "none"} onValueChange={(v) => setFormData({ ...formData, branch_id: v === "none" ? "" : v })}>
                         <SelectTrigger className="h-10" data-testid="expense-paid-from-branch"><SelectValue /></SelectTrigger>
                         <SelectContent><SelectItem value="none">-</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
@@ -304,9 +304,9 @@ export default function ExpensesPage() {
                     </div>
                   )}
                   
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div>
-                      <Label>Expense For</Label>
+                      <Label>Expense For (Branch)</Label>
                       <Select value={formData.expense_for_branch_id || "none"} onValueChange={(v) => setFormData({ ...formData, expense_for_branch_id: v === "none" ? "" : v })}>
                         <SelectTrigger className="h-10" data-testid="expense-for-branch"><SelectValue /></SelectTrigger>
                         <SelectContent><SelectItem value="none">-</SelectItem>{branches.filter(b => b.id !== formData.branch_id).map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
@@ -336,6 +336,23 @@ export default function ExpensesPage() {
                           <span className="absolute right-2 top-2.5 text-[9px] text-purple-500 bg-purple-50 px-1.5 py-0.5 rounded" data-testid="ai-cat-hint">AI</span>
                         )}
                       </div>
+                    </div>
+                    <div>
+                      <Label>Invoice (Optional)</Label>
+                      <Input type="file" accept="image/*,.pdf" className="h-10 text-xs" data-testid="expense-invoice-upload"
+                        onChange={async (e) => {
+                          const file = e.target.files[0];
+                          if (!file) return;
+                          try {
+                            const fd = new FormData();
+                            fd.append('file', file);
+                            const res = await api.post('/expenses/upload-bill', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+                            setFormData(f => ({ ...f, bill_image_url: res.data.bill_url }));
+                            toast.success('Invoice uploaded');
+                          } catch { toast.error('Upload failed'); }
+                        }}
+                      />
+                      {formData.bill_image_url && <span className="text-[10px] text-emerald-600 mt-0.5 block">Attached</span>}
                     </div>
                     <div className="flex items-end">
                       <Button type="submit" className="rounded-xl w-full h-10" data-testid="add-expense-btn"><Plus size={16} className="mr-2" />{t('add')}</Button>
@@ -401,11 +418,11 @@ export default function ExpensesPage() {
                       render: (val) => <span className="text-sm truncate">{val || '-'}</span>
                     },
                     {
-                      key: 'branch_id', header: t('branch'), width: '10%',
+                      key: 'branch_id', header: 'Paid By', width: '10%',
                       render: (val) => <span className="text-sm">{branches.find(b => b.id === val)?.name || '-'}</span>
                     },
                     {
-                      key: 'expense_for_branch_id', header: 'For', width: '10%',
+                      key: 'expense_for_branch_id', header: 'Expense For', width: '10%',
                       render: (val) => val ? <Badge variant="outline" className="bg-amber-50 border-amber-300 text-amber-700 text-[10px]">{branches.find(b => b.id === val)?.name || '-'}</Badge> : <span className="text-muted-foreground">-</span>
                     },
                     {

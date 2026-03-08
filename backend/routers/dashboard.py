@@ -744,3 +744,54 @@ async def get_daily_summary_range(
         "daily": daily_list,
         "days_count": len(daily_list),
     }
+
+
+
+@router.get("/dashboard/missing-data-alerts")
+async def get_missing_data_alerts(current_user: User = Depends(get_current_user)):
+    """Check which branches have no sales or expenses entered for yesterday and today."""
+    now = datetime.now(timezone.utc)
+    today = now.strftime("%Y-%m-%d")
+    yesterday = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+
+    branches = await db.branches.find({}, {"_id": 0, "id": 1, "name": 1}).to_list(100)
+    if not branches:
+        return {"alerts": [], "check_date": today}
+
+    alerts = []
+    for check_date in [yesterday, today]:
+        date_start = check_date + "T00:00:00"
+        date_end = check_date + "T23:59:59"
+
+        for branch in branches:
+            bid = branch["id"]
+            bname = branch["name"]
+
+            # Check sales
+            sales_count = await db.sales.count_documents({
+                "branch_id": bid,
+                "date": {"$gte": date_start, "$lte": date_end}
+            })
+            # Check expenses
+            expenses_count = await db.expenses.count_documents({
+                "branch_id": bid,
+                "date": {"$gte": date_start, "$lte": date_end}
+            })
+
+            missing = []
+            if sales_count == 0:
+                missing.append("sales")
+            if expenses_count == 0:
+                missing.append("expenses")
+
+            if missing:
+                alerts.append({
+                    "branch_id": bid,
+                    "branch_name": bname,
+                    "date": check_date,
+                    "missing": missing,
+                    "is_today": check_date == today,
+                    "message": f"{bname}: No {' or '.join(missing)} entered for {check_date}"
+                })
+
+    return {"alerts": alerts, "check_dates": [yesterday, today]}
