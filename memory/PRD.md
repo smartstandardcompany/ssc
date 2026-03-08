@@ -6,24 +6,30 @@ A comprehensive business management ERP system for tracking sales, expenses, sup
 ## Core Modules
 Financial Management | HR Management | Stock Management | Restaurant Operations | CCTV Security | Administration
 
+## Session 12 (Mar 8, 2026) - Bank Account Management, Branch Dues Drill-Down
+
+### Bank Account Management (DONE)
+- New Bank Accounts page with full CRUD (Add, Edit, Delete)
+- Card-based UI showing: display name, bank name, account number, IBAN, assigned branch, default badge
+- "Set as default" functionality — only one account can be default at a time
+- Accessible from sidebar under Reports section and from Reports hub
+- Backend: `/api/bank-accounts` CRUD endpoints
+
+### Bank Account Selection in Sales (DONE)
+- When recording a sale with bank payment mode, a "Select Bank Account" dropdown appears
+- Shows all registered bank accounts with names and account numbers
+- `bank_account_id` stored with each sale record for tracking which account received payment
+
+### Dashboard Branch Dues Drill-Down (DONE)
+- "View Details" button added to Branch-to-Branch Dues card on Dashboard
+- Clicking any due amount or the button opens a detail dialog
+- Dialog shows all cross-branch transactions: Date, Type (expense/supplier_payment/salary/transfer), From Branch, To Branch, Amount, Description
+- Backend: `/api/reports/branch-dues-detail` endpoint aggregates cross-branch entries from expenses, supplier payments, salaries, and transfers
+
 ## Session 11 (Mar 8, 2026) - Date Quick Filter, Summary Bars, UI Polish, Tours
-
 ### Date Range Quick-Filter Bar (DONE)
-- New reusable `DateQuickFilter` component with pill-buttons: All, Today, Yesterday, This Week, This Month, Custom Range
-- Integrated into both Sales and Expenses pages
-- Selecting a filter immediately fetches data for that period from backend
-- Custom Range shows inline date pickers
-- Clear button (X) to reset filters
-
 ### Grand Total Summary Bars (DONE)
-- Sales page: Summary cards showing Grand Total, Cash, Bank, Online, Credit totals above the table
-- Expenses page: Summary cards showing Total Expenses, Cash, Bank, Credit totals above the daily grouped view
-- Color-coded cards with payment mode totals
-
 ### Tour Buttons & UI Polish (DONE)
-- Added "Tour" buttons to Sales and Expenses page headers for guided tour access
-- Guided tours accessible via: floating green help button (bottom-right), Tour buttons on pages, and Settings > Reset Tours
-- Comprehensive tour content covers all major modules (16+ pages)
 
 ## Session 10 (Mar 8, 2026) - Sales & Expenses Daily Grouping, Pagination Fix
 ### Sales Daily Grouped View (DONE)
@@ -36,10 +42,7 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 ### Missing Data Entry Notifications (DONE)
 ### Optional Invoice Upload for Expenses (DONE)
 
-## Session 8 - Dashboard Branch Filter, Daily Summary Range, Tours, PIN Management (DONE)
-## Session 7 - Audit Trail, Report Builder, Comparative Analysis (DONE)
-## Session 6 - Access Control & Delete Restrictions (DONE)
-## Sessions 1-5 - Core ERP, POS, Kitchen, Employee Management (DONE)
+## Sessions 1-8 - Core ERP, POS, Kitchen, Employee Management, Reports, Dashboard (ALL DONE)
 
 ## Pending Issues
 - SMTP Email: Blocked on user's Microsoft 365 Security Defaults
@@ -50,4 +53,4 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 
 ## Remaining Backlog
 - P2: Email automation (blocked on SMTP)
-- P3: Further UI/UX refinements as needed
+- P3: Further UI/UX polishing
