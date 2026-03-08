@@ -137,11 +137,11 @@ export default function DashboardPage() {
   // User permissions from Zustand
   const userPermissions = user?.permissions || {};
 
-  // Check if should show tour on mount
+  // Check if should show tour on mount - only show if explicitly enabled
   useEffect(() => {
+    const tourEnabled = localStorage.getItem('ssc_dashboard_tour_enabled');
     const tourCompleted = localStorage.getItem('ssc_dashboard_tour_completed');
-    if (!tourCompleted) {
-      // Delay tour start to let dashboard load
+    if (tourEnabled === 'true' && !tourCompleted) {
       const timer = setTimeout(() => setShowTour(true), 1500);
       return () => clearTimeout(timer);
     }
@@ -154,6 +154,7 @@ export default function DashboardPage() {
 
   const startTour = () => {
     resetDashboardTour();
+    localStorage.setItem('ssc_dashboard_tour_enabled', 'true');
     setShowTour(true);
   };
 

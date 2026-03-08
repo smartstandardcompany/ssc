@@ -168,16 +168,20 @@ export default function ModuleTour() {
   useEffect(() => {
     const path = location.pathname;
     const config = MODULE_TOURS[path];
-    if (config) {
-      const completed = localStorage.getItem(`ssc_${config.key}_completed`);
-      if (completed !== 'true') {
-        setTourConfig(config);
-        setCurrentStep(0);
-        setIsVisible(true);
-      } else {
-        setIsVisible(false);
-        setTourConfig(null);
-      }
+    if (!config) {
+      setIsVisible(false);
+      setTourConfig(null);
+      return;
+    }
+
+    // Tours are opt-in: only show if user explicitly reset tours from Settings
+    // Check if this specific tour was enabled (not just "not completed")
+    const enabled = localStorage.getItem(`ssc_${config.key}_enabled`);
+    const completed = localStorage.getItem(`ssc_${config.key}_completed`);
+    if (enabled === 'true' && completed !== 'true') {
+      setTourConfig(config);
+      setCurrentStep(0);
+      setIsVisible(true);
     } else {
       setIsVisible(false);
       setTourConfig(null);
@@ -247,9 +251,8 @@ export function ResetModuleTourButton() {
     Object.keys(MODULE_TOURS).forEach(path => {
       const config = MODULE_TOURS[path];
       localStorage.removeItem(`ssc_${config.key}_completed`);
+      localStorage.setItem(`ssc_${config.key}_enabled`, 'true');
     });
-    localStorage.removeItem('ssc_dashboard_tour_completed');
-    localStorage.removeItem('ssc_dashboard_tour_date');
     window.location.reload();
   };
 
