@@ -6,42 +6,31 @@ A comprehensive business management ERP system for tracking sales, expenses, sup
 ## Core Modules
 Financial Management | HR Management | Stock Management | Restaurant Operations | CCTV Security | Administration
 
-## Session 16 (Mar 8, 2026) - Duplicate Detection, Monthly Reconciliation Report, Fee Calculator
+## Session 17 (Mar 8, 2026) - Net Cash/Bank, Duplicate Prevention, Guided Tours
 
-### Duplicate Sale Entry Detection (DONE)
-- Sales page now detects entries with same branch + same amount on the same day
-- Day rows with duplicates get orange background + "Duplicate" warning badge
-- Expanded duplicate entries get orange left border + "Possible duplicate" badge
-- Tested against real data: correctly flagged duplicates on 6 different dates
+### Daily Summary Net Cash/Bank Columns (DONE)
+- Added "Net Cash" and "Net Bank" columns to the Day by Day table in Range mode
+- Net Cash = Sales Cash - Expense Cash per day
+- Net Bank = Sales Bank - Expense Bank per day
+- Negative values displayed in red, positive in teal/indigo
+- TOTAL row includes net_cash and net_bank sums
+- Backend calculates net_cash/net_bank per daily row
 
-### Monthly Reconciliation Summary Report (DONE)
-- New page at /monthly-recon-report
-- Backend endpoint: GET /api/platform-reconciliation/monthly-report?months=N
-- Grand totals: Total Sales, Total Received, Expected Fees, Actual Cut, Variance
-- Monthly expandable cards with per-platform breakdown (rate, orders, sales, fees, variance)
-- "Overpaying" badge on months where actual cut exceeds expected
-- Accessible from Reports hub (new card) and Platform Reconciliation page (button)
+### Automatic Duplicate Prevention (DONE)
+- New backend endpoint: GET /api/sales/check-duplicate?branch_id=X&amount=Y&date=Z
+- Before saving, frontend calls check-duplicate to detect same branch + amount on same date
+- If duplicate found, shows AlertDialog: "X sale(s) with same branch and amount already exist"
+- User can "Cancel & Review" or "Yes, Save Anyway"
+- Works in combination with existing visual duplicate detection on day rows
 
-### PIN Regeneration Fix (DONE - verified)
-- PIN regeneration works from the employee list view
+### Guided Tours for All Sub-Modules (DONE)
+- Added tours for 14+ remaining modules: Platform Reconciliation, Monthly Recon Report, Bank Accounts, Branches, CCTV, Documents, Fines, Partners, Company Loans, Schedule, Transfers, Bank Statements, Credit Report, Supplier Report, Category Report, Reconciliation
+- Total: 32 module tours now configured
+- Each tour has 3-4 contextual steps explaining the module's purpose and key actions
 
-### Automatic Platform Fee Calculator (DONE)
-- Fixed reconciliation endpoint to use correct DB collection (delivery_platforms)
-- Fixed sale type filter to match actual types (online, online_platform)
-- Added processing_fee to platform CRUD
-- Auto Fee Calculator in Record Payment dialog
-- Fee Settings dialog per platform
-- Expected fee vs actual cut variance indicators
-
-## Previous Sessions Summary
-- Session 15: PIN Fix, Platform Fee Calculator
-- Session 14: Sales Delete Fix, Bank Accounts, Platform Reconciliation
-- Session 13: Auto Bank Account Tracking
-- Session 12: Bank Account Management, Dashboard Dues Drill-Down
-- Session 11: Date Quick Filter, Summary Bars, UI Polish, Tours
-- Session 10: Sales & Expenses Daily Grouping, Pagination Fix
-- Session 9: Cross-Branch Payments, Reports Hub, Data Alerts
-- Sessions 1-8: Core ERP, POS, Kitchen, Dashboard, Reports, Access Control
+## Session 16 - Duplicate Detection, Monthly Reconciliation Report, Fee Calculator
+## Session 15 - PIN Fix, Platform Fee Calculator  
+## Sessions 1-14 - Core ERP, POS, Kitchen, Dashboard, Reports, Access Control, Bank Accounts, Platform Reconciliation
 
 ## Pending Issues
 - SMTP Email: Blocked on user's Microsoft 365 Security Defaults
@@ -53,4 +42,3 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 ## Remaining Backlog
 - P2: General UI/UX polishing for data readability
 - P2: Email automation (blocked on SMTP)
-- P3: Guided tours for remaining sub-modules
