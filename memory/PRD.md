@@ -6,25 +6,25 @@ A comprehensive business management ERP system for tracking sales, expenses, sup
 ## Core Modules
 Financial Management | HR Management | Stock Management | Restaurant Operations | CCTV Security | Administration
 
-## Session 18 (Mar 8, 2026) - Anomaly Detector + Daily Summary Bug Fix
+## Session 19 (Mar 8, 2026) - Expense & Supplier Duplicate Detection
 
-### Daily Summary Bug Fix (DONE)
-- **Cross-branch expense filtering**: When filtering by branch, expenses with `expense_for_branch_id` matching the selected branch are now included (previously only `branch_id` was checked)
-- **Timezone date handling**: Changed from `$lte "T23:59:59"` to `$lt next_day` to properly handle dates with `+00:00` timezone suffix
-- **Both single-day and range endpoints fixed**
+### Expense Duplicate Detection (DONE)
+- Backend: GET /api/expenses/check-duplicate (branch_id, amount, date, category)
+- Visual: Day rows with duplicates (same branch + amount) highlighted orange with "Duplicate" badge
+- Visual: Individual duplicate entries marked with "Possible duplicate" badge + orange left border
+- Prevention: Warning dialog before saving when duplicate detected, with "Cancel & Review" / "Yes, Save Anyway"
 
-### Smart Anomaly Detector Dashboard Widget (DONE)
-- Added dashboard widget showing latest anomaly scan status (critical/warning counts)
-- "View Details" button links to the full /anomaly-detection page
-- Color-coded: red for critical alerts, amber for warnings, green for all-clear
-- Anomaly detection tour added to ModuleTour
+### Supplier Payment Duplicate Detection (DONE)
+- Backend: GET /api/supplier-payments/check-duplicate (supplier_id, amount, date)
+- Visual: Rows with same supplier + same amount on same day highlighted orange with "Duplicate" badge
+- Prevention: Warning dialog before saving payments or bills when duplicate detected
 
-### Previous Session Features (verified working)
-- Net Cash/Bank columns in Day by Day view
-- Duplicate sale prevention with warning dialog
-- Guided tours for 32+ modules
-- Monthly reconciliation report
-- Platform fee calculator
+### Daily Summary Bug Fix (Session 18 - DONE)
+- Cross-branch expenses now included when filtering by branch (expense_for_branch_id)
+- Timezone-safe date filtering ($lt next_day instead of $lte T23:59:59)
+
+### Smart Anomaly Detector Dashboard Widget (Session 18 - DONE)
+- Dashboard widget showing latest scan status with "View Details" link
 
 ## Pending Issues
 - SMTP Email: Blocked on user's Microsoft 365 Security Defaults
