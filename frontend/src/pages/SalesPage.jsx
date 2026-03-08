@@ -18,6 +18,8 @@ import { ExportButtons } from '@/components/ExportButtons';
 import { AdvancedSearch, applySearchFilters } from '@/components/AdvancedSearch';
 import { useBranchStore } from '@/stores';
 import { VirtualizedTable } from '@/components/VirtualizedTable';
+import { DateQuickFilter } from '@/components/DateQuickFilter';
+import { HelpCircle } from 'lucide-react';
 import { PDFExportButton } from '@/components/PDFExportButton';
 
 export default function SalesPage() {
@@ -33,6 +35,7 @@ export default function SalesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
+  const [dateRange, setDateRange] = useState(null);
 
   const [formData, setFormData] = useState({
     sale_type: 'branch',
@@ -105,14 +108,18 @@ export default function SalesPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [dateRange]);
 
   const fetchData = async (page = 1) => {
     try {
       // Use Zustand for branches
       fetchBranches();
+      let salesUrl = `/sales?page=${page}&limit=200`;
+      if (dateRange) {
+        salesUrl += `&start_date=${dateRange.start}&end_date=${dateRange.end}`;
+      }
       const [salesRes, customersRes, platformsRes] = await Promise.all([
-        api.get(`/sales?page=${page}&limit=200`),
+        api.get(salesUrl),
         api.get('/customers'),
         api.get('/platforms').catch(() => ({ data: [] })),
       ]);
@@ -586,8 +593,16 @@ export default function SalesPage() {
         )}
 
         <Card className="border-border">
-          <CardHeader>
-            <CardTitle className="font-outfit">All Sales</CardTitle>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <CardTitle className="font-outfit">All Sales</CardTitle>
+              <Button size="sm" variant="ghost" className="text-xs gap-1 text-muted-foreground"
+                onClick={() => { Object.keys(localStorage).filter(k => k.includes('sales_tour')).forEach(k => localStorage.removeItem(k)); localStorage.setItem('ssc_sales_tour_enabled', 'true'); window.location.reload(); }}
+                data-testid="sales-help-btn">
+                <HelpCircle size={14} /> Tour
+              </Button>
+            </div>
+            <DateQuickFilter onFilterChange={(range) => setDateRange(range)} className="mt-2" />
           </CardHeader>
           <CardContent>
             {urlDateFilter && (
@@ -636,6 +651,47 @@ export default function SalesPage() {
               }}
               className="mb-4"
             />
+            {/* Grand Total Summary Bar */}
+            {(() => {
+              const allSales = applySearchFilters(sales.map(s => ({
+                ...s, payment_mode: s.payment_details?.[0]?.mode || 'cash'
+              })), searchFilters);
+              const totals = allSales.reduce((acc, s) => {
+                acc.total += s.final_amount || (s.amount - (s.discount || 0));
+                (s.payment_details || []).forEach(p => {
+                  if (p.mode === 'cash') acc.cash += p.amount || 0;
+                  else if (p.mode === 'bank') acc.bank += p.amount || 0;
+                  else if (p.mode === 'credit') acc.credit += p.amount || 0;
+                  else acc.online += p.amount || 0;
+                });
+                return acc;
+              }, { total: 0, cash: 0, bank: 0, credit: 0, online: 0 });
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4 mt-3" data-testid="sales-summary-bar">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-stone-50 to-stone-100 border border-stone-200">
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Grand Total</div>
+                    <div className="text-lg font-bold text-stone-900">SAR {totals.total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                    <div className="text-[10px] text-muted-foreground">{allSales.length} sales</div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+                    <div className="text-[10px] text-emerald-600 uppercase tracking-wider">Cash</div>
+                    <div className="text-lg font-bold text-emerald-700">SAR {totals.cash.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-blue-50 border border-blue-200">
+                    <div className="text-[10px] text-blue-600 uppercase tracking-wider">Bank</div>
+                    <div className="text-lg font-bold text-blue-700">SAR {totals.bank.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-purple-50 border border-purple-200">
+                    <div className="text-[10px] text-purple-600 uppercase tracking-wider">Online</div>
+                    <div className="text-lg font-bold text-purple-700">SAR {totals.online.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-200">
+                    <div className="text-[10px] text-amber-600 uppercase tracking-wider">Credit</div>
+                    <div className="text-lg font-bold text-amber-700">SAR {totals.credit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                  </div>
+                </div>
+              );
+            })()}
             <VirtualizedTable
               data={(() => {
                 const filteredSales = applySearchFilters(sales.map(s => ({

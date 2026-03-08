@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, AlertTriangle, DollarSign, Settings2, MessageCircle, FileDown, RotateCcw, CalendarDays, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle, DollarSign, Settings2, MessageCircle, FileDown, RotateCcw, CalendarDays, ChevronDown, ChevronRight, HelpCircle } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -20,6 +20,7 @@ import { AdvancedSearch, applySearchFilters } from '@/components/AdvancedSearch'
 import { useBranchStore, useAuthStore } from '@/stores';
 import { VirtualizedTable } from '@/components/VirtualizedTable';
 import { PDFExportButton } from '@/components/PDFExportButton';
+import { DateQuickFilter } from '@/components/DateQuickFilter';
 import { SearchableSelect } from '@/components/SearchableSelect';
 
 export default function ExpensesPage() {
@@ -38,6 +39,7 @@ export default function ExpensesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [expandedDates, setExpandedDates] = useState({});
+  const [dateRange, setDateRange] = useState(null);
 
   useEffect(() => {
     if (urlDateFilter) {
@@ -88,13 +90,17 @@ export default function ExpensesPage() {
     { name: 'Other', subs: [] },
   ];
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData(); }, [dateRange]);
 
   const fetchData = async (page = 1) => {
     try {
       // Use Zustand for branches
       fetchBranches();
-      const [eR, sR, cR, rR] = await Promise.all([api.get(`/expenses?page=${page}&limit=200`), api.get('/suppliers'), api.get('/categories?category_type=expense'), api.get('/recurring-expenses')]);
+      let expUrl = `/expenses?page=${page}&limit=200`;
+      if (dateRange) {
+        expUrl += `&start_date=${dateRange.start}&end_date=${dateRange.end}`;
+      }
+      const [eR, sR, cR, rR] = await Promise.all([api.get(expUrl), api.get('/suppliers'), api.get('/categories?category_type=expense'), api.get('/recurring-expenses')]);
       const expData = eR.data;
       setExpenses(expData.data || expData || []);
       setCurrentPage(expData.page || 1);
@@ -181,8 +187,16 @@ export default function ExpensesPage() {
             <Button size="sm" variant="outline" className="rounded-xl text-red-600 border-red-200 hover:bg-red-50" onClick={() => setShowRefundDialog(true)} data-testid="add-refund-btn"><RotateCcw size={14} className="mr-1" />Refund</Button>
             <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowWhatsApp(true)} data-testid="expenses-whatsapp-btn"><MessageCircle size={14} className="mr-1" />WhatsApp</Button>
             {isAdmin && <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowCatManager(true)}><Settings2 size={14} className="mr-1" />{t('category')}</Button>}
+            <Button size="sm" variant="ghost" className="text-xs gap-1 text-muted-foreground"
+              onClick={() => { Object.keys(localStorage).filter(k => k.includes('expenses_tour')).forEach(k => localStorage.removeItem(k)); localStorage.setItem('ssc_expenses_tour_enabled', 'true'); window.location.reload(); }}
+              data-testid="expenses-help-btn">
+              <HelpCircle size={14} /> Tour
+            </Button>
           </div>
         </div>
+
+        {/* Date Quick Filter */}
+        <DateQuickFilter onFilterChange={(range) => setDateRange(range)} />
 
         {urlDateFilter && (
           <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-orange-50 rounded-lg border border-orange-200" data-testid="date-filter-banner">
@@ -377,6 +391,28 @@ export default function ExpensesPage() {
             <Card className="border-stone-100">
               <CardHeader><CardTitle className="font-outfit text-base flex justify-between">{t('all_expenses')} <span className="text-error">{t('total_label')}: SAR {totalExp.toFixed(2)}</span></CardTitle></CardHeader>
               <CardContent>
+                {/* Grand Total Summary */}
+                {filtered.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4" data-testid="expenses-summary-bar">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-red-50 to-red-100 border border-red-200">
+                      <div className="text-[10px] text-red-600 uppercase tracking-wider">Total Expenses</div>
+                      <div className="text-lg font-bold text-red-700">SAR {totalExp.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                      <div className="text-[10px] text-muted-foreground">{filtered.length} entries</div>
+                    </div>
+                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+                      <div className="text-[10px] text-emerald-600 uppercase tracking-wider">Cash</div>
+                      <div className="text-lg font-bold text-emerald-700">SAR {filtered.filter(e => e.payment_mode === 'cash').reduce((s, e) => s + e.amount, 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                    </div>
+                    <div className="p-3 rounded-xl bg-blue-50 border border-blue-200">
+                      <div className="text-[10px] text-blue-600 uppercase tracking-wider">Bank</div>
+                      <div className="text-lg font-bold text-blue-700">SAR {filtered.filter(e => e.payment_mode === 'bank').reduce((s, e) => s + e.amount, 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                    </div>
+                    <div className="p-3 rounded-xl bg-amber-50 border border-amber-200">
+                      <div className="text-[10px] text-amber-600 uppercase tracking-wider">Credit</div>
+                      <div className="text-lg font-bold text-amber-700">SAR {filtered.filter(e => e.payment_mode === 'credit').reduce((s, e) => s + e.amount, 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                    </div>
+                  </div>
+                )}
                 {/* Mobile card view */}
                 <div className="sm:hidden space-y-2">
                   {filtered.map(e => (
