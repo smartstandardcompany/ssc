@@ -6,28 +6,31 @@ A comprehensive business management ERP system for tracking sales, expenses, sup
 ## Core Modules
 Financial Management | HR Management | Stock Management | Restaurant Operations | CCTV Security | Administration
 
-## Session 13 (Mar 8, 2026) - Auto Bank Account Tracking
+## Session 14 (Mar 8, 2026) - Sales Delete Fix, Bank Accounts, Platform Reconciliation
 
-### Simplified Bank Account Tracking (DONE)
-- REMOVED manual bank account dropdown from Sales form (too tedious)
-- Bank accounts are assigned to branches once (in Bank Accounts page)
-- System auto-calculates how much each bank received/paid based on branch assignment
-- Logic: Branch A's bank sales → Branch A's assigned bank account. Unassigned branches → default account
+### Sales Delete Button Fix (DONE)
+- Sales date rows are now expandable (click to see individual entries)
+- Each entry has DELETE (red trash) and RECEIVE (for credit sales) buttons
+- Fixed the issue where admin couldn't delete sales after daily grouping change
 
-### Dashboard Bank Account Summary Widget (DONE)
-- New "Bank Account Summary" widget on Dashboard
-- Shows each bank account with: Received (green), Paid Out (red), Net Balance
-- "All Banks Total" bar with aggregated In/Out/Net
-- "Manage Accounts" button links to Bank Accounts page
-- Backend auto-calculation endpoint: GET /api/bank-accounts/summary
+### Sample Bank Accounts Added (DONE)
+- Alinma Bank - Branch A (assigned to branch A)
+- Bank Al Bilad - Branch B (assigned to branch B)
+- Al Rajhi - Main remains as default for all other branches
 
-### Branch Dues Drill-Down (DONE)
-- "View Details" button on Branch-to-Branch Dues section
-- Clickable due amounts open a detail dialog
-- Shows every cross-branch transaction: Date, Type, From/To Branch, Amount, Description
+### Platform Reconciliation (DONE)
+- New page: /platform-reconciliation
+- Tracks HungerStation, Keeta, and other online platform sales vs received payments
+- Auto-calculates platform commission/cuts based on: Sales recorded - Amount received
+- Shows per-branch breakdown when platform is expanded
+- "Record Received Payment" dialog to log platform payouts
+- Payment History tab with delete capability
+- Date quick filter for period analysis
+- Backend: CRUD endpoints for reconciliation records + summary calculation
 
 ## Previous Sessions Summary
-- Session 12: Bank Account Management (CRUD), Bank Account in Sales (now removed), Dues Drill-Down
+- Session 13: Auto Bank Account Tracking (removed manual dropdown, auto-calculate from branch assignment)
+- Session 12: Bank Account Management (CRUD), Dashboard Dues Drill-Down
 - Session 11: Date Quick Filter, Summary Bars, UI Polish, Tours
 - Session 10: Sales & Expenses Daily Grouping, Pagination Fix
 - Session 9: Cross-Branch Payments, Reports Hub, Data Alerts, Invoice Upload
@@ -42,5 +45,4 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 
 ## Remaining Backlog
 - P2: Email automation (blocked on SMTP)
-- P3: Platform reconciliation (HungerStation bulk payments vs branch orders)
 - P3: Further UI/UX polishing
