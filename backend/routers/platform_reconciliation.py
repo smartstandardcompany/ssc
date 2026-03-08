@@ -16,12 +16,15 @@ async def get_platform_reconciliation(
     current_user: User = Depends(get_current_user)
 ):
     """Calculate platform sales vs received amounts, showing platform cuts per branch."""
-    platforms = await db.platforms.find({}, {"_id": 0}).to_list(50)
+    platforms = await db.delivery_platforms.find({}, {"_id": 0}).to_list(50)
     branches = await db.branches.find({}, {"_id": 0}).to_list(100)
     branch_map = {b["id"]: b["name"] for b in branches}
 
-    # Build date filter for sales
-    sale_filter = {"sale_type": "online_delivery"}
+    # Build date filter for sales - match online/online_platform types or any sale with platform_id
+    sale_filter = {"$or": [
+        {"sale_type": {"$in": ["online_delivery", "online", "online_platform"]}},
+        {"platform_id": {"$exists": True, "$ne": None}}
+    ]}
     if start_date or end_date:
         date_f = {}
         if start_date:
@@ -57,13 +60,20 @@ async def get_platform_reconciliation(
         if not pid:
             continue
         if pid not in platform_summary:
-            pname = platform_map.get(pid, {}).get("name", "Unknown Platform")
+            pdata = platform_map.get(pid, {})
+            pname = pdata.get("name", "Unknown Platform")
+            comm_rate = pdata.get("commission_rate", 0) or 0
+            proc_fee = pdata.get("processing_fee", 0) or 0
             platform_summary[pid] = {
                 "platform_id": pid,
                 "platform_name": pname,
+                "commission_rate": comm_rate,
+                "processing_fee": proc_fee,
                 "total_sales": 0,
                 "total_received": 0,
                 "platform_cut": 0,
+                "expected_fee": 0,
+                "expected_received": 0,
                 "cut_percentage": 0,
                 "sales_count": 0,
                 "by_branch": {},
@@ -82,28 +92,39 @@ async def get_platform_reconciliation(
         pid = rec.get("platform_id")
         if pid and pid in platform_summary:
             platform_summary[pid]["total_received"] += rec.get("amount", 0)
-            # If branch-specific
             bname = rec.get("branch_name")
             if bname and bname in platform_summary[pid]["by_branch"]:
                 platform_summary[pid]["by_branch"][bname]["received"] += rec.get("amount", 0)
 
-    # Calculate cuts
+    # Calculate cuts + expected fees
     for pid, ps in platform_summary.items():
+        comm_rate = ps["commission_rate"]
+        proc_fee = ps["processing_fee"]
+        # Expected fee = (commission_rate% of sales) + (processing_fee * order_count)
+        expected_commission = ps["total_sales"] * (comm_rate / 100) if comm_rate > 0 else 0
+        expected_processing = proc_fee * ps["sales_count"] if proc_fee > 0 else 0
+        ps["expected_fee"] = round(expected_commission + expected_processing, 2)
+        ps["expected_received"] = round(ps["total_sales"] - ps["expected_fee"], 2)
+
         ps["platform_cut"] = round(ps["total_sales"] - ps["total_received"], 2)
         if ps["total_sales"] > 0:
             ps["cut_percentage"] = round((ps["platform_cut"] / ps["total_sales"]) * 100, 2)
         for bname, bd in ps["by_branch"].items():
             bd["cut"] = round(bd["sales"] - bd["received"], 2)
+            bd["expected_fee"] = round(bd["sales"] * (comm_rate / 100) + proc_fee * bd["count"], 2) if comm_rate > 0 or proc_fee > 0 else 0
             bd["sales"] = round(bd["sales"], 2)
             bd["received"] = round(bd["received"], 2)
         ps["total_sales"] = round(ps["total_sales"], 2)
         ps["total_received"] = round(ps["total_received"], 2)
+
+    total_expected_fee = round(sum(p["expected_fee"] for p in platform_summary.values()), 2)
 
     return {
         "platforms": list(platform_summary.values()),
         "total_online_sales": round(sum(p["total_sales"] for p in platform_summary.values()), 2),
         "total_received": round(sum(p["total_received"] for p in platform_summary.values()), 2),
         "total_platform_cut": round(sum(p["platform_cut"] for p in platform_summary.values()), 2),
+        "total_expected_fee": total_expected_fee,
     }
 
 

@@ -58,6 +58,7 @@ async def create_platform(body: dict, current_user: User = Depends(get_current_u
         "name_ar": body.get("name_ar", ""),
         "logo_url": body.get("logo_url", ""),
         "commission_rate": body.get("commission_rate", 0),  # Default commission %
+        "processing_fee": body.get("processing_fee", 0),  # Fixed fee per order
         "contact_email": body.get("contact_email", ""),
         "contact_phone": body.get("contact_phone", ""),
         "payment_terms": body.get("payment_terms", "weekly"),  # weekly, biweekly, monthly
@@ -83,6 +84,7 @@ async def update_platform(platform_id: str, body: dict, current_user: User = Dep
         "name_ar": body.get("name_ar", ""),
         "logo_url": body.get("logo_url", ""),
         "commission_rate": body.get("commission_rate", 0),
+        "processing_fee": body.get("processing_fee", 0),
         "contact_email": body.get("contact_email", ""),
         "contact_phone": body.get("contact_phone", ""),
         "payment_terms": body.get("payment_terms", "weekly"),
