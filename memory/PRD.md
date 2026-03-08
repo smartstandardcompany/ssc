@@ -6,31 +6,25 @@ A comprehensive business management ERP system for tracking sales, expenses, sup
 ## Core Modules
 Financial Management | HR Management | Stock Management | Restaurant Operations | CCTV Security | Administration
 
-## Session 17 (Mar 8, 2026) - Net Cash/Bank, Duplicate Prevention, Guided Tours
+## Session 18 (Mar 8, 2026) - Anomaly Detector + Daily Summary Bug Fix
 
-### Daily Summary Net Cash/Bank Columns (DONE)
-- Added "Net Cash" and "Net Bank" columns to the Day by Day table in Range mode
-- Net Cash = Sales Cash - Expense Cash per day
-- Net Bank = Sales Bank - Expense Bank per day
-- Negative values displayed in red, positive in teal/indigo
-- TOTAL row includes net_cash and net_bank sums
-- Backend calculates net_cash/net_bank per daily row
+### Daily Summary Bug Fix (DONE)
+- **Cross-branch expense filtering**: When filtering by branch, expenses with `expense_for_branch_id` matching the selected branch are now included (previously only `branch_id` was checked)
+- **Timezone date handling**: Changed from `$lte "T23:59:59"` to `$lt next_day` to properly handle dates with `+00:00` timezone suffix
+- **Both single-day and range endpoints fixed**
 
-### Automatic Duplicate Prevention (DONE)
-- New backend endpoint: GET /api/sales/check-duplicate?branch_id=X&amount=Y&date=Z
-- Before saving, frontend calls check-duplicate to detect same branch + amount on same date
-- If duplicate found, shows AlertDialog: "X sale(s) with same branch and amount already exist"
-- User can "Cancel & Review" or "Yes, Save Anyway"
-- Works in combination with existing visual duplicate detection on day rows
+### Smart Anomaly Detector Dashboard Widget (DONE)
+- Added dashboard widget showing latest anomaly scan status (critical/warning counts)
+- "View Details" button links to the full /anomaly-detection page
+- Color-coded: red for critical alerts, amber for warnings, green for all-clear
+- Anomaly detection tour added to ModuleTour
 
-### Guided Tours for All Sub-Modules (DONE)
-- Added tours for 14+ remaining modules: Platform Reconciliation, Monthly Recon Report, Bank Accounts, Branches, CCTV, Documents, Fines, Partners, Company Loans, Schedule, Transfers, Bank Statements, Credit Report, Supplier Report, Category Report, Reconciliation
-- Total: 32 module tours now configured
-- Each tour has 3-4 contextual steps explaining the module's purpose and key actions
-
-## Session 16 - Duplicate Detection, Monthly Reconciliation Report, Fee Calculator
-## Session 15 - PIN Fix, Platform Fee Calculator  
-## Sessions 1-14 - Core ERP, POS, Kitchen, Dashboard, Reports, Access Control, Bank Accounts, Platform Reconciliation
+### Previous Session Features (verified working)
+- Net Cash/Bank columns in Day by Day view
+- Duplicate sale prevention with warning dialog
+- Guided tours for 32+ modules
+- Monthly reconciliation report
+- Platform fee calculator
 
 ## Pending Issues
 - SMTP Email: Blocked on user's Microsoft 365 Security Defaults
