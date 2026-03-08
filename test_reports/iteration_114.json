@@ -1,0 +1,76 @@
+{
+  "summary": "Iteration 114: Tested Daily Summary bug fixes (cross-branch expense filtering + timezone date handling), Anomaly Detection feature integration, and verified previous features (net columns, duplicate prevention). All 9 backend tests passed. All UI features verified working.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter114_features.py",
+    "/app/test_reports/pytest/pytest_results_iter114.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iter114_features.py"
+  ],
+  "success_rate": {
+    "backend": "100% (9/9 tests passed)",
+    "frontend": "100% (All UI features verified)"
+  },
+  "test_credentials": {
+    "admin": "ss@ssc.com / Aa147258369Ssc@"
+  },
+  "seed_data_creation": "None - used existing data",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 114 verified all requested features. Daily summary bug fixes confirmed working with proper branch filtering (including expense_for_branch_id OR) and timezone handling ($lt next_day). Anomaly Detection fully integrated with dashboard widget and dedicated page.",
+  "features_verified": {
+    "1_daily_summary_branch_filter_bug_fix": {
+      "status": "PASSED",
+      "details": "GET /api/dashboard/daily-summary-range with branch_id now includes expenses where expense_for_branch_id matches the selected branch. API returns correct totals with $or query for cross-branch expenses."
+    },
+    "2_daily_summary_timezone_bug_fix": {
+      "status": "PASSED", 
+      "details": "Endpoint handles dates with +00:00 timezone suffix correctly using $lt next_day instead of $lte T23:59:59. Date range queries work properly."
+    },
+    "3_daily_summary_net_columns": {
+      "status": "PASSED",
+      "details": "Day by Day view shows 'Net Cash' and 'Net Bank' columns. Headers confirmed: ['Date', 'Sales', 'Cash', 'Bank', 'Expenses', 'Cash', 'Bank', 'SP', 'Net Cash', 'Net Bank', 'Net']. Sample data: Totals Net Cash=SAR 675.00, Net Bank=SAR -24,000.00 with red styling for negative values."
+    },
+    "4_anomaly_detection_scan_endpoint": {
+      "status": "PASSED",
+      "details": "GET /api/anomaly-detection/scan?days=30 returns proper structure: {scan: {total_anomalies, critical, warning, info, by_category}, anomalies: [...]}. Scan creates database record."
+    },
+    "5_anomaly_detection_history_endpoint": {
+      "status": "PASSED",
+      "details": "GET /api/anomaly-detection/history returns array of previous scan records with scanned_at, total_anomalies, critical, warning, info counts."
+    },
+    "6_anomaly_detection_schedule_endpoint": {
+      "status": "PASSED",
+      "details": "GET /api/anomaly-detection/schedule returns {enabled, frequency, period_days, alert_threshold, channels}."
+    },
+    "7_anomaly_dashboard_widget": {
+      "status": "PASSED",
+      "details": "Dashboard shows Anomaly Detection widget (data-testid='anomaly-dashboard-widget') with last scan date (3/8/2026), anomaly counts (1 Critical, 13 Warning), and 'View Details' button linking to /anomaly-detection."
+    },
+    "8_anomaly_detection_page": {
+      "status": "PASSED",
+      "details": "Full page at /anomaly-detection with: Run Scan button, period selector (Last 90 days), Auto-Scan Schedule settings (enabled, frequency, time, period, alert threshold, channels), Test Now button, Scan History showing multiple records with timestamps and anomaly breakdowns."
+    },
+    "9_duplicate_prevention_regression": {
+      "status": "PASSED",
+      "details": "GET /api/sales/check-duplicate still works. Sales page shows 6 duplicate warning badges on Feb 27 and Feb 28 rows with orange styling. AlertDialog component configured for confirmation prompt."
+    }
+  },
+  "screenshots": {
+    "dashboard_with_anomaly_widget": "Shows dashboard with Anomaly Detection widget showing 1 Critical, 13 Warning anomalies and View Details button",
+    "anomaly_detection_page": "Shows full Anomaly Detection page with Run Scan, Schedule Settings (Daily at 07:00, Warning+, push/whatsapp channels), and Scan History",
+    "daily_summary_net_columns": "Shows Range Summary (2026-03-01 to 2026-03-08) with Day by Day table including Net Cash (SAR 675.00) and Net Bank (SAR -24,000.00) columns",
+    "sales_duplicate_warnings": "Shows Sales page with duplicate badges on Feb 28 and Feb 27 rows (7 entries each)"
+  }
+}

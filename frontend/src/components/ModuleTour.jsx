@@ -289,6 +289,15 @@ const MODULE_TOURS = {
       { title: 'Discrepancy Report', description: 'View unmatched bank entries and system entries. Investigate and resolve differences to keep books clean.', icon: Shield, target: null },
     ]
   },
+  '/anomaly-detection': {
+    key: 'anomaly_detection_tour',
+    steps: [
+      { title: 'Smart Anomaly Detection', description: 'AI-powered scanner that detects unusual patterns in your sales, expenses, and bank data. Run manual scans or set up automatic daily/weekly scanning.', icon: Shield, target: null },
+      { title: 'Run a Scan', description: 'Click "Run Scan" to analyze your data. Choose the scan period (30-180 days). The system compares each metric against historical averages to detect outliers.', icon: TrendingUp, target: '[data-testid="run-scan-btn"]' },
+      { title: 'Severity Levels', description: 'Anomalies are classified as Critical (major spike/drop), Warning (moderate deviation), or Info (minor observation). Filter by category or severity.', icon: Shield, target: null },
+      { title: 'Auto-Scan Schedule', description: 'Enable automatic scanning on a daily or weekly basis. Configure alert thresholds and notification channels (push, WhatsApp, email).', icon: Settings, target: '[data-testid="schedule-settings"]' },
+    ]
+  },
 };
 
 export default function ModuleTour() {

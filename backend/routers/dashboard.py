@@ -433,27 +433,45 @@ async def get_daily_summary(
     else:
         target_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     
-    # Build queries
+    # Build queries - use $lt next_day to handle timezone-suffixed dates
     date_start = f"{target_date}T00:00:00"
-    date_end = f"{target_date}T23:59:59"
+    from datetime import timedelta as td
+    next_day = (datetime.strptime(target_date, "%Y-%m-%d") + td(days=1)).strftime("%Y-%m-%d")
+    date_end = f"{next_day}T00:00:00"
     
-    base_query = {"date": {"$gte": date_start, "$lte": date_end}}
+    base_query = {"date": {"$gte": date_start, "$lt": date_end}}
     
-    # Apply branch filter
+    # Apply branch filter for sales
+    sale_query = dict(base_query)
     if branch_id:
-        base_query["branch_id"] = branch_id
+        sale_query["branch_id"] = branch_id
     elif current_user.branch_id and current_user.role != "admin":
-        base_query["branch_id"] = current_user.branch_id
+        sale_query["branch_id"] = current_user.branch_id
+    
+    # Apply branch filter for expenses (include cross-branch expenses)
+    if branch_id:
+        exp_query = {"date": {"$gte": date_start, "$lt": date_end}, "$or": [
+            {"branch_id": branch_id},
+            {"expense_for_branch_id": branch_id}
+        ]}
+    elif current_user.branch_id and current_user.role != "admin":
+        exp_query = {"date": {"$gte": date_start, "$lt": date_end}, "$or": [
+            {"branch_id": current_user.branch_id},
+            {"expense_for_branch_id": current_user.branch_id}
+        ]}
+    else:
+        exp_query = dict(base_query)
     
     # Fetch data
-    sales = await db.sales.find(base_query, {"_id": 0}).to_list(10000)
+    sales = await db.sales.find(sale_query, {"_id": 0}).to_list(10000)
     
-    exp_query = dict(base_query)
     expenses = await db.expenses.find(exp_query, {"_id": 0}).to_list(10000)
     
-    sp_query = {"date": {"$gte": date_start, "$lte": date_end}}
+    sp_query = {"date": {"$gte": date_start, "$lt": date_end}}
     if branch_id:
         sp_query["branch_id"] = branch_id
+    elif current_user.branch_id and current_user.role != "admin":
+        sp_query["branch_id"] = current_user.branch_id
     supplier_payments = await db.supplier_payments.find(sp_query, {"_id": 0}).to_list(1000)
     
     # Get branches for names
@@ -631,27 +649,47 @@ async def get_daily_summary_range(
     current_user: User = Depends(get_current_user)
 ):
     """Get aggregated and day-by-day summary for a date range."""
-    from datetime import date as dt_date
+    from datetime import date as dt_date, timedelta as td
 
     # Parse dates
     start = datetime.strptime(start_date, "%Y-%m-%d")
     end = datetime.strptime(end_date, "%Y-%m-%d")
+    next_day = (end + td(days=1)).strftime("%Y-%m-%d")
     
-    base_query = {"date": {"$gte": f"{start_date}T00:00:00", "$lte": f"{end_date}T23:59:59"}}
+    # Use $lt next_day to properly include dates with timezone suffixes like +00:00
+    date_filter = {"$gte": f"{start_date}T00:00:00", "$lt": f"{next_day}T00:00:00"}
+
+    # --- Sales query: filter by branch_id ---
+    sale_query = {"date": date_filter}
     if branch_id:
-        base_query["branch_id"] = branch_id
+        sale_query["branch_id"] = branch_id
     elif current_user.branch_id and current_user.role != "admin":
-        base_query["branch_id"] = current_user.branch_id
+        sale_query["branch_id"] = current_user.branch_id
 
-    # Fetch all data for the range
-    sales = await db.sales.find(base_query, {"_id": 0, "date": 1, "amount": 1, "final_amount": 1, "payment_details": 1, "credit_amount": 1, "credit_received": 1}).to_list(50000)
-    expenses = await db.expenses.find(base_query, {"_id": 0, "date": 1, "amount": 1, "payment_mode": 1, "category": 1}).to_list(50000)
+    # --- Expense query: filter by branch_id OR expense_for_branch_id ---
+    if branch_id:
+        exp_query = {"date": date_filter, "$or": [
+            {"branch_id": branch_id},
+            {"expense_for_branch_id": branch_id}
+        ]}
+    elif current_user.branch_id and current_user.role != "admin":
+        exp_query = {"date": date_filter, "$or": [
+            {"branch_id": current_user.branch_id},
+            {"expense_for_branch_id": current_user.branch_id}
+        ]}
+    else:
+        exp_query = {"date": date_filter}
 
-    sp_query = {"date": {"$gte": f"{start_date}T00:00:00", "$lte": f"{end_date}T23:59:59"}}
+    # --- Supplier payment query ---
+    sp_query = {"date": date_filter}
     if branch_id:
         sp_query["branch_id"] = branch_id
     elif current_user.branch_id and current_user.role != "admin":
         sp_query["branch_id"] = current_user.branch_id
+
+    # Fetch all data for the range
+    sales = await db.sales.find(sale_query, {"_id": 0, "date": 1, "amount": 1, "final_amount": 1, "payment_details": 1, "credit_amount": 1, "credit_received": 1}).to_list(50000)
+    expenses = await db.expenses.find(exp_query, {"_id": 0, "date": 1, "amount": 1, "payment_mode": 1, "category": 1}).to_list(50000)
     supplier_payments = await db.supplier_payments.find(sp_query, {"_id": 0, "date": 1, "amount": 1, "payment_mode": 1}).to_list(50000)
 
     # Compute totals

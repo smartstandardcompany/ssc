@@ -134,6 +134,7 @@ export default function DashboardPage() {
   const [showDuesDetail, setShowDuesDetail] = useState(false);
   const [duesDetailData, setDuesDetailData] = useState([]);
   const [bankAccountSummary, setBankAccountSummary] = useState(null);
+  const [anomalyHistory, setAnomalyHistory] = useState([]);
   const t = THEMES[theme] || THEMES.default;
   const { t: tr, language } = useLanguage();
   const [showTour, setShowTour] = useState(false);
@@ -266,6 +267,8 @@ export default function DashboardPage() {
       try { const mdRes = await api.get('/dashboard/missing-data-alerts'); setMissingDataAlerts(mdRes.data?.alerts || []); } catch {}
       // Fetch bank account summary
       try { const baRes = await api.get('/bank-accounts/summary'); setBankAccountSummary(baRes.data); } catch {}
+      // Fetch latest anomaly scan
+      try { const anRes = await api.get('/anomaly-detection/history'); setAnomalyHistory(anRes.data?.slice(0, 1) || []); } catch {}
     } catch (error) {
       toast.error('Failed to fetch dashboard stats');
     } finally {
@@ -797,6 +800,37 @@ export default function DashboardPage() {
                   <span className="text-emerald-700">In: <strong>SAR {bankAccountSummary.total_bank_incoming?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></span>
                   <span className="text-red-600">Out: <strong>SAR {bankAccountSummary.total_bank_outgoing?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></span>
                   <span className={bankAccountSummary.total_bank_net >= 0 ? 'text-emerald-700' : 'text-red-600'}>Net: <strong>SAR {bankAccountSummary.total_bank_net?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* VAT Section (toggleable) */}
+
+        {/* Anomaly Detection Widget */}
+        {anomalyHistory.length > 0 && (
+          <Card className={`border ${anomalyHistory[0].critical > 0 ? 'border-red-300 bg-red-50/30' : anomalyHistory[0].warning > 0 ? 'border-amber-300 bg-amber-50/30' : 'border-emerald-300 bg-emerald-50/30'}`} data-testid="anomaly-dashboard-widget">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Zap size={16} className={anomalyHistory[0].critical > 0 ? 'text-red-500' : anomalyHistory[0].warning > 0 ? 'text-amber-500' : 'text-emerald-500'} />
+                  <span className="text-sm font-semibold">Anomaly Detection</span>
+                  <span className="text-[10px] text-muted-foreground">Last scan: {anomalyHistory[0].scanned_at ? new Date(anomalyHistory[0].scanned_at).toLocaleDateString() : 'N/A'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {anomalyHistory[0].critical > 0 && (
+                    <Badge className="bg-red-100 text-red-700 text-[10px] border-0">{anomalyHistory[0].critical} Critical</Badge>
+                  )}
+                  {anomalyHistory[0].warning > 0 && (
+                    <Badge className="bg-amber-100 text-amber-700 text-[10px] border-0">{anomalyHistory[0].warning} Warning</Badge>
+                  )}
+                  {anomalyHistory[0].total_anomalies === 0 && (
+                    <Badge className="bg-emerald-100 text-emerald-700 text-[10px] border-0">All Clear</Badge>
+                  )}
+                  <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => navigate('/anomaly-detection')} data-testid="view-anomalies-btn">
+                    View Details
+                  </Button>
                 </div>
               </div>
             </CardContent>
