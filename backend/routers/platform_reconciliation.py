@@ -161,3 +161,112 @@ async def delete_reconciliation(record_id: str, current_user: User = Depends(get
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Record not found")
     return {"message": "Deleted"}
+
+
+@router.get("/platform-reconciliation/monthly-report")
+async def get_monthly_reconciliation_report(
+    months: int = 6,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate a monthly reconciliation report for the last N months."""
+    from datetime import timedelta
+    from calendar import monthrange
+
+    platforms = await db.delivery_platforms.find({"is_active": True}, {"_id": 0}).to_list(50)
+    platform_map = {p["id"]: p for p in platforms}
+
+    now = datetime.now(timezone.utc)
+    monthly_data = []
+
+    for i in range(months):
+        # Calculate month boundaries
+        year = now.year
+        month = now.month - i
+        while month <= 0:
+            month += 12
+            year -= 1
+        _, last_day = monthrange(year, month)
+        start = f"{year}-{month:02d}-01"
+        end = f"{year}-{month:02d}-{last_day:02d}"
+        month_label = f"{year}-{month:02d}"
+
+        # Get sales for this month
+        sale_filter = {
+            "$or": [
+                {"sale_type": {"$in": ["online_delivery", "online", "online_platform"]}},
+                {"platform_id": {"$exists": True, "$ne": None}}
+            ],
+            "date": {"$gte": start + "T00:00:00", "$lte": end + "T23:59:59"}
+        }
+        sales = await db.sales.find(sale_filter, {"_id": 0, "platform_id": 1, "final_amount": 1, "amount": 1}).to_list(100000)
+
+        # Get reconciliation records for this month
+        recon_records = await db.platform_reconciliations.find(
+            {"date": {"$gte": start, "$lte": end}}, {"_id": 0}
+        ).to_list(10000)
+
+        # Build per-platform summary for this month
+        platform_months = {}
+        for sale in sales:
+            pid = sale.get("platform_id")
+            if not pid:
+                continue
+            amount = sale.get("final_amount") or sale.get("amount", 0)
+            if pid not in platform_months:
+                pdata = platform_map.get(pid, {})
+                platform_months[pid] = {
+                    "platform_id": pid,
+                    "platform_name": pdata.get("name", "Unknown"),
+                    "commission_rate": pdata.get("commission_rate", 0) or 0,
+                    "processing_fee": pdata.get("processing_fee", 0) or 0,
+                    "total_sales": 0,
+                    "total_received": 0,
+                    "sales_count": 0,
+                }
+            platform_months[pid]["total_sales"] += amount
+            platform_months[pid]["sales_count"] += 1
+
+        for rec in recon_records:
+            pid = rec.get("platform_id")
+            if pid and pid in platform_months:
+                platform_months[pid]["total_received"] += rec.get("amount", 0)
+
+        # Calculate fees for each platform this month
+        month_platforms = []
+        for pid, pm in platform_months.items():
+            comm = pm["commission_rate"]
+            proc = pm["processing_fee"]
+            expected_fee = round(pm["total_sales"] * (comm / 100) + proc * pm["sales_count"], 2)
+            actual_cut = round(pm["total_sales"] - pm["total_received"], 2)
+            month_platforms.append({
+                **pm,
+                "total_sales": round(pm["total_sales"], 2),
+                "total_received": round(pm["total_received"], 2),
+                "expected_fee": expected_fee,
+                "expected_received": round(pm["total_sales"] - expected_fee, 2),
+                "actual_cut": actual_cut,
+                "variance": round(actual_cut - expected_fee, 2),
+            })
+
+        total_sales = round(sum(p["total_sales"] for p in month_platforms), 2)
+        total_received = round(sum(p["total_received"] for p in month_platforms), 2)
+        total_expected = round(sum(p["expected_fee"] for p in month_platforms), 2)
+        total_actual_cut = round(total_sales - total_received, 2)
+
+        monthly_data.append({
+            "month": month_label,
+            "month_name": datetime(year, month, 1).strftime("%B %Y"),
+            "platforms": sorted(month_platforms, key=lambda x: x["total_sales"], reverse=True),
+            "total_sales": total_sales,
+            "total_received": total_received,
+            "total_expected_fee": total_expected,
+            "total_actual_cut": total_actual_cut,
+            "total_variance": round(total_actual_cut - total_expected, 2),
+            "order_count": sum(p["sales_count"] for p in month_platforms),
+        })
+
+    return {"months": monthly_data, "platforms": [{
+        "id": p["id"], "name": p["name"],
+        "commission_rate": p.get("commission_rate", 0),
+        "processing_fee": p.get("processing_fee", 0),
+    } for p in platforms]}

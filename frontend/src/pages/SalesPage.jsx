@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Trash2, DollarSign, X, Truck, Store, TrendingUp, FileDown, CalendarDays, Building2 } from 'lucide-react';
+import { Plus, Trash2, DollarSign, X, Truck, Store, TrendingUp, FileDown, CalendarDays, Building2, AlertTriangle, Copy } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -726,6 +726,22 @@ export default function SalesPage() {
               });
               const dailyData = Object.values(grouped).sort((a, b) => new Date(b.date) - new Date(a.date));
 
+              // Detect duplicate entries per day (same branch + same amount)
+              dailyData.forEach(day => {
+                const dupeKeys = {};
+                day.items.forEach(sale => {
+                  const key = `${sale.branch_id || 'none'}_${(sale.final_amount || sale.amount || 0).toFixed(2)}`;
+                  if (!dupeKeys[key]) dupeKeys[key] = [];
+                  dupeKeys[key].push(sale.id);
+                });
+                const dupeIds = new Set();
+                Object.values(dupeKeys).forEach(ids => {
+                  if (ids.length > 1) ids.forEach(id => dupeIds.add(id));
+                });
+                day.duplicateIds = dupeIds;
+                day.hasDuplicates = dupeIds.size > 0;
+              });
+
               if (dailyData.length === 0) return <div className="text-center py-8 text-muted-foreground">No sales recorded yet. Add your first sale above!</div>;
 
               return (
@@ -749,7 +765,7 @@ export default function SalesPage() {
                       <div key={day.dateKey}>
                         <table className="w-full text-sm table-fixed">
                           <tbody>
-                            <tr className="border-b hover:bg-stone-50 cursor-pointer transition-colors"
+                            <tr className={`border-b hover:bg-stone-50 cursor-pointer transition-colors ${day.hasDuplicates ? 'bg-orange-50/60' : ''}`}
                               onClick={() => setExpandedSalesDates(prev => ({ ...prev, [day.dateKey]: !prev[day.dateKey] }))}
                               data-testid={`sales-day-row-${day.dateKey}`}>
                               <td className="px-3 py-3 w-[4%]">
@@ -759,7 +775,14 @@ export default function SalesPage() {
                                 }
                               </td>
                               <td className="px-3 py-3 w-[14%]">
-                                <div className="font-semibold text-sm">{day.date ? format(new Date(day.date), 'MMM dd, yyyy') : '-'}</div>
+                                <div className="font-semibold text-sm flex items-center gap-1.5">
+                                  {day.date ? format(new Date(day.date), 'MMM dd, yyyy') : '-'}
+                                  {day.hasDuplicates && (
+                                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 text-[10px] font-bold border border-orange-300" data-testid={`duplicate-warning-${day.dateKey}`}>
+                                      <AlertTriangle size={10} /> Duplicate
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="text-[10px] text-muted-foreground">{day.count} entries</div>
                               </td>
                               <td className="px-3 py-3 text-right w-[12%]"><span className="text-sm font-bold text-primary">SAR {day.final.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></td>
@@ -784,10 +807,18 @@ export default function SalesPage() {
                               <tbody>
                                 {day.items.map(sale => {
                                   const remaining = (sale.credit_amount || 0) - (sale.credit_received || 0);
+                                  const isDuplicate = day.duplicateIds.has(sale.id);
                                   return (
-                                    <tr key={sale.id} className="border-b border-stone-100 hover:bg-white/50" data-testid={`sale-detail-${sale.id}`}>
+                                    <tr key={sale.id} className={`border-b border-stone-100 hover:bg-white/50 ${isDuplicate ? 'bg-orange-50/80 border-l-4 border-l-orange-400' : ''}`} data-testid={`sale-detail-${sale.id}`}>
                                       <td className="px-3 py-2 pl-10 w-[14%]">
-                                        <Badge variant="secondary" className="capitalize text-[10px]">{sale.sale_type}</Badge>
+                                        <div className="flex items-center gap-1">
+                                          <Badge variant="secondary" className="capitalize text-[10px]">{sale.sale_type}</Badge>
+                                          {isDuplicate && (
+                                            <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded bg-orange-100 text-orange-700 text-[9px] font-bold border border-orange-300" data-testid={`duplicate-badge-${sale.id}`}>
+                                              <Copy size={8} /> Possible duplicate
+                                            </span>
+                                          )}
+                                        </div>
                                       </td>
                                       <td className="px-3 py-2 text-sm w-[14%]">{branches.find(b => b.id === sale.branch_id)?.name || '-'}</td>
                                       <td className="px-3 py-2 text-right font-bold text-sm w-[12%]">SAR {(sale.final_amount || sale.amount || 0).toFixed(2)}</td>

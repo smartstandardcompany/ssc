@@ -8,10 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ArrowDownUp, Plus, Trash2, DollarSign, ChevronDown, ChevronRight, Percent, Calculator, AlertTriangle, CheckCircle2, Settings } from 'lucide-react';
+import { ArrowDownUp, Plus, Trash2, DollarSign, ChevronDown, ChevronRight, Percent, Calculator, AlertTriangle, CheckCircle2, Settings, FileBarChart } from 'lucide-react';
 import { DateQuickFilter } from '@/components/DateQuickFilter';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 export default function PlatformReconciliationPage() {
   const [summary, setSummary] = useState(null);
@@ -27,6 +28,7 @@ export default function PlatformReconciliationPage() {
     platform_id: '', amount: '', date: new Date().toISOString().split('T')[0], branch_name: '', notes: ''
   });
   const [feeForm, setFeeForm] = useState({ commission_rate: '', processing_fee: '' });
+  const navigate = useNavigate();
 
   const fetchData = async () => {
     try {
@@ -138,9 +140,14 @@ export default function PlatformReconciliationPage() {
             <h1 className="text-2xl sm:text-4xl font-bold font-outfit" data-testid="platform-recon-title">Platform Reconciliation</h1>
             <p className="text-sm text-muted-foreground">Track platform sales vs received payments with auto fee calculation</p>
           </div>
-          <Button className="rounded-xl" onClick={() => setShowReceiveDialog(true)} data-testid="record-payment-btn">
-            <Plus size={16} className="mr-1" /> Record Received Payment
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" className="rounded-xl" onClick={() => navigate('/monthly-recon-report')} data-testid="monthly-report-btn">
+              <FileBarChart size={16} className="mr-1" /> Monthly Report
+            </Button>
+            <Button className="rounded-xl" onClick={() => setShowReceiveDialog(true)} data-testid="record-payment-btn">
+              <Plus size={16} className="mr-1" /> Record Received Payment
+            </Button>
+          </div>
         </div>
 
         <DateQuickFilter onFilterChange={(range) => setDateRange(range)} />
