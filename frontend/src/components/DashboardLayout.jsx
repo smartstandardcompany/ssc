@@ -506,7 +506,7 @@ export const DashboardLayout = ({ children }) => {
               )}
             </div>
           )}
-          <div className="p-4 lg:p-8">{children}</div>
+          <div key={location.pathname} className="p-4 lg:p-8 page-enter">{children}</div>
         </div>
       </main>
 

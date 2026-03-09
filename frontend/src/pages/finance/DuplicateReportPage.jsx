@@ -117,7 +117,31 @@ export default function DuplicateReportPage() {
     );
   };
 
-  if (loading) return <DashboardLayout><div className="flex items-center justify-center h-64">Scanning for duplicates...</div></DashboardLayout>;
+  if (loading) return (
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
+          <div>
+            <div className="h-8 w-52 bg-stone-200 rounded-lg animate-pulse" />
+            <div className="h-4 w-72 bg-stone-100 rounded mt-2 animate-pulse" />
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-9 w-36 bg-stone-200 rounded-lg animate-pulse" />
+            <div className="h-9 w-9 bg-stone-200 rounded-lg animate-pulse" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="p-4 rounded-xl border bg-stone-50 animate-pulse">
+              <div className="h-3 w-16 bg-stone-200 rounded mb-2" />
+              <div className="h-7 w-12 bg-stone-200 rounded" />
+            </div>
+          ))}
+        </div>
+        <div className="h-48 bg-stone-50 rounded-xl border animate-pulse" />
+      </div>
+    </DashboardLayout>
+  );
 
   const s = data?.summary || {};
 
@@ -147,7 +171,7 @@ export default function DuplicateReportPage() {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3" data-testid="dup-summary-cards">
-          <Card className={`border ${s.total_duplicate_groups > 0 ? 'border-orange-200 bg-orange-50/30' : 'border-emerald-200 bg-emerald-50/30'}`}>
+          <Card className={`border card-enter ${s.total_duplicate_groups > 0 ? 'border-orange-200 bg-orange-50/30' : 'border-emerald-200 bg-emerald-50/30'}`}>
             <CardContent className="p-4">
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total Groups</div>
               <div className={`text-2xl font-bold ${s.total_duplicate_groups > 0 ? 'text-orange-700' : 'text-emerald-700'}`}>
@@ -156,28 +180,28 @@ export default function DuplicateReportPage() {
               <div className="text-xs text-muted-foreground">{s.scan_period}</div>
             </CardContent>
           </Card>
-          <Card className="border-purple-200 bg-purple-50/30">
+          <Card className="border-purple-200 bg-purple-50/30 card-enter">
             <CardContent className="p-4">
               <div className="text-[10px] uppercase tracking-wider text-purple-600">Sales</div>
               <div className="text-2xl font-bold text-purple-700">{s.sales_groups || 0}</div>
               <div className="text-xs text-muted-foreground">SAR {(s.sales_excess || 0).toLocaleString()}</div>
             </CardContent>
           </Card>
-          <Card className="border-red-200 bg-red-50/30">
+          <Card className="border-red-200 bg-red-50/30 card-enter">
             <CardContent className="p-4">
               <div className="text-[10px] uppercase tracking-wider text-red-600">Expenses</div>
               <div className="text-2xl font-bold text-red-700">{s.expense_groups || 0}</div>
               <div className="text-xs text-muted-foreground">SAR {(s.expense_excess || 0).toLocaleString()}</div>
             </CardContent>
           </Card>
-          <Card className="border-blue-200 bg-blue-50/30">
+          <Card className="border-blue-200 bg-blue-50/30 card-enter">
             <CardContent className="p-4">
               <div className="text-[10px] uppercase tracking-wider text-blue-600">Supplier Payments</div>
               <div className="text-2xl font-bold text-blue-700">{s.sp_groups || 0}</div>
               <div className="text-xs text-muted-foreground">SAR {(s.sp_excess || 0).toLocaleString()}</div>
             </CardContent>
           </Card>
-          <Card className="border-red-300 bg-red-50/50">
+          <Card className="border-red-300 bg-red-50/50 card-enter">
             <CardContent className="p-4">
               <div className="text-[10px] uppercase tracking-wider text-red-600">Potential Excess</div>
               <div className="text-2xl font-bold text-red-700">SAR {(s.total_potential_excess || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</div>

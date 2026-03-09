@@ -291,7 +291,23 @@ export default function SalesPage() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-64">Loading...</div>
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
+            <div>
+              <div className="h-8 w-48 bg-stone-200 rounded-lg animate-pulse" />
+              <div className="h-4 w-64 bg-stone-100 rounded mt-2 animate-pulse" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="p-3 rounded-xl border bg-stone-50 animate-pulse">
+                <div className="h-3 w-16 bg-stone-200 rounded mb-2" />
+                <div className="h-6 w-24 bg-stone-200 rounded" />
+              </div>
+            ))}
+          </div>
+          <div className="h-64 bg-stone-50 rounded-xl border animate-pulse" />
+        </div>
       </DashboardLayout>
     );
   }
@@ -302,7 +318,7 @@ export default function SalesPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Branch-wise Monthly Sales Summary */}
-        <Card className="border-0 shadow-sm bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20">
+        <Card className="border-0 shadow-sm bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 card-enter">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -695,24 +711,24 @@ export default function SalesPage() {
               }, { total: 0, cash: 0, bank: 0, credit: 0, online: 0 });
               return (
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4 mt-3" data-testid="sales-summary-bar">
-                  <div className="p-3 rounded-xl bg-gradient-to-br from-stone-50 to-stone-100 border border-stone-200">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-stone-50 to-stone-100 border border-stone-200 card-enter">
                     <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Grand Total</div>
                     <div className="text-lg font-bold text-stone-900">SAR {totals.total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                     <div className="text-[10px] text-muted-foreground">{allSales.length} sales</div>
                   </div>
-                  <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+                  <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 card-enter">
                     <div className="text-[10px] text-emerald-600 uppercase tracking-wider">Cash</div>
                     <div className="text-lg font-bold text-emerald-700">SAR {totals.cash.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                   </div>
-                  <div className="p-3 rounded-xl bg-blue-50 border border-blue-200">
+                  <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 card-enter">
                     <div className="text-[10px] text-blue-600 uppercase tracking-wider">Bank</div>
                     <div className="text-lg font-bold text-blue-700">SAR {totals.bank.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                   </div>
-                  <div className="p-3 rounded-xl bg-purple-50 border border-purple-200">
+                  <div className="p-3 rounded-xl bg-purple-50 border border-purple-200 card-enter">
                     <div className="text-[10px] text-purple-600 uppercase tracking-wider">Online</div>
                     <div className="text-lg font-bold text-purple-700">SAR {totals.online.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                   </div>
-                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-200">
+                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 card-enter">
                     <div className="text-[10px] text-amber-600 uppercase tracking-wider">Credit</div>
                     <div className="text-lg font-bold text-amber-700">SAR {totals.credit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                   </div>
@@ -879,8 +895,9 @@ export default function SalesPage() {
                       </div>
                     ))}
                   </div>
-                  <div className="px-3 py-2 text-xs text-muted-foreground bg-stone-50 border-t">
-                    Showing {filteredSales.length.toLocaleString()} sales across {dailyData.length} days — click a day to expand & manage entries
+                  <div className="px-4 py-2.5 text-xs text-muted-foreground bg-stone-50/80 border-t flex items-center justify-between">
+                    <span>Showing {filteredSales.length.toLocaleString()} sales across {dailyData.length} days</span>
+                    <span className="text-[10px] text-stone-400">Click a day to expand & manage entries</span>
                   </div>
                 </div>
               );
@@ -888,13 +905,19 @@ export default function SalesPage() {
             {/* Pagination Controls */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between mt-4 px-2">
-                <span className="text-xs text-muted-foreground">{totalRecords} total records</span>
-                <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">{totalRecords.toLocaleString()} total records</span>
+                <div className="flex items-center gap-1.5">
                   <Button size="sm" variant="outline" disabled={currentPage <= 1}
-                    onClick={() => fetchData(currentPage - 1)} data-testid="sales-prev-page">Previous</Button>
-                  <span className="text-sm">Page {currentPage} of {totalPages}</span>
+                    onClick={() => fetchData(currentPage - 1)} data-testid="sales-prev-page"
+                    className="h-8 px-3 rounded-lg text-xs">Previous</Button>
+                  <div className="flex items-center gap-1 px-2">
+                    <span className="text-xs font-medium">{currentPage}</span>
+                    <span className="text-xs text-muted-foreground">/</span>
+                    <span className="text-xs text-muted-foreground">{totalPages}</span>
+                  </div>
                   <Button size="sm" variant="outline" disabled={currentPage >= totalPages}
-                    onClick={() => fetchData(currentPage + 1)} data-testid="sales-next-page">Next</Button>
+                    onClick={() => fetchData(currentPage + 1)} data-testid="sales-next-page"
+                    className="h-8 px-3 rounded-lg text-xs">Next</Button>
                 </div>
               </div>
             )}

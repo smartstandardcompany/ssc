@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = "https://reconcile-preview.preview.emergentagent.com"
+    BASE_URL = "https://anomaly-finder-11.preview.emergentagent.com"
 
 # Test credentials
 ADMIN_EMAIL = "ss@ssc.com"
@@ -52,7 +52,7 @@ class TestDailySummaryBugFix(TestAuth):
         """
         Bug Fix #1: GET /api/dashboard/daily-summary-range with branch_id should include 
         expenses where expense_for_branch_id matches the selected branch.
-        Test with branch_id=d805e6cb-f65a-4a09-8707-95f3f5e505bf
+        Test with branch_id=anomaly-finder-11
         """
         # Test last 30 days range
         end_date = datetime.now().strftime("%Y-%m-%d")

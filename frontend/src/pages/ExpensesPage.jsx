@@ -415,20 +415,20 @@ export default function ExpensesPage() {
                 {/* Grand Total Summary */}
                 {filtered.length > 0 && (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4" data-testid="expenses-summary-bar">
-                    <div className="p-3 rounded-xl bg-gradient-to-br from-red-50 to-red-100 border border-red-200">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-red-50 to-red-100 border border-red-200 card-enter">
                       <div className="text-[10px] text-red-600 uppercase tracking-wider">Total Expenses</div>
                       <div className="text-lg font-bold text-red-700">SAR {totalExp.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                       <div className="text-[10px] text-muted-foreground">{filtered.length} entries</div>
                     </div>
-                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 card-enter">
                       <div className="text-[10px] text-emerald-600 uppercase tracking-wider">Cash</div>
                       <div className="text-lg font-bold text-emerald-700">SAR {filtered.filter(e => e.payment_mode === 'cash').reduce((s, e) => s + e.amount, 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                     </div>
-                    <div className="p-3 rounded-xl bg-blue-50 border border-blue-200">
+                    <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 card-enter">
                       <div className="text-[10px] text-blue-600 uppercase tracking-wider">Bank</div>
                       <div className="text-lg font-bold text-blue-700">SAR {filtered.filter(e => e.payment_mode === 'bank').reduce((s, e) => s + e.amount, 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                     </div>
-                    <div className="p-3 rounded-xl bg-amber-50 border border-amber-200">
+                    <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 card-enter">
                       <div className="text-[10px] text-amber-600 uppercase tracking-wider">Credit</div>
                       <div className="text-lg font-bold text-amber-700">SAR {filtered.filter(e => e.payment_mode === 'credit').reduce((s, e) => s + e.amount, 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                     </div>

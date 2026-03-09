@@ -179,7 +179,7 @@ export default function DailySummaryPage() {
           <>
             {/* Net Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card className="border-emerald-200 bg-emerald-50/50 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/sales?date=${selectedDate}`)} data-testid="card-total-sales">
+              <Card className="border-emerald-200 bg-emerald-50/50 cursor-pointer hover:shadow-md transition-shadow card-enter" onClick={() => navigate(`/sales?date=${selectedDate}`)} data-testid="card-total-sales">
                 <CardContent className="pt-4 pb-3">
                   <div className="flex items-center gap-2 mb-1">
                     <ArrowUpRight className="text-emerald-600" size={18} />
@@ -191,7 +191,7 @@ export default function DailySummaryPage() {
                   <p className="text-xs text-emerald-600">{data.sales.count} transactions</p>
                 </CardContent>
               </Card>
-              <Card className="border-red-200 bg-red-50/50 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/expenses?date=${selectedDate}`)} data-testid="card-total-expenses">
+              <Card className="border-red-200 bg-red-50/50 cursor-pointer hover:shadow-md transition-shadow card-enter" onClick={() => navigate(`/expenses?date=${selectedDate}`)} data-testid="card-total-expenses">
                 <CardContent className="pt-4 pb-3">
                   <div className="flex items-center gap-2 mb-1">
                     <ArrowDownRight className="text-red-600" size={18} />
@@ -203,7 +203,7 @@ export default function DailySummaryPage() {
                   <p className="text-xs text-red-600">{data.expenses.count} entries</p>
                 </CardContent>
               </Card>
-              <Card className="border-blue-200 bg-blue-50/50">
+              <Card className="border-blue-200 bg-blue-50/50 card-enter">
                 <CardContent className="pt-4 pb-3">
                   <div className="flex items-center gap-2 mb-1">
                     <Banknote className="text-blue-600" size={18} />
@@ -215,7 +215,7 @@ export default function DailySummaryPage() {
                   <p className="text-xs text-blue-600">Cash in - Cash out</p>
                 </CardContent>
               </Card>
-              <Card className={`border-${data.summary.net_profit >= 0 ? 'emerald' : 'red'}-200 bg-${data.summary.net_profit >= 0 ? 'emerald' : 'red'}-50/50`}>
+              <Card className={`border-${data.summary.net_profit >= 0 ? 'emerald' : 'red'}-200 bg-${data.summary.net_profit >= 0 ? 'emerald' : 'red'}-50/50 card-enter`}>
                 <CardContent className="pt-4 pb-3">
                   <div className="flex items-center gap-2 mb-1">
                     <DollarSign className={data.summary.net_profit >= 0 ? 'text-emerald-600' : 'text-red-600'} size={18} />
