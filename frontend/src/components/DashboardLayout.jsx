@@ -7,7 +7,7 @@ import {
   Handshake, HelpCircle, Building2, Package, ChefHat, CalendarClock,
   ArrowDownUp, Activity, PackageCheck, ChevronDown, Menu, X, Zap,
   AlertCircle, Moon, Sun, Keyboard, Globe, UtensilsCrossed, Camera, Armchair, Wallet,
-  CalendarDays, Gift, TrendingUp, Clock, Database, Copy, Download
+  CalendarDays, Gift, TrendingUp, Clock, Database, Copy, Download, ShieldCheck
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -95,6 +95,7 @@ const NAV_GROUPS = [
       { path: '/trend-comparison', icon: TrendingUp, label: 'Trend Comparison', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/report-builder', icon: FileText, label: 'Report Builder', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/export-center', icon: Download, label: 'Export Center', perm: 'reports', roles: ['admin', 'manager'] },
+      { path: '/data-integrity', icon: ShieldCheck, label: 'Data Integrity', perm: 'reports', roles: ['admin'] },
     ]
   },
   {

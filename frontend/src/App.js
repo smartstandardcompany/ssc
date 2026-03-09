@@ -59,6 +59,7 @@ import TaskCompliancePage from "./pages/TaskCompliancePage";
 import PerformanceReportPage from "./pages/PerformanceReportPage";
 import AnomalyDetectionPage from "./pages/AnomalyDetectionPage";
 import ExportCenterPage from "./pages/ExportCenterPage";
+import DataIntegrityPage from "./pages/DataIntegrityPage";
 import NotificationPreferencesPage from "./pages/NotificationPreferencesPage";
 import PlatformsPage from "./pages/PlatformsPage";
 import AssetsPage from "./pages/AssetsPage";
@@ -286,6 +287,7 @@ function App() {
           <Route path="/enhanced-pnl" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><EnhancedPnLPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/report-builder" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><ReportBuilderPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/export-center" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><ExportCenterPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/data-integrity" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin']}><DataIntegrityPage /></ProtectedRoute></AuthRoute>} />
 
           {/* Assets */}
           <Route path="/assets" element={<AuthRoute><ProtectedRoute perm="branches" roles={['admin', 'manager']}><AssetsPage /></ProtectedRoute></AuthRoute>} />
