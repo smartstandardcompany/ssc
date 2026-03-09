@@ -6,38 +6,38 @@ A comprehensive business management ERP system for tracking sales, expenses, sup
 ## Core Modules
 Financial Management | HR Management | Stock Management | Restaurant Operations | CCTV Security | Administration
 
-## Session 20 (Mar 9, 2026) - Export Center & UI/UX Polishing
+## Session 20 (Mar 9, 2026)
 
 ### Export Center (DONE)
-- New dedicated page at `/export-center` accessible from sidebar under Reports
-- **8 report types**: Sales, Expenses, Supplier Payments, Profit & Loss, Daily Summary, Customers, Employees, Inventory
-- **Date presets**: Today, Yesterday, This Week, This Month, Last Month, Last 30 Days, This Year, All Time, Custom Range
-- **Branch filtering**: Filter all exports by branch
-- **Export formats**: PDF (branded with company colors) and Excel (styled with alternating rows)
-- **Export history**: Logs all exports to MongoDB, shows in Recent Exports table
+- New dedicated page at `/export-center` accessible from sidebar
+- 8 report types: Sales, Expenses, Supplier Payments, Profit & Loss, Daily Summary, Customers, Employees, Inventory
+- Date presets: Today, Yesterday, This Week, This Month, Last Month, Last 30 Days, This Year, All Time, Custom Range
+- Branch filtering, PDF/Excel export, export history tracking
 - Backend: `/api/export-center/report-types`, `/api/export-center/history`, `/api/export-center/generate`
-- Frontend: `ExportCenterPage.jsx` with card-based UI
+
+### Dashboard Enhancement (DONE)
+- Total Sales card: Shows Cash, Bank, Online breakdown as small text
+- Total Expenses card: Shows top 3 expense categories (e.g., partner_salary, salary, Supplier Purchase) as small text
+- Uses existing backend data (cash_sales, bank_sales, online_sales, expense_by_category)
+
+### Daily Summary Bug Fix - Double Counting (DONE - CRITICAL)
+- **Root cause**: Line 761-762 in dashboard.py had TWO lines adding to `daily[d]["sales"]`: old line using `s.get("final_amount")` AND new line using `get_sale_total(s)`, effectively doubling all sales
+- **Additional fixes**: 
+  - Null `final_amount` handling: 8 sales had `final_amount: None`, causing incorrect fallback
+  - Payment mode mapping: `card` mode now maps to `bank`, `discount` mode now ignored
+  - Single-day endpoint also fixed with same helpers
+- **Verification**: Mar 5 correctly shows SAR 1,000 (was SAR 2,000), total matches SAR 64,662
 
 ### UI/UX Polishing (DONE)
-- Page entrance animation (`fadeSlideIn`) applied via DashboardLayout `key={location.pathname}`
-- Card staggered entrance animation (`fadeScaleIn`) with 40ms delay per child
-- Enhanced table hover states with warm orange tint
-- Better stat-card hover with translateY(-2px) and shadow
-- Custom scrollbar styling with orange theme
-- Improved focus ring (orange, 2px offset)
-- Smooth transitions for all interactive elements
-- Enhanced dark mode support
-- Skeleton loading states for SalesPage and DuplicateReportPage
+- Page entrance animations via DashboardLayout key={location.pathname}
+- Card staggered entrance animations, skeleton loading states
+- Enhanced table hover, scrollbar, focus rings, dark mode
 
 ## Previous Sessions Summary
 - Duplicate Detection & Prevention (Sales, Expenses, Supplier Payments)
-- Duplicate Report Page
-- Monthly Reconciliation Report
-- Daily Summary Bug Fix (branch filtering)
-- Smart Anomaly Detector Dashboard Widget
-- Guided Tours for all modules
-- Platform Fee Calculator
-- Employee PIN Regeneration Fix
+- Duplicate Report Page, Monthly Reconciliation Report
+- Daily Summary Bug Fix (branch filtering - session 19)
+- Smart Anomaly Detector, Guided Tours, Platform Fee Calculator
 
 ## Pending Issues
 - SMTP Email: Blocked on user's Microsoft 365 Security Defaults
@@ -48,4 +48,4 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 
 ## Remaining Backlog
 - P2: Email automation (blocked on SMTP)
-- P3: Scheduled PDF report delivery via email (blocked by SMTP)
+- P3: Scheduled PDF report delivery (blocked by SMTP)
