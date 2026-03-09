@@ -752,12 +752,19 @@ async def get_daily_summary_range(
         cat = e.get("category", "Other")
         exp_by_cat[cat] = exp_by_cat.get(cat, 0) + e.get("amount", 0)
 
-    # Day-by-day breakdown
+    # Day-by-day breakdown: Generate COMPLETE calendar range first
     daily = {}
+    empty_day = lambda d: {"date": d, "sales": 0, "sales_cash": 0, "sales_bank": 0, "sales_credit": 0, "sales_online": 0, "sales_count": 0, "expenses": 0, "exp_cash": 0, "exp_bank": 0, "exp_credit": 0, "exp_count": 0, "sp_total": 0, "sp_cash": 0, "sp_bank": 0}
+    current = start
+    while current <= end:
+        d = current.strftime("%Y-%m-%d")
+        daily[d] = empty_day(d)
+        current += td(days=1)
+
     for s in sales:
-        d = s.get("date", "")[:10]
+        d = str(s.get("date", ""))[:10]
         if d not in daily:
-            daily[d] = {"date": d, "sales": 0, "sales_cash": 0, "sales_bank": 0, "sales_credit": 0, "sales_online": 0, "sales_count": 0, "expenses": 0, "exp_cash": 0, "exp_bank": 0, "exp_credit": 0, "exp_count": 0, "sp_total": 0, "sp_cash": 0, "sp_bank": 0}
+            continue
         daily[d]["sales"] += get_sale_total(s)
         daily[d]["sales_count"] += 1
         for p in (s.get("payment_details") or []):
@@ -769,24 +776,24 @@ async def get_daily_summary_range(
             elif cat == "online": daily[d]["sales_online"] += amt
 
     for e in expenses:
-        d = e.get("date", "")[:10]
+        d = str(e.get("date", ""))[:10]
         if d not in daily:
-            daily[d] = {"date": d, "sales": 0, "sales_cash": 0, "sales_bank": 0, "sales_credit": 0, "sales_online": 0, "sales_count": 0, "expenses": 0, "exp_cash": 0, "exp_bank": 0, "exp_credit": 0, "exp_count": 0, "sp_total": 0, "sp_cash": 0, "sp_bank": 0}
+            continue
         daily[d]["expenses"] += e.get("amount", 0)
         daily[d]["exp_count"] += 1
         mode = e.get("payment_mode", "cash")
-        if mode == "cash": daily[d]["exp_cash"] += e["amount"]
-        elif mode == "bank": daily[d]["exp_bank"] += e["amount"]
-        elif mode == "credit": daily[d]["exp_credit"] += e["amount"]
+        if mode == "cash": daily[d]["exp_cash"] += e.get("amount", 0)
+        elif mode == "bank": daily[d]["exp_bank"] += e.get("amount", 0)
+        elif mode == "credit": daily[d]["exp_credit"] += e.get("amount", 0)
 
     for p in supplier_payments:
-        d = p.get("date", "")[:10]
+        d = str(p.get("date", ""))[:10]
         if d not in daily:
-            daily[d] = {"date": d, "sales": 0, "sales_cash": 0, "sales_bank": 0, "sales_credit": 0, "sales_online": 0, "sales_count": 0, "expenses": 0, "exp_cash": 0, "exp_bank": 0, "exp_credit": 0, "exp_count": 0, "sp_total": 0, "sp_cash": 0, "sp_bank": 0}
+            continue
         daily[d]["sp_total"] += p.get("amount", 0)
         mode = p.get("payment_mode", "cash")
-        if mode == "cash": daily[d]["sp_cash"] += p["amount"]
-        elif mode == "bank": daily[d]["sp_bank"] += p["amount"]
+        if mode == "cash": daily[d]["sp_cash"] += p.get("amount", 0)
+        elif mode == "bank": daily[d]["sp_bank"] += p.get("amount", 0)
 
     daily_list = sorted(daily.values(), key=lambda x: x["date"], reverse=True)
     # Round values and add net cash/bank per day
