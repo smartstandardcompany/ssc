@@ -22,6 +22,7 @@ const reportSections = [
       { path: '/reconciliation', icon: ArrowDownUp, label: 'Reconciliation', desc: 'Match transactions with bank records' },
       { path: '/platform-reconciliation', icon: ArrowDownUp, label: 'Platform Reconciliation', desc: 'Track platform sales vs payouts' },
       { path: '/monthly-recon-report', icon: CalendarDays, label: 'Monthly Platform Report', desc: 'Monthly platform fee analysis & variance', badge: 'New' },
+      { path: '/duplicate-report', icon: ArrowDownUp, label: 'Duplicate Report', desc: 'Find & remove duplicate entries across all modules', badge: 'New' },
     ]
   },
   {

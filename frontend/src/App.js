@@ -81,6 +81,7 @@ import ReportBuilderPage from "./pages/ReportBuilderPage";
 import BankAccountsPage from "./pages/finance/BankAccountsPage";
 import PlatformReconciliationPage from "./pages/finance/PlatformReconciliationPage";
 import MonthlyReconReportPage from "./pages/finance/MonthlyReconReportPage";
+import DuplicateReportPage from "./pages/finance/DuplicateReportPage";
 import CustomerPortalLogin from "./pages/customer-portal/CustomerPortalLogin";
 import { 
   CustomerPortalDashboard, 
@@ -271,6 +272,7 @@ function App() {
           <Route path="/bank-accounts" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><BankAccountsPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/platform-reconciliation" element={<AuthRoute><ProtectedRoute perm="sales" roles={['admin']}><PlatformReconciliationPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/monthly-recon-report" element={<AuthRoute><ProtectedRoute perm="sales" roles={['admin']}><MonthlyReconReportPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/duplicate-report" element={<AuthRoute><ProtectedRoute perm="sales" roles={['admin']}><DuplicateReportPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/reconciliation" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin']}><ReconciliationPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/sales-forecast" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><SalesForecastPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/sales-alerts" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><SalesAlertsPage /></ProtectedRoute></AuthRoute>} />

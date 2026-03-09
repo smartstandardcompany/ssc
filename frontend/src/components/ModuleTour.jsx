@@ -298,6 +298,15 @@ const MODULE_TOURS = {
       { title: 'Auto-Scan Schedule', description: 'Enable automatic scanning on a daily or weekly basis. Configure alert thresholds and notification channels (push, WhatsApp, email).', icon: Settings, target: '[data-testid="schedule-settings"]' },
     ]
   },
+  '/duplicate-report': {
+    key: 'duplicate_report_tour',
+    steps: [
+      { title: 'Duplicate Report', description: 'Scan all your data for potential duplicate entries. Find and remove duplicate sales, expenses, and supplier payments in one place.', icon: Shield, target: null },
+      { title: 'Scan Period', description: 'Choose how far back to scan: 7, 30, 90, or 180 days. Larger periods find more duplicates but take longer.', icon: CalendarDays, target: '[data-testid="dup-days-select"]' },
+      { title: 'Module Tabs', description: 'Switch between Sales, Expenses, and Supplier Payments tabs to see duplicates in each module. The badge shows how many duplicate groups were found.', icon: Receipt, target: null },
+      { title: 'Remove Duplicates', description: 'Expand any duplicate group to see all matching entries. The first entry is marked as "Original" — click "Remove" on subsequent entries to delete them.', icon: Shield, target: null },
+    ]
+  },
 };
 
 export default function ModuleTour() {
