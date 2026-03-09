@@ -8,36 +8,34 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 
 ## Session 20 (Mar 9, 2026)
 
+### Data Integrity Checker (DONE)
+- New page at `/data-integrity` accessible from sidebar (admin only)
+- Scans all sales for: missing final_amount, payment mismatches, unusual payment modes
+- Summary cards: Total Issues, High/Medium/Low severity
+- Expandable issue groups with detailed tables
+- Individual fix buttons and bulk "Fix All" with confirmation dialog
+- "Fix All Missing Final Amount": sets final_amount = amount - discount
+- "Fix All Unusual Modes": changes 'card' → 'bank', removes 'discount' entries
+- Backend: `/api/data-integrity/scan`, `/api/data-integrity/fix`, `/api/data-integrity/fix-all`
+
 ### Export Center (DONE)
-- New dedicated page at `/export-center` accessible from sidebar
-- 8 report types: Sales, Expenses, Supplier Payments, Profit & Loss, Daily Summary, Customers, Employees, Inventory
-- Date presets: Today, Yesterday, This Week, This Month, Last Month, Last 30 Days, This Year, All Time, Custom Range
-- Branch filtering, PDF/Excel export, export history tracking
-- Backend: `/api/export-center/report-types`, `/api/export-center/history`, `/api/export-center/generate`
+- New page at `/export-center`, 8 report types, date presets, branch filtering, PDF/Excel
 
 ### Dashboard Enhancement (DONE)
-- Total Sales card: Shows Cash, Bank, Online breakdown as small text
-- Total Expenses card: Shows top 3 expense categories (e.g., partner_salary, salary, Supplier Purchase) as small text
-- Uses existing backend data (cash_sales, bank_sales, online_sales, expense_by_category)
+- Total Sales card: Cash/Bank/Online breakdown as sub-text
+- Total Expenses card: Top 3 expense categories as sub-text
 
 ### Daily Summary Bug Fix - Double Counting (DONE - CRITICAL)
-- **Root cause**: Line 761-762 in dashboard.py had TWO lines adding to `daily[d]["sales"]`: old line using `s.get("final_amount")` AND new line using `get_sale_total(s)`, effectively doubling all sales
-- **Additional fixes**: 
-  - Null `final_amount` handling: 8 sales had `final_amount: None`, causing incorrect fallback
-  - Payment mode mapping: `card` mode now maps to `bank`, `discount` mode now ignored
-  - Single-day endpoint also fixed with same helpers
-- **Verification**: Mar 5 correctly shows SAR 1,000 (was SAR 2,000), total matches SAR 64,662
+- Fixed double-counting bug (line 761-762 both added to daily sales)
+- Fixed null final_amount handling, payment mode mapping (card→bank, discount→ignored)
 
 ### UI/UX Polishing (DONE)
-- Page entrance animations via DashboardLayout key={location.pathname}
-- Card staggered entrance animations, skeleton loading states
-- Enhanced table hover, scrollbar, focus rings, dark mode
+- Page entrance animations, card stagger, skeleton loading, enhanced hover/scrollbar
 
-## Previous Sessions Summary
-- Duplicate Detection & Prevention (Sales, Expenses, Supplier Payments)
-- Duplicate Report Page, Monthly Reconciliation Report
-- Daily Summary Bug Fix (branch filtering - session 19)
-- Smart Anomaly Detector, Guided Tours, Platform Fee Calculator
+## Previous Sessions
+- Duplicate Detection & Prevention, Duplicate Report
+- Monthly Reconciliation Report, Platform Fee Calculator
+- Anomaly Detector, Guided Tours, Daily Summary branch fix
 
 ## Pending Issues
 - SMTP Email: Blocked on user's Microsoft 365 Security Defaults
