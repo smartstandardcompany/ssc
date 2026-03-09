@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Upload, Trash2, Eye, AlertTriangle, Save } from 'lucide-react';
+import { Upload, Trash2, Eye, AlertTriangle, Save, Pencil, Check, X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import api from '@/lib/api';
 import { useBranchStore } from '@/stores';
@@ -16,6 +16,49 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 const COLORS = ['#F5841F', '#22C55E', '#0EA5E9', '#EF4444', '#F59E0B', '#8B5CF6', '#EC4899'];
 const CAT_LABELS = { pos_sales: 'POS Sales', pos_fees: 'POS Fees', bank_fees: 'Bank Fees', vat_fees: 'VAT on Fees', internal_transfer: 'Internal Transfers', incoming_transfer: 'Incoming Transfers', outgoing_transfer: 'Outgoing Transfers', sadad_payment: 'SADAD Bills', sadad_refund: 'SADAD Refund', iqama_renewal: 'Iqama Renewal', salary: 'Salary', vat: 'VAT', other: 'Other' };
+
+function PosRow({ pm, branches, onSave, onDelete }) {
+  const [editing, setEditing] = useState(false);
+  const [label, setLabel] = useState(pm.label || '');
+  const [branchId, setBranchId] = useState(pm.branch_id || '');
+
+  const handleSave = () => {
+    onSave(pm.machine_id, branchId, label);
+    setEditing(false);
+  };
+
+  const handleCancel = () => {
+    setLabel(pm.label || '');
+    setBranchId(pm.branch_id || '');
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <div className="flex gap-2 items-center p-2 border rounded-xl bg-blue-50/50 border-blue-200" data-testid={`pos-row-edit-${pm.machine_id}`}>
+        <span className="font-mono text-xs w-40 truncate" title={pm.machine_id}>{pm.machine_id}</span>
+        <Input value={label} onChange={e => setLabel(e.target.value)} placeholder="Label" className="h-7 w-28 text-xs" data-testid={`pos-label-input-${pm.machine_id}`} />
+        <Select value={branchId} onValueChange={setBranchId}>
+          <SelectTrigger className="h-7 w-36 text-xs" data-testid={`pos-branch-select-${pm.machine_id}`}><SelectValue placeholder="Branch" /></SelectTrigger>
+          <SelectContent>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+        </Select>
+        <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-emerald-600 hover:bg-emerald-50" onClick={handleSave} data-testid={`pos-save-${pm.machine_id}`}><Check size={14} /></Button>
+        <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-stone-400 hover:bg-stone-50" onClick={handleCancel}><X size={14} /></Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex gap-2 items-center p-2 border rounded-xl bg-success/5 group" data-testid={`pos-row-${pm.machine_id}`}>
+      <span className="font-mono text-xs flex-1 truncate" title={pm.machine_id}>{pm.machine_id}</span>
+      <Badge variant="secondary" className="cursor-pointer hover:bg-stone-200" onClick={() => setEditing(true)} data-testid={`pos-label-${pm.machine_id}`}>{label || 'No label'}</Badge>
+      <Badge className="bg-success/20 text-success cursor-pointer hover:bg-success/30" onClick={() => setEditing(true)} data-testid={`pos-branch-${pm.machine_id}`}>{branches.find(b => b.id === pm.branch_id)?.name || 'Unmapped'}</Badge>
+      <Button size="sm" variant="ghost" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setEditing(true)} data-testid={`pos-edit-${pm.machine_id}`}><Pencil size={12} /></Button>
+      <Button size="sm" variant="ghost" className="h-6 text-error" onClick={onDelete} data-testid={`pos-delete-${pm.machine_id}`}><Trash2 size={12} /></Button>
+    </div>
+  );
+}
+
 
 export default function BankStatementsPage() {
   const { t } = useLanguage();
@@ -293,7 +336,7 @@ export default function BankStatementsPage() {
         {/* POS Machine Manager */}
         <Dialog open={showPosManager} onOpenChange={setShowPosManager}>
           <DialogContent className="max-w-2xl"><DialogHeader><DialogTitle className="font-outfit">POS Machine → Branch Mapping</DialogTitle></DialogHeader>
-            <p className="text-sm text-muted-foreground mb-3">Add POS machines manually or auto-detected from statements</p>
+            <p className="text-sm text-muted-foreground mb-3">Add POS machines manually or auto-detected from statements. Click fields to edit.</p>
             
             {/* Manual Add */}
             <div className="flex gap-2 items-end p-3 bg-stone-50 rounded-xl border mb-3">
@@ -315,14 +358,9 @@ export default function BankStatementsPage() {
             </div>
 
             <div className="space-y-2 max-h-72 overflow-y-auto">
-              {/* Existing mapped machines */}
+              {/* Existing mapped machines - editable */}
               {posMachines.map(pm => (
-                <div key={pm.machine_id} className="flex gap-2 items-center p-2 border rounded-xl bg-success/5">
-                  <span className="font-mono text-xs flex-1">{pm.machine_id}</span>
-                  <Badge variant="secondary">{pm.label || 'No label'}</Badge>
-                  <Badge className="bg-success/20 text-success">{branches.find(b => b.id === pm.branch_id)?.name || 'Unmapped'}</Badge>
-                  <Button size="sm" variant="ghost" className="h-6 text-error" onClick={async () => { await api.delete(`/pos-machines/${pm.machine_id}`); fetchData(); }}><Trash2 size={12} /></Button>
-                </div>
+                <PosRow key={pm.machine_id} pm={pm} branches={branches} onSave={savePosMapping} onDelete={async () => { await api.delete(`/pos-machines/${pm.machine_id}`); fetchData(); }} />
               ))}
               {/* Unmapped machines from statements */}
               {(() => {
