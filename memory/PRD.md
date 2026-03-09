@@ -28,6 +28,8 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 
 ### Daily Summary Bug Fix (DONE - CRITICAL)
 - Fixed double-counting bug, null final_amount, payment mode mapping
+- Fixed missing days bug: pre-populate complete calendar range before overlaying data (Mar 9, Session 21)
+- Verified: all dates appear continuously, sales match /api/sales endpoint, net cash/bank correct
 
 ### UI/UX Polishing (DONE)
 - Page animations, skeleton loading, enhanced hover/scrollbar
