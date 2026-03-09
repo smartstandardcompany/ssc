@@ -700,12 +700,15 @@ export default function SalesPage() {
                 ...s, payment_mode: s.payment_details?.[0]?.mode || 'cash'
               })), searchFilters);
               const totals = allSales.reduce((acc, s) => {
-                acc.total += s.final_amount || (s.amount - (s.discount || 0));
+                const fa = s.final_amount != null ? s.final_amount : (s.amount - (s.discount || 0));
+                acc.total += fa;
                 (s.payment_details || []).forEach(p => {
-                  if (p.mode === 'cash') acc.cash += p.amount || 0;
-                  else if (p.mode === 'bank') acc.bank += p.amount || 0;
-                  else if (p.mode === 'credit') acc.credit += p.amount || 0;
-                  else acc.online += p.amount || 0;
+                  const mode = p.mode || 'cash';
+                  const pAmt = p.amount || 0;
+                  if (mode === 'cash') acc.cash += pAmt;
+                  else if (mode === 'bank' || mode === 'card') acc.bank += pAmt;
+                  else if (mode === 'credit') acc.credit += pAmt;
+                  else if (mode === 'online' || mode === 'online_platform') acc.online += pAmt;
                 });
                 return acc;
               }, { total: 0, cash: 0, bank: 0, credit: 0, online: 0 });
@@ -752,15 +755,17 @@ export default function SalesPage() {
                 g.items.push(sale);
                 (sale.payment_details || []).forEach(p => {
                   const amt = p.amount || 0;
-                  if (p.mode === 'cash') g.cash += amt;
-                  else if (p.mode === 'bank') g.bank += amt;
-                  else if (p.mode === 'credit') g.credit += amt;
-                  else g.online += amt;
+                  const mode = p.mode || 'cash';
+                  if (mode === 'cash') g.cash += amt;
+                  else if (mode === 'bank' || mode === 'card') g.bank += amt;
+                  else if (mode === 'credit') g.credit += amt;
+                  else if (mode === 'online' || mode === 'online_platform') g.online += amt;
                 });
+                const saleTotal = sale.final_amount != null ? sale.final_amount : (sale.amount - (sale.discount || 0));
                 g.total += sale.amount || 0;
-                g.final += sale.final_amount || (sale.amount - (sale.discount || 0));
+                g.final += saleTotal;
                 const bName = branches.find(b => b.id === sale.branch_id)?.name || 'Other';
-                g.branches[bName] = (g.branches[bName] || 0) + (sale.final_amount || sale.amount || 0);
+                g.branches[bName] = (g.branches[bName] || 0) + saleTotal;
               });
               const dailyData = Object.values(grouped).sort((a, b) => new Date(b.date) - new Date(a.date));
 

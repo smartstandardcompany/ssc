@@ -313,6 +313,11 @@ export default function DashboardPage() {
       testId: 'total-sales-card',
       sparkline: dailyTrend.sales,
       sparkColor: '#22C55E',
+      subItems: [
+        { label: 'Cash', value: stats?.cash_sales, color: 'text-emerald-600' },
+        { label: 'Bank', value: stats?.bank_sales, color: 'text-blue-600' },
+        ...(stats?.online_sales > 0 ? [{ label: 'Online', value: stats?.online_sales, color: 'text-purple-600' }] : []),
+      ],
     },
     ...(!vis.hide_financials ? [{
       title: tr('total_expenses'),
@@ -326,6 +331,13 @@ export default function DashboardPage() {
       testId: 'total-expenses-card',
       sparkline: dailyTrend.expenses,
       sparkColor: '#EF4444',
+      subItems: stats?.expense_by_category
+        ? Object.entries(stats.expense_by_category)
+            .filter(([, v]) => v > 0)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([cat, amt]) => ({ label: cat, value: amt, color: 'text-red-600' }))
+        : [],
     }] : []),
     ...(!vis.hide_financials ? [{
       title: tr('supplier_payments'),
@@ -456,6 +468,15 @@ export default function DashboardPage() {
                       <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${tvyChange > 0 && !card.invert ? 'bg-emerald-100 text-emerald-700' : tvyChange < 0 && !card.invert ? 'bg-red-100 text-red-700' : tvyChange > 0 && card.invert ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
                         {tvyChange > 0 ? '+' : ''}{tvyChange}% vs yesterday
                       </span>
+                    </div>
+                  )}
+                  {card.subItems && card.subItems.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-stone-100 flex flex-wrap gap-x-3 gap-y-1" data-testid={`${card.testId}-breakdown`}>
+                      {card.subItems.map((sub, idx) => (
+                        <span key={idx} className={`text-[10px] ${sub.color} font-medium`}>
+                          <span className="text-muted-foreground">{sub.label}:</span> SAR {(sub.value || 0).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+                        </span>
+                      ))}
                     </div>
                   )}
                 </CardContent>

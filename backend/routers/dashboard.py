@@ -486,8 +486,23 @@ async def get_daily_summary(
     customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
     customer_map = {c["id"]: c.get("name", "Unknown") for c in customers if "id" in c}
     
+    # Helper to get sale total accounting for null final_amount
+    def get_sale_total_single(s):
+        fa = s.get("final_amount")
+        if fa is not None:
+            return fa
+        return s.get("amount", 0) - s.get("discount", 0)
+
+    # Helper to map payment mode to standard category
+    def map_mode_single(mode):
+        if mode in ("cash",): return "cash"
+        if mode in ("bank", "card"): return "bank"
+        if mode in ("credit",): return "credit"
+        if mode in ("online", "online_platform"): return "online"
+        return None
+
     # === SALES SUMMARY ===
-    total_sales = sum(s.get("final_amount", s.get("amount", 0)) for s in sales)
+    total_sales = sum(get_sale_total_single(s) for s in sales)
     sales_count = len(sales)
     
     cash_sales = 0
@@ -496,16 +511,16 @@ async def get_daily_summary(
     online_sales = 0
     
     for sale in sales:
-        for p in sale.get("payment_details", []):
+        for p in (sale.get("payment_details") or []):
             amt = p.get("amount", 0)
-            mode = p.get("mode", "cash")
-            if mode == "cash":
+            cat = map_mode_single(p.get("mode", "cash"))
+            if cat == "cash":
                 cash_sales += amt
-            elif mode == "bank":
+            elif cat == "bank":
                 bank_sales += amt
-            elif mode == "credit":
+            elif cat == "credit":
                 credit_sales += amt
-            elif mode in ["online", "online_platform"]:
+            elif cat == "online":
                 online_sales += amt
     
     # Pending credit from today's sales
@@ -519,7 +534,7 @@ async def get_daily_summary(
         if bname not in sales_by_branch:
             sales_by_branch[bname] = {"count": 0, "amount": 0}
         sales_by_branch[bname]["count"] += 1
-        sales_by_branch[bname]["amount"] += s.get("final_amount", s.get("amount", 0))
+        sales_by_branch[bname]["amount"] += get_sale_total_single(s)
     
     # Top items sold today
     item_sales = {}
@@ -692,12 +707,35 @@ async def get_daily_summary_range(
     expenses = await db.expenses.find(exp_query, {"_id": 0, "date": 1, "amount": 1, "payment_mode": 1, "category": 1}).to_list(50000)
     supplier_payments = await db.supplier_payments.find(sp_query, {"_id": 0, "date": 1, "amount": 1, "payment_mode": 1}).to_list(50000)
 
+    # Helper to get sale total accounting for null final_amount
+    def get_sale_total(s):
+        fa = s.get("final_amount")
+        if fa is not None:
+            return fa
+        return s.get("amount", 0) - s.get("discount", 0)
+
+    # Helper to map payment mode to standard category
+    def map_mode(mode):
+        if mode in ("cash",): return "cash"
+        if mode in ("bank", "card"): return "bank"
+        if mode in ("credit",): return "credit"
+        if mode in ("online", "online_platform"): return "online"
+        return None  # discount, etc.
+
     # Compute totals
-    total_sales = sum(s.get("final_amount", s.get("amount", 0)) for s in sales)
-    total_sales_cash = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "cash")
-    total_sales_bank = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "bank")
-    total_sales_credit = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "credit")
-    total_sales_online = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") in ("online", "online_platform"))
+    total_sales = sum(get_sale_total(s) for s in sales)
+    total_sales_cash = 0
+    total_sales_bank = 0
+    total_sales_credit = 0
+    total_sales_online = 0
+    for s in sales:
+        for p in (s.get("payment_details") or []):
+            cat = map_mode(p.get("mode", "cash"))
+            amt = p.get("amount", 0)
+            if cat == "cash": total_sales_cash += amt
+            elif cat == "bank": total_sales_bank += amt
+            elif cat == "credit": total_sales_credit += amt
+            elif cat == "online": total_sales_online += amt
 
     total_expenses = sum(e.get("amount", 0) for e in expenses)
     total_exp_cash = sum(e["amount"] for e in expenses if e.get("payment_mode") == "cash")
@@ -720,14 +758,15 @@ async def get_daily_summary_range(
         d = s.get("date", "")[:10]
         if d not in daily:
             daily[d] = {"date": d, "sales": 0, "sales_cash": 0, "sales_bank": 0, "sales_credit": 0, "sales_online": 0, "sales_count": 0, "expenses": 0, "exp_cash": 0, "exp_bank": 0, "exp_credit": 0, "exp_count": 0, "sp_total": 0, "sp_cash": 0, "sp_bank": 0}
-        daily[d]["sales"] += s.get("final_amount", s.get("amount", 0))
+        daily[d]["sales"] += get_sale_total(s)
         daily[d]["sales_count"] += 1
-        for p in s.get("payment_details", []):
-            mode = p.get("mode", "cash")
-            if mode == "cash": daily[d]["sales_cash"] += p["amount"]
-            elif mode == "bank": daily[d]["sales_bank"] += p["amount"]
-            elif mode == "credit": daily[d]["sales_credit"] += p["amount"]
-            elif mode in ("online", "online_platform"): daily[d]["sales_online"] += p["amount"]
+        for p in (s.get("payment_details") or []):
+            cat = map_mode(p.get("mode", "cash"))
+            amt = p.get("amount", 0)
+            if cat == "cash": daily[d]["sales_cash"] += amt
+            elif cat == "bank": daily[d]["sales_bank"] += amt
+            elif cat == "credit": daily[d]["sales_credit"] += amt
+            elif cat == "online": daily[d]["sales_online"] += amt
 
     for e in expenses:
         d = e.get("date", "")[:10]
