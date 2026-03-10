@@ -34,9 +34,16 @@ async def get_expenses(
     total = await db.expenses.count_documents(query)
     skip = (page - 1) * limit
     expenses = await db.expenses.find(query, {"_id": 0}).sort("date", -1).skip(skip).limit(limit).to_list(limit)
+    # Resolve created_by user IDs to names
+    user_ids = list(set(e.get("created_by") for e in expenses if e.get("created_by")))
+    user_map = {}
+    if user_ids:
+        users = await db.users.find({"id": {"$in": user_ids}}, {"_id": 0, "id": 1, "name": 1}).to_list(len(user_ids))
+        user_map = {u["id"]: u.get("name", "Unknown") for u in users}
     for expense in expenses:
         if isinstance(expense.get('date'), str): expense['date'] = datetime.fromisoformat(expense['date'])
         if isinstance(expense.get('created_at'), str): expense['created_at'] = datetime.fromisoformat(expense['created_at'])
+        expense['created_by_name'] = user_map.get(expense.get('created_by'), '')
     return {"data": expenses, "total": total, "page": page, "limit": limit, "pages": (total + limit - 1) // limit}
 
 @router.post("/expenses", response_model=Expense)

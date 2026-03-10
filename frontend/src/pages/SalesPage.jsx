@@ -877,7 +877,10 @@ export default function SalesPage() {
                                           ))}
                                         </div>
                                       </td>
-                                      <td className="px-3 py-2 text-sm text-muted-foreground truncate w-[14%]">{sale.notes || '-'}</td>
+                                      <td className="px-3 py-2 text-sm text-muted-foreground truncate w-[10%]">{sale.notes || '-'}</td>
+                                      <td className="px-3 py-2 w-[8%]">
+                                        {sale.created_by_name && <span className="text-[10px] text-muted-foreground" data-testid={`sale-created-by-${sale.id}`}>{sale.created_by_name}</span>}
+                                      </td>
                                       <td className="px-3 py-2 text-right w-[12%]">
                                         <div className="flex gap-1 justify-end">
                                           {remaining > 0 && (

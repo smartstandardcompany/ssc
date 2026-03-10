@@ -469,7 +469,10 @@ export default function ExpensesPage() {
                       </div>
                       <p className="text-xs text-stone-600">{e.description || t('no_data')}</p>
                       <div className="flex justify-between items-center text-[10px] text-muted-foreground">
-                        <span>{format(new Date(e.date), 'MMM dd, yyyy')}</span>
+                        <div className="flex items-center gap-2">
+                          <span>{format(new Date(e.date), 'MMM dd, yyyy')}</span>
+                          {e.created_by_name && <span className="text-stone-500">by {e.created_by_name}</span>}
+                        </div>
                         <div className="flex items-center gap-2">
                           <Badge className={`capitalize text-[10px] ${e.payment_mode === 'cash' ? 'bg-cash/20 text-cash' : e.payment_mode === 'bank' ? 'bg-bank/20 text-bank' : 'bg-credit/20 text-credit'}`}>{e.payment_mode}</Badge>
                           <span>{branches.find(b => b.id === e.branch_id)?.name || '-'}</span>
@@ -601,7 +604,10 @@ export default function ExpensesPage() {
                                           <td className="px-3 py-2 w-[10%]">
                                             <Badge className={`capitalize text-[10px] ${exp.payment_mode === 'cash' ? 'bg-cash/20 text-cash' : exp.payment_mode === 'bank' ? 'bg-bank/20 text-bank' : 'bg-credit/20 text-credit'}`}>{exp.payment_mode}</Badge>
                                           </td>
-                                          <td className="px-3 py-2 text-right w-[8%]">
+                                          <td className="px-3 py-2 w-[10%]">
+                                            {exp.created_by_name && <span className="text-[10px] text-muted-foreground" data-testid={`expense-created-by-${exp.id}`}>{exp.created_by_name}</span>}
+                                          </td>
+                                          <td className="px-3 py-2 text-right w-[6%]">
                                             <Button size="sm" variant="ghost" data-testid={`delete-expense-${exp.id}`} onClick={async (e) => { e.stopPropagation(); if(window.confirm('Delete this expense?')) { try { await api.delete(`/expenses/${exp.id}`); toast.success('Expense deleted'); fetchData(); } catch(err) { toast.error(err.response?.data?.detail || 'Failed to delete expense'); } }}} className="h-7 text-error"><Trash2 size={12} /></Button>
                                           </td>
                                         </tr>

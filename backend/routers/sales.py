@@ -27,6 +27,12 @@ async def get_sales(
     total = await db.sales.count_documents(query)
     skip = (page - 1) * limit
     sales = await db.sales.find(query, {"_id": 0}).sort("date", -1).skip(skip).limit(limit).to_list(limit)
+    # Resolve created_by user IDs to names
+    user_ids = list(set(s.get("created_by") for s in sales if s.get("created_by")))
+    user_map = {}
+    if user_ids:
+        users = await db.users.find({"id": {"$in": user_ids}}, {"_id": 0, "id": 1, "name": 1}).to_list(len(user_ids))
+        user_map = {u["id"]: u.get("name", "Unknown") for u in users}
     result = []
     for sale in sales:
         if isinstance(sale.get('date'), str): sale['date'] = datetime.fromisoformat(sale['date'])
@@ -48,6 +54,7 @@ async def get_sales(
                     sale['payment_details'] = [{"mode": received_mode, "amount": sale['final_amount']}]; sale['credit_amount'] = 0; sale['credit_received'] = 0
             else:
                 sale['payment_details'] = [{"mode": payment_mode, "amount": sale['final_amount']}]; sale['credit_amount'] = 0; sale['credit_received'] = 0
+        sale['created_by_name'] = user_map.get(sale.get('created_by'), '')
         result.append(sale)
     return {"data": result, "total": total, "page": page, "limit": limit, "pages": (total + limit - 1) // limit}
 

@@ -1,0 +1,108 @@
+{
+  "summary": "Iteration 125: Verified two new features - (1) created_by_name field display in expenses and sales, (2) Salary category shows Employee selector. All 6 backend tests passed. All 3 frontend tests passed.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "ExpensesPage.jsx and SalesPage.jsx",
+        "issues": [
+          "Console warning: HTML hydration error - <tr> cannot be child of <span>, <span> cannot be child of <tbody>. This is a React/HTML nesting warning (pre-existing from previous iterations)."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter125_created_by_name.py",
+    "/app/test_reports/pytest/pytest_results_iter125.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "HTML table structure warning persists in both ExpensesPage.jsx and SalesPage.jsx - consider using React.Fragment instead of span wrappers for table body rows"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter125_created_by_name.py"
+  ],
+  "success_rate": {
+    "backend": "100% (6/6 tests passed)",
+    "frontend": "100% (3/3 tests passed)"
+  },
+  "test_credentials": {
+    "admin": "ss@ssc.com / Aa147258369Ssc@"
+  },
+  "seed_data_creation": "None - used existing data",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 125 features verified: (1) GET /api/expenses and GET /api/sales now return 'created_by_name' field resolved from user IDs - both backend APIs and frontend display tested working. (2) Expense form Salary category shows Employee selector instead of Supplier selector (lines 333-349 ExpensesPage.jsx). (3) delete_policy for expenses and sales is correctly set to 'admin_manager' in database. HTML hydration warnings in table structure are pre-existing issues from previous iterations.",
+  "features_verified": {
+    "expenses_created_by_name_backend": {
+      "status": "PASS",
+      "endpoint": "GET /api/expenses",
+      "test_case": "Returns created_by_name field for each expense",
+      "details": "All 10 expenses in response had created_by_name populated with 'SSC Admin'"
+    },
+    "sales_created_by_name_backend": {
+      "status": "PASS",
+      "endpoint": "GET /api/sales",
+      "test_case": "Returns created_by_name field for each sale",
+      "details": "All 10 sales in response had created_by_name populated with 'SSC Admin'"
+    },
+    "expenses_created_by_name_frontend": {
+      "status": "PASS",
+      "component": "ExpensesPage.jsx",
+      "test_case": "Expanded expense rows show creator name",
+      "details": "Found 6 expense-created-by elements displaying 'SSC Admin' in expanded row view"
+    },
+    "sales_created_by_name_frontend": {
+      "status": "PASS",
+      "component": "SalesPage.jsx",
+      "test_case": "Expanded sale rows show creator name",
+      "details": "Found 3 sale-created-by elements displaying 'SSC Admin' in expanded row view"
+    },
+    "delete_policy_expenses_admin_manager": {
+      "status": "PASS",
+      "endpoint": "GET /api/access-policies",
+      "test_case": "Expenses delete_policy is 'admin_manager'",
+      "details": "Verified delete_policy.expenses = 'admin_manager' in database"
+    },
+    "admin_can_delete_expense": {
+      "status": "PASS",
+      "endpoint": "DELETE /api/expenses/{id}",
+      "test_case": "Admin user can successfully delete expense",
+      "details": "Created and deleted test expense - admin bypass working correctly"
+    },
+    "salary_category_employee_selector": {
+      "status": "PASS",
+      "component": "ExpensesPage.jsx Add Expense form",
+      "test_case": "Salary category shows Employee selector instead of Supplier",
+      "details": "When Salary category selected, Employee label visible with '-No Employee-' dropdown, Supplier label hidden"
+    }
+  },
+  "backend_tests_summary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "tests": [
+      "test_01_expenses_return_created_by_name - PASS",
+      "test_02_sales_return_created_by_name - PASS",
+      "test_03_get_access_policies_delete_policy - PASS",
+      "test_04_admin_can_delete_expense - PASS",
+      "test_05_created_by_name_is_resolved_from_user - PASS",
+      "test_06_update_delete_policy_for_expenses - PASS"
+    ]
+  },
+  "frontend_tests_summary": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "tests": [
+      "TEST 1: Salary category shows Employee selector - PASS",
+      "TEST 2: created_by_name in expenses expanded rows - PASS",
+      "TEST 3: created_by_name in sales expanded rows - PASS"
+    ]
+  }
+}
