@@ -88,6 +88,14 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 - Void/Delete orders: removes order and linked sale record
 - Backend: PUT /cashier/orders/{id} (edit) and DELETE /cashier/orders/{id} (void)
 
+### Menu Item Sizes, Add-ons & Branch Pricing (DONE)
+- Size variants: Add different sizes (Small/Large) with unique prices per size
+- Add-on options: Extra Cheese, Jalapeno, etc. with individual prices
+- Branch-specific pricing: Different base price per branch
+- Sizes/Add-ons stored as modifiers, branch_prices as {branch_id: price}
+- Cashier POS shows modifier selection dialog when adding items with options
+- 5-tab form: Details | Sizes | Add-ons | Branches | Platforms
+
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
 - Operator: test@ssc.com / testtest
