@@ -65,6 +65,7 @@ const NAV_GROUPS = [
       { path: '/stock-reorder', icon: Zap, label: 'AI Reorder', perm: 'stock', roles: ['admin', 'manager'] },
       { path: '/transfers', icon: PackageCheck, label: 'Transfers', perm: 'stock', roles: ['admin', 'manager'] },
       { path: '/menu-items', icon: UtensilsCrossed, label: 'Menu Items', perm: 'stock', roles: ['admin', 'manager'] },
+      { path: '/addons', icon: Package, label: 'Add-on Library', perm: 'stock', roles: ['admin', 'manager'] },
       { path: '/table-management', icon: Armchair, label: 'Tables', perm: 'stock', roles: ['admin', 'manager'] },
       { path: '/reservations', icon: CalendarDays, label: 'Reservations', perm: 'stock', roles: ['admin', 'manager'] },
       { path: '/kitchen', icon: ChefHat, label: 'Kitchen', perm: 'kitchen' },

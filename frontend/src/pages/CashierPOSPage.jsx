@@ -189,8 +189,43 @@ export default function CashierPOSPage() {
 
   // Add item to cart
   const handleAddItem = (item) => {
-    if (item.modifiers && item.modifiers.length > 0) {
-      setSelectedItem(item);
+    // Use V2 resolved modifiers (includes branch filtering) or fall back to legacy modifiers
+    const allModifiers = item._resolved_modifiers || item.modifiers || [];
+    // Filter by branch availability
+    const branchId = user?.branch_id;
+    const visibleModifiers = allModifiers.filter(group => {
+      const ba = group.branch_availability || {};
+      const branchKeys = Object.keys(ba);
+      // If no branch_availability defined, show everywhere
+      if (branchKeys.length === 0) return true;
+      if (!branchId) return true;
+      // For addon type: ba = {branch_id: [addon_id, ...]}
+      // For size type: ba = {branch_id: [size_name, ...]}
+      // For option type: ba = {branch_id: true/false}
+      if (group.type === 'option') return ba[branchId] === true || ba[branchId] === undefined;
+      if (group.type === 'size' || group.type === 'addon') {
+        const allowed = ba[branchId];
+        if (!allowed || !Array.isArray(allowed) || allowed.length === 0) return false;
+        return true;
+      }
+      return true;
+    }).map(group => {
+      // For size/addon types, filter options to only those available at this branch
+      const ba = group.branch_availability || {};
+      if (branchId && ba[branchId] && Array.isArray(ba[branchId])) {
+        const allowed = ba[branchId];
+        if (group.type === 'size') {
+          return { ...group, options: (group.options || []).filter(o => allowed.includes(o.name)) };
+        }
+        if (group.type === 'addon') {
+          return { ...group, options: (group.options || []).filter(o => allowed.includes(o.addon_id || o.name)) };
+        }
+      }
+      return group;
+    }).filter(group => (group.options || []).length > 0);
+
+    if (visibleModifiers.length > 0) {
+      setSelectedItem({ ...item, _filteredModifiers: visibleModifiers });
       setSelectedModifiers({});
       setShowModifiers(true);
     } else {
@@ -696,7 +731,7 @@ export default function CashierPOSPage() {
             <DialogTitle>{selectedItem?.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-            {selectedItem?.modifiers?.map((group, gi) => (
+            {(selectedItem?._filteredModifiers || selectedItem?.modifiers || []).map((group, gi) => (
               <div key={gi} className="space-y-2">
                 <Label className="font-semibold">{group.name} {group.required && <span className="text-red-500">*</span>}</Label>
                 <div className="grid grid-cols-2 gap-2">
@@ -737,7 +772,7 @@ export default function CashierPOSPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowModifiers(false)}>Cancel</Button>
-            <Button onClick={confirmModifiers} className="bg-orange-500 hover:bg-orange-600">Add to Cart</Button>
+            <Button onClick={confirmModifiers} className="bg-orange-500 hover:bg-orange-600" data-testid="confirm-modifiers-btn">Add to Cart</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

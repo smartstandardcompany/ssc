@@ -860,26 +860,34 @@ class MenuItemModifier(BaseModel):
     multiple: bool = False  # Can select multiple options?
 
 class MenuItem(BaseModel):
-    """Menu item for restaurant POS"""
+    """Menu item for restaurant POS - V2 with central add-on library support"""
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
-    name_ar: Optional[str] = None  # Arabic name
+    name_ar: Optional[str] = None
     description: Optional[str] = None
-    category: str = "main"  # main, appetizer, beverage, dessert, sides
+    category: str = "main"
     price: float
     cost_price: float = 0
     image_url: Optional[str] = None
-    modifiers: List[dict] = []  # List of modifier groups
+    # V2: modifier_groups replaces old modifiers
+    # Each group: {id, name, type: "size"|"addon"|"option", required, multiple,
+    #   options: [{name, price}],         -- for size/option type
+    #   addon_ids: [addon_id, ...],       -- for addon type (linked from central library)
+    #   branch_availability: {branch_id: [option_name/addon_id, ...], ...}  -- per-branch control
+    # }
+    modifier_groups: List[dict] = []
+    # Legacy field kept for backward compat with existing orders/data
+    modifiers: List[dict] = []
     is_available: bool = True
-    branch_id: Optional[str] = None  # Deprecated - use branch_ids
-    branch_ids: List[str] = []  # Empty = all branches
-    platform_ids: List[str] = []  # Which platforms this item is listed on
-    platform_prices: dict = {}  # Platform-specific prices {platform_id: price}
-    branch_prices: dict = {}  # Branch-specific prices {branch_id: price}
-    preparation_time: int = 10  # minutes
+    branch_id: Optional[str] = None
+    branch_ids: List[str] = []
+    platform_ids: List[str] = []
+    platform_prices: dict = {}
+    branch_prices: dict = {}
+    preparation_time: int = 10
     calories: Optional[int] = None
-    tags: List[str] = []  # vegetarian, spicy, popular, new
+    tags: List[str] = []
     display_order: int = 0
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -891,6 +899,7 @@ class MenuItemCreate(BaseModel):
     price: float
     cost_price: float = 0
     image_url: Optional[str] = None
+    modifier_groups: Optional[List[dict]] = []
     modifiers: Optional[List[dict]] = []
     is_available: bool = True
     branch_id: Optional[str] = None

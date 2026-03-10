@@ -281,6 +281,52 @@ async def get_menu_items(
             query["$or"] = search_filter
     
     items = await db.menu_items.find(query, {"_id": 0}).sort("display_order", 1).to_list(500)
+
+    # Resolve addon IDs in modifier_groups to full addon data
+    all_addon_ids = set()
+    for item in items:
+        for mg in item.get("modifier_groups", []):
+            if mg.get("type") == "addon":
+                all_addon_ids.update(mg.get("addon_ids", []))
+    
+    addon_map = {}
+    if all_addon_ids:
+        addons = await db.addons.find({"id": {"$in": list(all_addon_ids)}, "is_active": True}, {"_id": 0}).to_list(500)
+        addon_map = {a["id"]: a for a in addons}
+
+    # Build resolved modifiers for POS display
+    for item in items:
+        resolved_modifiers = []
+        # Legacy: keep old modifiers as-is for backward compat
+        for mod in item.get("modifiers", []):
+            resolved_modifiers.append(mod)
+        # V2: resolve modifier_groups into modifiers format for POS
+        for mg in item.get("modifier_groups", []):
+            group = {
+                "id": mg.get("id", ""),
+                "name": mg.get("name", ""),
+                "type": mg.get("type", "option"),
+                "required": mg.get("required", False),
+                "multiple": mg.get("multiple", False),
+                "branch_availability": mg.get("branch_availability", {}),
+            }
+            if mg.get("type") == "addon":
+                # Resolve addon IDs to full options
+                group["options"] = []
+                for aid in mg.get("addon_ids", []):
+                    addon = addon_map.get(aid)
+                    if addon:
+                        group["options"].append({
+                            "addon_id": addon["id"],
+                            "name": addon["name"],
+                            "name_ar": addon.get("name_ar", ""),
+                            "price": addon.get("price", 0),
+                        })
+            else:
+                group["options"] = mg.get("options", [])
+            resolved_modifiers.append(group)
+        item["_resolved_modifiers"] = resolved_modifiers
+
     return items
 
 @router.get("/cashier/menu/{item_id}")

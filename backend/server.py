@@ -11,6 +11,7 @@ from database import client, db
 from routers import (
     access_policies,
     activity_logs,
+    addons,
     assets,
     auth,
     anomaly_detection,
@@ -75,6 +76,7 @@ app.add_middleware(
 for module in [
     access_policies,
     activity_logs,
+    addons,
     anomaly_detection,
     assets,
     auth,
