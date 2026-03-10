@@ -12,7 +12,8 @@ import { toast } from 'sonner';
 import { 
   Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, Banknote,
   Users, Printer, ChefHat, X, Check, Clock, Coffee, UtensilsCrossed, Cake,
-  Pizza, Salad, Grid, Star, LogOut, Receipt, Percent, DollarSign, User, Building2, PlayCircle
+  Pizza, Salad, Grid, Star, LogOut, Receipt, Percent, DollarSign, User, Building2, PlayCircle,
+  Edit, Save, ChevronLeft
 } from 'lucide-react';
 import api from '@/lib/api';
 import CashierShiftModal from '@/components/CashierShiftModal';
@@ -60,6 +61,13 @@ export default function CashierPOSPage() {
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [currentShift, setCurrentShift] = useState(null);
 
+  // Order History
+  const [showOrderHistory, setShowOrderHistory] = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [viewingOrder, setViewingOrder] = useState(null);
+  const [editingOrder, setEditingOrder] = useState(null);
+
   // Check auth
   useEffect(() => {
     const token = localStorage.getItem('cashier_token');
@@ -96,6 +104,68 @@ export default function CashierPOSPage() {
   useEffect(() => {
     if (user) fetchData();
   }, [user, fetchData]);
+
+  const fetchOrders = async () => {
+    setLoadingOrders(true);
+    try {
+      const token = localStorage.getItem('cashier_token');
+      const headers = { Authorization: `Bearer ${token}` };
+      const { data } = await api.get('/cashier/orders', { headers });
+      setOrders(data || []);
+    } catch { setOrders([]); }
+    finally { setLoadingOrders(false); }
+  };
+
+  const handleDeleteOrder = async (orderId) => {
+    if (!window.confirm('Are you sure you want to void this order?')) return;
+    try {
+      const token = localStorage.getItem('cashier_token');
+      const headers = { Authorization: `Bearer ${token}` };
+      await api.delete(`/cashier/orders/${orderId}`, { headers });
+      toast.success('Order voided');
+      fetchOrders();
+      fetchData();
+    } catch (err) { toast.error(err.response?.data?.detail || 'Failed to void order'); }
+  };
+
+  const handleEditOrder = (order) => {
+    // Load order items into cart for editing
+    setEditingOrder(order);
+    setCart(order.items.map(item => ({
+      item_id: item.item_id, name: item.name, name_ar: item.name_ar,
+      unit_price: item.unit_price, modifiers: item.modifiers || [],
+      modifier_total: item.modifier_total || 0,
+      quantity: item.quantity, subtotal: item.subtotal
+    })));
+    setPaymentMethod(order.payment_method || 'cash');
+    setDiscount(order.discount || 0);
+    setOrderType(order.order_type || 'dine_in');
+    setTableNumber(order.table_number || '');
+    setNotes(order.notes || '');
+    setShowOrderHistory(false);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingOrder || cart.length === 0) return;
+    try {
+      const token = localStorage.getItem('cashier_token');
+      const headers = { Authorization: `Bearer ${token}` };
+      await api.put(`/cashier/orders/${editingOrder.id}`, {
+        items: cart.map(c => ({ item_id: c.item_id, quantity: c.quantity, modifiers: c.modifiers })),
+        discount, discount_type: discountType,
+        payment_method: paymentMethod,
+        payment_details: [{ mode: paymentMethod, amount: total }],
+        order_type: orderType, table_number: tableNumber || null, notes
+      }, { headers });
+      toast.success(`Order #${editingOrder.order_number} updated!`);
+      setEditingOrder(null);
+      setCart([]);
+      setDiscount(0);
+      setNotes('');
+      setTableNumber('');
+      fetchData();
+    } catch (err) { toast.error(err.response?.data?.detail || 'Failed to update order'); }
+  };
 
   // Filter menu items
   const filteredItems = menuItems.filter(item => {
@@ -306,6 +376,16 @@ export default function CashierPOSPage() {
             </Button>
             <Button 
               size="sm" 
+              variant="outline"
+              className="h-9"
+              onClick={() => { setShowOrderHistory(true); fetchOrders(); }}
+              data-testid="orders-history-btn"
+            >
+              <Receipt size={16} className="mr-1" />
+              Orders
+            </Button>
+            <Button 
+              size="sm" 
               variant={currentShift ? 'default' : 'outline'}
               className={`h-9 ${currentShift ? 'bg-emerald-500 hover:bg-emerald-600' : ''}`}
               onClick={() => setShowShiftModal(true)}
@@ -407,9 +487,14 @@ export default function CashierPOSPage() {
         <div className="p-3 sm:p-4 border-b flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ShoppingCart size={20} className="text-orange-600" />
-            <h2 className="font-bold font-outfit text-sm sm:text-base">Current Order</h2>
+            <h2 className="font-bold font-outfit text-sm sm:text-base">
+              {editingOrder ? `Editing Order #${editingOrder.order_number}` : 'Current Order'}
+            </h2>
           </div>
           <div className="flex items-center gap-2">
+            {editingOrder && (
+              <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground" onClick={() => { setEditingOrder(null); setCart([]); setDiscount(0); setNotes(''); }}>Cancel</Button>
+            )}
             <Button size="sm" variant="ghost" className="md:hidden h-7 w-7 p-0" onClick={() => setShowMobilePosCart(false)}>
               <X size={16} />
             </Button>
@@ -530,6 +615,17 @@ export default function CashierPOSPage() {
             </div>
 
             {/* Payment Buttons - 3 Options: Cash, Bank, Credit */}
+            {editingOrder ? (
+              <Button 
+                className="h-14 w-full bg-orange-500 hover:bg-orange-600 text-white font-bold"
+                onClick={handleSaveEdit}
+                disabled={cart.length === 0}
+                data-testid="save-edit-btn"
+              >
+                <Save size={20} className="mr-2" />
+                Save Changes to Order #{editingOrder.order_number}
+              </Button>
+            ) : (
             <div className="grid grid-cols-3 gap-2">
               <Button 
                 variant={paymentMethod === 'cash' ? 'default' : 'outline'}
@@ -559,6 +655,7 @@ export default function CashierPOSPage() {
                 <span className="text-xs font-medium">Credit</span>
               </Button>
             </div>
+            )}
 
             {selectedCustomer && (
               <div className="bg-amber-50 rounded-lg p-2 flex items-center justify-between">
@@ -808,6 +905,115 @@ export default function CashierPOSPage() {
           fetchData();
         }}
       />
+
+      {/* Order History Dialog */}
+      <Dialog open={showOrderHistory} onOpenChange={setShowOrderHistory}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-outfit flex items-center gap-2">
+              <Receipt size={20} /> Today's Orders
+            </DialogTitle>
+          </DialogHeader>
+          
+          {viewingOrder ? (
+            <div className="space-y-4">
+              <Button variant="ghost" size="sm" onClick={() => setViewingOrder(null)} className="mb-2">
+                <ChevronLeft size={16} className="mr-1" /> Back to list
+              </Button>
+              <div className="bg-stone-50 rounded-lg p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-bold text-lg">Order #{viewingOrder.order_number}</h3>
+                  <Badge className={viewingOrder.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : viewingOrder.status === 'preparing' ? 'bg-amber-100 text-amber-700' : 'bg-stone-100'}>
+                    {viewingOrder.status}
+                  </Badge>
+                </div>
+                <div className="text-sm text-muted-foreground grid grid-cols-2 gap-2">
+                  <span>Type: {viewingOrder.order_type?.replace('_', ' ')}</span>
+                  <span>Payment: {viewingOrder.payment_method}</span>
+                  {viewingOrder.table_number && <span>Table: {viewingOrder.table_number}</span>}
+                  {viewingOrder.customer_name && <span>Customer: {viewingOrder.customer_name}</span>}
+                  <span>Cashier: {viewingOrder.cashier_name}</span>
+                  <span>Time: {viewingOrder.created_at ? new Date(viewingOrder.created_at).toLocaleTimeString() : '-'}</span>
+                </div>
+                
+                <div className="border rounded-lg overflow-hidden mt-3">
+                  <table className="w-full text-sm">
+                    <thead className="bg-stone-100">
+                      <tr><th className="px-3 py-2 text-left">Item</th><th className="px-3 py-2 text-center">Qty</th><th className="px-3 py-2 text-right">Price</th><th className="px-3 py-2 text-right">Total</th></tr>
+                    </thead>
+                    <tbody>
+                      {(viewingOrder.items || []).map((item, i) => (
+                        <tr key={i} className="border-t">
+                          <td className="px-3 py-2">{item.name}</td>
+                          <td className="px-3 py-2 text-center">{item.quantity}</td>
+                          <td className="px-3 py-2 text-right">SAR {item.unit_price?.toFixed(2)}</td>
+                          <td className="px-3 py-2 text-right">SAR {item.subtotal?.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                
+                <div className="text-sm space-y-1 pt-2 border-t">
+                  <div className="flex justify-between"><span>Subtotal</span><span>SAR {viewingOrder.subtotal?.toFixed(2)}</span></div>
+                  {viewingOrder.discount > 0 && <div className="flex justify-between text-red-600"><span>Discount</span><span>-SAR {viewingOrder.discount?.toFixed(2)}</span></div>}
+                  <div className="flex justify-between"><span>Tax (15%)</span><span>SAR {viewingOrder.tax?.toFixed(2)}</span></div>
+                  <div className="flex justify-between font-bold text-base"><span>Total</span><span>SAR {viewingOrder.total?.toFixed(2)}</span></div>
+                </div>
+                {viewingOrder.notes && <div className="text-sm text-muted-foreground mt-2">Notes: {viewingOrder.notes}</div>}
+              </div>
+              
+              <div className="flex gap-2">
+                <Button className="flex-1 bg-orange-500 hover:bg-orange-600" onClick={() => { handleEditOrder(viewingOrder); setViewingOrder(null); }} data-testid="edit-order-btn">
+                  <Edit size={16} className="mr-1" /> Edit Order
+                </Button>
+                <Button variant="destructive" className="flex-1" onClick={() => { handleDeleteOrder(viewingOrder.id); setViewingOrder(null); }} data-testid="void-order-btn">
+                  <Trash2 size={16} className="mr-1" /> Void Order
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {loadingOrders ? (
+                <div className="text-center py-8 text-muted-foreground">Loading orders...</div>
+              ) : orders.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">No orders today</div>
+              ) : (
+                orders.map(order => (
+                  <div 
+                    key={order.id} 
+                    className="border rounded-lg p-3 hover:bg-stone-50 cursor-pointer transition-colors"
+                    onClick={() => setViewingOrder(order)}
+                    data-testid={`order-row-${order.order_number}`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-orange-100 text-orange-700 font-bold rounded-lg px-3 py-1 text-sm">
+                          #{order.order_number}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{(order.items || []).length} item(s) - {order.order_type?.replace('_', ' ')}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {order.created_at ? new Date(order.created_at).toLocaleTimeString() : ''} 
+                            {order.cashier_name ? ` · ${order.cashier_name}` : ''}
+                            {order.customer_name ? ` · ${order.customer_name}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-sm">SAR {order.total?.toFixed(2)}</p>
+                        <Badge className={`text-[10px] ${order.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : order.status === 'preparing' ? 'bg-amber-100 text-amber-700' : 'bg-stone-100'}`}>
+                          {order.payment_method} · {order.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

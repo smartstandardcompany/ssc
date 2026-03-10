@@ -607,6 +607,88 @@ async def send_to_kitchen(order_id: str, current_user: User = Depends(get_curren
     return {"message": "Order sent to kitchen", "order_id": order_id}
 
 
+@router.put("/cashier/orders/{order_id}")
+async def edit_pos_order(order_id: str, body: dict, current_user: User = Depends(get_current_user)):
+    """Edit an existing POS order - update items, payment, discount, notes"""
+    order = await db.pos_orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    update = {}
+    # Recalculate if items changed
+    if "items" in body:
+        subtotal = 0
+        processed_items = []
+        for item in body["items"]:
+            item_data = await db.menu_items.find_one({"id": item["item_id"]}, {"_id": 0})
+            if not item_data:
+                continue
+            unit_price = item_data["price"]
+            modifier_total = sum(m.get("price", 0) for m in item.get("modifiers", []))
+            item_total = (unit_price + modifier_total) * item["quantity"]
+            subtotal += item_total
+            processed_items.append({
+                "item_id": item["item_id"], "name": item_data["name"],
+                "name_ar": item_data.get("name_ar"), "quantity": item["quantity"],
+                "unit_price": unit_price, "modifiers": item.get("modifiers", []),
+                "modifier_total": modifier_total, "subtotal": round(item_total, 2)
+            })
+        discount = body.get("discount", order.get("discount", 0))
+        discount_type = body.get("discount_type", order.get("discount_type", "amount"))
+        if discount_type == "percent":
+            discount_amount = subtotal * (discount / 100)
+        else:
+            discount_amount = discount
+        taxable = subtotal - discount_amount
+        tax = taxable * 0.15
+        total = taxable + tax
+        update.update({
+            "items": processed_items, "subtotal": round(subtotal, 2),
+            "discount": round(discount_amount, 2), "discount_type": discount_type,
+            "tax": round(tax, 2), "total": round(total, 2)
+        })
+        # Also update the linked sale record
+        await db.sales.update_one(
+            {"pos_order_id": order_id},
+            {"$set": {"amount": round(subtotal, 2), "discount": round(discount_amount, 2), "final_amount": round(total, 2)}}
+        )
+    if "payment_method" in body:
+        update["payment_method"] = body["payment_method"]
+        update["payment_details"] = body.get("payment_details", [{"mode": body["payment_method"], "amount": update.get("total", order.get("total", 0))}])
+    if "notes" in body:
+        update["notes"] = body["notes"]
+    if "order_type" in body:
+        update["order_type"] = body["order_type"]
+    if "table_number" in body:
+        update["table_number"] = body["table_number"]
+    if "customer_id" in body:
+        update["customer_id"] = body["customer_id"]
+    update["updated_at"] = datetime.now(timezone.utc).isoformat()
+    update["updated_by"] = current_user.id
+
+    await db.pos_orders.update_one({"id": order_id}, {"$set": update})
+    updated = await db.pos_orders.find_one({"id": order_id}, {"_id": 0})
+    return updated
+
+@router.delete("/cashier/orders/{order_id}")
+async def delete_pos_order(order_id: str, current_user: User = Depends(get_current_user)):
+    """Void/delete a POS order and its linked sale"""
+    order = await db.pos_orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    # If payment was credit, reverse the customer credit
+    if order.get("payment_method") == "credit" and order.get("customer_id"):
+        await db.customers.update_one(
+            {"id": order["customer_id"]},
+            {"$inc": {"credit_balance": -order.get("total", 0)}}
+        )
+    # Delete linked sale record
+    await db.sales.delete_one({"pos_order_id": order_id})
+    # Delete the order
+    await db.pos_orders.delete_one({"id": order_id})
+    return {"message": f"Order #{order.get('order_number')} voided successfully"}
+
+
 # =====================================================
 # POS SHIFT MANAGEMENT
 # =====================================================
