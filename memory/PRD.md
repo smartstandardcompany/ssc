@@ -37,6 +37,19 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 ## Pending Issues
 - SMTP Email: Blocked on user's Microsoft 365 Security Defaults
 
+## Session 21 (Mar 10, 2026)
+
+### Quick Entry Date Bug Fix (DONE - CRITICAL)
+- Fixed timezone conversion bug: getDateISO() was using .toISOString() (UTC shift)
+- Now preserves selected date as-is (e.g., `2026-03-09T23:45:00` stays on Mar 9)
+- Also hardened multi-entry forms to keep failed entries instead of clearing all
+
+### Menu Dynamic Categories (DONE)
+- Categories no longer hardcoded (was: 5 built-in only)
+- Added "Manage Categories" dialog: add custom categories, delete them
+- Uses /api/categories?category_type=menu backend endpoint
+- Default 5 categories remain as built-in, custom ones are deletable
+
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
 - Operator: test@ssc.com / testtest
