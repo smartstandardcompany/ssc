@@ -72,6 +72,12 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 ### Delete Time Limit Fix (DONE)
 - Disabled the 24-hour delete time limit policy that was blocking expense deletion
 - Admin already had bypass, but policy was affecting other users
+- Updated delete_policy for expenses/sales to 'admin_manager' so managers can also delete
+
+### Created By Name Display (DONE)
+- Expenses and Sales API now return 'created_by_name' field (resolved from user IDs)
+- Visible in expanded entry rows on both Expenses and Sales pages
+- Shows who entered each data entry for easy tracking
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
