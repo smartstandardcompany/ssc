@@ -27,6 +27,21 @@ async def get_suppliers(current_user: User = Depends(get_current_user)):
     agg_result = await db.expenses.aggregate(pipeline).to_list(1000)
     purchase_totals = {r["_id"]: r["total"] for r in agg_result}
     
+    # Compute actual credit balance: credit expenses - cash/bank payments
+    credit_pipeline = [
+        {"$match": {"supplier_id": {"$exists": True, "$ne": None}, "payment_mode": "credit"}},
+        {"$group": {"_id": "$supplier_id", "total": {"$sum": "$amount"}}}
+    ]
+    credit_result = await db.expenses.aggregate(credit_pipeline).to_list(1000)
+    credit_totals = {r["_id"]: r["total"] for r in credit_result}
+    
+    payment_pipeline = [
+        {"$match": {"supplier_id": {"$exists": True, "$ne": None}, "payment_mode": {"$in": ["cash", "bank"]}}},
+        {"$group": {"_id": "$supplier_id", "total": {"$sum": "$amount"}}}
+    ]
+    payment_result = await db.supplier_payments.aggregate(payment_pipeline).to_list(1000)
+    payment_totals = {r["_id"]: r["total"] for r in payment_result}
+    
     for supplier in suppliers:
         if isinstance(supplier.get('created_at'), str):
             supplier['created_at'] = datetime.fromisoformat(supplier['created_at']).isoformat()
@@ -35,6 +50,8 @@ async def get_suppliers(current_user: User = Depends(get_current_user)):
         if supplier.get('updated_at') and hasattr(supplier['updated_at'], 'isoformat'):
             supplier['updated_at'] = supplier['updated_at'].isoformat()
         supplier['total_purchases'] = purchase_totals.get(supplier['id'], 0)
+        # Dynamically computed credit = total credit bills - total cash/bank payments
+        supplier['current_credit'] = max(0, credit_totals.get(supplier['id'], 0) - payment_totals.get(supplier['id'], 0))
     
     return suppliers
 
