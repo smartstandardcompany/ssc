@@ -66,7 +66,8 @@ export default function MenuItemsPage() {
   const [formData, setFormData] = useState({
     name: '', name_ar: '', description: '', category: 'main',
     price: '', cost_price: '', preparation_time: '10',
-    is_available: true, tags: [], branch_ids: [], platform_ids: [], platform_prices: {}
+    is_available: true, tags: [], branch_ids: [], platform_ids: [], platform_prices: {},
+    sizes: [], addons: [], branch_prices: {}
   });
 
   const fetchCategories = async () => {
@@ -134,13 +135,19 @@ export default function MenuItemsPage() {
 
   const handleEdit = (item) => {
     setEditingItem(item);
+    const modifiers = item.modifiers || [];
+    const sizeGroup = modifiers.find(m => m.name === 'Size');
+    const addonGroup = modifiers.find(m => m.name === 'Add-ons');
     setFormData({
       name: item.name || '', name_ar: item.name_ar || '', description: item.description || '',
       category: item.category || 'main', price: item.price?.toString() || '',
       cost_price: item.cost_price?.toString() || '', preparation_time: item.preparation_time?.toString() || '10',
       is_available: item.is_available !== false, tags: item.tags || [],
       branch_ids: item.branch_ids || [], platform_ids: item.platform_ids || [],
-      platform_prices: item.platform_prices || {}
+      platform_prices: item.platform_prices || {},
+      sizes: sizeGroup ? sizeGroup.options : [],
+      addons: addonGroup ? addonGroup.options : [],
+      branch_prices: item.branch_prices || {}
     });
     setShowDialog(true);
   };
@@ -150,7 +157,8 @@ export default function MenuItemsPage() {
     setFormData({
       name: '', name_ar: '', description: '', category: 'main',
       price: '', cost_price: '', preparation_time: '10',
-      is_available: true, tags: [], branch_ids: [], platform_ids: [], platform_prices: {}
+      is_available: true, tags: [], branch_ids: [], platform_ids: [], platform_prices: {},
+      sizes: [], addons: [], branch_prices: {}
     });
     setShowDialog(true);
   };
@@ -159,11 +167,22 @@ export default function MenuItemsPage() {
     if (!formData.name || !formData.price) { toast.error('Name and price are required'); return; }
     setSaving(true);
     try {
+      // Build modifiers from sizes and addons
+      const modifiers = [];
+      if (formData.sizes.length > 0) {
+        modifiers.push({ name: 'Size', required: true, multiple: false, options: formData.sizes.filter(s => s.name && s.price) });
+      }
+      if (formData.addons.length > 0) {
+        modifiers.push({ name: 'Add-ons', required: false, multiple: true, options: formData.addons.filter(a => a.name && a.price) });
+      }
       const payload = {
-        ...formData,
+        ...formData, modifiers,
         price: parseFloat(formData.price), cost_price: parseFloat(formData.cost_price) || 0,
         preparation_time: parseInt(formData.preparation_time) || 10,
+        branch_prices: formData.branch_prices || {},
       };
+      delete payload.sizes;
+      delete payload.addons;
       if (editingItem) {
         await api.put(`/cashier/menu/${editingItem.id}`, payload);
         toast.success('Item updated');
@@ -378,6 +397,13 @@ export default function MenuItemsPage() {
                     </div>
                     <span className="text-sm font-bold text-orange-600 ml-2 whitespace-nowrap">SAR {item.price}</span>
                   </div>
+                  {(item.modifiers || []).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {item.modifiers.map((m, mi) => (
+                        <Badge key={mi} variant="outline" className="text-[9px] py-0">{m.name}: {m.options?.length || 0}</Badge>
+                      ))}
+                    </div>
+                  )}
                   
                   {/* Branch Tags */}
                   <div className="flex flex-wrap gap-1 mt-2">
@@ -434,6 +460,8 @@ export default function MenuItemsPage() {
           <Tabs defaultValue="details" className="w-full">
             <TabsList className="w-full mb-4">
               <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
+              <TabsTrigger value="sizes" className="flex-1" data-testid="sizes-tab">Sizes</TabsTrigger>
+              <TabsTrigger value="addons" className="flex-1" data-testid="addons-tab">Add-ons</TabsTrigger>
               <TabsTrigger value="branches" className="flex-1" data-testid="branches-tab">Branches</TabsTrigger>
               <TabsTrigger value="platforms" className="flex-1" data-testid="platforms-tab">Platforms</TabsTrigger>
             </TabsList>
@@ -483,6 +511,104 @@ export default function MenuItemsPage() {
               </div>
             </TabsContent>
 
+            {/* Sizes Tab */}
+            <TabsContent value="sizes" className="space-y-4">
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg">
+                <p className="text-xs text-blue-700 dark:text-blue-400">
+                  Add size variants for this item. Each size has its own price. The base price is used when no size is selected.
+                </p>
+              </div>
+              
+              {formData.sizes.map((size, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <Input 
+                      placeholder="Size name (e.g., Small)" 
+                      value={size.name} 
+                      onChange={(e) => {
+                        const next = [...formData.sizes];
+                        next[i] = { ...next[i], name: e.target.value };
+                        setFormData({ ...formData, sizes: next });
+                      }}
+                      data-testid={`size-name-${i}`}
+                    />
+                  </div>
+                  <div className="w-28">
+                    <Input 
+                      type="number" step="0.01" placeholder="Price" 
+                      value={size.price} 
+                      onChange={(e) => {
+                        const next = [...formData.sizes];
+                        next[i] = { ...next[i], price: parseFloat(e.target.value) || 0 };
+                        setFormData({ ...formData, sizes: next });
+                      }}
+                      data-testid={`size-price-${i}`}
+                    />
+                  </div>
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" onClick={() => {
+                    setFormData({ ...formData, sizes: formData.sizes.filter((_, j) => j !== i) });
+                  }}>
+                    <Trash2 size={14} />
+                  </Button>
+                </div>
+              ))}
+              
+              <Button variant="outline" className="w-full" onClick={() => {
+                setFormData({ ...formData, sizes: [...formData.sizes, { name: '', price: 0 }] });
+              }} data-testid="add-size-btn">
+                <Plus size={16} className="mr-1" /> Add Size
+              </Button>
+            </TabsContent>
+
+            {/* Add-ons Tab */}
+            <TabsContent value="addons" className="space-y-4">
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-900/10 rounded-lg">
+                <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                  Add optional extras that customers can add to this item. Multiple add-ons can be selected.
+                </p>
+              </div>
+              
+              {formData.addons.map((addon, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <Input 
+                      placeholder="Add-on name (e.g., Extra Cheese)" 
+                      value={addon.name} 
+                      onChange={(e) => {
+                        const next = [...formData.addons];
+                        next[i] = { ...next[i], name: e.target.value };
+                        setFormData({ ...formData, addons: next });
+                      }}
+                      data-testid={`addon-name-${i}`}
+                    />
+                  </div>
+                  <div className="w-28">
+                    <Input 
+                      type="number" step="0.01" placeholder="Price" 
+                      value={addon.price} 
+                      onChange={(e) => {
+                        const next = [...formData.addons];
+                        next[i] = { ...next[i], price: parseFloat(e.target.value) || 0 };
+                        setFormData({ ...formData, addons: next });
+                      }}
+                      data-testid={`addon-price-${i}`}
+                    />
+                  </div>
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" onClick={() => {
+                    setFormData({ ...formData, addons: formData.addons.filter((_, j) => j !== i) });
+                  }}>
+                    <Trash2 size={14} />
+                  </Button>
+                </div>
+              ))}
+              
+              <Button variant="outline" className="w-full" onClick={() => {
+                setFormData({ ...formData, addons: [...formData.addons, { name: '', price: 0 }] });
+              }} data-testid="add-addon-btn">
+                <Plus size={16} className="mr-1" /> Add Option
+              </Button>
+            </TabsContent>
+
             <TabsContent value="branches" className="space-y-4">
               <div className="p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg">
                 <p className="text-xs text-blue-700 dark:text-blue-400">
@@ -495,8 +621,22 @@ export default function MenuItemsPage() {
                        onClick={() => toggleBranch(b.id)} data-testid={`branch-toggle-${b.id}`}>
                     <Checkbox checked={formData.branch_ids.includes(b.id)} onCheckedChange={() => toggleBranch(b.id)} />
                     <Building2 size={16} className="text-muted-foreground" />
-                    <span className="text-sm font-medium dark:text-white">{b.name}</span>
-                    {formData.branch_ids.includes(b.id) && <Check size={16} className="ml-auto text-orange-500" />}
+                    <span className="text-sm font-medium dark:text-white flex-1">{b.name}</span>
+                    {formData.branch_ids.includes(b.id) && (
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <Label className="text-xs whitespace-nowrap">Price:</Label>
+                        <Input type="number" step="0.01" className="w-24 h-8 text-sm"
+                          placeholder={formData.price || 'Same'}
+                          value={formData.branch_prices[b.id] || ''}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            branch_prices: {...prev.branch_prices, [b.id]: e.target.value ? parseFloat(e.target.value) : undefined}
+                          }))}
+                          data-testid={`branch-price-${b.id}`}
+                        />
+                      </div>
+                    )}
+                    {formData.branch_ids.includes(b.id) && !formData.branch_prices[b.id] && <Check size={16} className="text-orange-500" />}
                   </div>
                 ))}
               </div>

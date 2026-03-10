@@ -876,6 +876,7 @@ class MenuItem(BaseModel):
     branch_ids: List[str] = []  # Empty = all branches
     platform_ids: List[str] = []  # Which platforms this item is listed on
     platform_prices: dict = {}  # Platform-specific prices {platform_id: price}
+    branch_prices: dict = {}  # Branch-specific prices {branch_id: price}
     preparation_time: int = 10  # minutes
     calories: Optional[int] = None
     tags: List[str] = []  # vegetarian, spicy, popular, new
@@ -896,6 +897,7 @@ class MenuItemCreate(BaseModel):
     branch_ids: Optional[List[str]] = []
     platform_ids: Optional[List[str]] = []
     platform_prices: Optional[dict] = {}
+    branch_prices: Optional[dict] = {}
     preparation_time: int = 10
     calories: Optional[int] = None
     tags: Optional[List[str]] = []

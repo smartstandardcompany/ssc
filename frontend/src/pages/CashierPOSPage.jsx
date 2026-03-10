@@ -200,7 +200,11 @@ export default function CashierPOSPage() {
 
   const addToCart = (item, modifiers) => {
     const modifierTotal = modifiers.reduce((sum, m) => sum + (m.price || 0), 0);
-    const itemTotal = (item.price + modifierTotal);
+    // Use branch-specific price if available
+    const basePrice = (item.branch_prices && user?.branch_id && item.branch_prices[user.branch_id])
+      ? item.branch_prices[user.branch_id]
+      : item.price;
+    const itemTotal = (basePrice + modifierTotal);
     
     // Check if same item with same modifiers exists
     const existingIndex = cart.findIndex(c => 
@@ -218,7 +222,7 @@ export default function CashierPOSPage() {
         item_id: item.id,
         name: item.name,
         name_ar: item.name_ar,
-        unit_price: item.price,
+        unit_price: basePrice,
         modifiers,
         modifier_total: modifierTotal,
         quantity: 1,
