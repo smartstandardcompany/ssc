@@ -50,9 +50,11 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 - Uses /api/categories?category_type=menu backend endpoint
 - Default 5 categories remain as built-in, custom ones are deletable
 
-### Supplier Payment Credit Fix (DONE - CRITICAL)
+### Supplier Credit Balance Fix (DONE - CRITICAL)
 - POST /supplier-payments now correctly reduces supplier credit for cash/bank payments
 - Previously only credit-mode payments adjusted the balance, cash/bank were ignored
+- Also fixed: Bill submission (credit bills) now creates BOTH an expense AND a supplier payment to properly increment credit
+- Fixed on both SuppliersPage and SupplierPaymentsPage
 - Also fixed undefined 'amount' variable in delete_supplier_payment
 
 ### Expense Delete Error Handling (DONE)
