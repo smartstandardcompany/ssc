@@ -166,6 +166,16 @@ export default function SupplierPaymentsPage() {
         date: `${formData.date}T${new Date().toTimeString().slice(0,8)}`,
       });
       
+      // Also create supplier payment to update credit balance
+      await api.post('/supplier-payments', {
+        supplier_id: formData.supplier_id,
+        amount: parseFloat(formData.amount),
+        payment_mode: formData.payment_mode,
+        branch_id: formData.branch_id || null,
+        date: `${formData.date}T${new Date().toTimeString().slice(0,8)}`,
+        notes: `Bill: ${formData.notes || `Purchase from ${supplierName}`}`,
+      }).catch(() => {}); // Don't fail if payment record fails
+      
       const modeText = formData.payment_mode === 'credit'
         ? 'Added to supplier credit balance'
         : 'Paid immediately (no balance change)';

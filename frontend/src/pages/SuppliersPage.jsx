@@ -170,8 +170,19 @@ export default function SuppliersPage() {
         payment_mode: billData.payment_mode,
         supplier_id: payingSupplier.id,
         branch_id: billData.branch_id || '',
-        date: new Date().toISOString(),
+        date: `${new Date().toISOString().split('T')[0]}T${new Date().toTimeString().slice(0,8)}`,
       });
+      
+      // Also create supplier payment to update credit balance
+      await api.post('/supplier-payments', {
+        supplier_id: payingSupplier.id,
+        amount: parseFloat(billData.amount),
+        payment_mode: billData.payment_mode,
+        branch_id: billData.branch_id || null,
+        date: `${new Date().toISOString().split('T')[0]}T${new Date().toTimeString().slice(0,8)}`,
+        notes: `Bill: ${billData.description || `Purchase from ${payingSupplier.name}`}`,
+      }).catch(() => {});
+      
       const modeText = billData.payment_mode === 'credit' ? 'Credit bill added to balance' : 'Cash/Bank bill recorded';
       toast.success(`Purchase bill recorded! ${modeText}`);
       setShowAddBillDialog(false);

@@ -1,0 +1,132 @@
+{
+  "summary": "Iteration 126: Verified supplier credit balance fix. When adding a credit bill, the fix now creates BOTH an expense (POST /expenses) AND a supplier payment (POST /supplier-payments), which correctly updates the credit balance. All 6 backend tests passed. All frontend UI tests passed.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "SupplierPaymentsPage.jsx",
+        "issues": [
+          "Pre-existing HTML hydration warning: <tr> cannot be child of <span>, <span> cannot be child of <tbody> in table structure (from previous iterations)"
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter126_supplier_credit_balance.py",
+    "/app/test_reports/pytest/pytest_results_iter126.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "HTML table structure warning persists in SupplierPaymentsPage.jsx - consider using React.Fragment instead of span wrappers for table body rows (pre-existing issue)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter126_supplier_credit_balance.py"
+  ],
+  "success_rate": {
+    "backend": "100% (6/6 tests passed)",
+    "frontend": "100% (all UI tests passed)"
+  },
+  "test_credentials": {
+    "admin": "ss@ssc.com / Aa147258369Ssc@"
+  },
+  "seed_data_creation": "None - used small test amounts with cleanup",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 126: Verified supplier credit balance bug fix. The fix ensures that bill submission now creates BOTH an expense AND a supplier payment. POST /api/supplier-payments with payment_mode='credit' increases current_credit, and payment_mode='cash' or 'bank' decreases current_credit. DELETE also correctly reverses the credit change. Frontend forms on SupplierPaymentsPage and SuppliersPage are working correctly with 'credit' as the default payment mode for bills.",
+  "features_verified": {
+    "credit_payment_increases_balance": {
+      "status": "PASS",
+      "endpoint": "POST /api/supplier-payments",
+      "test_case": "payment_mode='credit' increases supplier current_credit",
+      "details": "Verified: initial credit + 10 SAR = new credit after credit payment"
+    },
+    "cash_payment_decreases_balance": {
+      "status": "PASS",
+      "endpoint": "POST /api/supplier-payments",
+      "test_case": "payment_mode='cash' decreases supplier current_credit",
+      "details": "Verified: credit balance decreased by payment amount"
+    },
+    "bank_payment_decreases_balance": {
+      "status": "PASS",
+      "endpoint": "POST /api/supplier-payments",
+      "test_case": "payment_mode='bank' decreases supplier current_credit",
+      "details": "Verified: credit balance decreased by payment amount"
+    },
+    "delete_credit_payment_reverses_increase": {
+      "status": "PASS",
+      "endpoint": "DELETE /api/supplier-payments/{id}",
+      "test_case": "Deleting credit payment reverses the credit increase",
+      "details": "Verified: credit returned to original value after deleting credit payment"
+    },
+    "delete_cash_payment_reverses_decrease": {
+      "status": "PASS",
+      "endpoint": "DELETE /api/supplier-payments/{id}",
+      "test_case": "Deleting cash payment reverses the credit decrease",
+      "details": "Verified: credit restored after deleting cash payment"
+    },
+    "full_flow_credit_then_cash": {
+      "status": "PASS",
+      "endpoint": "Multiple endpoints",
+      "test_case": "Add credit bill → Pay cash → Verify final balance",
+      "details": "Verified: initial + credit_amount - cash_payment = final balance"
+    },
+    "frontend_supplier_payments_add_bill": {
+      "status": "PASS",
+      "component": "SupplierPaymentsPage.jsx",
+      "test_case": "Add Bill form visible and 'credit' mode selected by default",
+      "details": "Add Bill button opens form with credit mode pre-selected"
+    },
+    "frontend_suppliers_add_bill_dialog": {
+      "status": "PASS",
+      "component": "SuppliersPage.jsx",
+      "test_case": "Add Bill dialog from supplier card works correctly",
+      "details": "Add Bill button on supplier card opens dialog with credit mode default"
+    },
+    "frontend_credit_status_display": {
+      "status": "PASS",
+      "component": "SuppliersPage.jsx",
+      "test_case": "Supplier cards display Credit Status",
+      "details": "Found 7 supplier cards with Credit Status displayed"
+    }
+  },
+  "backend_tests_summary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "tests": [
+      "test_01_credit_payment_mode_increases_credit - PASS",
+      "test_02_cash_payment_mode_decreases_credit - PASS",
+      "test_03_bank_payment_mode_decreases_credit - PASS",
+      "test_04_delete_credit_payment_reverses_increase - PASS",
+      "test_05_delete_cash_payment_reverses_decrease - PASS",
+      "test_06_full_flow_credit_then_cash_then_verify - PASS"
+    ]
+  },
+  "frontend_tests_summary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "tests": [
+      "SupplierPaymentsPage Add Bill form - PASS",
+      "SuppliersPage Add Bill dialog - PASS",
+      "Credit mode default for bills - PASS",
+      "Credit Status display on supplier cards - PASS"
+    ]
+  },
+  "bug_fix_verification": {
+    "original_issue": "Supplier credit balance not updating correctly after payments",
+    "root_cause": "When adding a credit bill, only an expense was created but the supplier's current_credit was NEVER updated",
+    "fix_applied": "Bill submission now creates BOTH an expense (POST /expenses) AND a supplier payment (POST /supplier-payments), which correctly updates the credit balance",
+    "fix_verified": true,
+    "files_involved": [
+      "frontend/src/pages/SupplierPaymentsPage.jsx (lines 155-187)",
+      "frontend/src/pages/SuppliersPage.jsx (lines 162-180)",
+      "backend/routers/suppliers.py (lines 190-215)"
+    ]
+  }
+}
