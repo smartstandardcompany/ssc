@@ -31,6 +31,7 @@ export default function ExpensesPage() {
   const { branches, fetchBranches } = useBranchStore();
   const { user } = useAuthStore();
   const [categories, setCategories] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [recurringExpenses, setRecurringExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchFilters, setSearchFilters] = useState({});
@@ -62,7 +63,7 @@ export default function ExpensesPage() {
 
   const [formData, setFormData] = useState({
     category: '', sub_category: '', description: '', amount: '',
-    payment_mode: 'cash', branch_id: '', expense_for_branch_id: '', supplier_id: '',
+    payment_mode: 'cash', branch_id: '', expense_for_branch_id: '', supplier_id: '', employee_id: '',
     date: new Date().toISOString().split('T')[0], notes: '', bill_image_url: ''
   });
 
@@ -103,13 +104,14 @@ export default function ExpensesPage() {
       if (dateRange) {
         expUrl += `&start_date=${dateRange.start}&end_date=${dateRange.end}`;
       }
-      const [eR, sR, cR, rR] = await Promise.all([api.get(expUrl), api.get('/suppliers'), api.get('/categories?category_type=expense'), api.get('/recurring-expenses')]);
+      const [eR, sR, cR, rR, empR] = await Promise.all([api.get(expUrl), api.get('/suppliers'), api.get('/categories?category_type=expense'), api.get('/recurring-expenses'), api.get('/employees').catch(() => ({ data: [] }))]);
       const expData = eR.data;
       setExpenses(expData.data || expData || []);
       setCurrentPage(expData.page || 1);
       setTotalPages(expData.pages || 1);
       setTotalRecords(expData.total || 0);
       setSuppliers(sR.data); setCategories(cR.data); setRecurringExpenses(rR.data);
+      setEmployees(Array.isArray(empR.data) ? empR.data : []);
     } catch { toast.error('Failed'); } finally { setLoading(false); }
   };
 
@@ -146,16 +148,26 @@ export default function ExpensesPage() {
 
   const submitExpense = async () => {
     try {
+      // Auto-add employee name to description for employee-related expenses
+      let description = formData.description || '';
+      if (formData.employee_id && ['Salary', 'Tickets', 'ID Card'].includes(formData.category)) {
+        const emp = employees.find(e => e.id === formData.employee_id);
+        if (emp && !description.toLowerCase().includes(emp.name.toLowerCase())) {
+          description = description ? `${emp.name} - ${description}` : emp.name;
+        }
+      }
       await api.post('/expenses', {
-        ...formData, category: formData.sub_category || formData.category,
+        ...formData, description,
+        category: formData.sub_category || formData.category,
         sub_category: formData.sub_category ? formData.category : null,
         amount: parseFloat(formData.amount),
         branch_id: formData.branch_id || null, supplier_id: formData.supplier_id || null,
         expense_for_branch_id: formData.expense_for_branch_id || null,
-        date: `${formData.date}T${new Date().toTimeString().slice(0,8)}`
+        date: `${formData.date}T${new Date().toTimeString().slice(0,8)}`,
+        notes: formData.employee_id ? `Employee: ${employees.find(e => e.id === formData.employee_id)?.name || ''}` : formData.notes,
       });
       toast.success('Expense added');
-      setFormData({ category: '', sub_category: '', description: '', amount: '', payment_mode: 'cash', branch_id: '', expense_for_branch_id: '', supplier_id: '', date: new Date().toISOString().split('T')[0], notes: '' });
+      setFormData({ category: '', sub_category: '', description: '', amount: '', payment_mode: 'cash', branch_id: '', expense_for_branch_id: '', supplier_id: '', employee_id: '', date: new Date().toISOString().split('T')[0], notes: '' });
       fetchData();
     } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
   };
@@ -318,13 +330,23 @@ export default function ExpensesPage() {
                       </Select>
                     </div>
                     <div>
-                      <Label>Supplier</Label>
-                      <SearchableSelect
-                        items={[{id: '', name: '- No Supplier -'}, ...suppliers]}
-                        value={formData.supplier_id || ''}
-                        onChange={(v) => setFormData({ ...formData, supplier_id: v })}
-                        placeholder="Search supplier..."
-                      />
+                      <Label>{['Salary', 'Tickets', 'ID Card'].includes(formData.category) ? 'Employee' : 'Supplier'}</Label>
+                      {['Salary', 'Tickets', 'ID Card'].includes(formData.category) ? (
+                        <SearchableSelect
+                          items={[{id: '', name: '- No Employee -'}, ...employees.map(e => ({id: e.id, name: e.name}))]}
+                          value={formData.employee_id || ''}
+                          onChange={(v) => setFormData({ ...formData, employee_id: v, supplier_id: '' })}
+                          placeholder="Search employee..."
+                          data-testid="expense-employee-select"
+                        />
+                      ) : (
+                        <SearchableSelect
+                          items={[{id: '', name: '- No Supplier -'}, ...suppliers]}
+                          value={formData.supplier_id || ''}
+                          onChange={(v) => setFormData({ ...formData, supplier_id: v, employee_id: '' })}
+                          placeholder="Search supplier..."
+                        />
+                      )}
                     </div>
                     <div>
                       <Label>Paid By (Branch)</Label>
