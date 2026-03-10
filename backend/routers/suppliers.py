@@ -207,6 +207,11 @@ async def create_supplier_payment(payment_data: SupplierPaymentCreate, current_u
     if payment_data.payment_mode == "credit":
         new_credit = supplier.get("current_credit", 0) + payment_data.amount
         await db.suppliers.update_one({"id": payment_data.supplier_id}, {"$set": {"current_credit": new_credit}})
+    elif payment_data.payment_mode in ("cash", "bank"):
+        # Cash/bank payment to supplier reduces their credit balance
+        current_credit = supplier.get("current_credit", 0)
+        new_credit = max(0, current_credit - payment_data.amount)
+        await db.suppliers.update_one({"id": payment_data.supplier_id}, {"$set": {"current_credit": new_credit}})
     return payment
 
 @router.delete("/supplier-payments/{payment_id}")
@@ -218,7 +223,7 @@ async def delete_supplier_payment(payment_id: str, current_user: User = Depends(
         raise HTTPException(status_code=404, detail="Payment not found")
     
     from routers.access_policies import check_delete_permission
-    await check_delete_permission(current_user, "supplier_payments", payment.get("date"), f"Payment to {payment.get('supplier_name', '')} - SAR {amount}")
+    await check_delete_permission(current_user, "supplier_payments", payment.get("date"), f"Payment to {payment.get('supplier_name', '')} - SAR {payment.get('amount', 0)}")
     
     supplier_id = payment.get("supplier_id")
     payment_mode = payment.get("payment_mode")

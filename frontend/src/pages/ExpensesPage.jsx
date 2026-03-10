@@ -451,7 +451,7 @@ export default function ExpensesPage() {
                         <div className="flex items-center gap-2">
                           <Badge className={`capitalize text-[10px] ${e.payment_mode === 'cash' ? 'bg-cash/20 text-cash' : e.payment_mode === 'bank' ? 'bg-bank/20 text-bank' : 'bg-credit/20 text-credit'}`}>{e.payment_mode}</Badge>
                           <span>{branches.find(b => b.id === e.branch_id)?.name || '-'}</span>
-                          <Button size="sm" variant="ghost" onClick={async () => { if(window.confirm('Delete?')) { await api.delete(`/expenses/${e.id}`); fetchData(); }}} className="h-6 w-6 p-0 text-error"><Trash2 size={12} /></Button>
+                          <Button size="sm" variant="ghost" data-testid={`delete-expense-mobile-${e.id}`} onClick={async () => { if(window.confirm('Delete this expense?')) { try { await api.delete(`/expenses/${e.id}`); toast.success('Expense deleted'); fetchData(); } catch(err) { toast.error(err.response?.data?.detail || 'Failed to delete expense'); } }}} className="h-6 w-6 p-0 text-error"><Trash2 size={12} /></Button>
                         </div>
                       </div>
                     </div>
@@ -580,7 +580,7 @@ export default function ExpensesPage() {
                                             <Badge className={`capitalize text-[10px] ${exp.payment_mode === 'cash' ? 'bg-cash/20 text-cash' : exp.payment_mode === 'bank' ? 'bg-bank/20 text-bank' : 'bg-credit/20 text-credit'}`}>{exp.payment_mode}</Badge>
                                           </td>
                                           <td className="px-3 py-2 text-right w-[8%]">
-                                            <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); if(window.confirm('Delete?')) { api.delete(`/expenses/${exp.id}`).then(fetchData); }}} className="h-7 text-error"><Trash2 size={12} /></Button>
+                                            <Button size="sm" variant="ghost" data-testid={`delete-expense-${exp.id}`} onClick={async (e) => { e.stopPropagation(); if(window.confirm('Delete this expense?')) { try { await api.delete(`/expenses/${exp.id}`); toast.success('Expense deleted'); fetchData(); } catch(err) { toast.error(err.response?.data?.detail || 'Failed to delete expense'); } }}} className="h-7 text-error"><Trash2 size={12} /></Button>
                                           </td>
                                         </tr>
                                       ))}

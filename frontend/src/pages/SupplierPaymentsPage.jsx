@@ -107,7 +107,7 @@ export default function SupplierPaymentsPage() {
         payment_mode: formData.payment_mode,
         branch_id: formData.branch_id || null,
         expense_for_branch_id: formData.expense_for_branch_id || null,
-        date: new Date(formData.date).toISOString(),
+        date: `${formData.date}T${new Date().toTimeString().slice(0,8)}`,
         notes: formData.notes,
       };
       await api.post('/supplier-payments', payload);
@@ -121,7 +121,7 @@ export default function SupplierPaymentsPage() {
         supplier_id: formData.supplier_id,
         branch_id: formData.branch_id || '',
         expense_for_branch_id: formData.expense_for_branch_id || '',
-        date: new Date(formData.date).toISOString(),
+        date: `${formData.date}T${new Date().toTimeString().slice(0,8)}`,
       }).catch(() => {}); // Don't fail if expense recording fails
       
       toast.success('Payment recorded successfully');

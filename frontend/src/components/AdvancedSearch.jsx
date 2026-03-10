@@ -81,7 +81,13 @@ export function AdvancedSearch({ onSearch, config = {}, className = '' }) {
   };
 
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    const next = { ...filters, [key]: value };
+    setFilters(next);
+    // Auto-apply: trigger search immediately for select filters
+    const searchFilters = { text: searchText, searchFields, ...next };
+    onSearch(searchFilters);
+    // Update active filter badges
+    setTimeout(() => updateActiveFilters(), 10);
   };
 
   const handleRangeChange = (key, field, value) => {
