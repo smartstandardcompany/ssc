@@ -50,6 +50,19 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 - Uses /api/categories?category_type=menu backend endpoint
 - Default 5 categories remain as built-in, custom ones are deletable
 
+### Supplier Payment Credit Fix (DONE - CRITICAL)
+- POST /supplier-payments now correctly reduces supplier credit for cash/bank payments
+- Previously only credit-mode payments adjusted the balance, cash/bank were ignored
+- Also fixed undefined 'amount' variable in delete_supplier_payment
+
+### Expense Delete Error Handling (DONE)
+- Delete buttons now have proper try/catch with toast.error messages
+- Previously errors were silently swallowed, making it seem like delete didn't work
+
+### Expense Filter Auto-Apply (DONE)
+- AdvancedSearch dropdown filters now apply immediately on selection
+- Previously required clicking "Apply Filters" button after every dropdown change
+
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
 - Operator: test@ssc.com / testtest
