@@ -89,13 +89,35 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 - Void/Delete orders: removes order and linked sale record
 - Backend: PUT /cashier/orders/{id} (edit) and DELETE /cashier/orders/{id} (void)
 
-### Menu Item Sizes, Add-ons & Branch Pricing (DONE)
+### Menu Item Sizes, Add-ons & Branch Pricing V1 (DONE)
 - Size variants: Add different sizes (Small/Large) with unique prices per size
 - Add-on options: Extra Cheese, Jalapeno, etc. with individual prices
 - Branch-specific pricing: Different base price per branch
 - Sizes/Add-ons stored as modifiers, branch_prices as {branch_id: price}
 - Cashier POS shows modifier selection dialog when adding items with options
 - 5-tab form: Details | Sizes | Add-ons | Branches | Platforms
+
+## Session 22 (Mar 10, 2026)
+
+### Advanced Menu Management V2 (DONE)
+- **Central Add-on Library**: New `/addons` page with full CRUD for global add-ons
+  - Add-ons have name (EN/AR), default price, category (extras/sauces/toppings/sides/drinks + custom)
+  - Active/inactive toggle, grouped display by category, search and filter
+  - Backend: GET/POST/PUT/DELETE /api/addons + GET /api/addons/categories
+- **V2 Modifier Groups**: MenuItem model extended with `modifier_groups` field
+  - Types: `size` (size variants), `addon` (linked from central library), `option` (single-choice groups)
+  - Each group has `branch_availability` for per-branch control
+  - Backward compatible: legacy `modifiers` field still populated for existing POS orders
+- **6-Tab Menu Item Editor**: Details | Sizes | Add-ons | Options | Branches | Platforms
+  - Sizes tab: add/remove sizes with price, toggle branch availability per size
+  - Add-ons tab: checkboxes to link from central library, branch availability per addon
+  - Options tab: create option groups (e.g., "Bread Type": Pita/Saj), branch availability
+  - Branch/Platform tabs: unchanged from V1
+- **POS Branch Filtering**: Cashier POS filters modifiers by branch availability
+  - Uses `_resolved_modifiers` from API which resolves addon IDs to full addon data
+  - Only shows sizes/add-ons/options available at the cashier's branch
+- **V1 Legacy Support**: Existing items with V1 modifiers correctly parsed in V2 editor
+- Testing: 16/16 backend + 8/8 frontend tests passed (100%)
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
