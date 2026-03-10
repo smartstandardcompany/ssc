@@ -62,6 +62,16 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 ### Expense Filter Auto-Apply (DONE)
 - AdvancedSearch dropdown filters now apply immediately on selection
 - Previously required clicking "Apply Filters" button after every dropdown change
+- Also fixed: filter matching is now case-insensitive with startsWith (e.g., "Salary" matches "salary", "Supplier" matches "Supplier Purchase")
+
+### Salary Expense Date Fix (DONE)
+- Partner salary now accepts a 'date' field so expense lands in the salary month, not payment date
+- Added "Expense Date" date picker to the partner salary payment dialog
+- Fixed UTC date conversion bug (.toISOString()) across ALL pages: Expenses, Sales, Cash Transfers, Supplier Payments, Partner Transactions, Employee Salary
+
+### Delete Time Limit Fix (DONE)
+- Disabled the 24-hour delete time limit policy that was blocking expense deletion
+- Admin already had bypass, but policy was affecting other users
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
