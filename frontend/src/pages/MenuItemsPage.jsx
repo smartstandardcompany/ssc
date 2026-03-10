@@ -15,18 +15,18 @@ import { toast } from 'sonner';
 import { 
   Plus, Search, Edit, Trash2, X, UtensilsCrossed,
   Save, Loader2, Star, Coffee, Cake, Pizza, Salad, Upload,
-  Building2, Globe, Check, Copy, Download, Filter
+  Building2, Globe, Check, Copy, Download, Filter, Tag
 } from 'lucide-react';
 import api from '@/lib/api';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useBranchStore } from '@/stores';
 
-const CATEGORIES = [
-  { id: 'main', name: 'Main Dishes', icon: UtensilsCrossed },
-  { id: 'appetizer', name: 'Appetizers', icon: Salad },
-  { id: 'beverage', name: 'Beverages', icon: Coffee },
-  { id: 'dessert', name: 'Desserts', icon: Cake },
-  { id: 'sides', name: 'Sides', icon: Pizza },
+const DEFAULT_CATEGORIES = [
+  { id: 'main', name: 'Main Dishes' },
+  { id: 'appetizer', name: 'Appetizers' },
+  { id: 'beverage', name: 'Beverages' },
+  { id: 'dessert', name: 'Desserts' },
+  { id: 'sides', name: 'Sides' },
 ];
 
 export default function MenuItemsPage() {
@@ -52,15 +52,57 @@ export default function MenuItemsPage() {
   const fileInputRef = useRef(null);
   const uploadItemRef = useRef(null);
 
+  // Dynamic categories
+  const [customCategories, setCustomCategories] = useState([]);
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [savingCategory, setSavingCategory] = useState(false);
+
+  const CATEGORIES = [
+    ...DEFAULT_CATEGORIES,
+    ...customCategories.map(c => ({ id: c.name.toLowerCase().replace(/\s+/g, '_'), name: c.name, dbId: c.id }))
+  ];
+
   const [formData, setFormData] = useState({
     name: '', name_ar: '', description: '', category: 'main',
     price: '', cost_price: '', preparation_time: '10',
     is_available: true, tags: [], branch_ids: [], platform_ids: [], platform_prices: {}
   });
 
+  const fetchCategories = async () => {
+    try {
+      const { data } = await api.get('/categories?category_type=menu');
+      setCustomCategories(data || []);
+    } catch {}
+  };
+
+  const addCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    setSavingCategory(true);
+    try {
+      await api.post('/categories', { name: newCategoryName.trim(), type: 'menu' });
+      toast.success(`Category "${newCategoryName.trim()}" added`);
+      setNewCategoryName('');
+      setShowCategoryDialog(false);
+      fetchCategories();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to add category');
+    } finally { setSavingCategory(false); }
+  };
+
+  const deleteCategory = async (cat) => {
+    if (!cat.dbId) return;
+    try {
+      await api.delete(`/categories/${cat.dbId}`);
+      toast.success(`Category "${cat.name}" removed`);
+      fetchCategories();
+    } catch { toast.error('Failed to delete category'); }
+  };
+
   useEffect(() => {
     fetchBranches();
     fetchItems();
+    fetchCategories();
     api.get('/platforms').then(r => setPlatforms(r.data || [])).catch(() => {});
   }, []);
 
@@ -253,13 +295,18 @@ export default function MenuItemsPage() {
             <Search size={16} className="absolute left-3 top-3 text-stone-400" />
             <Input placeholder="Search items..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
           </div>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Category" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {CATEGORIES.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-1">
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-full sm:w-40" data-testid="category-filter"><SelectValue placeholder="Category" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {CATEGORIES.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Button size="icon" variant="outline" className="h-10 w-10 shrink-0" onClick={() => setShowCategoryDialog(true)} data-testid="manage-categories-btn">
+              <Tag size={16} />
+            </Button>
+          </div>
           <Select value={branchFilter} onValueChange={setBranchFilter}>
             <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Branch" /></SelectTrigger>
             <SelectContent>
@@ -568,6 +615,62 @@ export default function MenuItemsPage() {
               <Download size={16} className="mr-1" />Export Menu
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Category Management Dialog */}
+      <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-outfit">Manage Menu Categories</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Add new category */}
+            <div className="flex gap-2">
+              <Input
+                placeholder="New category name..."
+                value={newCategoryName}
+                onChange={e => setNewCategoryName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addCategory()}
+                className="flex-1"
+                data-testid="new-category-input"
+              />
+              <Button onClick={addCategory} disabled={savingCategory || !newCategoryName.trim()} className="bg-orange-500 hover:bg-orange-600" data-testid="add-category-btn">
+                {savingCategory ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+              </Button>
+            </div>
+
+            {/* Default categories */}
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Default Categories</p>
+              <div className="space-y-1">
+                {DEFAULT_CATEGORIES.map(c => (
+                  <div key={c.id} className="flex items-center justify-between px-3 py-2 bg-stone-50 rounded-lg">
+                    <span className="text-sm">{c.name}</span>
+                    <Badge variant="outline" className="text-[10px]">Built-in</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom categories */}
+            {customCategories.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Custom Categories</p>
+                <div className="space-y-1">
+                  {customCategories.map(c => (
+                    <div key={c.id} className="flex items-center justify-between px-3 py-2 bg-orange-50 rounded-lg">
+                      <span className="text-sm">{c.name}</span>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => deleteCategory({ dbId: c.id, name: c.name })} data-testid={`delete-cat-${c.id}`}>
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </DashboardLayout>

@@ -127,10 +127,12 @@ export default function POSPage() {
   };
 
   const getDateISO = () => {
-    // Use selected date with current time
+    // Preserve selected date as-is (no UTC conversion) to avoid timezone date shift
     const now = new Date();
-    const [year, month, day] = selectedDate.split('-');
-    return new Date(year, month - 1, day, now.getHours(), now.getMinutes()).toISOString();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    return `${selectedDate}T${hh}:${mm}:${ss}`;
   };
 
   const submitRegularSale = async () => {
@@ -227,8 +229,19 @@ export default function POSPage() {
         success: r.success
       })));
 
-      // Clear amounts
-      setPlatformAmounts({});
+      // Only clear amounts for successful platforms, keep failed ones
+      if (failed.length > 0) {
+        const failedPlatformNames = new Set(failed.map(r => r.platform));
+        const remaining = {};
+        platforms.forEach(p => {
+          if (failedPlatformNames.has(p.name) && parseFloat(platformAmounts[p.id] || 0) > 0) {
+            remaining[p.id] = platformAmounts[p.id];
+          }
+        });
+        setPlatformAmounts(remaining);
+      } else {
+        setPlatformAmounts({});
+      }
       refreshStats();
     } catch (err) {
       toast.error('Failed to record sales');
@@ -348,8 +361,10 @@ export default function POSPage() {
     setSubmittingExpenses(true);
     let successCount = 0;
     const entries = [];
+    const failedIndices = new Set();
 
-    for (const expense of validExpenses) {
+    for (let i = 0; i < validExpenses.length; i++) {
+      const expense = validExpenses[i];
       try {
         await api.post('/expenses', {
           amount: parseFloat(expense.amount),
@@ -369,6 +384,7 @@ export default function POSPage() {
         });
         successCount++;
       } catch (err) {
+        failedIndices.add(i);
         toast.error(`Failed to record expense: ${err.response?.data?.detail || 'Error'}`);
       }
     }
@@ -376,7 +392,11 @@ export default function POSPage() {
     if (successCount > 0) {
       toast.success(`${successCount} expense(s) recorded successfully!`);
       setLastEntries(entries);
-      setExpenses([{ category: '', amount: '', payment_mode: 'cash', supplier_id: '', description: '' }]);
+      // Keep only failed expenses in the form
+      const remaining = failedIndices.size > 0
+        ? validExpenses.filter((_, i) => failedIndices.has(i))
+        : [{ category: '', amount: '', payment_mode: 'cash', supplier_id: '', description: '' }];
+      setExpenses(remaining);
       refreshStats();
     }
     setSubmittingExpenses(false);
