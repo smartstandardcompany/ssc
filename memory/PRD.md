@@ -81,6 +81,13 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 - Visible in expanded entry rows on both Expenses and Sales pages
 - Shows who entered each data entry for easy tracking
 
+### Restaurant POS Order History (DONE)
+- Added "Orders" button in POS header that opens "Today's Orders" dialog
+- View order details: items, quantities, prices, subtotal, tax, total, payment method, status, time
+- Edit orders: loads order back into cart, modify items/payment/notes, save changes
+- Void/Delete orders: removes order and linked sale record
+- Backend: PUT /cashier/orders/{id} (edit) and DELETE /cashier/orders/{id} (void)
+
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
 - Operator: test@ssc.com / testtest
