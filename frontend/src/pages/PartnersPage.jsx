@@ -35,7 +35,7 @@ export default function PartnersPage() {
   const [editingPartner, setEditingPartner] = useState(null);
   const [branchFilter, setBranchFilter] = useState([]);
   const [partnerData, setPartnerData] = useState({ name: '', phone: '', email: '', share_percentage: '', salary: '', notes: '' });
-  const [salaryPayData, setSalaryPayData] = useState({ type: 'salary', amount: '', payment_mode: 'cash', branch_id: '', period: '' });
+  const [salaryPayData, setSalaryPayData] = useState({ type: 'salary', amount: '', payment_mode: 'cash', branch_id: '', period: '', date: new Date().toISOString().split('T')[0] });
   const [txnData, setTxnData] = useState({ partner_id: '', transaction_type: 'investment', amount: '', payment_mode: 'cash', branch_id: '', description: '', date: new Date().toISOString().split('T')[0] });
 
   useEffect(() => { fetchData(); }, []);
@@ -59,7 +59,7 @@ export default function PartnersPage() {
   const handleAddTxn = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/partner-transactions', { ...txnData, amount: parseFloat(txnData.amount), branch_id: txnData.branch_id || null, date: new Date(txnData.date).toISOString() });
+      await api.post('/partner-transactions', { ...txnData, amount: parseFloat(txnData.amount), branch_id: txnData.branch_id || null, date: `${txnData.date}T${new Date().toTimeString().slice(0,8)}` });
       toast.success('Transaction recorded'); setShowTxnDialog(false); setTxnData({ partner_id: '', transaction_type: 'investment', amount: '', payment_mode: 'cash', branch_id: '', description: '', date: new Date().toISOString().split('T')[0] }); fetchData();
     } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
   };
@@ -170,11 +170,12 @@ export default function PartnersPage() {
                 <div><Label>Type</Label><Select value={salaryPayData.type} onValueChange={(v) => setSalaryPayData({...salaryPayData, type: v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="salary">Salary</SelectItem><SelectItem value="advance">Advance/Loan</SelectItem><SelectItem value="loan_repayment">Loan Repayment</SelectItem></SelectContent></Select></div>
                 <div><Label>Amount *</Label><Input type="number" step="0.01" value={salaryPayData.amount} onChange={(e) => setSalaryPayData({...salaryPayData, amount: e.target.value})} /></div>
                 <div><Label>Period</Label><Input value={salaryPayData.period} onChange={(e) => setSalaryPayData({...salaryPayData, period: e.target.value})} placeholder="Feb 2026" /></div>
+                <div><Label>Expense Date</Label><Input type="date" value={salaryPayData.date} onChange={(e) => setSalaryPayData({...salaryPayData, date: e.target.value})} data-testid="salary-expense-date" /></div>
                 <div><Label>Mode</Label><Select value={salaryPayData.payment_mode} onValueChange={(v) => setSalaryPayData({...salaryPayData, payment_mode: v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="cash">Cash</SelectItem><SelectItem value="bank">Bank</SelectItem></SelectContent></Select></div>
                 <div><Label>Branch</Label><Select value={salaryPayData.branch_id || "none"} onValueChange={(v) => setSalaryPayData({...salaryPayData, branch_id: v === "none" ? "" : v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Company</SelectItem>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></div>
               </div>
               <Button className="rounded-xl" onClick={async () => {
-                try { const res = await api.post(`/partners/${payingPartner.id}/pay-salary`, {...salaryPayData, amount: parseFloat(salaryPayData.amount), branch_id: salaryPayData.branch_id || null}); toast.success(res.data.message); setShowPaySalaryDialog(false); fetchData(); }
+                try { const res = await api.post(`/partners/${payingPartner.id}/pay-salary`, {...salaryPayData, amount: parseFloat(salaryPayData.amount), branch_id: salaryPayData.branch_id || null, date: `${salaryPayData.date}T12:00:00`}); toast.success(res.data.message); setShowPaySalaryDialog(false); fetchData(); }
                 catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
               }}>Record Payment</Button>
             </div>

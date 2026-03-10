@@ -230,7 +230,7 @@ export default function SalesPage() {
             mode: p.mode,
             amount: parseFloat(p.amount)
           })),
-        date: new Date(formData.date).toISOString(),
+        date: `${formData.date}T${new Date().toTimeString().slice(0,8)}`,
       };
 
       await api.post('/sales', payload);

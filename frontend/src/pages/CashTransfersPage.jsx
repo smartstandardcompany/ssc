@@ -40,7 +40,7 @@ export default function CashTransfersPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/cash-transfers', { ...formData, amount: parseFloat(formData.amount), from_branch_id: formData.from_branch_id || null, to_branch_id: formData.to_branch_id || null, date: new Date(formData.date).toISOString() });
+      await api.post('/cash-transfers', { ...formData, amount: parseFloat(formData.amount), from_branch_id: formData.from_branch_id || null, to_branch_id: formData.to_branch_id || null, date: `${formData.date}T${new Date().toTimeString().slice(0,8)}` });
       toast.success('Cash transfer recorded');
       setShowDialog(false);
       setFormData({ from_branch_id: '', to_branch_id: '', amount: '', transfer_mode: 'cash', sender_name: '', receiver_name: '', date: new Date().toISOString().split('T')[0], notes: '' });

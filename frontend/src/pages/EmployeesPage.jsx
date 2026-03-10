@@ -144,7 +144,7 @@ export default function EmployeesPage() {
   const handlePaySalary = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/salary-payments', { ...payData, employee_id: payingEmp.id, amount: parseFloat(payData.amount), branch_id: payData.branch_id || null, date: new Date(payData.date).toISOString() });
+      await api.post('/salary-payments', { ...payData, employee_id: payingEmp.id, amount: parseFloat(payData.amount), branch_id: payData.branch_id || null, date: `${payData.date}T12:00:00` });
       const tl = PAYMENT_TYPES.find(t => t.value === payData.payment_type)?.label || 'Payment';
       toast.success(`${tl} recorded for ${payingEmp.name}`);
       if (['tickets', 'id_card'].includes(payData.payment_type)) toast.info('Also added to Expenses');

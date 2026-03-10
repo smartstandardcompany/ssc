@@ -298,9 +298,10 @@ export function applySearchFilters(data, filters) {
         if (value.start && itemDate < new Date(value.start)) return false;
         if (value.end && itemDate > new Date(value.end + 'T23:59:59')) return false;
       }
-      // Exact match filter
+      // Exact match filter (case-insensitive, with startsWith fallback for categories)
       else if (typeof value === 'string' && value !== 'all') {
-        if (item[key] !== value) return false;
+        const itemVal = String(item[key] || '');
+        if (itemVal.toLowerCase() !== value.toLowerCase() && !itemVal.toLowerCase().startsWith(value.toLowerCase())) return false;
       }
     }
 

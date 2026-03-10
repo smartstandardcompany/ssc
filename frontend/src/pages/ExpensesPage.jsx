@@ -152,7 +152,7 @@ export default function ExpensesPage() {
         amount: parseFloat(formData.amount),
         branch_id: formData.branch_id || null, supplier_id: formData.supplier_id || null,
         expense_for_branch_id: formData.expense_for_branch_id || null,
-        date: new Date(formData.date).toISOString()
+        date: `${formData.date}T${new Date().toTimeString().slice(0,8)}`
       });
       toast.success('Expense added');
       setFormData({ category: '', sub_category: '', description: '', amount: '', payment_mode: 'cash', branch_id: '', expense_for_branch_id: '', supplier_id: '', date: new Date().toISOString().split('T')[0], notes: '' });
@@ -180,7 +180,7 @@ export default function ExpensesPage() {
       await api.post('/expense-refunds', {
         ...refundData,
         amount: parseFloat(refundData.amount),
-        date: new Date(refundData.date).toISOString(),
+        date: `${refundData.date}T${new Date().toTimeString().slice(0,8)}`,
       });
       toast.success(`Refund of SAR ${refundData.amount} recorded`);
       setShowRefundDialog(false);

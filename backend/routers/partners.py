@@ -228,12 +228,19 @@ async def pay_partner_salary(partner_id: str, body: dict, current_user: User = D
     if not partner: raise HTTPException(status_code=404, detail="Partner not found")
     amount = float(body.get("amount", partner.get("salary", 0))); period = body.get("period", ""); ptype = body.get("type", "salary")
     mode = body.get("payment_mode", "cash"); branch_id = body.get("branch_id") or None
-    txn = PartnerTransaction(partner_id=partner_id, partner_name=partner["name"], transaction_type="withdrawal" if ptype in ["salary", "advance"] else ptype, amount=amount, payment_mode=mode, branch_id=branch_id, description=f"{ptype.replace('_',' ').title()} - {period}", date=datetime.now(timezone.utc), created_by=current_user.id)
+    # Use provided date (salary month) or fall back to now
+    salary_date = datetime.now(timezone.utc)
+    if body.get("date"):
+        try:
+            salary_date = datetime.fromisoformat(body["date"].replace('Z', '+00:00'))
+        except (ValueError, TypeError):
+            pass
+    txn = PartnerTransaction(partner_id=partner_id, partner_name=partner["name"], transaction_type="withdrawal" if ptype in ["salary", "advance"] else ptype, amount=amount, payment_mode=mode, branch_id=branch_id, description=f"{ptype.replace('_',' ').title()} - {period}", date=salary_date, created_by=current_user.id)
     t_dict = txn.model_dump(); t_dict["date"] = t_dict["date"].isoformat(); t_dict["created_at"] = t_dict["created_at"].isoformat()
     await db.partner_transactions.insert_one(t_dict)
     if ptype == "advance": await db.partners.update_one({"id": partner_id}, {"$inc": {"loan_balance": amount}})
     elif ptype == "loan_repayment": await db.partners.update_one({"id": partner_id}, {"$inc": {"loan_balance": -amount}})
-    expense = Expense(category="partner_salary", description=f"Partner {ptype.title()} - {partner['name']} - {period}", amount=amount, payment_mode=mode, branch_id=branch_id, date=datetime.now(timezone.utc), created_by=current_user.id)
+    expense = Expense(category="partner_salary", description=f"Partner {ptype.title()} - {partner['name']} - {period}", amount=amount, payment_mode=mode, branch_id=branch_id, date=salary_date, created_by=current_user.id)
     e_dict = expense.model_dump(); e_dict["date"] = e_dict["date"].isoformat(); e_dict["created_at"] = e_dict["created_at"].isoformat()
     await db.expenses.insert_one(e_dict)
     return {"message": f"Partner {ptype} SAR {amount:.2f} recorded & added to expenses"}

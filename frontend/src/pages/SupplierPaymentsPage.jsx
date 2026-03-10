@@ -163,7 +163,7 @@ export default function SupplierPaymentsPage() {
         supplier_id: formData.supplier_id,
         branch_id: formData.branch_id || '',
         expense_for_branch_id: formData.expense_for_branch_id || '',
-        date: new Date(formData.date).toISOString(),
+        date: `${formData.date}T${new Date().toTimeString().slice(0,8)}`,
       });
       
       const modeText = formData.payment_mode === 'credit'
