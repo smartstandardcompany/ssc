@@ -56,6 +56,7 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 - Also fixed: Bill submission (credit bills) now creates BOTH an expense AND a supplier payment to properly increment credit
 - Fixed on both SuppliersPage and SupplierPaymentsPage
 - Also fixed undefined 'amount' variable in delete_supplier_payment
+- **GET /suppliers now computes current_credit dynamically** from aggregation (credit expenses - cash/bank payments), never showing stale values
 
 ### Expense Delete Error Handling (DONE)
 - Delete buttons now have proper try/catch with toast.error messages
