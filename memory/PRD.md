@@ -134,6 +134,16 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 - **Backend**: 3 API endpoints: `/api/menu-analytics/items`, `/api/menu-analytics/addons`, `/api/menu-analytics/trends`
 - Testing: 15/15 backend + all frontend tests passed (100%)
 
+### Peak Hours Analysis (DONE)
+- **New "Peak Hours" tab** in Menu Analytics page
+- **4 stat cards**: Peak Hour, Peak Day, Rush Hours count, Avg orders/hour
+- **Orders by Hour of Day**: Area chart showing 24-hour distribution
+- **Revenue by Hour**: Bar chart for hourly revenue
+- **Orders by Day of Week**: Bar chart for weekly distribution (Mon-Sun)
+- **Order Heatmap**: Day x Hour grid with color intensity showing order concentration
+- **Rush Hours badges**: Highlights hours above average order volume
+- **Backend**: New endpoint `/api/menu-analytics/peak-hours` with period/branch filters
+
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
 - Operator: test@ssc.com / testtest
