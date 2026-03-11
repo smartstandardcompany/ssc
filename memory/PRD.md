@@ -178,6 +178,21 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 - **Integration**: Created reminders appear in existing Task Reminders page for management
 - Testing: 25/25 backend + full frontend verified (100%)
 
+### WhatsApp Notifications & Employee Portal Alerts (DONE)
+- **WhatsApp Channel**: Duty reminders now auto-send WhatsApp messages to employees when their phone is on file
+  - Uses existing Twilio integration via `_send_whatsapp_to_employee` helper
+  - Message format: bold task name + description + "Please acknowledge in Employee Portal"
+  - Gracefully handles missing Twilio config (no crash)
+  - AI Duty Planner defaults to `['push', 'in_app', 'whatsapp']` channels
+- **Employee Portal Notifications** (`/my-portal`):
+  - New "Notifications" tab with unread count badge
+  - Notification bell icon in portal header with red count badge
+  - Notification cards: title, message, timestamp, orange unread dot
+  - Click to mark as read, "Mark All Read" button
+  - Shows notifications even for users without employee profile (noProfile view)
+- **Backend**: 3 new endpoints: `GET /api/my/notifications`, `PUT /api/my/notifications/{id}/read`, `PUT /api/my/notifications/read-all`
+- Testing: 13/13 backend + full frontend verified (100%)
+
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
 - Operator: test@ssc.com / testtest
