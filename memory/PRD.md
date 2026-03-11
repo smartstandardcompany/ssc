@@ -1,202 +1,68 @@
 # SSC Track - ERP System PRD
 
 ## Original Problem Statement
-A comprehensive business management ERP system for tracking sales, expenses, supplier payments, HR operations, restaurant POS, stock management, and more.
+A comprehensive business management ERP system named "SSC Track" for a restaurant business (Smart Standard Company). Started as a simple data entry app and evolved into a full-featured restaurant operations platform.
+
+## Architecture
+- **Frontend**: React (CRA) + Tailwind CSS + shadcn/ui + recharts
+- **Backend**: FastAPI + MongoDB (Motor async driver)
+- **Auth**: JWT-based authentication with role-based access control
+- **AI**: OpenAI GPT-4o via Emergent LLM Key for insights, scheduling, duty planning
+- **Notifications**: Twilio (WhatsApp), in-app notifications
+- **Email**: aiosmtplib (BLOCKED - user needs to fix M365 Security Defaults)
 
 ## Core Modules
-Financial Management | HR Management | Stock Management | Restaurant Operations | CCTV Security | Administration
+1. **Dashboard** - Business overview with branch-wise KPIs, AI insights
+2. **Sales Management** - Branch/online sales tracking, credit management, payment modes
+3. **Expenses Management** - Category-based tracking, recurring expenses, refunds, branch summary
+4. **Inventory/Stock** - Item tracking, AI reorder, stock transfers
+5. **POS System** - Quick entry, cashier mode, waiter mode, kitchen display
+6. **HR/People** - Employees, loans, leave approvals, scheduling, staff performance
+7. **Menu Management** - V2 with add-on library, modifier groups, branch availability
+8. **Analytics** - Menu analytics, peak hours, advanced analytics, visualizations
+9. **Reports** - P&L, category reports, credit reports, trend comparison, export center
+10. **Assets** - Branches, CCTV, documents, fines, partners
+11. **Notifications** - Multi-channel (in-app, WhatsApp), preferences management
 
-## Session 20 (Mar 9, 2026)
+## What's Implemented (Complete)
+- Full CRUD for all modules (Sales, Expenses, Inventory, Suppliers, etc.)
+- Role-based access control (admin, manager, operator, employee roles)
+- Multi-branch support with branch-level permissions
+- Advanced Menu Management V2 (central add-on library, modifier groups)
+- Menu Analytics Dashboard (item sales, revenue by category, add-on usage)
+- Peak Hours Analysis (order/revenue by hour and day)
+- AI Staffing Suggestions (demand vs. coverage, smart recommendations)
+- Staff Performance Dashboard (attendance, punctuality, performance tiers)
+- AI Duty Planner (role-based task generation and assignment)
+- Multi-Channel Notifications (WhatsApp + in-app)
+- Notification Preferences page
+- **[2026-03-11] Foodics-Inspired Sidebar UI** - Redesigned sidebar with light gray background (#f8f9fa), collapsible nav groups, cleaner active states
+- **[2026-03-11] Expenses Filter Bug Fix** - Backend /api/expenses now supports server-side filtering by branch_id, category, payment_mode
+- **[2026-03-11] Expenses Branch Summary** - Monthly branch-wise expense breakdown card at top of Expenses page (matching Sales page)
+- **[2026-03-11] Pagination Improvement** - Numbered page buttons on both Sales and Expenses pages
 
-### POS Machine Settings - Edit Branch & Label (DONE)
-- Existing POS machines now have inline edit capability
-- Click label or branch badge to enter edit mode
-- Editable label input, branch dropdown, save/cancel buttons
-- Pencil icon appears on hover for discoverability
-- Uses existing POST /api/pos-machines (upsert) backend
+## Key Technical Details
+- MongoDB aggregation pipelines for analytics
+- AI prompt engineering for schedules and duty plans
+- Modular router architecture (each feature in its own router file)
+- Zustand for state management (auth, UI, branches)
+- Multi-language support (EN, AR, UR, HI)
 
-### Data Integrity Checker (DONE)
-- New page at `/data-integrity`, admin only
-- Scans sales for: missing final_amount, payment mismatches, unusual modes
-- Individual fix and bulk "Fix All" with confirmation dialog
+## 3rd Party Integrations
+- **OpenAI GPT-4o**: Via Emergent LLM Key - AI insights, scheduling, duty planning
+- **Twilio**: WhatsApp notifications (requires user API key)
+- **aiosmtplib**: SMTP email (BLOCKED - user M365 config needed)
+- **recharts**: Charts and visualizations
+- **lucide-react**: Icons
 
-### Export Center (DONE)
-- 8 report types, date presets, branch filtering, PDF/Excel, export history
+## Known Issues
+- SMTP Email: BLOCKED - user needs to disable Security Defaults in M365/Azure AD
+- Task reminder scheduler shows minor warning about NoneType (non-critical)
 
-### Dashboard Enhancement (DONE)
-- Sales card: Cash/Bank/Online breakdown; Expenses card: Top 3 categories
-
-### Daily Summary Bug Fix (DONE - CRITICAL)
-- Fixed double-counting bug, null final_amount, payment mode mapping
-- Fixed missing days bug: pre-populate complete calendar range before overlaying data (Mar 9, Session 21)
-- Verified: all dates appear continuously, sales match /api/sales endpoint, net cash/bank correct
-
-### UI/UX Polishing (DONE)
-- Page animations, skeleton loading, enhanced hover/scrollbar
-
-## Pending Issues
-- SMTP Email: Blocked on user's Microsoft 365 Security Defaults
-
-## Session 21 (Mar 10, 2026)
-
-### Quick Entry Date Bug Fix (DONE - CRITICAL)
-- Fixed timezone conversion bug: getDateISO() was using .toISOString() (UTC shift)
-- Now preserves selected date as-is (e.g., `2026-03-09T23:45:00` stays on Mar 9)
-- Also hardened multi-entry forms to keep failed entries instead of clearing all
-
-### Menu Dynamic Categories (DONE)
-- Categories no longer hardcoded (was: 5 built-in only)
-- Added "Manage Categories" dialog: add custom categories, delete them
-- Uses /api/categories?category_type=menu backend endpoint
-- Default 5 categories remain as built-in, custom ones are deletable
-
-### Supplier Credit Balance Fix (DONE - CRITICAL)
-- POST /supplier-payments now correctly reduces supplier credit for cash/bank payments
-- Previously only credit-mode payments adjusted the balance, cash/bank were ignored
-- Also fixed: Bill submission (credit bills) now creates BOTH an expense AND a supplier payment to properly increment credit
-- Fixed on both SuppliersPage and SupplierPaymentsPage
-- Also fixed undefined 'amount' variable in delete_supplier_payment
-- **GET /suppliers now computes current_credit dynamically** from aggregation (credit expenses - cash/bank payments), never showing stale values
-
-### Expense Delete Error Handling (DONE)
-- Delete buttons now have proper try/catch with toast.error messages
-- Previously errors were silently swallowed, making it seem like delete didn't work
-
-### Expense Filter Auto-Apply (DONE)
-- AdvancedSearch dropdown filters now apply immediately on selection
-- Previously required clicking "Apply Filters" button after every dropdown change
-- Also fixed: filter matching is now case-insensitive with startsWith (e.g., "Salary" matches "salary", "Supplier" matches "Supplier Purchase")
-
-### Salary Expense Date Fix (DONE)
-- Partner salary now accepts a 'date' field so expense lands in the salary month, not payment date
-- Added "Expense Date" date picker to the partner salary payment dialog
-- Fixed UTC date conversion bug (.toISOString()) across ALL pages: Expenses, Sales, Cash Transfers, Supplier Payments, Partner Transactions, Employee Salary
-
-### Delete Time Limit Fix (DONE)
-- Disabled the 24-hour delete time limit policy that was blocking expense deletion
-- Admin already had bypass, but policy was affecting other users
-- Updated delete_policy for expenses/sales to 'admin_manager' so managers can also delete
-
-### Created By Name Display (DONE)
-- Expenses and Sales API now return 'created_by_name' field (resolved from user IDs)
-- Visible in expanded entry rows on both Expenses and Sales pages
-- Shows who entered each data entry for easy tracking
-
-### Restaurant POS Order History (DONE)
-- Added "Orders" button in POS header that opens "Today's Orders" dialog
-- View order details: items, quantities, prices, subtotal, tax, total, payment method, status, time
-- Edit orders: loads order back into cart, modify items/payment/notes, save changes
-- Void/Delete orders: removes order and linked sale record
-- Backend: PUT /cashier/orders/{id} (edit) and DELETE /cashier/orders/{id} (void)
-
-### Menu Item Sizes, Add-ons & Branch Pricing V1 (DONE)
-- Size variants: Add different sizes (Small/Large) with unique prices per size
-- Add-on options: Extra Cheese, Jalapeno, etc. with individual prices
-- Branch-specific pricing: Different base price per branch
-- Sizes/Add-ons stored as modifiers, branch_prices as {branch_id: price}
-- Cashier POS shows modifier selection dialog when adding items with options
-- 5-tab form: Details | Sizes | Add-ons | Branches | Platforms
-
-## Session 22 (Mar 10, 2026)
-
-### Advanced Menu Management V2 (DONE)
-- **Central Add-on Library**: New `/addons` page with full CRUD for global add-ons
-  - Add-ons have name (EN/AR), default price, category (extras/sauces/toppings/sides/drinks + custom)
-  - Active/inactive toggle, grouped display by category, search and filter
-  - Backend: GET/POST/PUT/DELETE /api/addons + GET /api/addons/categories
-- **V2 Modifier Groups**: MenuItem model extended with `modifier_groups` field
-  - Types: `size` (size variants), `addon` (linked from central library), `option` (single-choice groups)
-  - Each group has `branch_availability` for per-branch control
-  - Backward compatible: legacy `modifiers` field still populated for existing POS orders
-- **6-Tab Menu Item Editor**: Details | Sizes | Add-ons | Options | Branches | Platforms
-  - Sizes tab: add/remove sizes with price, toggle branch availability per size
-  - Add-ons tab: checkboxes to link from central library, branch availability per addon
-  - Options tab: create option groups (e.g., "Bread Type": Pita/Saj), branch availability
-  - Branch/Platform tabs: unchanged from V1
-- **POS Branch Filtering**: Cashier POS filters modifiers by branch availability
-  - Uses `_resolved_modifiers` from API which resolves addon IDs to full addon data
-  - Only shows sizes/add-ons/options available at the cashier's branch
-- **V1 Legacy Support**: Existing items with V1 modifiers correctly parsed in V2 editor
-- Testing: 16/16 backend + 8/8 frontend tests passed (100%)
-
-### Menu Analytics (DONE)
-- **New page at `/menu-analytics`** with two tabs: Item Sales and Add-on Usage
-- **Item Sales Tab**:
-  - 4 stat cards: Total Items Sold, Menu Revenue, Unique Items, Categories
-  - Top Items by Revenue bar chart (recharts)
-  - Revenue by Category pie chart
-  - All Items Ranked table with qty, revenue, orders, category
-- **Add-on Usage Tab**:
-  - 4 stat cards: Modifier Uses, Modifier Revenue, Adoption Rate, Total Orders
-  - Most Used Modifiers bar chart
-  - 3 breakdown cards: Size Variants, Add-ons, Option Groups
-- **Filters**: Period (today/week/month/year/all) and Branch
-- **Backend**: 3 API endpoints: `/api/menu-analytics/items`, `/api/menu-analytics/addons`, `/api/menu-analytics/trends`
-- Testing: 15/15 backend + all frontend tests passed (100%)
-
-### Peak Hours Analysis (DONE)
-- **New "Peak Hours" tab** in Menu Analytics page
-- **4 stat cards**: Peak Hour, Peak Day, Rush Hours count, Avg orders/hour
-- **Orders by Hour of Day**: Area chart showing 24-hour distribution
-- **Revenue by Hour**: Bar chart for hourly revenue
-- **Orders by Day of Week**: Bar chart for weekly distribution (Mon-Sun)
-- **Order Heatmap**: Day x Hour grid with color intensity showing order concentration
-- **Rush Hours badges**: Highlights hours above average order volume
-- **Backend**: New endpoint `/api/menu-analytics/peak-hours` with period/branch filters
-
-### Staff Scheduling Insights (DONE)
-- **New "Staffing Insights" tab** on Schedule page (`/schedule`)
-- **4 summary cards**: Total Staff, Peak Hour, Peak Day, Suggestions count
-- **Weekly Coverage vs Demand table**: 7-day view with staff count, avg orders, demand level (high/medium/low), shift coverage per day, gap/covered/empty status
-- **Shift Demand Analysis**: Cards per shift showing order volume during shift hours
-- **Scheduling Suggestions**: Auto-generated alerts for no_coverage (unassigned shifts), understaffed (high demand, low staff), overstaffed (low demand, too many staff)
-- **Enhanced AI Schedule**: POST /api/shifts/ai-recommend now includes peak hours data in the AI prompt, so AI assigns more reliable staff to busy shifts/days
-- **Backend**: `GET /api/staffing-insights?branch_id=X&week_start=Y` - combines peak hours analysis with current schedule to calculate coverage gaps
-- Testing: 17/17 backend + full frontend UI verified (100%)
-
-### Staff Performance Dashboard (DONE)
-- **New page at `/staff-performance`** with 3 tabs: Overview, Employee Scores, Duty Assignment
-- **Overview Tab**:
-  - 5 stat cards: Employees, Avg Attendance %, Avg Punctuality %, Total Overtime, Shifts Tracked
-  - Performance Tier Distribution bar chart (Excellent/Good/Average/Needs Improvement)
-  - Weekly Attendance Trend line chart
-  - Top Performers section with ScoreRing visualization
-- **Employee Scores Tab**: Full table with score rings, attendance %, punctuality %, late/absent/OT/task counts, tier badges
-- **Reliability Score Formula**: attendance*0.4 + punctuality*0.3 + (100-absence)*0.2 + tasks*0.1
-- **Backend**: `GET /api/staff-performance` (summary + all employees) and `GET /api/staff-performance/{id}` (individual details)
-- Filters: Period (7/30/90/180 days) and Branch
-
-### AI Duty Assignment & Reminders (DONE)
-- **Duty Assignment Tab**: AI-Powered Duty Planner with role-based duty generation
-- **4 Role Cards**: Cleaner, Waiter, Cashier, Chef — each with "Use Preset" (instant 5 reminders) and "AI Plan" (custom AI generation)
-- **AI Duty Planner Dialog**: Select role, set shift hours, add context, generate 5-8 smart tasks with AI
-  - AI considers food safety, customer experience, hygiene, peak hours
-  - Generated tasks show name, message, priority, interval
-  - One-click "Create All as Reminders" saves to task reminder system
-- **Enhanced AI Prompt**: Considers food safety regulations, peak hours, role-specific workflows
-- **Backend**: `POST /api/task-reminders/ai-generate` (GPT-4o via Emergent LLM key)
-- **Integration**: Created reminders appear in existing Task Reminders page for management
-- Testing: 25/25 backend + full frontend verified (100%)
-
-### WhatsApp Notifications & Employee Portal Alerts (DONE)
-- **WhatsApp Channel**: Duty reminders now auto-send WhatsApp messages to employees when their phone is on file
-  - Uses existing Twilio integration via `_send_whatsapp_to_employee` helper
-  - Message format: bold task name + description + "Please acknowledge in Employee Portal"
-  - Gracefully handles missing Twilio config (no crash)
-  - AI Duty Planner defaults to `['push', 'in_app', 'whatsapp']` channels
-- **Employee Portal Notifications** (`/my-portal`):
-  - New "Notifications" tab with unread count badge
-  - Notification bell icon in portal header with red count badge
-  - Notification cards: title, message, timestamp, orange unread dot
-  - Click to mark as read, "Mark All Read" button
-  - Shows notifications even for users without employee profile (noProfile view)
-- **Backend**: 3 new endpoints: `GET /api/my/notifications`, `PUT /api/my/notifications/{id}/read`, `PUT /api/my/notifications/read-all`
-- Testing: 13/13 backend + full frontend verified (100%)
+## Backlog
+- P2: Email automation (blocked on SMTP)
+- P3: Scheduled PDF report delivery (blocked on SMTP)
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
 - Operator: test@ssc.com / testtest
-
-## Remaining Backlog
-- P2: Email automation (blocked on SMTP)
-- P3: Scheduled PDF report delivery (blocked by SMTP)
