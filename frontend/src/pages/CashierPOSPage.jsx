@@ -394,149 +394,140 @@ export default function CashierPOSPage() {
   if (!user) return null;
 
   return (
-    <div className="h-screen flex flex-col md:flex-row bg-stone-100 overflow-hidden" data-testid="cashier-pos">
+    <div className="h-screen flex flex-col md:flex-row bg-[#f5f5f5] overflow-hidden" data-testid="cashier-pos">
       {/* Left: Menu Section */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="bg-white border-b p-2 sm:p-3 flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 rounded-xl flex items-center justify-center">
-              <UtensilsCrossed size={16} className="text-orange-600 sm:hidden" />
-              <UtensilsCrossed size={20} className="text-orange-600 hidden sm:block" />
+        {/* Header - Foodics style: clean white, no heavy borders */}
+        <div className="bg-white shadow-sm p-3 sm:p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center">
+              <UtensilsCrossed size={18} className="text-primary" />
             </div>
             <div>
-              <h1 className="font-bold text-sm sm:text-lg font-outfit" data-testid="pos-title">Restaurant POS</h1>
-              <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
-                <Building2 size={10} />
-                <span className="font-medium text-orange-600">{user.branch_name || 'Main Branch'}</span>
+              <h1 className="font-bold text-sm sm:text-base font-outfit text-stone-800" data-testid="pos-title">Restaurant POS</h1>
+              <div className="flex items-center gap-1.5 text-[11px] text-stone-400">
+                <Building2 size={11} />
+                <span className="font-medium text-primary">{user.branch_name || 'Main Branch'}</span>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             {stats && (
-              <div className="hidden sm:flex gap-4 text-xs">
-                <div className="text-center px-3 py-1 bg-emerald-50 rounded-lg">
-                  <p className="text-emerald-600 font-medium">Today Sales</p>
-                  <p className="font-bold text-emerald-700" data-testid="today-sales">SAR {stats.today?.total_sales?.toLocaleString()}</p>
+              <div className="hidden sm:flex gap-3">
+                <div className="text-center px-4 py-1.5 bg-emerald-50 rounded-xl">
+                  <p className="text-[10px] text-emerald-500 font-medium">Today Sales</p>
+                  <p className="font-bold text-sm text-emerald-700" data-testid="today-sales">SAR {stats.today?.total_sales?.toLocaleString()}</p>
                 </div>
-                <div className="text-center px-3 py-1 bg-blue-50 rounded-lg">
-                  <p className="text-blue-600 font-medium">Orders</p>
-                  <p className="font-bold text-blue-700">{stats.today?.total_orders}</p>
+                <div className="text-center px-4 py-1.5 bg-blue-50 rounded-xl">
+                  <p className="text-[10px] text-blue-500 font-medium">Orders</p>
+                  <p className="font-bold text-sm text-blue-700">{stats.today?.total_orders}</p>
                 </div>
               </div>
             )}
-            {/* Mobile cart toggle */}
-            <Button size="sm" className="md:hidden bg-orange-500 hover:bg-orange-600 relative h-8 w-8 p-0" onClick={() => setShowMobilePosCart(true)} data-testid="pos-mobile-cart-toggle">
+            <Button size="sm" className="md:hidden bg-primary hover:bg-primary/90 relative h-8 w-8 p-0 rounded-xl" onClick={() => setShowMobilePosCart(true)} data-testid="pos-mobile-cart-toggle">
               <ShoppingCart size={16} />
               {cart.length > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] flex items-center justify-center text-white">{cart.length}</span>}
             </Button>
-            <Button 
-              size="sm" 
-              variant="outline"
-              className="h-9"
-              onClick={() => { setShowOrderHistory(true); fetchOrders(); }}
-              data-testid="orders-history-btn"
-            >
-              <Receipt size={16} className="mr-1" />
-              Orders
+            <Button size="sm" variant="outline" className="h-9 rounded-xl border-stone-200 text-stone-600"
+              onClick={() => { setShowOrderHistory(true); fetchOrders(); }} data-testid="orders-history-btn">
+              <Receipt size={15} className="mr-1.5" />Orders
             </Button>
-            <Button 
-              size="sm" 
+            <Button size="sm"
               variant={currentShift ? 'default' : 'outline'}
-              className={`h-9 ${currentShift ? 'bg-emerald-500 hover:bg-emerald-600' : ''}`}
-              onClick={() => setShowShiftModal(true)}
-              data-testid="shift-btn"
-            >
-              <PlayCircle size={16} className="mr-1" />
-              {currentShift ? 'Shift Active' : 'Start Shift'}
+              className={`h-9 rounded-xl ${currentShift ? 'bg-emerald-500 hover:bg-emerald-600' : 'border-stone-200 text-stone-600'}`}
+              onClick={() => setShowShiftModal(true)} data-testid="shift-btn">
+              <PlayCircle size={15} className="mr-1.5" />{currentShift ? 'Shift Active' : 'Start Shift'}
             </Button>
-            <Badge variant="outline" className="text-xs px-3 py-1">{user.name}</Badge>
-            <Button size="sm" variant="ghost" onClick={handleLogout} data-testid="logout-btn">
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-stone-50 rounded-xl text-xs font-medium text-stone-600">
+              <User size={13} />{user.name}
+            </div>
+            <Button size="sm" variant="ghost" onClick={handleLogout} data-testid="logout-btn" className="h-9 w-9 p-0 rounded-xl text-stone-400 hover:text-red-500">
               <LogOut size={16} />
             </Button>
           </div>
         </div>
 
-        {/* Search */}
-        <div className="p-3 bg-white border-b">
+        {/* Search - cleaner, no border, integrated */}
+        <div className="px-4 pt-3">
           <div className="relative">
-            <Search size={18} className="absolute left-3 top-3 text-stone-400" />
+            <Search size={16} className="absolute left-3.5 top-3 text-stone-400" />
             <Input
               placeholder="Search menu items..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-11 rounded-xl"
+              className="pl-10 h-10 rounded-xl border-stone-200 bg-white shadow-sm focus:shadow-md transition-shadow"
               data-testid="menu-search"
             />
           </div>
         </div>
 
-        {/* Categories */}
-        <div className="p-3 bg-white border-b overflow-x-auto">
+        {/* Categories - Foodics-style pill tabs */}
+        <div className="px-4 py-3 overflow-x-auto">
           <div className="flex gap-2">
             {categories.map(cat => {
               const Icon = CATEGORY_ICONS[cat.id] || Grid;
+              const isActive = selectedCategory === cat.id;
               return (
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.id)}
-                  className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all min-w-[80px] ${
-                    selectedCategory === cat.id 
-                      ? 'bg-orange-500 text-white' 
-                      : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all whitespace-nowrap text-xs font-semibold ${
+                    isActive 
+                      ? 'bg-primary text-white shadow-md shadow-primary/20' 
+                      : 'bg-white text-stone-500 shadow-sm hover:shadow-md hover:text-stone-700'
                   }`}
                   data-testid={`cat-${cat.id}`}
                 >
-                  <Icon size={20} />
-                  <span className="text-xs font-medium whitespace-nowrap">{cat.name}</span>
+                  <Icon size={16} />
+                  {cat.name}
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Menu Grid */}
-        <div className="flex-1 p-3 overflow-y-auto pb-20 md:pb-3">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
+        {/* Menu Grid - Foodics-style cards: no borders, subtle shadows */}
+        <div className="flex-1 px-4 pb-4 overflow-y-auto pb-20 md:pb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {filteredItems.map(item => {
               const scheduleInactive = item.schedule?.enabled && !isItemScheduleActive(item);
               const isDisabled = !item.is_available || scheduleInactive;
               return (
-              <Card 
+              <div 
                 key={item.id}
-                className={`cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] border-2 ${
-                  scheduleInactive ? 'opacity-40 border-blue-200 grayscale' :
-                  !item.is_available ? 'opacity-50 border-red-200' : 'border-transparent hover:border-orange-200'
-                }`}
+                className={`bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-200 ${
+                  scheduleInactive ? 'opacity-40 grayscale' :
+                  !item.is_available ? 'opacity-50' : 'hover:shadow-lg hover:-translate-y-0.5'
+                } shadow-sm`}
                 onClick={() => !isDisabled && handleAddItem(item)}
                 data-testid={`menu-item-${item.id}`}
               >
-                <CardContent className="p-3">
-                  {item.image_url ? (
-                    <img src={item.image_url} alt={item.name} className="w-full h-24 object-cover rounded-lg mb-2" />
-                  ) : (
-                    <div className="w-full h-24 bg-gradient-to-br from-orange-100 to-amber-100 rounded-lg mb-2 flex items-center justify-center">
-                      <UtensilsCrossed size={32} className="text-orange-400" />
-                    </div>
-                  )}
-                  <h3 className="font-semibold text-sm truncate">{item.name}</h3>
-                  {item.name_ar && <p className="text-xs text-muted-foreground truncate" dir="rtl">{item.name_ar}</p>}
+                {item.image_url ? (
+                  <img src={item.image_url} alt={item.name} className="w-full h-24 object-cover" />
+                ) : (
+                  <div className="w-full h-24 bg-gradient-to-br from-stone-50 to-stone-100 flex items-center justify-center">
+                    <UtensilsCrossed size={28} className="text-stone-300" />
+                  </div>
+                )}
+                <div className="p-3">
+                  <h3 className="font-semibold text-[13px] text-stone-800 truncate">{item.name}</h3>
+                  {item.name_ar && <p className="text-[11px] text-stone-400 truncate mt-0.5" dir="rtl">{item.name_ar}</p>}
                   <div className="flex items-center justify-between mt-2">
-                    <span className="font-bold text-orange-600">SAR {item.price}</span>
-                    {item.tags?.includes('popular') && <Star size={14} className="text-amber-500 fill-amber-500" />}
+                    <span className="font-bold text-sm text-primary">SAR {item.price}</span>
+                    {item.tags?.includes('popular') && <Star size={13} className="text-amber-400 fill-amber-400" />}
                   </div>
                   {item.modifiers?.length > 0 && (
-                    <Badge variant="secondary" className="text-[10px] mt-1">Has options</Badge>
+                    <span className="inline-block text-[10px] mt-1.5 px-2 py-0.5 bg-stone-100 text-stone-500 rounded-full">Has options</span>
                   )}
                   {scheduleInactive && (
-                    <Badge className="text-[10px] mt-1 bg-blue-100 text-blue-600">Not available now</Badge>
+                    <span className="inline-block text-[10px] mt-1 px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full">Not available now</span>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
               );
             })}
             {filteredItems.length === 0 && (
-              <div className="col-span-full text-center py-12 text-muted-foreground">
+              <div className="col-span-full text-center py-12 text-stone-400">
                 No items found
               </div>
             )}
@@ -544,30 +535,32 @@ export default function CashierPOSPage() {
         </div>
       </div>
 
-      {/* Right: Cart Section - Hidden on mobile, slide-in overlay */}
+      {/* Right: Cart Section */}
       <div className={`${showMobilePosCart ? 'fixed inset-0 z-50 bg-black/50 md:relative md:inset-auto md:bg-transparent' : 'hidden md:flex'} md:w-80 lg:w-96`}>
-        <div className={`${showMobilePosCart ? 'absolute right-0 top-0 bottom-0 w-[85vw] max-w-96' : 'w-full'} bg-white border-l flex flex-col h-full`}>
+        <div className={`${showMobilePosCart ? 'absolute right-0 top-0 bottom-0 w-[85vw] max-w-96' : 'w-full'} bg-white shadow-lg flex flex-col h-full`}>
         {/* Cart Header */}
-        <div className="p-3 sm:p-4 border-b flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ShoppingCart size={20} className="text-orange-600" />
-            <h2 className="font-bold font-outfit text-sm sm:text-base">
-              {editingOrder ? `Editing Order #${editingOrder.order_number}` : 'Current Order'}
+        <div className="p-4 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+              <ShoppingCart size={16} className="text-primary" />
+            </div>
+            <h2 className="font-bold text-sm">
+              {editingOrder ? `Editing #${editingOrder.order_number}` : 'Current Order'}
             </h2>
           </div>
           <div className="flex items-center gap-2">
             {editingOrder && (
-              <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground" onClick={() => { setEditingOrder(null); setCart([]); setDiscount(0); setNotes(''); }}>Cancel</Button>
+              <Button size="sm" variant="ghost" className="h-7 text-xs text-stone-400 rounded-lg" onClick={() => { setEditingOrder(null); setCart([]); setDiscount(0); setNotes(''); }}>Cancel</Button>
             )}
-            <Button size="sm" variant="ghost" className="md:hidden h-7 w-7 p-0" onClick={() => setShowMobilePosCart(false)}>
+            <Button size="sm" variant="ghost" className="md:hidden h-7 w-7 p-0 rounded-lg" onClick={() => setShowMobilePosCart(false)}>
               <X size={16} />
             </Button>
           </div>
         </div>
-        <div className="p-3 border-b flex gap-2">
+        <div className="px-4 pb-3 flex gap-2">
           <div className="flex gap-2">
             <Select value={orderType} onValueChange={setOrderType}>
-              <SelectTrigger className="w-28 h-8 text-xs">
+              <SelectTrigger className="w-28 h-8 text-xs rounded-lg border-stone-200">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -581,59 +574,59 @@ export default function CashierPOSPage() {
                 placeholder="Table #" 
                 value={tableNumber}
                 onChange={(e) => setTableNumber(e.target.value)}
-                className="w-20 h-8 text-xs"
+                className="w-20 h-8 text-xs rounded-lg border-stone-200"
               />
             )}
           </div>
         </div>
 
-        {/* Cart Items */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        {/* Cart Items - cleaner cards */}
+        <div className="flex-1 overflow-y-auto px-4 space-y-2 border-t border-stone-100 pt-3">
           {cart.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <ShoppingCart size={48} className="mx-auto mb-3 opacity-30" />
-              <p>Cart is empty</p>
-              <p className="text-xs">Tap items to add</p>
+            <div className="text-center py-16 text-stone-300">
+              <ShoppingCart size={40} className="mx-auto mb-3" />
+              <p className="text-sm font-medium text-stone-400">Cart is empty</p>
+              <p className="text-xs text-stone-300">Tap items to add</p>
             </div>
           ) : (
             cart.map((item, index) => (
-              <div key={index} className="bg-stone-50 rounded-xl p-3" data-testid={`cart-item-${index}`}>
+              <div key={index} className="bg-stone-50/80 rounded-xl p-3" data-testid={`cart-item-${index}`}>
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <h4 className="font-medium text-sm">{item.name}</h4>
+                    <h4 className="font-semibold text-[13px] text-stone-700">{item.name}</h4>
                     {item.modifiers?.length > 0 && (
-                      <div className="text-xs text-muted-foreground mt-1">
+                      <div className="text-[11px] text-stone-400 mt-0.5">
                         {item.modifiers.map((m, i) => (
-                          <span key={i} className="mr-2">+{m.name}</span>
+                          <span key={i} className="mr-1.5">+{m.name}</span>
                         ))}
                       </div>
                     )}
-                    <p className="text-xs text-orange-600 mt-1">SAR {item.unit_price + item.modifier_total} each</p>
+                    <p className="text-[11px] text-primary mt-0.5">SAR {item.unit_price + item.modifier_total} each</p>
                   </div>
-                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removeFromCart(index)}>
-                    <Trash2 size={14} className="text-red-500" />
+                  <Button size="icon" variant="ghost" className="h-6 w-6 rounded-lg hover:bg-red-50" onClick={() => removeFromCart(index)}>
+                    <Trash2 size={13} className="text-red-400" />
                   </Button>
                 </div>
                 <div className="flex items-center justify-between mt-2">
-                  <div className="flex items-center gap-2">
-                    <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => updateQuantity(index, -1)}>
-                      <Minus size={14} />
+                  <div className="flex items-center gap-1.5">
+                    <Button size="icon" variant="outline" className="h-7 w-7 rounded-lg border-stone-200" onClick={() => updateQuantity(index, -1)}>
+                      <Minus size={12} />
                     </Button>
-                    <span className="font-bold w-8 text-center">{item.quantity}</span>
-                    <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => updateQuantity(index, 1)}>
-                      <Plus size={14} />
+                    <span className="font-bold text-sm w-7 text-center">{item.quantity}</span>
+                    <Button size="icon" variant="outline" className="h-7 w-7 rounded-lg border-stone-200" onClick={() => updateQuantity(index, 1)}>
+                      <Plus size={12} />
                     </Button>
                   </div>
-                  <span className="font-bold text-sm">SAR {item.subtotal.toFixed(2)}</span>
+                  <span className="font-bold text-sm text-stone-700">SAR {item.subtotal.toFixed(2)}</span>
                 </div>
               </div>
             ))
           )}
         </div>
 
-        {/* Cart Footer */}
+        {/* Cart Footer - polished totals and buttons */}
         {cart.length > 0 && (
-          <div className="border-t p-4 space-y-3">
+          <div className="border-t border-stone-100 p-4 space-y-3 bg-white">
             {/* Discount */}
             <div className="flex gap-2">
               <div className="flex-1 flex gap-1">
@@ -642,10 +635,10 @@ export default function CashierPOSPage() {
                   placeholder="Discount"
                   value={discount || ''}
                   onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                  className="h-9 text-sm"
+                  className="h-9 text-sm rounded-lg border-stone-200"
                 />
                 <Select value={discountType} onValueChange={setDiscountType}>
-                  <SelectTrigger className="w-20 h-9">
+                  <SelectTrigger className="w-20 h-9 rounded-lg border-stone-200">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -656,58 +649,58 @@ export default function CashierPOSPage() {
               </div>
             </div>
 
-            {/* Totals */}
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span>SAR {subtotal.toFixed(2)}</span>
+            {/* Totals - cleaner spacing */}
+            <div className="space-y-1.5 text-sm">
+              <div className="flex justify-between text-stone-400">
+                <span>Subtotal</span>
+                <span className="text-stone-600">SAR {subtotal.toFixed(2)}</span>
               </div>
               {discountAmount > 0 && (
-                <div className="flex justify-between text-red-500">
+                <div className="flex justify-between text-red-400">
                   <span>Discount</span>
                   <span>-SAR {discountAmount.toFixed(2)}</span>
                 </div>
               )}
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">VAT (15%)</span>
-                <span>SAR {tax.toFixed(2)}</span>
+              <div className="flex justify-between text-stone-400">
+                <span>VAT (15%)</span>
+                <span className="text-stone-600">SAR {tax.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-lg font-bold pt-2 border-t">
-                <span>Total</span>
-                <span className="text-orange-600" data-testid="cart-total">SAR {total.toFixed(2)}</span>
+              <div className="flex justify-between text-lg font-bold pt-2.5 border-t border-stone-100">
+                <span className="text-stone-800">Total</span>
+                <span className="text-primary" data-testid="cart-total">SAR {total.toFixed(2)}</span>
               </div>
             </div>
 
-            {/* Payment Buttons - 3 Options: Cash, Bank, Credit */}
+            {/* Payment Buttons - rounded, modern */}
             {editingOrder ? (
               <Button 
-                className="h-14 w-full bg-orange-500 hover:bg-orange-600 text-white font-bold"
+                className="h-12 w-full bg-primary hover:bg-primary/90 text-white font-bold rounded-xl"
                 onClick={handleSaveEdit}
                 disabled={cart.length === 0}
                 data-testid="save-edit-btn"
               >
-                <Save size={20} className="mr-2" />
-                Save Changes to Order #{editingOrder.order_number}
+                <Save size={18} className="mr-2" />
+                Save Changes to #{editingOrder.order_number}
               </Button>
             ) : (
             <div className="grid grid-cols-3 gap-2">
               <Button 
                 variant={paymentMethod === 'cash' ? 'default' : 'outline'}
-                className={`h-14 flex-col gap-1 ${paymentMethod === 'cash' ? 'bg-emerald-500 hover:bg-emerald-600' : ''}`}
+                className={`h-12 flex-col gap-1 rounded-xl ${paymentMethod === 'cash' ? 'bg-emerald-500 hover:bg-emerald-600' : 'border-stone-200 text-stone-600'}`}
                 onClick={() => { setPaymentMethod('cash'); setShowPayment(true); }}
                 data-testid="pay-cash"
               >
-                <Banknote size={22} />
-                <span className="text-xs font-medium">Cash</span>
+                <Banknote size={20} />
+                <span className="text-[10px] font-semibold">Cash</span>
               </Button>
               <Button 
                 variant={paymentMethod === 'bank' ? 'default' : 'outline'}
-                className={`h-14 flex-col gap-1 ${paymentMethod === 'bank' ? 'bg-blue-500 hover:bg-blue-600' : ''}`}
+                className={`h-12 flex-col gap-1 rounded-xl ${paymentMethod === 'bank' ? 'bg-blue-500 hover:bg-blue-600' : 'border-stone-200 text-stone-600'}`}
                 onClick={() => { setPaymentMethod('bank'); setShowPayment(true); }}
                 data-testid="pay-bank"
               >
-                <CreditCard size={22} />
-                <span className="text-xs font-medium">Bank</span>
+                <CreditCard size={20} />
+                <span className="text-[10px] font-semibold">Bank</span>
               </Button>
               <Button 
                 variant={paymentMethod === 'credit' ? 'default' : 'outline'}
@@ -740,11 +733,11 @@ export default function CashierPOSPage() {
       {/* Mobile floating cart button */}
       {cart.length > 0 && !showMobilePosCart && (
         <div className="fixed bottom-4 left-4 right-4 md:hidden z-40" data-testid="pos-mobile-cart-bar">
-          <Button className="w-full h-14 bg-orange-500 hover:bg-orange-600 rounded-2xl shadow-lg" onClick={() => setShowMobilePosCart(true)}>
-            <ShoppingCart size={20} className="mr-2" />
-            <span className="font-bold">{cart.length} items</span>
-            <span className="mx-2">|</span>
-            <span className="font-bold">SAR {(cart.reduce((sum, item) => sum + item.subtotal, 0) * 1.15).toFixed(2)}</span>
+          <Button className="w-full h-12 bg-primary hover:bg-primary/90 rounded-2xl shadow-lg shadow-primary/20" onClick={() => setShowMobilePosCart(true)}>
+            <ShoppingCart size={18} className="mr-2" />
+            <span className="font-bold text-sm">{cart.length} items</span>
+            <span className="mx-2 opacity-50">|</span>
+            <span className="font-bold text-sm">SAR {(cart.reduce((sum, item) => sum + item.subtotal, 0) * 1.15).toFixed(2)}</span>
           </Button>
         </div>
       )}

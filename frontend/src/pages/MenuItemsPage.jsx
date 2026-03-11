@@ -537,125 +537,127 @@ export default function MenuItemsPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6" data-testid="menu-items-page">
+      <div className="space-y-5" data-testid="menu-items-page">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold font-outfit dark:text-white">Menu Management</h1>
-            <p className="text-muted-foreground text-sm">Manage items, sizes, add-ons & branch availability</p>
+            <h1 className="text-xl sm:text-2xl font-bold font-outfit text-stone-800 dark:text-white">Menu Management</h1>
+            <p className="text-stone-400 text-sm">Manage items, sizes, add-ons & branch availability</p>
           </div>
           <div className="flex gap-2">
             {selectedItems.length > 0 && (
-              <Button variant="outline" onClick={() => setShowBulkAssign(true)} data-testid="bulk-assign-btn"><Building2 size={16} className="mr-1" />Assign ({selectedItems.length})</Button>
+              <Button variant="outline" className="rounded-xl border-stone-200" onClick={() => setShowBulkAssign(true)} data-testid="bulk-assign-btn"><Building2 size={15} className="mr-1.5" />Assign ({selectedItems.length})</Button>
             )}
-            <Button variant="outline" onClick={() => setShowExport(true)} data-testid="export-menu-btn"><Download size={16} className="mr-1" />Export</Button>
-            <Button onClick={handleCreate} className="bg-orange-500 hover:bg-orange-600" data-testid="add-menu-item-btn"><Plus size={16} className="mr-1" />Add Item</Button>
+            <Button variant="outline" className="rounded-xl border-stone-200 text-stone-600" onClick={() => setShowExport(true)} data-testid="export-menu-btn"><Download size={15} className="mr-1.5" />Export</Button>
+            <Button onClick={handleCreate} className="bg-primary hover:bg-primary/90 rounded-xl" data-testid="add-menu-item-btn"><Plus size={15} className="mr-1.5" />Add Item</Button>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-3 text-stone-400" />
-            <Input placeholder="Search items..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
-          </div>
-          <div className="flex gap-1">
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-full sm:w-40" data-testid="category-filter"><SelectValue placeholder="Category" /></SelectTrigger>
+        {/* Foodics-style filter bar */}
+        <div className="bg-white dark:bg-stone-800 rounded-2xl shadow-sm p-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search size={15} className="absolute left-3.5 top-3 text-stone-400" />
+              <Input placeholder="Search items..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 rounded-xl border-stone-200" />
+            </div>
+            <div className="flex gap-2">
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-full sm:w-36 rounded-xl border-stone-200" data-testid="category-filter"><SelectValue placeholder="Category" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {CATEGORIES.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Button size="icon" variant="outline" className="h-10 w-10 shrink-0 rounded-xl border-stone-200" onClick={() => setShowCategoryDialog(true)} data-testid="manage-categories-btn"><Tag size={15} /></Button>
+            </div>
+            <Select value={branchFilter} onValueChange={setBranchFilter}>
+              <SelectTrigger className="w-full sm:w-36 rounded-xl border-stone-200"><SelectValue placeholder="Branch" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {CATEGORIES.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                <SelectItem value="all">All Branches</SelectItem>
+                {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Button size="icon" variant="outline" className="h-10 w-10 shrink-0" onClick={() => setShowCategoryDialog(true)} data-testid="manage-categories-btn"><Tag size={16} /></Button>
+            <Select value={platformFilter} onValueChange={setPlatformFilter}>
+              <SelectTrigger className="w-full sm:w-36 rounded-xl border-stone-200"><SelectValue placeholder="Platform" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Platforms</SelectItem>
+                {platforms.filter(p => p.name !== 'Other').map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
-          <Select value={branchFilter} onValueChange={setBranchFilter}>
-            <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Branch" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Branches</SelectItem>
-              {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={platformFilter} onValueChange={setPlatformFilter}>
-            <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Platform" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Platforms</SelectItem>
-              {platforms.filter(p => p.name !== 'Other').map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Checkbox checked={selectedItems.length > 0 && selectedItems.length === filteredItems.length} onCheckedChange={selectAll} />
-          <span className="text-sm text-muted-foreground">{selectedItems.length > 0 ? `${selectedItems.length} selected` : `${filteredItems.length} items`}</span>
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-stone-100 dark:border-stone-700">
+            <Checkbox checked={selectedItems.length > 0 && selectedItems.length === filteredItems.length} onCheckedChange={selectAll} />
+            <span className="text-xs text-stone-400">{selectedItems.length > 0 ? `${selectedItems.length} selected` : `${filteredItems.length} items`}</span>
+          </div>
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-12"><Loader2 size={32} className="animate-spin text-orange-500" /></div>
+          <div className="flex items-center justify-center py-16"><Loader2 size={28} className="animate-spin text-primary" /></div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredItems.map(item => (
-              <Card key={item.id} className={`overflow-hidden group transition-all ${selectedItems.includes(item.id) ? 'ring-2 ring-orange-500' : ''} ${!item.is_available ? 'opacity-60' : ''}`} data-testid={`menu-card-${item.id}`}>
-                <div className="relative h-36 bg-gradient-to-br from-orange-100 to-amber-100 dark:from-stone-800 dark:to-stone-700 cursor-pointer" onClick={() => toggleSelect(item.id)}>
+              <div key={item.id} className={`bg-white dark:bg-stone-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-200 group ${selectedItems.includes(item.id) ? 'ring-2 ring-primary' : ''} ${!item.is_available ? 'opacity-60' : ''}`} data-testid={`menu-card-${item.id}`}>
+                <div className="relative h-36 bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-700 dark:to-stone-600 cursor-pointer" onClick={() => toggleSelect(item.id)}>
                   {item.image_url ? (
                     <img src={getImageUrl(item)} alt={item.name} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center"><UtensilsCrossed size={40} className="text-orange-300 dark:text-stone-500" /></div>
+                    <div className="w-full h-full flex items-center justify-center"><UtensilsCrossed size={36} className="text-stone-300 dark:text-stone-500" /></div>
                   )}
-                  <div className="absolute top-2 left-2" onClick={e => e.stopPropagation()}>
-                    <Checkbox checked={selectedItems.includes(item.id)} onCheckedChange={() => toggleSelect(item.id)} className="bg-white/80" />
+                  <div className="absolute top-2.5 left-2.5" onClick={e => e.stopPropagation()}>
+                    <Checkbox checked={selectedItems.includes(item.id)} onCheckedChange={() => toggleSelect(item.id)} className="bg-white/90 shadow-sm" />
                   </div>
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center" onClick={e => e.stopPropagation()}>
                     <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={e => { if (e.target.files[0] && uploadItemRef.current) handleImageUpload(uploadItemRef.current, e.target.files[0]); }} />
-                    <Button size="sm" variant="secondary" onClick={() => { uploadItemRef.current = item; fileInputRef.current?.click(); }}>
-                      <Upload size={14} className="mr-1" />{item.image_url ? 'Change' : 'Upload'}
+                    <Button size="sm" variant="secondary" className="rounded-xl" onClick={() => { uploadItemRef.current = item; fileInputRef.current?.click(); }}>
+                      <Upload size={13} className="mr-1" />{item.image_url ? 'Change' : 'Upload'}
                     </Button>
                   </div>
-                  <div className="absolute top-2 right-2 flex gap-1 flex-col items-end">
-                    {item.tags?.includes('popular') && <Badge className="bg-amber-500 text-[10px]"><Star size={10} className="mr-0.5" />Popular</Badge>}
-                    {!item.is_available && <Badge variant="destructive" className="text-[10px]">Unavailable</Badge>}
-                    {item.schedule?.enabled && <Badge className="bg-blue-500 text-[10px]"><Clock size={10} className="mr-0.5" />Scheduled</Badge>}
+                  <div className="absolute top-2.5 right-2.5 flex gap-1 flex-col items-end">
+                    {item.tags?.includes('popular') && <span className="bg-amber-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-0.5"><Star size={10} />Popular</span>}
+                    {!item.is_available && <span className="bg-red-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">Unavailable</span>}
+                    {item.schedule?.enabled && <span className="bg-blue-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-0.5"><Clock size={10} />Scheduled</span>}
                   </div>
                 </div>
-                <CardContent className="p-3">
-                  <div className="flex justify-between items-start mb-1">
+                <div className="p-3.5">
+                  <div className="flex justify-between items-start mb-1.5">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-sm dark:text-white truncate">{item.name}</h3>
-                      {item.name_ar && <p className="text-xs text-muted-foreground truncate" dir="rtl">{item.name_ar}</p>}
+                      <h3 className="font-semibold text-[13px] text-stone-800 dark:text-white truncate">{item.name}</h3>
+                      {item.name_ar && <p className="text-[11px] text-stone-400 truncate" dir="rtl">{item.name_ar}</p>}
                     </div>
-                    <span className="text-sm font-bold text-orange-600 ml-2 whitespace-nowrap">SAR {item.price}</span>
+                    <span className="text-sm font-bold text-primary ml-2 whitespace-nowrap">SAR {item.price}</span>
                   </div>
                   {getModifierCount(item) > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1">
+                    <div className="flex flex-wrap gap-1 mt-1.5">
                       {getModifierLabels(item).map((m, mi) => (
-                        <Badge key={mi} variant="outline" className="text-[9px] py-0">{m.name}: {m.count}</Badge>
+                        <span key={mi} className="text-[9px] px-1.5 py-0.5 bg-stone-100 dark:bg-stone-700 text-stone-500 rounded-full">{m.name}: {m.count}</span>
                       ))}
                     </div>
                   )}
                   <div className="flex flex-wrap gap-1 mt-2">
                     {(!item.branch_ids || item.branch_ids.length === 0) ? (
-                      <Badge variant="outline" className="text-[9px] bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400">All Branches</Badge>
+                      <span className="text-[9px] px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded-full">All Branches</span>
                     ) : (
                       item.branch_ids.slice(0, 2).map(bid => (
-                        <Badge key={bid} variant="outline" className="text-[9px]"><Building2 size={8} className="mr-0.5" />{getBranchName(bid)}</Badge>
+                        <span key={bid} className="text-[9px] px-1.5 py-0.5 bg-stone-50 dark:bg-stone-700 text-stone-500 rounded-full flex items-center gap-0.5"><Building2 size={8} />{getBranchName(bid)}</span>
                       ))
                     )}
-                    {(item.branch_ids?.length || 0) > 2 && <Badge variant="outline" className="text-[9px]">+{item.branch_ids.length - 2}</Badge>}
+                    {(item.branch_ids?.length || 0) > 2 && <span className="text-[9px] px-1.5 py-0.5 bg-stone-50 text-stone-500 rounded-full">+{item.branch_ids.length - 2}</span>}
                   </div>
                   {item.platform_ids?.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
                       {item.platform_ids.slice(0, 3).map(pid => (
-                        <Badge key={pid} className="text-[9px] bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"><Globe size={8} className="mr-0.5" />{getPlatformName(pid)}</Badge>
+                        <span key={pid} className="text-[9px] px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded-full flex items-center gap-0.5"><Globe size={8} />{getPlatformName(pid)}</span>
                       ))}
-                      {item.platform_ids.length > 3 && <Badge className="text-[9px] bg-blue-100 text-blue-700">+{item.platform_ids.length - 3}</Badge>}
+                      {item.platform_ids.length > 3 && <span className="text-[9px] px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded-full">+{item.platform_ids.length - 3}</span>}
                     </div>
                   )}
-                  <div className="flex justify-end gap-1 mt-2">
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleEdit(item)} data-testid={`edit-${item.id}`}><Edit size={13} /></Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500" onClick={() => handleDelete(item)} data-testid={`delete-${item.id}`}><Trash2 size={13} /></Button>
+                  <div className="flex justify-end gap-1 mt-2.5 pt-2 border-t border-stone-100 dark:border-stone-700">
+                    <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg text-stone-400 hover:text-primary" onClick={() => handleEdit(item)} data-testid={`edit-${item.id}`}><Edit size={13} /></Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg text-stone-400 hover:text-red-500" onClick={() => handleDelete(item)} data-testid={`delete-${item.id}`}><Trash2 size={13} /></Button>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
-            {filteredItems.length === 0 && <div className="col-span-full text-center py-12 text-muted-foreground">No items found</div>}
+            {filteredItems.length === 0 && <div className="col-span-full text-center py-16 text-stone-400">No items found</div>}
           </div>
         )}
       </div>
