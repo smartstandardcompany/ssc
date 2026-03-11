@@ -390,6 +390,76 @@ async def get_compliance_dashboard(days: int = 30, current_user: User = Depends(
     }
 
 
+@router.post("/task-reminders/ai-generate")
+async def ai_generate_duties(body: dict, current_user: User = Depends(get_current_user)):
+    """Use AI to generate a duty plan for a specific role or employee."""
+    import json as json_lib
+    role = body.get("role", "")
+    employee_name = body.get("employee_name", "")
+    branch_name = body.get("branch_name", "")
+    custom_context = body.get("context", "")
+    shift_hours = body.get("shift_hours", "08:00 - 22:00")
+
+    if not role:
+        raise HTTPException(status_code=400, detail="Role is required (e.g., cleaner, waiter, cashier, chef)")
+
+    prompt = f"""You are a restaurant operations manager. Generate a smart daily duty plan with recurring task reminders for a {role}.
+
+{"Employee: " + employee_name if employee_name else ""}
+{"Branch: " + branch_name if branch_name else ""}
+Shift hours: {shift_hours}
+{"Additional context: " + custom_context if custom_context else ""}
+
+Create 5-8 practical, actionable tasks that this {role} should perform during their shift. Each task should have:
+- A clear task name
+- A reminder message (specific, actionable instruction)
+- Interval in hours (how often this should repeat during the shift)
+- Priority: high, medium, or low
+
+Consider:
+- Food safety regulations
+- Customer experience
+- Hygiene standards
+- Efficiency and workflow
+- Peak hours (lunch 12-14, dinner 19-22) need more frequent checks
+
+Return ONLY a valid JSON array (no markdown):
+[
+  {{"name": "Task Name", "message": "Specific instruction", "interval_hours": 2, "priority": "high"}}
+]"""
+
+    try:
+        from emergentintegrations.llm.chat import chat, ChatMessage
+        import os
+        response = await chat(
+            api_key=os.environ.get("EMERGENT_API_KEY", ""),
+            model="gpt-4o",
+            messages=[ChatMessage(role="user", content=prompt)],
+        )
+
+        text = response.message.strip()
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+        tasks = json_lib.loads(text)
+
+        if not isinstance(tasks, list):
+            raise ValueError("AI returned non-list")
+
+        return {
+            "role": role,
+            "tasks": tasks,
+            "total": len(tasks),
+            "note": "Review and adjust before creating reminders",
+        }
+    except json_lib.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="AI returned invalid JSON. Please try again.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)[:200]}")
+
+
+
 
 async def process_task_reminders():
     """Called by scheduler - check and fire due reminders."""

@@ -34,6 +34,7 @@ import UsersPage from "./pages/UsersPage";
 import StockPage from "./pages/StockPage";
 import KitchenPage from "./pages/KitchenPage";
 import SchedulePage from "./pages/SchedulePage";
+import StaffPerformancePage from "./pages/StaffPerformancePage";
 import ReconciliationPage from "./pages/ReconciliationPage";
 import POSPage from "./pages/POSPage";
 import POSAnalyticsPage from "./pages/POSAnalyticsPage";
@@ -252,6 +253,7 @@ function App() {
           <Route path="/loans" element={<AuthRoute><ProtectedRoute perm="employees" roles={['admin', 'manager']}><LoanManagementPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/leave-approvals" element={<AuthRoute><ProtectedRoute perm="employees" roles={['admin', 'manager']}><LeaveApprovalsPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/schedule" element={<AuthRoute><ProtectedRoute perm="shifts" roles={['admin', 'manager']}><SchedulePage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/staff-performance" element={<AuthRoute><ProtectedRoute perm="shifts" roles={['admin', 'manager']}><StaffPerformancePage /></ProtectedRoute></AuthRoute>} />
           <Route path="/order-tracking" element={<AuthRoute><ProtectedRoute perm="sales" roles={['admin', 'manager']}><OrderTrackingPage /></ProtectedRoute></AuthRoute>} />
 
           {/* Stock */}

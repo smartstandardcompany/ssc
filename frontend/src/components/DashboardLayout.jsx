@@ -7,7 +7,7 @@ import {
   Handshake, HelpCircle, Building2, Package, ChefHat, CalendarClock,
   ArrowDownUp, Activity, PackageCheck, ChevronDown, Menu, X, Zap,
   AlertCircle, Moon, Sun, Keyboard, Globe, UtensilsCrossed, Camera, Armchair, Wallet,
-  CalendarDays, Gift, TrendingUp, Clock, Database, Copy, Download, ShieldCheck
+  CalendarDays, Gift, TrendingUp, Clock, Database, Copy, Download, ShieldCheck, Award
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -56,6 +56,7 @@ const NAV_GROUPS = [
       { path: '/loans', icon: Wallet, label: 'Loans', perm: 'employees', roles: ['admin', 'manager'] },
       { path: '/leave-approvals', icon: Bell, label: 'Leave Approvals', perm: 'employees', roles: ['admin', 'manager'] },
       { path: '/schedule', icon: CalendarClock, label: 'Schedule', perm: 'shifts', roles: ['admin', 'manager'] },
+      { path: '/staff-performance', icon: Award, label: 'Staff Performance', perm: 'shifts', roles: ['admin', 'manager'] },
     ]
   },
   {
