@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,12 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, AlertTriangle, DollarSign, Settings2, MessageCircle, FileDown, RotateCcw, CalendarDays, ChevronDown, ChevronRight, HelpCircle, Copy } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle, DollarSign, Settings2, MessageCircle, FileDown, RotateCcw, CalendarDays, ChevronDown, ChevronRight, HelpCircle, Copy, Store, TrendingDown, ChevronLeft } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { ExportButtons } from '@/components/ExportButtons';
 import { WhatsAppSendDialog } from '@/components/WhatsAppSendDialog';
 import { AdvancedSearch, applySearchFilters } from '@/components/AdvancedSearch';
@@ -44,6 +44,7 @@ export default function ExpensesPage() {
   const [dateRange, setDateRange] = useState(null);
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const [duplicateCount, setDuplicateCount] = useState(0);
+  const [activeBackendFilters, setActiveBackendFilters] = useState({});
 
   useEffect(() => {
     if (urlDateFilter) {
@@ -68,6 +69,43 @@ export default function ExpensesPage() {
   });
 
   const isAdmin = user?.role === 'admin' || user?.role === 'manager';
+
+  // Calculate branch-wise monthly expenses (like Sales page)
+  const branchMonthlyExpenses = useMemo(() => {
+    const now = new Date();
+    const monthStart = startOfMonth(now);
+    const monthEnd = endOfMonth(now);
+    
+    const monthlyExps = expenses.filter(e => {
+      try {
+        const expDate = parseISO(typeof e.date === 'string' ? e.date : e.date?.toISOString?.() || '');
+        return expDate >= monthStart && expDate <= monthEnd;
+      } catch { return false; }
+    });
+
+    const byBranch = {};
+    let totalAll = 0;
+
+    monthlyExps.forEach(exp => {
+      const branchId = exp.branch_id;
+      const branch = branches.find(b => b.id === branchId);
+      const branchName = branch?.name || 'Unassigned';
+      
+      if (!byBranch[branchName]) {
+        byBranch[branchName] = { cash: 0, bank: 0, credit: 0, total: 0 };
+      }
+      
+      const amt = exp.amount || 0;
+      if (exp.payment_mode === 'cash') byBranch[branchName].cash += amt;
+      else if (exp.payment_mode === 'bank') byBranch[branchName].bank += amt;
+      else if (exp.payment_mode === 'credit') byBranch[branchName].credit += amt;
+      
+      byBranch[branchName].total += amt;
+      totalAll += amt;
+    });
+
+    return { byBranch, totalAll, month: format(now, 'MMMM yyyy') };
+  }, [expenses, branches]);
 
   // Category translation helper
   const catMap = {
@@ -94,7 +132,7 @@ export default function ExpensesPage() {
     { name: 'Other', subs: [] },
   ];
 
-  useEffect(() => { fetchData(); }, [dateRange]);
+  useEffect(() => { fetchData(); }, [dateRange, activeBackendFilters]);
 
   const fetchData = async (page = 1) => {
     try {
@@ -103,6 +141,15 @@ export default function ExpensesPage() {
       let expUrl = `/expenses?page=${page}&limit=200`;
       if (dateRange) {
         expUrl += `&start_date=${dateRange.start}&end_date=${dateRange.end}`;
+      }
+      if (activeBackendFilters.branch_id) {
+        expUrl += `&branch_id=${activeBackendFilters.branch_id}`;
+      }
+      if (activeBackendFilters.category) {
+        expUrl += `&category=${encodeURIComponent(activeBackendFilters.category)}`;
+      }
+      if (activeBackendFilters.payment_mode) {
+        expUrl += `&payment_mode=${activeBackendFilters.payment_mode}`;
       }
       const [eR, sR, cR, rR, empR] = await Promise.all([api.get(expUrl), api.get('/suppliers'), api.get('/categories?category_type=expense'), api.get('/recurring-expenses'), api.get('/employees').catch(() => ({ data: [] }))]);
       const expData = eR.data;
@@ -209,6 +256,42 @@ export default function ExpensesPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* Branch-wise Monthly Expenses Summary */}
+        <Card className="border-0 shadow-sm bg-gradient-to-r from-red-50 to-amber-50 dark:from-red-900/20 dark:to-amber-900/20 card-enter" data-testid="expenses-branch-summary">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <TrendingDown size={18} className="text-red-600" />
+                <h3 className="font-semibold text-sm">{branchMonthlyExpenses.month} - Branch Expenses</h3>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">Total This Month</p>
+                <p className="text-xl font-bold text-red-600">SAR {branchMonthlyExpenses.totalAll.toLocaleString()}</p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+              {Object.entries(branchMonthlyExpenses.byBranch).map(([branchName, data]) => (
+                <div key={branchName} className="bg-white dark:bg-stone-800 rounded-xl p-3 border">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Store size={14} className="text-red-500" />
+                    <span className="text-xs font-medium truncate">{branchName}</span>
+                  </div>
+                  <p className="text-lg font-bold text-red-600">SAR {data.total.toLocaleString()}</p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {data.cash > 0 && <span className="text-[10px] px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded">Cash: {data.cash.toLocaleString()}</span>}
+                    {data.bank > 0 && <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">Bank: {data.bank.toLocaleString()}</span>}
+                    {data.credit > 0 && <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded">Credit: {data.credit.toLocaleString()}</span>}
+                  </div>
+                </div>
+              ))}
+              {Object.keys(branchMonthlyExpenses.byBranch).length === 0 && (
+                <div className="col-span-full text-center py-3 text-sm text-muted-foreground">No expenses recorded this month</div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
           <div>
             <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-1">{t('expenses_title')}</h1>
@@ -249,6 +332,12 @@ export default function ExpensesPage() {
             } else {
               setSearchFilters(f);
             }
+            // Pass server-filterable fields to backend
+            const newBackendFilters = {};
+            if (f.branch_id && f.branch_id !== 'all') newBackendFilters.branch_id = f.branch_id;
+            if (f.category && f.category !== 'all') newBackendFilters.category = f.category;
+            if (f.payment_mode && f.payment_mode !== 'all') newBackendFilters.payment_mode = f.payment_mode;
+            setActiveBackendFilters(newBackendFilters);
           }}
           config={{
             searchFields: ['description', 'notes'],
@@ -628,14 +717,29 @@ export default function ExpensesPage() {
                   })()}
                   {/* Pagination Controls */}
                   {totalPages > 1 && (
-                    <div className="flex items-center justify-between mt-4 px-2">
+                    <div className="flex items-center justify-between mt-4 px-2" data-testid="expenses-pagination">
                       <span className="text-xs text-muted-foreground">{totalRecords} total records</span>
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" variant="outline" disabled={currentPage <= 1}
-                          onClick={() => fetchData(currentPage - 1)} data-testid="expenses-prev-page">Previous</Button>
-                        <span className="text-sm">Page {currentPage} of {totalPages}</span>
-                        <Button size="sm" variant="outline" disabled={currentPage >= totalPages}
-                          onClick={() => fetchData(currentPage + 1)} data-testid="expenses-next-page">Next</Button>
+                      <div className="flex items-center gap-1">
+                        <Button size="sm" variant="outline" disabled={currentPage <= 1} className="h-8 w-8 p-0"
+                          onClick={() => fetchData(currentPage - 1)} data-testid="expenses-prev-page"><ChevronLeft size={14} /></Button>
+                        {(() => {
+                          const pages = [];
+                          const maxVisible = 5;
+                          let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+                          let end = Math.min(totalPages, start + maxVisible - 1);
+                          if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+                          if (start > 1) { pages.push(1); if (start > 2) pages.push('...'); }
+                          for (let i = start; i <= end; i++) pages.push(i);
+                          if (end < totalPages) { if (end < totalPages - 1) pages.push('...'); pages.push(totalPages); }
+                          return pages.map((p, idx) => p === '...' ? (
+                            <span key={`dots-${idx}`} className="text-xs text-muted-foreground px-1">...</span>
+                          ) : (
+                            <Button key={p} size="sm" variant={p === currentPage ? 'default' : 'outline'} className="h-8 w-8 p-0 text-xs"
+                              onClick={() => fetchData(p)} data-testid={`expenses-page-${p}`}>{p}</Button>
+                          ));
+                        })()}
+                        <Button size="sm" variant="outline" disabled={currentPage >= totalPages} className="h-8 w-8 p-0"
+                          onClick={() => fetchData(currentPage + 1)} data-testid="expenses-next-page"><ChevronRight size={14} /></Button>
                       </div>
                     </div>
                   )}

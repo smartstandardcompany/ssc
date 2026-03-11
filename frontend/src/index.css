@@ -70,3 +70,9 @@ body {
         gap: inherit; border-width: inherit; border-style: inherit; border-color: inherit;
     }
 }
+
+/* Thin scrollbar for sidebar */
+.scrollbar-thin::-webkit-scrollbar { width: 4px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 4px; }
+.scrollbar-thin::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }

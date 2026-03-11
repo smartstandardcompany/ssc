@@ -156,7 +156,6 @@ function NavGroup({ group, userRole, userPerms, currentPath, onNavigate, t }) {
   const filteredItems = group.items.filter(item => {
     if (userRole === 'admin') return true;
     if (item.roles && !item.roles.includes(userRole || 'operator')) return false;
-    // Check permission using the new dict-based format
     if (item.perm) {
       return hasPermission(userPerms, item.perm);
     }
@@ -169,17 +168,17 @@ function NavGroup({ group, userRole, userPerms, currentPath, onNavigate, t }) {
   if (filteredItems.length === 0) return null;
 
   return (
-    <div className="mb-1">
+    <div className="mb-0.5">
       <button
         onClick={() => setOpen(!open)}
         data-testid={`nav-group-${group.label.toLowerCase()}`}
-        className={`w-full flex items-center justify-between px-3 py-2 text-[11px] font-semibold uppercase tracking-wider rounded-lg transition-colors ${hasActive ? 'text-orange-600' : 'text-stone-400 hover:text-stone-600'}`}
+        className={`w-full flex items-center justify-between px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider transition-colors ${hasActive ? 'text-primary' : 'text-stone-400 hover:text-stone-500'}`}
       >
         {t(navLabelToKey[group.label] || group.label)}
-        <ChevronDown size={14} className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={12} className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
       </button>
-      {open && (
-        <div className="space-y-0.5 mt-0.5">
+      <div className={`overflow-hidden transition-all duration-200 ${open ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+        <div className="space-y-px pb-1">
           {filteredItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentPath === item.path;
@@ -189,19 +188,19 @@ function NavGroup({ group, userRole, userPerms, currentPath, onNavigate, t }) {
                 to={item.path}
                 onClick={onNavigate}
                 data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
-                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+                className={`flex items-center gap-2.5 px-4 py-[7px] mx-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
                   isActive
-                    ? 'bg-orange-50 text-orange-700 border-l-[3px] border-orange-500'
-                    : 'text-stone-500 hover:bg-stone-50 hover:text-stone-700 ml-[3px]'
+                    ? 'bg-primary/8 text-primary font-semibold'
+                    : 'text-stone-500 hover:bg-stone-100/70 hover:text-stone-700'
                 }`}
               >
-                <Icon size={16} strokeWidth={isActive ? 2.5 : 1.8} />
-                {t(navLabelToKey[item.label] || item.label)}
+                <Icon size={16} strokeWidth={isActive ? 2.2 : 1.7} className={isActive ? 'text-primary' : ''} />
+                <span className="truncate">{t(navLabelToKey[item.label] || item.label)}</span>
               </Link>
             );
           })}
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -310,30 +309,30 @@ export const DashboardLayout = ({ children }) => {
 
   const sidebarContent = (
     <>
-      <div className="p-4 border-b border-stone-100">
+      <div className="px-4 py-4 border-b border-stone-100 dark:border-stone-700">
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="SSC" className="w-10 h-10 rounded-xl object-contain" />
+          <img src="/logo.png" alt="SSC" className="w-9 h-9 rounded-lg object-contain" />
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold font-outfit bg-gradient-to-r from-orange-600 to-amber-500 bg-clip-text text-transparent" data-testid="app-title">SSC Track</h1>
+            <h1 className="text-base font-bold font-outfit text-stone-800 dark:text-white" data-testid="app-title">SSC Track</h1>
             <p className="text-[10px] text-stone-400 truncate">{isEmployee ? 'Employee Portal' : 'Smart Standard Company'}</p>
           </div>
         </div>
       </div>
 
-      <nav className="px-2 py-3 flex-1 overflow-y-auto">
+      <nav className="px-1 py-2 flex-1 overflow-y-auto scrollbar-thin">
         {isEmployee ? (
-          <div className="space-y-0.5">
+          <div className="space-y-px px-2">
             {employeeNav.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
               return (
                 <Link key={item.path} to={item.path} onClick={() => setMobileOpen(false)}
                   data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
-                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${isActive ? 'bg-orange-50 text-orange-700 border-l-[3px] border-orange-500' : 'text-stone-500 hover:bg-stone-50 hover:text-stone-700 ml-[3px]'}`}>
-                  <Icon size={16} strokeWidth={isActive ? 2.5 : 1.8} />
+                  className={`flex items-center gap-2.5 px-4 py-[7px] rounded-lg text-[13px] font-medium transition-all ${isActive ? 'bg-primary/8 text-primary font-semibold' : 'text-stone-500 hover:bg-stone-100/70 hover:text-stone-700'}`}>
+                  <Icon size={16} strokeWidth={isActive ? 2.2 : 1.7} />
                   {item.label}
                   {item.path === '/notifications' && unreadCount > 0 && (
-                    <Badge className="ml-auto bg-orange-500 text-white text-[10px] h-5 w-5 p-0 flex items-center justify-center rounded-full">{unreadCount}</Badge>
+                    <Badge className="ml-auto bg-primary text-white text-[10px] h-5 w-5 p-0 flex items-center justify-center rounded-full">{unreadCount}</Badge>
                   )}
                 </Link>
               );
@@ -341,13 +340,15 @@ export const DashboardLayout = ({ children }) => {
           </div>
         ) : (
           <>
-            {/* Prominent My Portal link for all users */}
-            <Link to="/my-portal" onClick={() => setMobileOpen(false)}
-              data-testid="nav-my-portal-top"
-              className={`flex items-center gap-2.5 px-3 py-2.5 mb-2 rounded-xl text-sm font-medium transition-all border ${location.pathname === '/my-portal' ? 'bg-orange-50 text-orange-700 border-orange-300' : 'text-stone-600 hover:bg-orange-50/50 hover:text-orange-600 border-stone-200 dark:border-stone-700 dark:text-stone-300'}`}>
-              <UserIcon size={16} strokeWidth={1.8} />
-              My Portal
-            </Link>
+            {/* My Portal link */}
+            <div className="px-2 mb-1">
+              <Link to="/my-portal" onClick={() => setMobileOpen(false)}
+                data-testid="nav-my-portal-top"
+                className={`flex items-center gap-2.5 px-4 py-[7px] rounded-lg text-[13px] font-medium transition-all ${location.pathname === '/my-portal' ? 'bg-primary/8 text-primary font-semibold' : 'text-stone-500 hover:bg-stone-100/70 hover:text-stone-700'}`}>
+                <UserIcon size={16} strokeWidth={1.7} />
+                My Portal
+              </Link>
+            </div>
 
             {NAV_GROUPS.map((group) => (
             <NavGroup
@@ -364,41 +365,41 @@ export const DashboardLayout = ({ children }) => {
         )}
       </nav>
 
-      <div className="p-3 border-t border-stone-100 bg-white dark:bg-stone-900 dark:border-stone-700">
-        <div className="flex items-center gap-2.5 mb-2.5">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-amber-400 flex items-center justify-center text-white font-bold text-xs shrink-0">
+      <div className="p-3 border-t border-stone-100 dark:border-stone-700 bg-stone-50/50 dark:bg-stone-800/50">
+        <div className="flex items-center gap-2.5 mb-2">
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0">
             {currentUser.name?.charAt(0)?.toUpperCase() || 'U'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-stone-800 dark:text-stone-200 truncate" data-testid="user-name">{currentUser.name}</p>
+            <p className="text-sm font-semibold text-stone-700 dark:text-stone-200 truncate" data-testid="user-name">{currentUser.name}</p>
             <p className="text-[10px] text-stone-400 truncate">{currentUser.email}</p>
           </div>
-          <Badge className="bg-orange-50 text-orange-600 border-orange-200 capitalize text-[10px] shrink-0">{currentUser.role}</Badge>
+          <Badge className="bg-primary/10 text-primary border-0 capitalize text-[10px] shrink-0">{currentUser.role}</Badge>
         </div>
         <div className="flex gap-1.5 mb-1.5">
-          <button onClick={toggleDarkMode} data-testid="dark-mode-toggle" className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border border-stone-200 dark:border-stone-600 text-stone-500 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 text-xs transition-colors">
+          <button onClick={toggleDarkMode} data-testid="dark-mode-toggle" className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border border-stone-200 dark:border-stone-600 text-stone-500 dark:text-stone-300 hover:bg-white dark:hover:bg-stone-700 text-xs transition-colors">
             {darkMode ? <Sun size={12} /> : <Moon size={12} />}{darkMode ? t('light') : t('dark')}
           </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button data-testid="language-dropdown" className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border border-stone-200 dark:border-stone-600 text-stone-500 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 text-xs transition-colors font-semibold">
+              <button data-testid="language-dropdown" className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border border-stone-200 dark:border-stone-600 text-stone-500 dark:text-stone-300 hover:bg-white dark:hover:bg-stone-700 text-xs transition-colors font-semibold">
                 <Globe size={12} />{LANGUAGES.find(l => l.code === lang)?.flag || 'EN'}
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-36">
               {LANGUAGES.map((l) => (
-                <DropdownMenuItem key={l.code} onClick={() => setLang(l.code)} className={`cursor-pointer ${lang === l.code ? 'bg-orange-50 text-orange-600' : ''}`}>
+                <DropdownMenuItem key={l.code} onClick={() => setLang(l.code)} className={`cursor-pointer ${lang === l.code ? 'bg-primary/10 text-primary' : ''}`}>
                   <span className="font-bold mr-2">{l.flag}</span>{l.label}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <button onClick={() => setShowShortcuts(true)} data-testid="shortcuts-btn" className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border border-stone-200 dark:border-stone-600 text-stone-500 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 text-xs transition-colors">
+          <button onClick={() => setShowShortcuts(true)} data-testid="shortcuts-btn" className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border border-stone-200 dark:border-stone-600 text-stone-500 dark:text-stone-300 hover:bg-white dark:hover:bg-stone-700 text-xs transition-colors">
             <Keyboard size={12} />{t('shortcuts')}
           </button>
         </div>
         <Button variant="outline" size="sm" onClick={handleLogout} data-testid="logout-button"
-          className="w-full rounded-lg border-stone-200 text-stone-500 hover:text-orange-600 hover:border-orange-200 hover:bg-orange-50 text-xs h-8 dark:border-stone-600 dark:text-stone-300">
+          className="w-full rounded-lg border-stone-200 text-stone-500 hover:text-red-600 hover:border-red-200 hover:bg-red-50 text-xs h-8 dark:border-stone-600 dark:text-stone-300">
           <LogOut size={14} className="mr-1.5" />{t('logout')}
         </Button>
       </div>
@@ -459,16 +460,16 @@ export const DashboardLayout = ({ children }) => {
       )}
 
       {/* Sidebar - desktop */}
-      <aside className={`hidden lg:flex lg:flex-col w-60 bg-white ${isRTL ? 'border-l' : 'border-r'} border-stone-100 fixed ${isRTL ? 'right-0' : 'left-0'} h-full overflow-hidden dark:bg-stone-900 dark:border-stone-700`}>
+      <aside className={`hidden lg:flex lg:flex-col w-[240px] bg-[#f8f9fa] ${isRTL ? 'border-l' : 'border-r'} border-stone-200/80 fixed ${isRTL ? 'right-0' : 'left-0'} h-full overflow-hidden dark:bg-stone-900 dark:border-stone-700`}>
         {sidebarContent}
       </aside>
 
       {/* Sidebar - mobile */}
-      <aside className={`lg:hidden fixed top-0 ${isRTL ? 'right-0' : 'left-0'} z-50 w-72 h-full bg-white ${isRTL ? 'border-l' : 'border-r'} border-stone-100 flex flex-col transform transition-transform duration-200 dark:bg-stone-900 dark:border-stone-700 ${mobileOpen ? 'translate-x-0' : isRTL ? 'translate-x-full' : '-translate-x-full'}`}>
+      <aside className={`lg:hidden fixed top-0 ${isRTL ? 'right-0' : 'left-0'} z-50 w-72 h-full bg-[#f8f9fa] ${isRTL ? 'border-l' : 'border-r'} border-stone-200/80 flex flex-col transform transition-transform duration-200 dark:bg-stone-900 dark:border-stone-700 ${mobileOpen ? 'translate-x-0' : isRTL ? 'translate-x-full' : '-translate-x-full'}`}>
         {sidebarContent}
       </aside>
 
-      <main className={`flex-1 ${isRTL ? 'lg:mr-60' : 'lg:ml-60'} bg-gradient-to-br from-[#FDFBF7] to-[#FFF8F0] dark:from-stone-900 dark:to-stone-800 pb-16 lg:pb-0`}>
+      <main className={`flex-1 ${isRTL ? 'lg:mr-[240px]' : 'lg:ml-[240px]'} bg-[#f5f5f5] dark:from-stone-900 dark:to-stone-800 pb-16 lg:pb-0`}>
         <div className="pt-14 lg:pt-0">
           {/* Stock Alerts Banner */}
           {stockAlerts.length > 0 && (

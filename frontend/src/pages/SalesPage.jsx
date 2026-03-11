@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Trash2, DollarSign, X, Truck, Store, TrendingUp, FileDown, CalendarDays, Building2, AlertTriangle, Copy } from 'lucide-react';
+import { Plus, Trash2, DollarSign, X, Truck, Store, TrendingUp, FileDown, CalendarDays, Building2, AlertTriangle, Copy, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import api from '@/lib/api';
 import { toast } from 'sonner';
@@ -912,20 +912,29 @@ export default function SalesPage() {
             })()}
             {/* Pagination Controls */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4 px-2">
+              <div className="flex items-center justify-between mt-4 px-2" data-testid="sales-pagination">
                 <span className="text-xs text-muted-foreground">{totalRecords.toLocaleString()} total records</span>
-                <div className="flex items-center gap-1.5">
-                  <Button size="sm" variant="outline" disabled={currentPage <= 1}
-                    onClick={() => fetchData(currentPage - 1)} data-testid="sales-prev-page"
-                    className="h-8 px-3 rounded-lg text-xs">Previous</Button>
-                  <div className="flex items-center gap-1 px-2">
-                    <span className="text-xs font-medium">{currentPage}</span>
-                    <span className="text-xs text-muted-foreground">/</span>
-                    <span className="text-xs text-muted-foreground">{totalPages}</span>
-                  </div>
-                  <Button size="sm" variant="outline" disabled={currentPage >= totalPages}
-                    onClick={() => fetchData(currentPage + 1)} data-testid="sales-next-page"
-                    className="h-8 px-3 rounded-lg text-xs">Next</Button>
+                <div className="flex items-center gap-1">
+                  <Button size="sm" variant="outline" disabled={currentPage <= 1} className="h-8 w-8 p-0"
+                    onClick={() => fetchData(currentPage - 1)} data-testid="sales-prev-page"><ChevronLeft size={14} /></Button>
+                  {(() => {
+                    const pages = [];
+                    const maxVisible = 5;
+                    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+                    let end = Math.min(totalPages, start + maxVisible - 1);
+                    if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+                    if (start > 1) { pages.push(1); if (start > 2) pages.push('...'); }
+                    for (let i = start; i <= end; i++) pages.push(i);
+                    if (end < totalPages) { if (end < totalPages - 1) pages.push('...'); pages.push(totalPages); }
+                    return pages.map((p, idx) => p === '...' ? (
+                      <span key={`dots-${idx}`} className="text-xs text-muted-foreground px-1">...</span>
+                    ) : (
+                      <Button key={p} size="sm" variant={p === currentPage ? 'default' : 'outline'} className="h-8 w-8 p-0 text-xs"
+                        onClick={() => fetchData(p)} data-testid={`sales-page-${p}`}>{p}</Button>
+                    ));
+                  })()}
+                  <Button size="sm" variant="outline" disabled={currentPage >= totalPages} className="h-8 w-8 p-0"
+                    onClick={() => fetchData(currentPage + 1)} data-testid="sales-next-page"><ChevronRight size={14} /></Button>
                 </div>
               </div>
             )}

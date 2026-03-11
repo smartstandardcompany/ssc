@@ -20,10 +20,19 @@ async def get_expenses(
     limit: int = Query(100, ge=1, le=500),
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
+    branch_id: Optional[str] = None,
+    category: Optional[str] = None,
+    payment_mode: Optional[str] = None,
     current_user: User = Depends(get_current_user)
 ):
     require_permission(current_user, "expenses", "read")
     query = get_branch_filter(current_user)
+    if branch_id:
+        query["branch_id"] = branch_id
+    if category:
+        query["category"] = {"$regex": f"^{category}", "$options": "i"}
+    if payment_mode:
+        query["payment_mode"] = payment_mode
     if start_date:
         query["date"] = query.get("date", {})
         query["date"]["$gte"] = start_date
