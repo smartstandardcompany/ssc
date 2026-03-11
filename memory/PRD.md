@@ -144,6 +144,16 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 - **Rush Hours badges**: Highlights hours above average order volume
 - **Backend**: New endpoint `/api/menu-analytics/peak-hours` with period/branch filters
 
+### Staff Scheduling Insights (DONE)
+- **New "Staffing Insights" tab** on Schedule page (`/schedule`)
+- **4 summary cards**: Total Staff, Peak Hour, Peak Day, Suggestions count
+- **Weekly Coverage vs Demand table**: 7-day view with staff count, avg orders, demand level (high/medium/low), shift coverage per day, gap/covered/empty status
+- **Shift Demand Analysis**: Cards per shift showing order volume during shift hours
+- **Scheduling Suggestions**: Auto-generated alerts for no_coverage (unassigned shifts), understaffed (high demand, low staff), overstaffed (low demand, too many staff)
+- **Enhanced AI Schedule**: POST /api/shifts/ai-recommend now includes peak hours data in the AI prompt, so AI assigns more reliable staff to busy shifts/days
+- **Backend**: `GET /api/staffing-insights?branch_id=X&week_start=Y` - combines peak hours analysis with current schedule to calculate coverage gaps
+- Testing: 17/17 backend + full frontend UI verified (100%)
+
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
 - Operator: test@ssc.com / testtest
