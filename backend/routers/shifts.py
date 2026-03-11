@@ -159,7 +159,7 @@ async def get_attendance_summary(branch_id: Optional[str] = None, month: Optiona
 
 
 
-# AI Shift Recommendation
+# AI Shift Recommendation - Enhanced with Peak Hours Data
 @router.post("/shifts/ai-recommend")
 async def ai_recommend_shifts(body: dict, current_user: User = Depends(get_current_user)):
     branch_id = body.get("branch_id")
@@ -193,6 +193,10 @@ async def ai_recommend_shifts(body: dict, current_user: User = Depends(get_curre
         if s == "absent":
             emp_stats[eid]["absent"] += 1
         emp_stats[eid]["overtime"] += a.get("overtime_hours", 0)
+
+    # Fetch peak hours data for this branch (last 30 days)
+    peak_hours_data = await _get_branch_peak_hours(branch_id, days=30)
+
     # Build prompt
     emp_lines = []
     for e in employees[:20]:
@@ -200,22 +204,40 @@ async def ai_recommend_shifts(body: dict, current_user: User = Depends(get_curre
         reliability = round(stats.get("present", 0) / max(stats.get("scheduled", 1), 1) * 100)
         emp_lines.append(f"- {e['name']} (ID: {e['id'][:8]}, Position: {e.get('position','N/A')}, Reliability: {reliability}%, Late: {stats.get('late',0)}x, OT: {stats.get('overtime',0):.1f}h)")
     shift_lines = [f"- {s['name']} ({s['start_time']}-{s['end_time']}, Days: {','.join(s.get('days',[]))})" for s in shifts]
-    prompt = f"""You are a restaurant shift scheduling AI. Based on employee attendance data, create an optimal 7-day schedule.
+
+    # Peak hours context
+    peak_context = ""
+    if peak_hours_data.get("peak_hour"):
+        ph = peak_hours_data
+        busy_hours = [h for h in ph.get("hourly", []) if h["orders"] > 0]
+        busy_days = [d for d in ph.get("daily", []) if d["orders"] > 0]
+        peak_context = f"""
+PEAK HOURS DATA (last 30 days at this branch):
+- Busiest hour: {ph['peak_hour']['hour']} ({ph['peak_hour']['orders']} orders, SAR {ph['peak_hour']['revenue']})
+- Busiest day: {ph['peak_day']['day']} ({ph['peak_day']['orders']} orders)
+- Rush hours (above average): {', '.join(h['hour'] for h in ph.get('rush_hours', []))}
+- Order distribution by day: {', '.join(f"{d['name']}: {d['orders']} orders" for d in busy_days)}
+- Order distribution by hour: {', '.join(f"{h['label']}: {h['orders']} orders" for h in busy_hours[:8])}
+"""
+
+    prompt = f"""You are a restaurant shift scheduling AI. Based on employee attendance data AND peak hours analysis, create an optimal 7-day schedule.
 
 Branch shifts available:
 {chr(10).join(shift_lines)}
 
 Employees:
 {chr(10).join(emp_lines)}
-
+{peak_context}
 Week starting: {week_start}
 
 Rules:
-1. Prioritize reliable employees for busy shifts
-2. Give employees with high overtime some lighter days
-3. Ensure each shift has adequate coverage
-4. Frequently late employees should get later shifts when possible
-5. Distribute workload fairly across the week
+1. CRITICAL: Assign MORE staff to shifts covering peak/rush hours (see peak hours data above)
+2. Busiest days of the week need maximum coverage
+3. Prioritize reliable employees for busy shifts (peak hours)
+4. Give employees with high overtime some lighter days on quieter days
+5. Frequently late employees should get later shifts when possible
+6. Distribute workload fairly but favor coverage during high-demand periods
+7. Quieter days/hours can have minimum staff
 
 Return ONLY valid JSON array with this structure (no markdown):
 [
@@ -251,3 +273,217 @@ Assign shifts for 7 days (Mon-Sun). Each employee should work 5-6 days."""
         if "JSONDecodeError" in type(e).__name__:
             return {"recommendations": [], "error": "AI returned invalid format", "raw": str(e)[:200]}
         raise HTTPException(status_code=500, detail=f"AI recommendation failed: {str(e)[:200]}")
+
+
+
+async def _get_branch_peak_hours(branch_id: str, days: int = 30):
+    """Helper to get peak hours data for a specific branch."""
+    DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    now = datetime.now(timezone.utc)
+    start = (now - timedelta(days=days)).isoformat()
+    end = now.isoformat()
+
+    match_stage = {"created_at": {"$gte": start, "$lte": end}, "status": {"$ne": "cancelled"}}
+    if branch_id:
+        match_stage["branch_id"] = branch_id
+
+    orders = await db.pos_orders.find(match_stage, {"_id": 0, "created_at": 1, "total": 1, "items": 1}).to_list(10000)
+
+    hourly = {h: {"hour": h, "orders": 0, "revenue": 0, "items_sold": 0} for h in range(24)}
+    daily = {d: {"day": d, "orders": 0, "revenue": 0} for d in range(7)}
+
+    for order in orders:
+        created = order.get("created_at", "")
+        total = order.get("total", 0) or 0
+        item_count = sum(i.get("quantity", 1) for i in order.get("items", []))
+        try:
+            dt = datetime.fromisoformat(created.replace("Z", "+00:00")) if isinstance(created, str) else created
+            h = dt.hour
+            dow = dt.weekday()
+            hourly[h]["orders"] += 1
+            hourly[h]["revenue"] += total
+            hourly[h]["items_sold"] += item_count
+            daily[dow]["orders"] += 1
+            daily[dow]["revenue"] += total
+        except:
+            continue
+
+    hourly_list = sorted(hourly.values(), key=lambda x: x["hour"])
+    for h in hourly_list:
+        h["revenue"] = round(h["revenue"], 2)
+        h["label"] = f"{h['hour']:02d}:00"
+
+    daily_list = sorted(daily.values(), key=lambda x: x["day"])
+    for d in daily_list:
+        d["revenue"] = round(d["revenue"], 2)
+        d["name"] = DAY_NAMES[d["day"]]
+
+    peak_hour = max(hourly_list, key=lambda x: x["orders"]) if orders else None
+    peak_day = max(daily_list, key=lambda x: x["orders"]) if orders else None
+    total_orders = len(orders)
+    avg_per_hour = total_orders / 24 if total_orders > 0 else 0
+    rush_hours = [h for h in hourly_list if h["orders"] > avg_per_hour and h["orders"] > 0]
+
+    return {
+        "hourly": hourly_list,
+        "daily": daily_list,
+        "peak_hour": {"hour": peak_hour["label"], "orders": peak_hour["orders"], "revenue": peak_hour["revenue"]} if peak_hour and peak_hour["orders"] > 0 else None,
+        "peak_day": {"day": peak_day["name"], "orders": peak_day["orders"], "revenue": peak_day["revenue"]} if peak_day and peak_day["orders"] > 0 else None,
+        "rush_hours": [{"hour": h["label"], "orders": h["orders"]} for h in rush_hours],
+        "total_orders": total_orders,
+        "avg_orders_per_hour": round(avg_per_hour, 1),
+    }
+
+
+@router.get("/staffing-insights")
+async def get_staffing_insights(
+    branch_id: str,
+    week_start: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Staffing insights: peak hours vs shift coverage analysis."""
+    DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    DAY_ABBR = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+    if not week_start:
+        week_start = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    # 1. Get peak hours for this branch
+    peak = await _get_branch_peak_hours(branch_id, days=60)
+
+    # 2. Get shifts for this branch
+    shifts = await db.shifts.find({"branch_id": branch_id, "active": {"$ne": False}}, {"_id": 0}).to_list(50)
+
+    # 3. Get current week assignments
+    week_end = (datetime.fromisoformat(week_start) + timedelta(days=7)).strftime("%Y-%m-%d")
+    assignments = await db.shift_assignments.find({
+        "branch_id": branch_id,
+        "date": {"$gte": week_start, "$lt": week_end}
+    }, {"_id": 0}).to_list(5000)
+
+    # 4. Get employees
+    employees = await db.employees.find({"active": True, "branch_id": branch_id}, {"_id": 0, "id": 1, "name": 1, "position": 1}).to_list(200)
+
+    # 5. Build shift coverage map: for each day, how many staff per shift
+    week_dates = []
+    start_dt = datetime.fromisoformat(week_start)
+    for i in range(7):
+        d = start_dt + timedelta(days=i)
+        week_dates.append(d.strftime("%Y-%m-%d"))
+
+    # Coverage per day
+    daily_coverage = []
+    for i, date in enumerate(week_dates):
+        day_abbr = DAY_ABBR[i]
+        day_assignments = [a for a in assignments if a["date"] == date]
+        staff_count = len(set(a["employee_id"] for a in day_assignments))
+
+        # Demand from peak hours: get order volume for this day of week
+        dow = (start_dt + timedelta(days=i)).weekday()
+        day_demand = next((d for d in peak.get("daily", []) if d["day"] == dow), {})
+        avg_daily_orders = day_demand.get("orders", 0)
+
+        # Calculate demand level
+        avg_orders = peak.get("total_orders", 0) / 7 if peak.get("total_orders", 0) > 0 else 0
+        if avg_daily_orders > avg_orders * 1.3:
+            demand_level = "high"
+        elif avg_daily_orders > avg_orders * 0.7:
+            demand_level = "medium"
+        else:
+            demand_level = "low"
+
+        # Shift breakdown
+        shift_breakdown = []
+        for s in shifts:
+            if day_abbr not in s.get("days", []):
+                continue
+            assigned = [a for a in day_assignments if a["shift_id"] == s["id"]]
+            shift_breakdown.append({
+                "shift_name": s["name"],
+                "shift_id": s["id"],
+                "start_time": s["start_time"],
+                "end_time": s["end_time"],
+                "assigned_count": len(assigned),
+                "assigned_employees": [a["employee_name"] for a in assigned],
+            })
+
+        daily_coverage.append({
+            "date": date,
+            "day": DAY_NAMES[dow],
+            "day_abbr": day_abbr,
+            "staff_count": staff_count,
+            "order_demand": avg_daily_orders,
+            "demand_level": demand_level,
+            "shifts": shift_breakdown,
+        })
+
+    # 6. Build suggestions
+    suggestions = []
+    total_staff = len(employees)
+
+    for dc in daily_coverage:
+        if dc["demand_level"] == "high" and dc["staff_count"] < total_staff * 0.7:
+            suggestions.append({
+                "type": "understaffed",
+                "priority": "high",
+                "day": dc["day"],
+                "date": dc["date"],
+                "message": f"{dc['day']} is a high-demand day ({dc['order_demand']} orders avg) but only {dc['staff_count']} of {total_staff} staff scheduled.",
+                "action": f"Consider adding {max(1, int(total_staff * 0.7) - dc['staff_count'])} more staff.",
+            })
+        elif dc["demand_level"] == "low" and dc["staff_count"] > total_staff * 0.6:
+            suggestions.append({
+                "type": "overstaffed",
+                "priority": "low",
+                "day": dc["day"],
+                "date": dc["date"],
+                "message": f"{dc['day']} is a low-demand day ({dc['order_demand']} orders avg) with {dc['staff_count']} staff.",
+                "action": "You could reduce staff or use this day for training/inventory.",
+            })
+
+        # Check for shifts without coverage
+        for sb in dc["shifts"]:
+            if sb["assigned_count"] == 0:
+                suggestions.append({
+                    "type": "no_coverage",
+                    "priority": "high",
+                    "day": dc["day"],
+                    "date": dc["date"],
+                    "message": f"{sb['shift_name']} ({sb['start_time']}-{sb['end_time']}) on {dc['day']} has no staff assigned.",
+                    "action": "Assign at least one employee to this shift.",
+                })
+
+    # 7. Peak hour to shift mapping
+    shift_demand = []
+    for s in shifts:
+        try:
+            s_start = int(s["start_time"].split(":")[0])
+            s_end = int(s["end_time"].split(":")[0])
+            if s_end <= s_start:
+                s_end += 24
+            overlap_orders = sum(
+                h["orders"] for h in peak.get("hourly", [])
+                if s_start <= h["hour"] < s_end or (s_end > 24 and h["hour"] < s_end - 24)
+            )
+            shift_demand.append({
+                "shift_name": s["name"],
+                "shift_id": s["id"],
+                "start_time": s["start_time"],
+                "end_time": s["end_time"],
+                "orders_during_shift": overlap_orders,
+                "demand_level": "high" if overlap_orders > peak.get("avg_orders_per_hour", 0) * (s_end - s_start) else "normal",
+            })
+        except:
+            continue
+
+    return {
+        "branch_id": branch_id,
+        "week_start": week_start,
+        "total_employees": total_staff,
+        "total_shifts": len(shifts),
+        "peak_hours": peak,
+        "daily_coverage": daily_coverage,
+        "shift_demand": shift_demand,
+        "suggestions": sorted(suggestions, key=lambda x: 0 if x["priority"] == "high" else 1),
+        "total_suggestions": len(suggestions),
+    }

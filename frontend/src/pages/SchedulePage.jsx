@@ -8,11 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Clock, ChevronLeft, ChevronRight, UserCheck, AlertTriangle, Sparkles, Loader2 } from 'lucide-react';
+import { Plus, Clock, ChevronLeft, ChevronRight, UserCheck, AlertTriangle, Sparkles, Loader2, TrendingUp, Users, CalendarDays, Zap, ShieldAlert, ArrowRight } from 'lucide-react';
 import api from '@/lib/api';
 import { useBranchStore } from '@/stores';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const COLORS = ['#F5841F', '#3B82F6', '#22C55E', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F59E0B'];
@@ -55,6 +56,8 @@ export default function SchedulePage() {
   const [timeData, setTimeData] = useState({ actual_in: '', actual_out: '' });
   const [aiLoading, setAiLoading] = useState(false);
   const [aiRecommendations, setAiRecommendations] = useState(null);
+  const [insights, setInsights] = useState(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -69,8 +72,18 @@ export default function SchedulePage() {
   }, []);
 
   useEffect(() => {
-    if (branchId) { fetchAssignments(); fetchAttendance(); }
+    if (branchId) { fetchAssignments(); fetchAttendance(); fetchInsights(); }
   }, [branchId, weekStart]);
+
+  const fetchInsights = async () => {
+    if (!branchId) return;
+    setInsightsLoading(true);
+    try {
+      const { data } = await api.get(`/staffing-insights?branch_id=${branchId}&week_start=${weekStart}`);
+      setInsights(data);
+    } catch { }
+    finally { setInsightsLoading(false); }
+  };
 
   const fetchAssignments = async () => {
     try {
@@ -192,6 +205,7 @@ export default function SchedulePage() {
         <Tabs defaultValue="schedule">
           <TabsList>
             <TabsTrigger value="schedule">Weekly Schedule</TabsTrigger>
+            <TabsTrigger value="insights" data-testid="insights-tab"><TrendingUp size={12} className="mr-1" />Staffing Insights</TabsTrigger>
             <TabsTrigger value="shifts">Shifts ({branchShifts.length})</TabsTrigger>
             <TabsTrigger value="attendance">Attendance Summary</TabsTrigger>
             {aiRecommendations && <TabsTrigger value="ai" data-testid="ai-tab"><Sparkles size={12} className="mr-1" />AI Suggestions ({aiRecommendations.length})</TabsTrigger>}
@@ -254,6 +268,195 @@ export default function SchedulePage() {
               </Card>
             </TabsContent>
           )}
+
+          {/* STAFFING INSIGHTS */}
+          <TabsContent value="insights" data-testid="staffing-insights">
+            {insightsLoading ? (
+              <div className="flex items-center justify-center py-16"><Loader2 size={28} className="animate-spin text-orange-500" /></div>
+            ) : !insights ? (
+              <div className="text-center py-16 text-muted-foreground">Select a branch to see staffing insights</div>
+            ) : (
+              <div className="space-y-6">
+                {/* Summary Cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-xs text-muted-foreground">Total Staff</p>
+                      <p className="text-2xl font-bold mt-1">{insights.total_employees}</p>
+                      <p className="text-xs text-muted-foreground">active employees</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-xs text-muted-foreground">Peak Hour</p>
+                      <p className="text-2xl font-bold mt-1 text-orange-600">{insights.peak_hours?.peak_hour?.hour || '--'}</p>
+                      <p className="text-xs text-muted-foreground">{insights.peak_hours?.peak_hour ? `${insights.peak_hours.peak_hour.orders} orders` : 'no data'}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-xs text-muted-foreground">Peak Day</p>
+                      <p className="text-2xl font-bold mt-1 text-blue-600">{insights.peak_hours?.peak_day?.day || '--'}</p>
+                      <p className="text-xs text-muted-foreground">{insights.peak_hours?.peak_day ? `${insights.peak_hours.peak_day.orders} orders` : 'no data'}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-xs text-muted-foreground">Suggestions</p>
+                      <p className="text-2xl font-bold mt-1">{insights.total_suggestions}</p>
+                      <p className="text-xs text-muted-foreground">{insights.suggestions?.filter(s => s.priority === 'high').length || 0} high priority</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Peak Hours Chart */}
+                {(insights.peak_hours?.hourly || []).some(h => h.orders > 0) && (
+                  <Card>
+                    <CardHeader className="pb-2"><CardTitle className="text-sm font-outfit">Order Volume by Hour (Last 60 Days)</CardTitle></CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={220}>
+                        <AreaChart data={insights.peak_hours?.hourly || []}>
+                          <defs>
+                            <linearGradient id="insightGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#f97316" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                          <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={2} />
+                          <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                          <Tooltip formatter={(v) => [`${v} orders`, 'Orders']} />
+                          <Area type="monotone" dataKey="orders" stroke="#f97316" fill="url(#insightGrad)" strokeWidth={2} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Daily Coverage vs Demand */}
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm font-outfit">Weekly Coverage vs Demand</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b text-left text-muted-foreground">
+                            <th className="pb-2 font-medium">Day</th>
+                            <th className="pb-2 font-medium text-center">Staff Scheduled</th>
+                            <th className="pb-2 font-medium text-center">Avg Orders</th>
+                            <th className="pb-2 font-medium text-center">Demand</th>
+                            <th className="pb-2 font-medium">Shifts Coverage</th>
+                            <th className="pb-2 font-medium">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(insights.daily_coverage || []).map((dc, i) => {
+                            const demandColors = { high: 'bg-red-100 text-red-700', medium: 'bg-amber-100 text-amber-700', low: 'bg-emerald-100 text-emerald-700' };
+                            const hasGap = dc.shifts?.some(s => s.assigned_count === 0);
+                            return (
+                              <tr key={i} className="border-b last:border-0 hover:bg-stone-50" data-testid={`coverage-row-${i}`}>
+                                <td className="py-3 font-medium">{dc.day}<span className="text-xs text-muted-foreground ml-2">{dc.date}</span></td>
+                                <td className="py-3 text-center">
+                                  <span className="inline-flex items-center gap-1"><Users size={13} />{dc.staff_count}</span>
+                                </td>
+                                <td className="py-3 text-center font-medium">{dc.order_demand}</td>
+                                <td className="py-3 text-center">
+                                  <Badge className={`text-[10px] ${demandColors[dc.demand_level] || ''}`}>{dc.demand_level}</Badge>
+                                </td>
+                                <td className="py-3">
+                                  <div className="flex flex-wrap gap-1">
+                                    {dc.shifts?.map((s, si) => (
+                                      <Badge key={si} variant="outline" className={`text-[10px] ${s.assigned_count === 0 ? 'border-red-300 text-red-600 bg-red-50' : ''}`}>
+                                        {s.shift_name}: {s.assigned_count}
+                                      </Badge>
+                                    ))}
+                                    {(!dc.shifts || dc.shifts.length === 0) && <span className="text-xs text-muted-foreground">No shifts</span>}
+                                  </div>
+                                </td>
+                                <td className="py-3">
+                                  {hasGap ? (
+                                    <Badge className="bg-red-50 text-red-600 text-[10px]"><ShieldAlert size={10} className="mr-0.5" />Gap</Badge>
+                                  ) : dc.staff_count > 0 ? (
+                                    <Badge className="bg-emerald-50 text-emerald-600 text-[10px]">Covered</Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="text-[10px]">Empty</Badge>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Shift Demand Analysis */}
+                {(insights.shift_demand || []).length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2"><CardTitle className="text-sm font-outfit">Shift Demand Analysis</CardTitle></CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {insights.shift_demand.map((sd, i) => (
+                          <div key={i} className={`p-4 rounded-xl border-2 transition-all ${sd.demand_level === 'high' ? 'border-orange-300 bg-orange-50/50' : 'border-stone-200'}`}
+                            data-testid={`shift-demand-${i}`}>
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-medium text-sm">{sd.shift_name}</h4>
+                              <Badge className={sd.demand_level === 'high' ? 'bg-orange-100 text-orange-700' : 'bg-stone-100 text-stone-600'} variant="outline">
+                                {sd.demand_level === 'high' ? <Zap size={10} className="mr-0.5" /> : null}
+                                {sd.demand_level}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{sd.start_time} - {sd.end_time}</p>
+                            <p className="text-lg font-bold mt-1">{sd.orders_during_shift} <span className="text-xs font-normal text-muted-foreground">orders during shift</span></p>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Suggestions */}
+                {(insights.suggestions || []).length > 0 && (
+                  <Card className="border-amber-200">
+                    <CardHeader className="pb-2"><CardTitle className="text-sm font-outfit flex items-center gap-2"><AlertTriangle size={14} className="text-amber-500" />Scheduling Suggestions ({insights.suggestions.length})</CardTitle></CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {insights.suggestions.map((s, i) => (
+                          <div key={i} className={`p-3 rounded-lg border-l-4 ${
+                            s.priority === 'high' ? 'border-l-red-500 bg-red-50/50' : 'border-l-amber-400 bg-amber-50/50'
+                          }`} data-testid={`suggestion-${i}`}>
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <Badge className={`text-[10px] ${s.priority === 'high' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{s.priority}</Badge>
+                                  <Badge variant="outline" className="text-[10px]">{s.type.replace('_', ' ')}</Badge>
+                                </div>
+                                <p className="text-sm mt-1 font-medium">{s.message}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1"><ArrowRight size={10} />{s.action}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {(insights.suggestions || []).length === 0 && insights.total_employees > 0 && (
+                  <Card className="border-emerald-200">
+                    <CardContent className="p-6 text-center">
+                      <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-3">
+                        <UserCheck size={24} className="text-emerald-600" />
+                      </div>
+                      <p className="font-medium text-emerald-700">All Good!</p>
+                      <p className="text-sm text-muted-foreground">No staffing issues detected for this week.</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
+          </TabsContent>
 
           {/* WEEKLY SCHEDULE */}
           <TabsContent value="schedule" data-testid="schedule-grid">
