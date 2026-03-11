@@ -49,6 +49,7 @@ import OrderStatusPage from "./pages/OrderStatusPage";
 import PublicOrderTrackPage from "./pages/PublicOrderTrackPage";
 import MenuItemsPage from "./pages/MenuItemsPage";
 import AddonsPage from "./pages/AddonsPage";
+import MenuAnalyticsPage from "./pages/MenuAnalyticsPage";
 import ShiftReportPage from "./pages/ShiftReportPage";
 import CCTVPage from "./pages/CCTVPage";
 import PartnerPLReportPage from "./pages/PartnerPLReportPage";
@@ -258,6 +259,7 @@ function App() {
           <Route path="/transfers" element={<AuthRoute><ProtectedRoute perm="stock" roles={['admin', 'manager']}><TransfersPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/menu-items" element={<AuthRoute><ProtectedRoute perm="stock" roles={['admin', 'manager']}><MenuItemsPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/addons" element={<AuthRoute><ProtectedRoute perm="stock" roles={['admin', 'manager']}><AddonsPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/menu-analytics" element={<AuthRoute><ProtectedRoute perm="stock" roles={['admin', 'manager']}><MenuAnalyticsPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/table-management" element={<AuthRoute><ProtectedRoute perm="stock" roles={['admin', 'manager']}><TableManagementPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/reservations" element={<AuthRoute><ProtectedRoute perm="stock" roles={['admin', 'manager']}><ReservationsPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/kitchen" element={<AuthRoute><ProtectedRoute perm="kitchen"><KitchenPage /></ProtectedRoute></AuthRoute>} />
