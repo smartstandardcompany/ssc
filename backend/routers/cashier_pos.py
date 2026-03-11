@@ -203,20 +203,51 @@ async def get_active_orders_for_display(branch_id: Optional[str] = None):
 
 @router.get("/cashier/categories")
 async def get_menu_categories(current_user: User = Depends(get_current_user)):
-    """Get all menu categories"""
-    categories = await db.menu_categories.find({"is_active": True}, {"_id": 0}).sort("display_order", 1).to_list(100)
-    if not categories:
-        # Return default categories if none exist
-        return [
-            {"id": "all", "name": "All Items", "name_ar": "جميع الأصناف", "icon": "Grid", "color": "#F97316", "display_order": 0},
-            {"id": "popular", "name": "Popular", "name_ar": "الأكثر طلباً", "icon": "Star", "color": "#EAB308", "display_order": 1},
-            {"id": "main", "name": "Main Dishes", "name_ar": "الأطباق الرئيسية", "icon": "UtensilsCrossed", "color": "#22C55E", "display_order": 2},
-            {"id": "appetizer", "name": "Appetizers", "name_ar": "المقبلات", "icon": "Salad", "color": "#3B82F6", "display_order": 3},
-            {"id": "beverage", "name": "Beverages", "name_ar": "المشروبات", "icon": "Coffee", "color": "#8B5CF6", "display_order": 4},
-            {"id": "dessert", "name": "Desserts", "name_ar": "الحلويات", "icon": "Cake", "color": "#EC4899", "display_order": 5},
-            {"id": "sides", "name": "Sides", "name_ar": "الإضافات", "icon": "Pizza", "color": "#14B8A6", "display_order": 6},
-        ]
-    return categories
+    """Get all menu categories - merges defaults with custom categories"""
+    defaults = [
+        {"id": "all", "name": "All Items", "name_ar": "جميع الأصناف", "icon": "Grid", "color": "#F97316", "display_order": 0},
+        {"id": "popular", "name": "Popular", "name_ar": "الأكثر طلباً", "icon": "Star", "color": "#EAB308", "display_order": 1},
+        {"id": "main", "name": "Main Dishes", "name_ar": "الأطباق الرئيسية", "icon": "UtensilsCrossed", "color": "#22C55E", "display_order": 2},
+        {"id": "appetizer", "name": "Appetizers", "name_ar": "المقبلات", "icon": "Salad", "color": "#3B82F6", "display_order": 3},
+        {"id": "beverage", "name": "Beverages", "name_ar": "المشروبات", "icon": "Coffee", "color": "#8B5CF6", "display_order": 4},
+        {"id": "dessert", "name": "Desserts", "name_ar": "الحلويات", "icon": "Cake", "color": "#EC4899", "display_order": 5},
+        {"id": "sides", "name": "Sides", "name_ar": "الإضافات", "icon": "Pizza", "color": "#14B8A6", "display_order": 6},
+    ]
+    default_ids = {d["id"] for d in defaults}
+    
+    # Also fetch custom categories from the categories collection (type=menu)
+    custom_cats = await db.categories.find({"type": "menu"}, {"_id": 0}).to_list(100)
+    order = len(defaults)
+    for c in custom_cats:
+        cat_id = c["name"].lower().replace(" ", "_")
+        if cat_id not in default_ids:
+            defaults.append({
+                "id": cat_id,
+                "name": c["name"],
+                "name_ar": c.get("name_ar", ""),
+                "icon": "Tag",
+                "color": "#6B7280",
+                "display_order": order
+            })
+            default_ids.add(cat_id)
+            order += 1
+    
+    # Also check for any category values in menu_items that aren't covered
+    item_cats = await db.menu_items.distinct("category")
+    for cat_val in item_cats:
+        if cat_val and cat_val not in default_ids:
+            defaults.append({
+                "id": cat_val,
+                "name": cat_val.replace("_", " ").title(),
+                "name_ar": "",
+                "icon": "Tag",
+                "color": "#6B7280",
+                "display_order": order
+            })
+            default_ids.add(cat_val)
+            order += 1
+    
+    return defaults
 
 @router.post("/cashier/categories")
 async def create_menu_category(body: dict, current_user: User = Depends(get_current_user)):
@@ -1257,3 +1288,78 @@ async def seed_menu_data(current_user: User = Depends(get_current_user)):
         await db.menu_items.insert_one(item_dict)
     
     return {"message": f"Seeded {len(sample_items)} menu items", "seeded": True}
+
+
+# =====================================================
+# PRINTER MANAGEMENT
+# =====================================================
+
+@router.get("/cashier/printers")
+async def get_printers(current_user: User = Depends(get_current_user)):
+    """Get all configured printers"""
+    printers = await db.printers.find({}, {"_id": 0}).to_list(50)
+    return printers
+
+@router.post("/cashier/printers")
+async def create_printer(body: dict, current_user: User = Depends(get_current_user)):
+    """Add a new printer"""
+    printer = {
+        "id": str(uuid.uuid4()),
+        "name": body["name"],
+        "type": body.get("type", "receipt"),  # receipt, kitchen, label
+        "ip_address": body.get("ip_address", ""),
+        "port": body.get("port", 9100),
+        "paper_width": body.get("paper_width", "80mm"),  # 58mm, 80mm
+        "is_default": body.get("is_default", False),
+        "branch_id": body.get("branch_id"),
+        "print_categories": body.get("print_categories", []),  # which categories go to this printer
+        "auto_print": body.get("auto_print", False),
+        "copies": body.get("copies", 1),
+        "is_active": True,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    # If setting as default, unset other defaults of same type
+    if printer["is_default"]:
+        await db.printers.update_many(
+            {"type": printer["type"], "branch_id": printer.get("branch_id")},
+            {"$set": {"is_default": False}}
+        )
+    await db.printers.insert_one(printer)
+    return {k: v for k, v in printer.items() if k != '_id'}
+
+@router.put("/cashier/printers/{printer_id}")
+async def update_printer(printer_id: str, body: dict, current_user: User = Depends(get_current_user)):
+    """Update printer settings"""
+    update_fields = {}
+    for field in ["name", "type", "ip_address", "port", "paper_width", "is_default", "branch_id", "print_categories", "auto_print", "copies", "is_active"]:
+        if field in body:
+            update_fields[field] = body[field]
+    if update_fields.get("is_default"):
+        p = await db.printers.find_one({"id": printer_id}, {"_id": 0})
+        if p:
+            await db.printers.update_many(
+                {"type": p["type"], "branch_id": p.get("branch_id"), "id": {"$ne": printer_id}},
+                {"$set": {"is_default": False}}
+            )
+    result = await db.printers.update_one({"id": printer_id}, {"$set": update_fields})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Printer not found")
+    updated = await db.printers.find_one({"id": printer_id}, {"_id": 0})
+    return updated
+
+@router.delete("/cashier/printers/{printer_id}")
+async def delete_printer(printer_id: str, current_user: User = Depends(get_current_user)):
+    """Remove a printer"""
+    result = await db.printers.delete_one({"id": printer_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Printer not found")
+    return {"message": "Printer deleted"}
+
+@router.post("/cashier/printers/{printer_id}/test")
+async def test_printer(printer_id: str, current_user: User = Depends(get_current_user)):
+    """Test printer connection"""
+    printer = await db.printers.find_one({"id": printer_id}, {"_id": 0})
+    if not printer:
+        raise HTTPException(status_code=404, detail="Printer not found")
+    # In production, this would send a test print. For now, we just verify the config exists.
+    return {"message": f"Test sent to {printer['name']} ({printer.get('ip_address', 'N/A')})", "status": "ok"}

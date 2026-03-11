@@ -30,7 +30,7 @@ const DEFAULT_CATEGORIES = [
 
 // ---- Small sub-components for the editor tabs ----
 
-function SizesEditor({ sizes, onChange, branches, branchAvailability, onAvailChange }) {
+function SizesEditor({ sizes, onChange, branches, branchAvailability, onAvailChange, branchPrices, onBranchPricesChange }) {
   const addSize = () => onChange([...sizes, { name: '', price: 0 }]);
   const remove = (i) => onChange(sizes.filter((_, j) => j !== i));
   const update = (i, field, val) => {
@@ -39,36 +39,71 @@ function SizesEditor({ sizes, onChange, branches, branchAvailability, onAvailCha
     onChange(next);
   };
 
+  const setBranchPrice = (sizeName, branchId, price) => {
+    const next = { ...(branchPrices || {}) };
+    const key = `${sizeName}__${branchId}`;
+    next[key] = parseFloat(price) || 0;
+    onBranchPricesChange(next);
+  };
+
+  const getBranchPrice = (sizeName, branchId) => {
+    const key = `${sizeName}__${branchId}`;
+    return (branchPrices || {})[key];
+  };
+
   return (
     <div className="space-y-4">
       <div className="p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg">
-        <p className="text-xs text-blue-700 dark:text-blue-400">Add size variants. Each size has its own price. Toggle branch availability below each size.</p>
+        <p className="text-xs text-blue-700 dark:text-blue-400">Add size variants with branch-specific pricing. Toggle which branches offer each size and set custom prices per branch.</p>
       </div>
       {sizes.map((size, i) => (
-        <div key={i} className="border rounded-lg p-3 space-y-2">
+        <div key={i} className="border rounded-xl p-4 space-y-3 bg-white dark:bg-stone-800">
           <div className="flex items-center gap-3">
-            <Input placeholder="Size name (e.g., Small)" value={size.name} onChange={e => update(i, 'name', e.target.value)} className="flex-1" data-testid={`size-name-${i}`} />
-            <Input type="number" step="0.01" placeholder="Price" value={size.price} onChange={e => update(i, 'price', e.target.value)} className="w-28" data-testid={`size-price-${i}`} />
-            <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" onClick={() => remove(i)}><Trash2 size={14} /></Button>
+            <Input placeholder="Size name (e.g., Small)" value={size.name} onChange={e => update(i, 'name', e.target.value)} className="flex-1 font-semibold rounded-lg" data-testid={`size-name-${i}`} />
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground">Base:</span>
+              <Input type="number" step="0.01" placeholder="Price" value={size.price} onChange={e => update(i, 'price', e.target.value)} className="w-24 rounded-lg" data-testid={`size-price-${i}`} />
+            </div>
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-red-400 hover:text-red-600 rounded-lg" onClick={() => remove(i)}><Trash2 size={14} /></Button>
           </div>
           {size.name && branches.length > 0 && (
-            <div className="pl-2">
-              <p className="text-[11px] text-muted-foreground mb-1">Available at:</p>
-              <div className="flex flex-wrap gap-1">
+            <div className="border-t pt-3">
+              <p className="text-[11px] font-semibold text-stone-500 mb-2 uppercase tracking-wide">Branch Availability & Pricing</p>
+              <div className="space-y-1.5">
                 {branches.map(b => {
                   const avail = branchAvailability[b.id] || [];
                   const isOn = avail.includes(size.name);
+                  const customPrice = getBranchPrice(size.name, b.id);
                   return (
-                    <Badge key={b.id} variant={isOn ? 'default' : 'outline'}
-                      className={`text-[10px] cursor-pointer select-none ${isOn ? 'bg-orange-500' : ''}`}
-                      onClick={() => {
-                        const next = { ...branchAvailability };
-                        const curr = next[b.id] || [];
-                        next[b.id] = isOn ? curr.filter(s => s !== size.name) : [...curr, size.name];
-                        onAvailChange(next);
-                      }}
-                      data-testid={`size-branch-${b.id}-${i}`}
-                    >{b.name}</Badge>
+                    <div key={b.id} className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${isOn ? 'bg-primary/5' : 'bg-stone-50 dark:bg-stone-700/50'}`}>
+                      <Checkbox
+                        checked={isOn}
+                        onCheckedChange={() => {
+                          const next = { ...branchAvailability };
+                          const curr = next[b.id] || [];
+                          next[b.id] = isOn ? curr.filter(s => s !== size.name) : [...curr, size.name];
+                          onAvailChange(next);
+                        }}
+                        data-testid={`size-branch-${b.id}-${i}`}
+                      />
+                      <span className={`text-xs font-medium flex-1 ${isOn ? 'text-stone-700 dark:text-stone-200' : 'text-stone-400'}`}>{b.name}</span>
+                      {isOn && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-stone-400">SAR</span>
+                          <Input
+                            type="number" step="0.01"
+                            placeholder={String(size.price)}
+                            value={customPrice !== undefined ? customPrice : ''}
+                            onChange={e => setBranchPrice(size.name, b.id, e.target.value)}
+                            className="w-20 h-7 text-xs rounded-md"
+                            data-testid={`size-branch-price-${b.id}-${i}`}
+                          />
+                          {customPrice !== undefined && customPrice !== size.price && (
+                            <span className="text-[9px] text-primary font-medium">custom</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -76,7 +111,7 @@ function SizesEditor({ sizes, onChange, branches, branchAvailability, onAvailCha
           )}
         </div>
       ))}
-      <Button variant="outline" className="w-full" onClick={addSize} data-testid="add-size-btn"><Plus size={16} className="mr-1" /> Add Size</Button>
+      <Button variant="outline" className="w-full rounded-xl" onClick={addSize} data-testid="add-size-btn"><Plus size={16} className="mr-1" /> Add Size</Button>
     </div>
   );
 }
@@ -727,6 +762,8 @@ export default function MenuItemsPage() {
                 branches={branches}
                 branchAvailability={formData.sizesBranchAvail}
                 onAvailChange={sizesBranchAvail => setFormData({...formData, sizesBranchAvail})}
+                branchPrices={formData.branch_prices}
+                onBranchPricesChange={branch_prices => setFormData({...formData, branch_prices})}
               />
             </TabsContent>
 

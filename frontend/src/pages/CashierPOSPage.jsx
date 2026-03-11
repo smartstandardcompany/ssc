@@ -13,11 +13,12 @@ import {
   Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, Banknote,
   Users, Printer, ChefHat, X, Check, Clock, Coffee, UtensilsCrossed, Cake,
   Pizza, Salad, Grid, Star, LogOut, Receipt, Percent, DollarSign, User, Building2, PlayCircle,
-  Edit, Save, ChevronLeft
+  Edit, Save, ChevronLeft, Tag, Settings, Wifi, WifiOff
 } from 'lucide-react';
 import api from '@/lib/api';
 import CashierShiftModal from '@/components/CashierShiftModal';
 import { QRCodeSVG } from 'qrcode.react';
+import { Switch } from '@/components/ui/switch';
 
 const CATEGORY_ICONS = {
   all: Grid,
@@ -27,6 +28,7 @@ const CATEGORY_ICONS = {
   beverage: Coffee,
   dessert: Cake,
   sides: Pizza,
+  _default: Tag,
 };
 
 export default function CashierPOSPage() {
@@ -67,6 +69,12 @@ export default function CashierPOSPage() {
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [viewingOrder, setViewingOrder] = useState(null);
   const [editingOrder, setEditingOrder] = useState(null);
+
+  // Printer
+  const [showPrinterSettings, setShowPrinterSettings] = useState(false);
+  const [printers, setPrinters] = useState([]);
+  const [printerForm, setPrinterForm] = useState({ name: '', type: 'receipt', ip_address: '', port: 9100, paper_width: '80mm', is_default: false, auto_print: false, copies: 1 });
+  const [editingPrinter, setEditingPrinter] = useState(null);
 
   // Check auth
   useEffect(() => {
@@ -114,6 +122,47 @@ export default function CashierPOSPage() {
       setOrders(data || []);
     } catch { setOrders([]); }
     finally { setLoadingOrders(false); }
+  };
+
+  // Printer management
+  const fetchPrinters = async () => {
+    try {
+      const token = localStorage.getItem('cashier_token');
+      const { data } = await api.get('/cashier/printers', { headers: { Authorization: `Bearer ${token}` } });
+      setPrinters(data || []);
+    } catch {}
+  };
+  const savePrinter = async () => {
+    try {
+      const token = localStorage.getItem('cashier_token');
+      const headers = { Authorization: `Bearer ${token}` };
+      if (editingPrinter) {
+        await api.put(`/cashier/printers/${editingPrinter.id}`, printerForm, { headers });
+        toast.success('Printer updated');
+      } else {
+        await api.post('/cashier/printers', printerForm, { headers });
+        toast.success('Printer added');
+      }
+      fetchPrinters();
+      setEditingPrinter(null);
+      setPrinterForm({ name: '', type: 'receipt', ip_address: '', port: 9100, paper_width: '80mm', is_default: false, auto_print: false, copies: 1 });
+    } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+  };
+  const deletePrinter = async (id) => {
+    if (!window.confirm('Delete this printer?')) return;
+    try {
+      const token = localStorage.getItem('cashier_token');
+      await api.delete(`/cashier/printers/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      toast.success('Printer removed');
+      fetchPrinters();
+    } catch { toast.error('Failed to delete'); }
+  };
+  const testPrinter = async (id) => {
+    try {
+      const token = localStorage.getItem('cashier_token');
+      const { data } = await api.post(`/cashier/printers/${id}/test`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      toast.success(data.message);
+    } catch { toast.error('Test failed'); }
   };
 
   const handleDeleteOrder = async (orderId) => {
@@ -432,6 +481,10 @@ export default function CashierPOSPage() {
               onClick={() => { setShowOrderHistory(true); fetchOrders(); }} data-testid="orders-history-btn">
               <Receipt size={15} className="mr-1.5" />Orders
             </Button>
+            <Button size="sm" variant="outline" className="h-9 rounded-xl border-stone-200 text-stone-600"
+              onClick={() => { setShowPrinterSettings(true); fetchPrinters(); }} data-testid="printer-settings-btn">
+              <Printer size={15} className="mr-1.5" />Printers
+            </Button>
             <Button size="sm"
               variant={currentShift ? 'default' : 'outline'}
               className={`h-9 rounded-xl ${currentShift ? 'bg-emerald-500 hover:bg-emerald-600' : 'border-stone-200 text-stone-600'}`}
@@ -465,7 +518,7 @@ export default function CashierPOSPage() {
         <div className="px-4 py-3 overflow-x-auto">
           <div className="flex gap-2">
             {categories.map(cat => {
-              const Icon = CATEGORY_ICONS[cat.id] || Grid;
+              const Icon = CATEGORY_ICONS[cat.id] || CATEGORY_ICONS._default;
               const isActive = selectedCategory === cat.id;
               return (
                 <button
@@ -1069,6 +1122,134 @@ export default function CashierPOSPage() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Printer Settings Dialog */}
+      <Dialog open={showPrinterSettings} onOpenChange={setShowPrinterSettings}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Printer size={18} className="text-primary" />
+              Printer Settings
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Printer Form */}
+          <div className="bg-stone-50 dark:bg-stone-800 rounded-xl p-4 space-y-3">
+            <h3 className="font-semibold text-sm">{editingPrinter ? 'Edit Printer' : 'Add New Printer'}</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Printer Name</Label>
+                <Input placeholder="e.g., Receipt Printer 1" value={printerForm.name}
+                  onChange={e => setPrinterForm({...printerForm, name: e.target.value})}
+                  className="rounded-lg" data-testid="printer-name-input" />
+              </div>
+              <div>
+                <Label className="text-xs">Type</Label>
+                <Select value={printerForm.type} onValueChange={v => setPrinterForm({...printerForm, type: v})}>
+                  <SelectTrigger className="rounded-lg" data-testid="printer-type-select"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="receipt">Receipt Printer</SelectItem>
+                    <SelectItem value="kitchen">Kitchen Printer</SelectItem>
+                    <SelectItem value="label">Label Printer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">IP Address</Label>
+                <Input placeholder="192.168.1.100" value={printerForm.ip_address}
+                  onChange={e => setPrinterForm({...printerForm, ip_address: e.target.value})}
+                  className="rounded-lg" data-testid="printer-ip-input" />
+              </div>
+              <div>
+                <Label className="text-xs">Port</Label>
+                <Input type="number" value={printerForm.port}
+                  onChange={e => setPrinterForm({...printerForm, port: parseInt(e.target.value) || 9100})}
+                  className="rounded-lg" />
+              </div>
+              <div>
+                <Label className="text-xs">Paper Width</Label>
+                <Select value={printerForm.paper_width} onValueChange={v => setPrinterForm({...printerForm, paper_width: v})}>
+                  <SelectTrigger className="rounded-lg"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="58mm">58mm</SelectItem>
+                    <SelectItem value="80mm">80mm</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Copies</Label>
+                <Input type="number" min="1" max="5" value={printerForm.copies}
+                  onChange={e => setPrinterForm({...printerForm, copies: parseInt(e.target.value) || 1})}
+                  className="rounded-lg" />
+              </div>
+            </div>
+            <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Switch checked={printerForm.is_default} onCheckedChange={v => setPrinterForm({...printerForm, is_default: v})} />
+                  <Label className="text-xs">Default</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={printerForm.auto_print} onCheckedChange={v => setPrinterForm({...printerForm, auto_print: v})} />
+                  <Label className="text-xs">Auto Print</Label>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {editingPrinter && (
+                  <Button size="sm" variant="ghost" className="rounded-lg" onClick={() => {
+                    setEditingPrinter(null);
+                    setPrinterForm({ name: '', type: 'receipt', ip_address: '', port: 9100, paper_width: '80mm', is_default: false, auto_print: false, copies: 1 });
+                  }}>Cancel</Button>
+                )}
+                <Button size="sm" className="rounded-lg bg-primary hover:bg-primary/90" onClick={savePrinter}
+                  disabled={!printerForm.name} data-testid="save-printer-btn">
+                  {editingPrinter ? 'Update' : 'Add Printer'}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Printer List */}
+          <div className="space-y-2">
+            <h3 className="font-semibold text-sm">Configured Printers</h3>
+            {printers.length === 0 ? (
+              <div className="text-center py-8 text-stone-400">
+                <Printer size={32} className="mx-auto mb-2 opacity-40" />
+                <p className="text-sm">No printers configured</p>
+                <p className="text-xs">Add a printer above to start printing receipts</p>
+              </div>
+            ) : (
+              printers.map(p => (
+                <div key={p.id} className="flex items-center gap-3 p-3 bg-white dark:bg-stone-800 border rounded-xl" data-testid={`printer-${p.id}`}>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${p.is_active ? 'bg-emerald-50 text-emerald-600' : 'bg-stone-100 text-stone-400'}`}>
+                    <Printer size={18} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm">{p.name}</span>
+                      {p.is_default && <span className="text-[9px] px-1.5 py-0.5 bg-primary/10 text-primary rounded-full font-semibold">Default</span>}
+                      <span className="text-[9px] px-1.5 py-0.5 bg-stone-100 text-stone-500 rounded-full capitalize">{p.type}</span>
+                    </div>
+                    <p className="text-[11px] text-stone-400">{p.ip_address || 'No IP set'} · {p.paper_width} · {p.copies} copies</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg text-blue-500" onClick={() => testPrinter(p.id)} title="Test">
+                      <Wifi size={13} />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg" onClick={() => {
+                      setEditingPrinter(p);
+                      setPrinterForm({ name: p.name, type: p.type, ip_address: p.ip_address || '', port: p.port || 9100, paper_width: p.paper_width || '80mm', is_default: p.is_default || false, auto_print: p.auto_print || false, copies: p.copies || 1 });
+                    }}><Edit size={13} /></Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg text-red-400" onClick={() => deletePrinter(p.id)}>
+                      <Trash2 size={13} />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
