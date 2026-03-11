@@ -154,6 +154,30 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 - **Backend**: `GET /api/staffing-insights?branch_id=X&week_start=Y` - combines peak hours analysis with current schedule to calculate coverage gaps
 - Testing: 17/17 backend + full frontend UI verified (100%)
 
+### Staff Performance Dashboard (DONE)
+- **New page at `/staff-performance`** with 3 tabs: Overview, Employee Scores, Duty Assignment
+- **Overview Tab**:
+  - 5 stat cards: Employees, Avg Attendance %, Avg Punctuality %, Total Overtime, Shifts Tracked
+  - Performance Tier Distribution bar chart (Excellent/Good/Average/Needs Improvement)
+  - Weekly Attendance Trend line chart
+  - Top Performers section with ScoreRing visualization
+- **Employee Scores Tab**: Full table with score rings, attendance %, punctuality %, late/absent/OT/task counts, tier badges
+- **Reliability Score Formula**: attendance*0.4 + punctuality*0.3 + (100-absence)*0.2 + tasks*0.1
+- **Backend**: `GET /api/staff-performance` (summary + all employees) and `GET /api/staff-performance/{id}` (individual details)
+- Filters: Period (7/30/90/180 days) and Branch
+
+### AI Duty Assignment & Reminders (DONE)
+- **Duty Assignment Tab**: AI-Powered Duty Planner with role-based duty generation
+- **4 Role Cards**: Cleaner, Waiter, Cashier, Chef — each with "Use Preset" (instant 5 reminders) and "AI Plan" (custom AI generation)
+- **AI Duty Planner Dialog**: Select role, set shift hours, add context, generate 5-8 smart tasks with AI
+  - AI considers food safety, customer experience, hygiene, peak hours
+  - Generated tasks show name, message, priority, interval
+  - One-click "Create All as Reminders" saves to task reminder system
+- **Enhanced AI Prompt**: Considers food safety regulations, peak hours, role-specific workflows
+- **Backend**: `POST /api/task-reminders/ai-generate` (GPT-4o via Emergent LLM key)
+- **Integration**: Created reminders appear in existing Task Reminders page for management
+- Testing: 25/25 backend + full frontend verified (100%)
+
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
 - Operator: test@ssc.com / testtest
