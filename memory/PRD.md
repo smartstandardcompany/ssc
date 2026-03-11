@@ -119,6 +119,21 @@ Financial Management | HR Management | Stock Management | Restaurant Operations 
 - **V1 Legacy Support**: Existing items with V1 modifiers correctly parsed in V2 editor
 - Testing: 16/16 backend + 8/8 frontend tests passed (100%)
 
+### Menu Analytics (DONE)
+- **New page at `/menu-analytics`** with two tabs: Item Sales and Add-on Usage
+- **Item Sales Tab**:
+  - 4 stat cards: Total Items Sold, Menu Revenue, Unique Items, Categories
+  - Top Items by Revenue bar chart (recharts)
+  - Revenue by Category pie chart
+  - All Items Ranked table with qty, revenue, orders, category
+- **Add-on Usage Tab**:
+  - 4 stat cards: Modifier Uses, Modifier Revenue, Adoption Rate, Total Orders
+  - Most Used Modifiers bar chart
+  - 3 breakdown cards: Size Variants, Add-ons, Option Groups
+- **Filters**: Period (today/week/month/year/all) and Branch
+- **Backend**: 3 API endpoints: `/api/menu-analytics/items`, `/api/menu-analytics/addons`, `/api/menu-analytics/trends`
+- Testing: 15/15 backend + all frontend tests passed (100%)
+
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
 - Operator: test@ssc.com / testtest
