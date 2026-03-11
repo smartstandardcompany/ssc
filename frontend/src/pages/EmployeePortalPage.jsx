@@ -681,6 +681,9 @@ export default function EmployeePortalPage() {
                       <CheckCircle size={12} className="mr-1" />Mark All Read
                     </Button>
                   )}
+                  <a href="/notification-preferences">
+                    <Button size="sm" variant="ghost" className="text-xs" data-testid="prefs-link-btn">Preferences</Button>
+                  </a>
                 </div>
               </CardHeader>
               <CardContent>

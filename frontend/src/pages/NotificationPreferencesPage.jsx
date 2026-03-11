@@ -1,237 +1,205 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Bell, BellOff, Package, Calendar, Wallet, AlertTriangle, FileWarning, BarChart3, Check, MessageSquare } from 'lucide-react';
-import api from '@/lib/api';
 import { toast } from 'sonner';
+import { Bell, Smartphone, MessageCircle, Moon, Save, Loader2, Shield, Clock, Volume2, VolumeX } from 'lucide-react';
+import api from '@/lib/api';
 
-const PREF_ITEMS = [
-  { key: 'low_stock_alerts', label: 'Low Stock Alerts', desc: 'Get notified when items run low', icon: Package, color: 'text-red-500' },
-  { key: 'leave_requests', label: 'Leave Requests', desc: 'Notifications for new leave requests and approvals', icon: Calendar, color: 'text-blue-500' },
-  { key: 'order_updates', label: 'Order Updates', desc: 'KDS and POS order status changes', icon: BarChart3, color: 'text-emerald-500' },
-  { key: 'loan_installments', label: 'Loan Installments', desc: 'Upcoming loan installment due reminders', icon: Wallet, color: 'text-amber-500' },
-  { key: 'expense_anomalies', label: 'Expense Anomalies', desc: 'Unusual spending pattern detection', icon: AlertTriangle, color: 'text-orange-500' },
-  { key: 'document_expiry', label: 'Document Expiry', desc: 'Alerts for expiring documents and licenses', icon: FileWarning, color: 'text-purple-500' },
-  { key: 'daily_summary', label: 'Daily Summary', desc: 'End-of-day business summary notification', icon: BarChart3, color: 'text-stone-500' },
-];
+const HOURS = Array.from({ length: 24 }, (_, i) => ({ value: i, label: `${i.toString().padStart(2, '0')}:00` }));
 
 export default function NotificationPreferencesPage() {
-  const [prefs, setPrefs] = useState({});
-  const [pushStatus, setPushStatus] = useState({ subscribed: false });
+  const [prefs, setPrefs] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { loadAll(); }, []);
-
-  const loadAll = async () => {
+  const fetchPrefs = async () => {
     try {
-      const [prefsRes, statusRes] = await Promise.all([
-        api.get('/push/preferences'),
-        api.get('/push/status')
-      ]);
-      setPrefs(prefsRes.data);
-      setPushStatus(statusRes.data);
+      const { data } = await api.get('/my/notification-preferences');
+      setPrefs({
+        channels: data.channels || {
+          in_app: data.channel_in_app !== false,
+          push: data.channel_push !== false,
+          whatsapp: data.channel_whatsapp !== false,
+        },
+        quiet_hours_enabled: data.quiet_hours_enabled || false,
+        quiet_hours_start: data.quiet_hours_start ?? 22,
+        quiet_hours_end: data.quiet_hours_end ?? 7,
+        task_reminders: data.task_reminders !== false,
+        schedule_alerts: data.schedule_alerts !== false,
+        system_alerts: data.system_alerts !== false,
+      });
     } catch { toast.error('Failed to load preferences'); }
     finally { setLoading(false); }
   };
 
-  const togglePref = (key) => {
-    setPrefs(prev => ({ ...prev, [key]: !prev[key] }));
-  };
+  useEffect(() => { fetchPrefs(); }, []);
 
-  const savePrefs = async () => {
+  const handleSave = async () => {
     setSaving(true);
     try {
-      await api.put('/push/preferences', {
-        low_stock_alerts: prefs.low_stock_alerts ?? true,
-        leave_requests: prefs.leave_requests ?? true,
-        order_updates: prefs.order_updates ?? true,
-        loan_installments: prefs.loan_installments ?? true,
-        expense_anomalies: prefs.expense_anomalies ?? true,
-        document_expiry: prefs.document_expiry ?? true,
-        daily_summary: prefs.daily_summary ?? false,
-        channel_push: prefs.channel_push ?? true,
-        channel_whatsapp: prefs.channel_whatsapp ?? false,
-      });
+      await api.put('/my/notification-preferences', prefs);
       toast.success('Preferences saved');
     } catch { toast.error('Failed to save'); }
     finally { setSaving(false); }
   };
 
-  const enablePush = async () => {
-    if (!('Notification' in window)) {
-      toast.error('Push notifications not supported in this browser');
-      return;
-    }
+  const updateChannel = (key, val) => setPrefs(p => ({ ...p, channels: { ...p.channels, [key]: val } }));
+  const update = (key, val) => setPrefs(p => ({ ...p, [key]: val }));
 
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      toast.error('Notification permission denied');
-      return;
-    }
-
-    try {
-      const vapidRes = await api.get('/push/vapid-key');
-      const publicKey = vapidRes.data.publicKey;
-
-      if (!publicKey) {
-        toast.error('Push not configured on server');
-        return;
-      }
-
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey)
-      });
-
-      await api.post('/push/subscribe', {
-        endpoint: subscription.endpoint,
-        keys: {
-          p256dh: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('p256dh')))),
-          auth: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('auth'))))
-        }
-      });
-
-      setPushStatus({ subscribed: true, subscription_count: 1 });
-      toast.success('Push notifications enabled!');
-    } catch (err) {
-      console.error('Push subscribe error:', err);
-      toast.error('Failed to enable push notifications');
-    }
-  };
-
-  const disablePush = async () => {
-    try {
-      await api.delete('/push/unsubscribe');
-      setPushStatus({ subscribed: false, subscription_count: 0 });
-      toast.success('Push notifications disabled');
-    } catch { toast.error('Failed'); }
-  };
-
-  if (loading) return <DashboardLayout><div className="flex items-center justify-center h-64">Loading...</div></DashboardLayout>;
+  if (loading) return <DashboardLayout><div className="flex items-center justify-center py-20"><Loader2 size={32} className="animate-spin text-orange-500" /></div></DashboardLayout>;
+  if (!prefs) return null;
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 max-w-2xl" data-testid="notification-preferences-page">
+      <div className="max-w-2xl mx-auto space-y-6" data-testid="notification-prefs-page">
         <div>
-          <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-1" data-testid="notif-prefs-title">Notification Preferences</h1>
-          <p className="text-sm text-muted-foreground">Choose which notifications you want to receive</p>
+          <h1 className="text-2xl sm:text-3xl font-bold font-outfit dark:text-white">Notification Preferences</h1>
+          <p className="text-muted-foreground text-sm">Control how and when you receive notifications</p>
         </div>
 
-        {/* Push Status */}
-        <Card className="border-orange-200 bg-orange-50/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {pushStatus.subscribed ? <Bell className="text-orange-500" size={24} /> : <BellOff className="text-stone-400" size={24} />}
-                <div>
-                  <p className="text-sm font-semibold">Browser Push Notifications</p>
-                  <p className="text-xs text-muted-foreground">
-                    {pushStatus.subscribed ? 'Enabled — you will receive browser push alerts' : 'Disabled — enable to get real-time browser alerts'}
-                  </p>
-                </div>
-              </div>
-              <Button
-                onClick={pushStatus.subscribed ? disablePush : enablePush}
-                variant={pushStatus.subscribed ? 'outline' : 'default'}
-                className="rounded-xl"
-                data-testid="toggle-push-btn"
-              >
-                {pushStatus.subscribed ? 'Disable' : 'Enable Push'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Delivery Channels */}
+        {/* Channels */}
         <Card>
-          <CardHeader>
-            <CardTitle className="font-outfit text-base">Delivery Channels</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-outfit flex items-center gap-2"><Bell size={16} className="text-orange-500" />Notification Channels</CardTitle>
+            <p className="text-xs text-muted-foreground">Choose how you want to receive duty reminders and alerts</p>
           </CardHeader>
           <CardContent className="space-y-1">
-            {[
-              { key: 'channel_push', label: 'Browser Push', desc: 'Receive alerts as browser push notifications', icon: Bell, color: 'text-orange-500' },
-              { key: 'channel_whatsapp', label: 'WhatsApp', desc: 'Receive alerts via WhatsApp (requires Twilio config)', icon: MessageSquare, color: 'text-emerald-500' },
-            ].map(item => {
-              const Icon = item.icon;
-              const enabled = prefs[item.key] ?? (item.key === 'channel_push');
-              return (
-                <div
-                  key={item.key}
-                  className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-colors ${enabled ? 'bg-white border-stone-200' : 'bg-stone-50 border-stone-100 opacity-60'}`}
-                  onClick={() => togglePref(item.key)}
-                  data-testid={`channel-${item.key}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon size={18} className={item.color} />
-                    <div>
-                      <p className="text-sm font-medium">{item.label}</p>
-                      <p className="text-[11px] text-muted-foreground">{item.desc}</p>
-                    </div>
-                  </div>
-                  <div className={`w-10 h-6 rounded-full flex items-center transition-colors ${enabled ? 'bg-orange-500 justify-end' : 'bg-stone-300 justify-start'}`}>
-                    <div className="w-5 h-5 bg-white rounded-full shadow mx-0.5 flex items-center justify-center">
-                      {enabled && <Check size={12} className="text-orange-500" />}
-                    </div>
-                  </div>
+            <div className="flex items-center justify-between p-4 rounded-xl border hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors" data-testid="channel-in-app">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <Bell size={18} className="text-blue-600" />
                 </div>
-              );
-            })}
+                <div>
+                  <p className="font-medium text-sm dark:text-white">In-App Notifications</p>
+                  <p className="text-xs text-muted-foreground">See alerts in your Employee Portal</p>
+                </div>
+              </div>
+              <Switch checked={prefs.channels.in_app} onCheckedChange={v => updateChannel('in_app', v)} data-testid="toggle-in-app" />
+            </div>
+
+            <div className="flex items-center justify-between p-4 rounded-xl border hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors" data-testid="channel-push">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                  <Smartphone size={18} className="text-purple-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm dark:text-white">Push Notifications</p>
+                  <p className="text-xs text-muted-foreground">Browser push alerts on your device</p>
+                </div>
+              </div>
+              <Switch checked={prefs.channels.push} onCheckedChange={v => updateChannel('push', v)} data-testid="toggle-push" />
+            </div>
+
+            <div className="flex items-center justify-between p-4 rounded-xl border hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors" data-testid="channel-whatsapp">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                  <MessageCircle size={18} className="text-emerald-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm dark:text-white">WhatsApp Messages</p>
+                  <p className="text-xs text-muted-foreground">Receive duty reminders via WhatsApp</p>
+                </div>
+              </div>
+              <Switch checked={prefs.channels.whatsapp} onCheckedChange={v => updateChannel('whatsapp', v)} data-testid="toggle-whatsapp" />
+            </div>
           </CardContent>
         </Card>
 
         {/* Notification Types */}
         <Card>
-          <CardHeader>
-            <CardTitle className="font-outfit text-base">Notification Types</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-outfit flex items-center gap-2"><Shield size={16} className="text-blue-500" />Notification Types</CardTitle>
+            <p className="text-xs text-muted-foreground">Choose which types of notifications to receive</p>
           </CardHeader>
           <CardContent className="space-y-1">
-            {PREF_ITEMS.map(item => {
-              const Icon = item.icon;
-              const enabled = prefs[item.key] ?? (item.key !== 'daily_summary');
-              return (
-                <div
-                  key={item.key}
-                  className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-colors ${enabled ? 'bg-white border-stone-200' : 'bg-stone-50 border-stone-100 opacity-60'}`}
-                  onClick={() => togglePref(item.key)}
-                  data-testid={`pref-${item.key}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon size={18} className={item.color} />
-                    <div>
-                      <p className="text-sm font-medium">{item.label}</p>
-                      <p className="text-[11px] text-muted-foreground">{item.desc}</p>
-                    </div>
-                  </div>
-                  <div className={`w-10 h-6 rounded-full flex items-center transition-colors ${enabled ? 'bg-orange-500 justify-end' : 'bg-stone-300 justify-start'}`}>
-                    <div className="w-5 h-5 bg-white rounded-full shadow mx-0.5 flex items-center justify-center">
-                      {enabled && <Check size={12} className="text-orange-500" />}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            <div className="flex items-center justify-between p-4 rounded-xl border hover:bg-stone-50 dark:hover:bg-stone-800/50" data-testid="type-task-reminders">
+              <div>
+                <p className="font-medium text-sm dark:text-white">Task & Duty Reminders</p>
+                <p className="text-xs text-muted-foreground">Cleaning schedules, prep tasks, service checks</p>
+              </div>
+              <Switch checked={prefs.task_reminders} onCheckedChange={v => update('task_reminders', v)} data-testid="toggle-task-reminders" />
+            </div>
+
+            <div className="flex items-center justify-between p-4 rounded-xl border hover:bg-stone-50 dark:hover:bg-stone-800/50" data-testid="type-schedule-alerts">
+              <div>
+                <p className="font-medium text-sm dark:text-white">Schedule Alerts</p>
+                <p className="text-xs text-muted-foreground">Shift changes, upcoming shifts, swap requests</p>
+              </div>
+              <Switch checked={prefs.schedule_alerts} onCheckedChange={v => update('schedule_alerts', v)} data-testid="toggle-schedule-alerts" />
+            </div>
+
+            <div className="flex items-center justify-between p-4 rounded-xl border hover:bg-stone-50 dark:hover:bg-stone-800/50" data-testid="type-system-alerts">
+              <div>
+                <p className="font-medium text-sm dark:text-white">System Alerts</p>
+                <p className="text-xs text-muted-foreground">Leave approvals, salary updates, announcements</p>
+              </div>
+              <Switch checked={prefs.system_alerts} onCheckedChange={v => update('system_alerts', v)} data-testid="toggle-system-alerts" />
+            </div>
           </CardContent>
         </Card>
 
-        <Button onClick={savePrefs} className="w-full rounded-xl" disabled={saving} data-testid="save-prefs-btn">
-          {saving ? 'Saving...' : 'Save Preferences'}
-        </Button>
+        {/* Quiet Hours */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-outfit flex items-center gap-2"><Moon size={16} className="text-indigo-500" />Quiet Hours</CardTitle>
+            <p className="text-xs text-muted-foreground">Pause WhatsApp and push notifications during rest time. In-app notifications still arrive.</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-4 rounded-xl border" data-testid="quiet-hours-toggle">
+              <div className="flex items-center gap-3">
+                {prefs.quiet_hours_enabled ? (
+                  <VolumeX size={18} className="text-indigo-500" />
+                ) : (
+                  <Volume2 size={18} className="text-stone-400" />
+                )}
+                <div>
+                  <p className="font-medium text-sm dark:text-white">Enable Quiet Hours</p>
+                  <p className="text-xs text-muted-foreground">No push or WhatsApp during these hours</p>
+                </div>
+              </div>
+              <Switch checked={prefs.quiet_hours_enabled} onCheckedChange={v => update('quiet_hours_enabled', v)} data-testid="toggle-quiet-hours" />
+            </div>
+
+            {prefs.quiet_hours_enabled && (
+              <div className="flex items-center gap-4 pl-4">
+                <div className="flex items-center gap-2">
+                  <Clock size={14} className="text-muted-foreground" />
+                  <Label className="text-sm whitespace-nowrap">From</Label>
+                  <Select value={String(prefs.quiet_hours_start)} onValueChange={v => update('quiet_hours_start', parseInt(v))}>
+                    <SelectTrigger className="w-28" data-testid="quiet-start"><SelectValue /></SelectTrigger>
+                    <SelectContent>{HOURS.map(h => <SelectItem key={h.value} value={String(h.value)}>{h.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm whitespace-nowrap">To</Label>
+                  <Select value={String(prefs.quiet_hours_end)} onValueChange={v => update('quiet_hours_end', parseInt(v))}>
+                    <SelectTrigger className="w-28" data-testid="quiet-end"><SelectValue /></SelectTrigger>
+                    <SelectContent>{HOURS.map(h => <SelectItem key={h.value} value={String(h.value)}>{h.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <Badge variant="outline" className="text-[10px]">
+                  {prefs.quiet_hours_start > prefs.quiet_hours_end 
+                    ? `${HOURS[prefs.quiet_hours_start]?.label} - ${HOURS[prefs.quiet_hours_end]?.label} (overnight)`
+                    : `${HOURS[prefs.quiet_hours_start]?.label} - ${HOURS[prefs.quiet_hours_end]?.label}`}
+                </Badge>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Save Button */}
+        <div className="flex justify-end">
+          <Button onClick={handleSave} disabled={saving} className="bg-orange-500 hover:bg-orange-600 min-w-[140px]" data-testid="save-prefs-btn">
+            {saving ? <Loader2 size={16} className="animate-spin mr-2" /> : <Save size={16} className="mr-2" />}
+            Save Preferences
+          </Button>
+        </div>
       </div>
     </DashboardLayout>
   );
-}
-
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
 }

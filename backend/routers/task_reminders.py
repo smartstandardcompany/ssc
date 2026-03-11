@@ -514,31 +514,56 @@ async def process_task_reminders():
             # Find user account
             user = await db.users.find_one({"email": emp.get("email")}, {"_id": 0})
             user_id = user["id"] if user else None
+            emp_id = emp.get("id")
 
-            # Create in-app notification
-            notif = {
-                "id": str(uuid.uuid4()),
-                "user_id": user_id or emp.get("id"),
-                "employee_id": emp.get("id"),
-                "type": "task_reminder",
-                "title": f"Task: {r['name']}",
-                "message": r["message"],
-                "reminder_id": r["id"],
-                "read": False,
-                "created_at": now.isoformat()
-            }
-            await db.notifications.insert_one(notif)
+            # Check employee notification preferences
+            prefs = await db.notification_preferences.find_one(
+                {"$or": [{"user_id": user_id}, {"employee_id": emp_id}]}, {"_id": 0}
+            ) if (user_id or emp_id) else None
+            # Defaults: all channels enabled, no quiet hours
+            pref_channels = prefs.get("channels", {}) if prefs else {}
+            # Support both new format (channels.in_app) and legacy (channel_push)
+            in_app_enabled = pref_channels.get("in_app", prefs.get("channel_in_app", True) if prefs else True)
+            push_enabled = pref_channels.get("push", prefs.get("channel_push", True) if prefs else True)
+            whatsapp_enabled = pref_channels.get("whatsapp", prefs.get("channel_whatsapp", True) if prefs else True)
+            quiet_enabled = prefs.get("quiet_hours_enabled", False) if prefs else False
+            quiet_start = prefs.get("quiet_hours_start") if prefs else None
+            quiet_end = prefs.get("quiet_hours_end") if prefs else None
 
-            # Send push if configured
-            if "push" in r.get("channels", []) and user_id:
+            # Check quiet hours
+            in_quiet = False
+            if quiet_enabled and quiet_start is not None and quiet_end is not None:
+                current_hour = now.hour
+                if quiet_start <= quiet_end:
+                    in_quiet = quiet_start <= current_hour < quiet_end
+                else:
+                    in_quiet = current_hour >= quiet_start or current_hour < quiet_end
+
+            # Create in-app notification (always, unless disabled)
+            if in_app_enabled:
+                notif = {
+                    "id": str(uuid.uuid4()),
+                    "user_id": user_id or emp_id,
+                    "employee_id": emp_id,
+                    "type": "task_reminder",
+                    "title": f"Task: {r['name']}",
+                    "message": r["message"],
+                    "reminder_id": r["id"],
+                    "read": False,
+                    "created_at": now.isoformat()
+                }
+                await db.notifications.insert_one(notif)
+
+            # Send push if configured and not in quiet hours
+            if push_enabled and not in_quiet and "push" in r.get("channels", []) and user_id:
                 try:
                     from routers.push_notifications import send_push_to_user
                     await send_push_to_user(user_id, f"Task: {r['name']}", r["message"])
                 except Exception:
                     pass
 
-            # Send WhatsApp if configured and employee has phone
-            if "whatsapp" in r.get("channels", []):
+            # Send WhatsApp if configured, not in quiet hours, and employee has phone
+            if whatsapp_enabled and not in_quiet and "whatsapp" in r.get("channels", []):
                 emp_phone = emp.get("phone", "").strip()
                 if emp_phone:
                     try:
@@ -622,3 +647,59 @@ async def mark_all_notifications_read(current_user: User = Depends(get_current_u
         {"$set": {"read": True, "read_at": datetime.now(timezone.utc).isoformat()}}
     )
     return {"message": "All notifications marked as read"}
+
+
+# ---- Notification Preferences Endpoints ----
+
+@router.get("/my/notification-preferences")
+async def get_notification_preferences(current_user: User = Depends(get_current_user)):
+    """Get notification preferences for the current user."""
+    prefs = await db.notification_preferences.find_one(
+        {"user_id": current_user.id}, {"_id": 0}
+    )
+    if not prefs:
+        # Return defaults
+        return {
+            "user_id": current_user.id,
+            "channels": {"in_app": True, "push": True, "whatsapp": True},
+            "quiet_hours_enabled": False,
+            "quiet_hours_start": 22,
+            "quiet_hours_end": 7,
+            "task_reminders": True,
+            "schedule_alerts": True,
+            "system_alerts": True,
+        }
+    return prefs
+
+
+@router.put("/my/notification-preferences")
+async def update_notification_preferences(body: dict, current_user: User = Depends(get_current_user)):
+    """Update notification preferences."""
+    update = {"user_id": current_user.id, "updated_at": datetime.now(timezone.utc).isoformat()}
+
+    if "channels" in body:
+        channels = body["channels"]
+        update["channels"] = {
+            "in_app": channels.get("in_app", True),
+            "push": channels.get("push", True),
+            "whatsapp": channels.get("whatsapp", True),
+        }
+    if "quiet_hours_enabled" in body:
+        update["quiet_hours_enabled"] = bool(body["quiet_hours_enabled"])
+    if "quiet_hours_start" in body:
+        update["quiet_hours_start"] = int(body["quiet_hours_start"])
+    if "quiet_hours_end" in body:
+        update["quiet_hours_end"] = int(body["quiet_hours_end"])
+    if "task_reminders" in body:
+        update["task_reminders"] = bool(body["task_reminders"])
+    if "schedule_alerts" in body:
+        update["schedule_alerts"] = bool(body["schedule_alerts"])
+    if "system_alerts" in body:
+        update["system_alerts"] = bool(body["system_alerts"])
+
+    await db.notification_preferences.update_one(
+        {"user_id": current_user.id},
+        {"$set": update},
+        upsert=True
+    )
+    return await db.notification_preferences.find_one({"user_id": current_user.id}, {"_id": 0})
