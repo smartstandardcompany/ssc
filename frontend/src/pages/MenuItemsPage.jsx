@@ -759,7 +759,7 @@ export default function MenuItemsPage() {
               <SizesEditor
                 sizes={formData.sizes}
                 onChange={sizes => setFormData({...formData, sizes})}
-                branches={branches}
+                branches={formData.branch_ids?.length > 0 ? branches.filter(b => formData.branch_ids.includes(b.id)) : branches}
                 branchAvailability={formData.sizesBranchAvail}
                 onAvailChange={sizesBranchAvail => setFormData({...formData, sizesBranchAvail})}
                 branchPrices={formData.branch_prices}
@@ -773,7 +773,7 @@ export default function MenuItemsPage() {
                 linkedAddons={formData.linkedAddonIds}
                 onChange={linkedAddonIds => setFormData({...formData, linkedAddonIds})}
                 centralAddons={centralAddons}
-                branches={branches}
+                branches={formData.branch_ids?.length > 0 ? branches.filter(b => formData.branch_ids.includes(b.id)) : branches}
                 branchAvailability={formData.addonsBranchAvail}
                 onAvailChange={addonsBranchAvail => setFormData({...formData, addonsBranchAvail})}
               />
