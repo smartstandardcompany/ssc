@@ -519,6 +519,7 @@ async def process_task_reminders():
             notif = {
                 "id": str(uuid.uuid4()),
                 "user_id": user_id or emp.get("id"),
+                "employee_id": emp.get("id"),
                 "type": "task_reminder",
                 "title": f"Task: {r['name']}",
                 "message": r["message"],
@@ -535,6 +536,18 @@ async def process_task_reminders():
                     await send_push_to_user(user_id, f"Task: {r['name']}", r["message"])
                 except Exception:
                     pass
+
+            # Send WhatsApp if configured and employee has phone
+            if "whatsapp" in r.get("channels", []):
+                emp_phone = emp.get("phone", "").strip()
+                if emp_phone:
+                    try:
+                        await _send_whatsapp_to_employee(
+                            emp_phone,
+                            f"*{r['name']}*\n{r['message']}\n\n_Please acknowledge in the Employee Portal._"
+                        )
+                    except Exception:
+                        pass
 
         # Log alert
         alert_log = {
@@ -553,3 +566,59 @@ async def process_task_reminders():
             {"id": r["id"]},
             {"$set": {"last_triggered": now.isoformat()}, "$inc": {"trigger_count": 1}}
         )
+
+
+async def _send_whatsapp_to_employee(phone: str, message: str):
+    """Send WhatsApp message to a specific employee phone number."""
+    config = await db.whatsapp_config.find_one({}, {"_id": 0})
+    if not config or not config.get("account_sid") or not config.get("auth_token"):
+        return False
+    try:
+        from twilio.rest import Client
+        client_tw = Client(config["account_sid"], config["auth_token"])
+        # Ensure phone format
+        if not phone.startswith("+"):
+            phone = f"+{phone}"
+        client_tw.messages.create(
+            from_=f'whatsapp:{config["phone_number"]}',
+            body=message,
+            to=f'whatsapp:{phone}'
+        )
+        return True
+    except Exception:
+        return False
+
+
+# ---- Employee Notification Endpoints ----
+
+@router.get("/my/notifications")
+async def get_my_notifications(current_user: User = Depends(get_current_user)):
+    """Get notifications for the current user (employee portal)."""
+    notifs = await db.notifications.find(
+        {"$or": [{"user_id": current_user.id}, {"employee_id": current_user.id}]},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    unread = sum(1 for n in notifs if not n.get("read"))
+    return {"notifications": notifs, "unread_count": unread}
+
+
+@router.put("/my/notifications/{notif_id}/read")
+async def mark_notification_read(notif_id: str, current_user: User = Depends(get_current_user)):
+    """Mark a notification as read."""
+    result = await db.notifications.update_one(
+        {"id": notif_id, "$or": [{"user_id": current_user.id}, {"employee_id": current_user.id}]},
+        {"$set": {"read": True, "read_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return {"message": "Marked as read"}
+
+
+@router.put("/my/notifications/read-all")
+async def mark_all_notifications_read(current_user: User = Depends(get_current_user)):
+    """Mark all notifications as read."""
+    await db.notifications.update_many(
+        {"$or": [{"user_id": current_user.id}, {"employee_id": current_user.id}], "read": False},
+        {"$set": {"read": True, "read_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return {"message": "All notifications marked as read"}

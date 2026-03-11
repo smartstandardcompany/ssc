@@ -13,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   CheckCircle, Clock, XCircle, Calendar, DollarSign, FileText, Send,
   LogIn, LogOut, AlertTriangle, User, Banknote, Briefcase, Phone, Mail,
-  Building, Wallet, TrendingDown, Receipt
+  Building, Wallet, TrendingDown, Receipt, Bell, BellRing
 } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
@@ -62,6 +62,8 @@ export default function EmployeePortalPage() {
   const [editData, setEditData] = useState({ phone: '', email: '' });
   const [noProfile, setNoProfile] = useState(false);
   const [todayAttendance, setTodayAttendance] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => { fetchData(); }, []);
 
@@ -83,7 +85,15 @@ export default function EmployeePortalPage() {
       setTodayAttendance(attRes.data.find(a => a.date === today) || null);
     } catch (err) {
       if (err.response?.status === 404) setNoProfile(true);
-    } finally { setLoading(false); }
+    } finally {
+      // Always fetch notifications, even without an employee profile
+      try {
+        const notifRes = await api.get('/my/notifications');
+        setNotifications(notifRes.data?.notifications || []);
+        setUnreadCount(notifRes.data?.unread_count || 0);
+      } catch {}
+      setLoading(false);
+    }
   };
 
   const handleTimeIn = async () => { try { await api.post('/attendance/time-in'); toast.success('Timed in!'); fetchData(); } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); } };
@@ -104,6 +114,24 @@ export default function EmployeePortalPage() {
       setShowLeaveForm(false); setLeaveData({ leave_type: 'annual', start_date: '', end_date: '', days: '', reason: '', with_ticket: false }); fetchData();
     } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
   };
+
+  const markNotifRead = async (notifId) => {
+    try {
+      await api.put(`/my/notifications/${notifId}/read`);
+      setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, read: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch {}
+  };
+
+  const markAllRead = async () => {
+    try {
+      await api.put('/my/notifications/read-all');
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+      toast.success('All notifications marked as read');
+    } catch {}
+  };
+
 
   const handleRequest = async (e) => {
     e.preventDefault();
@@ -132,20 +160,70 @@ export default function EmployeePortalPage() {
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-64 text-muted-foreground">Loading...</div></DashboardLayout>;
   if (noProfile) return (
     <DashboardLayout>
-      <div className="flex flex-col items-center justify-center h-[60vh] text-center px-4" data-testid="no-profile-message">
-        <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mb-4">
-          <User size={28} className="text-amber-500" />
+      <div className="space-y-6 max-w-2xl mx-auto" data-testid="no-profile-message">
+        <div className="flex flex-col items-center justify-center text-center px-4 pt-12">
+          <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mb-4">
+            <User size={28} className="text-amber-500" />
+          </div>
+          <h2 className="text-lg font-semibold mb-2">Employee Profile Not Linked</h2>
+          <p className="text-sm text-muted-foreground max-w-md mb-4">
+            Your user account is not linked to an employee profile yet. Once linked, you'll be able to view your salary, leave balance, attendance, and more.
+          </p>
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 max-w-md text-left text-xs space-y-1">
+            <p className="font-semibold text-blue-800">Ask your admin to:</p>
+            <p className="text-blue-700">1. Go to <strong>Employees</strong> page</p>
+            <p className="text-blue-700">2. Edit your employee record</p>
+            <p className="text-blue-700">3. Link it to your user account</p>
+          </div>
         </div>
-        <h2 className="text-lg font-semibold mb-2">Employee Profile Not Linked</h2>
-        <p className="text-sm text-muted-foreground max-w-md mb-4">
-          Your user account is not linked to an employee profile yet. Once linked, you'll be able to view your salary, leave balance, attendance, and more.
-        </p>
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 max-w-md text-left text-xs space-y-1">
-          <p className="font-semibold text-blue-800">Ask your admin to:</p>
-          <p className="text-blue-700">1. Go to <strong>Employees</strong> page</p>
-          <p className="text-blue-700">2. Edit your employee record</p>
-          <p className="text-blue-700">3. Link it to your user account</p>
-        </div>
+        {/* Show notifications even without profile */}
+        {notifications.length > 0 && (
+          <Card className="dark:bg-stone-900 dark:border-stone-700">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="font-outfit text-base dark:text-white flex items-center gap-2">
+                  <Bell size={16} className="text-orange-500" />
+                  Notifications ({notifications.length})
+                  {unreadCount > 0 && <span className="text-xs text-red-500 font-normal">{unreadCount} unread</span>}
+                </CardTitle>
+                {unreadCount > 0 && (
+                  <Button size="sm" variant="outline" className="text-xs" onClick={markAllRead}>
+                    <CheckCircle size={12} className="mr-1" />Mark All Read
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {notifications.map(notif => (
+                  <div key={notif.id}
+                    className={`p-3 rounded-xl border transition-all cursor-pointer ${
+                      notif.read ? 'dark:border-stone-700' : 'border-orange-200 bg-orange-50/50 dark:bg-orange-900/10'
+                    }`}
+                    onClick={() => !notif.read && markNotifRead(notif.id)}
+                    data-testid={`notification-${notif.id}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                        notif.read ? 'bg-stone-100' : 'bg-orange-100'
+                      }`}>
+                        <Clock size={14} className={notif.read ? 'text-stone-400' : 'text-orange-500'} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className={`text-sm font-medium ${notif.read ? 'text-muted-foreground' : ''}`}>{notif.title}</p>
+                          {!notif.read && <span className="w-2 h-2 rounded-full bg-orange-500" />}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">{notif.message}</p>
+                        <p className="text-[10px] text-stone-400 mt-1">{new Date(notif.created_at).toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </DashboardLayout>
   );
@@ -178,6 +256,17 @@ export default function EmployeePortalPage() {
             )}
             <Button onClick={() => setShowLeaveForm(true)} variant="outline" size="sm"><Calendar size={14} className="mr-1" />Leave</Button>
             <Button onClick={() => setShowRequestForm(true)} variant="outline" size="sm"><Send size={14} className="mr-1" />Request</Button>
+            <div className="relative">
+              <Button variant="outline" size="sm" className={unreadCount > 0 ? 'border-orange-400' : ''} onClick={() => {
+                const el = document.querySelector('[data-testid="notif-tab"]');
+                if (el) el.click();
+              }} data-testid="notif-bell-btn">
+                {unreadCount > 0 ? <BellRing size={14} className="text-orange-500" /> : <Bell size={14} />}
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{unreadCount}</span>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -281,6 +370,9 @@ export default function EmployeePortalPage() {
               <TabsTrigger value="requests" className="text-xs sm:text-sm">Requests</TabsTrigger>
               <TabsTrigger value="letters" className="text-xs sm:text-sm">Letters</TabsTrigger>
               <TabsTrigger value="tasks" className="text-xs sm:text-sm">My Tasks</TabsTrigger>
+              <TabsTrigger value="notifications" className="text-xs sm:text-sm" data-testid="notif-tab">
+                Notifications {unreadCount > 0 && <span className="ml-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full inline-flex items-center justify-center">{unreadCount}</span>}
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -566,6 +658,69 @@ export default function EmployeePortalPage() {
                         <Button size="sm" variant="outline" className="rounded-xl border-emerald-200 text-emerald-600 hover:bg-emerald-50" onClick={() => handleAcknowledgeTask(task.id)} data-testid={`ack-task-${task.id}`}>
                           <CheckCircle size={14} className="mr-1" />Done
                         </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Notifications Tab */}
+          <TabsContent value="notifications" data-testid="notifications-tab">
+            <Card className="dark:bg-stone-900 dark:border-stone-700">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="font-outfit text-base dark:text-white flex items-center gap-2">
+                    <Bell size={16} className="text-orange-500" />
+                    Notifications ({notifications.length})
+                    {unreadCount > 0 && <span className="text-xs text-red-500 font-normal">{unreadCount} unread</span>}
+                  </CardTitle>
+                  {unreadCount > 0 && (
+                    <Button size="sm" variant="outline" className="text-xs" onClick={markAllRead} data-testid="mark-all-read-btn">
+                      <CheckCircle size={12} className="mr-1" />Mark All Read
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {notifications.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Bell size={36} className="mx-auto mb-3 opacity-30" />
+                    <p className="text-sm">No notifications yet</p>
+                    <p className="text-xs">Duty reminders and alerts will appear here</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {notifications.map(notif => (
+                      <div key={notif.id}
+                        className={`p-3 rounded-xl border transition-all cursor-pointer ${
+                          notif.read 
+                            ? 'dark:border-stone-700 bg-transparent' 
+                            : 'border-orange-200 bg-orange-50/50 dark:bg-orange-900/10 dark:border-orange-800'
+                        }`}
+                        onClick={() => !notif.read && markNotifRead(notif.id)}
+                        data-testid={`notification-${notif.id}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                            notif.read ? 'bg-stone-100 dark:bg-stone-800' : 'bg-orange-100 dark:bg-orange-900/30'
+                          }`}>
+                            {notif.type === 'task_reminder' ? (
+                              <Clock size={14} className={notif.read ? 'text-stone-400' : 'text-orange-500'} />
+                            ) : (
+                              <Bell size={14} className={notif.read ? 'text-stone-400' : 'text-orange-500'} />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <p className={`text-sm font-medium ${notif.read ? 'text-muted-foreground' : 'dark:text-white'}`}>{notif.title}</p>
+                              {!notif.read && <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">{notif.message}</p>
+                            <p className="text-[10px] text-stone-400 mt-1">{new Date(notif.created_at).toLocaleString()}</p>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>

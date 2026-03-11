@@ -114,7 +114,7 @@ export default function StaffPerformancePage() {
           active_start_hour: parseInt(aiShift.split('-')[0]) || 8,
           active_end_hour: parseInt(aiShift.split('-')[1]) || 22,
           days_of_week: [0, 1, 2, 3, 4, 5, 6],
-          channels: ['push', 'in_app'],
+          channels: ['push', 'in_app', 'whatsapp'],
           enabled: true,
         });
         created++;
