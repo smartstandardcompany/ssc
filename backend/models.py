@@ -870,16 +870,11 @@ class MenuItem(BaseModel):
     price: float
     cost_price: float = 0
     image_url: Optional[str] = None
-    # V2: modifier_groups replaces old modifiers
-    # Each group: {id, name, type: "size"|"addon"|"option", required, multiple,
-    #   options: [{name, price}],         -- for size/option type
-    #   addon_ids: [addon_id, ...],       -- for addon type (linked from central library)
-    #   branch_availability: {branch_id: [option_name/addon_id, ...], ...}  -- per-branch control
-    # }
     modifier_groups: List[dict] = []
-    # Legacy field kept for backward compat with existing orders/data
     modifiers: List[dict] = []
     is_available: bool = True
+    # Schedule: {enabled, available_days: [0-6], start_time: "HH:mm", end_time: "HH:mm", unavailable_behavior: "hide"|"disabled"}
+    schedule: Optional[dict] = None
     branch_id: Optional[str] = None
     branch_ids: List[str] = []
     platform_ids: List[str] = []
@@ -902,6 +897,7 @@ class MenuItemCreate(BaseModel):
     modifier_groups: Optional[List[dict]] = []
     modifiers: Optional[List[dict]] = []
     is_available: bool = True
+    schedule: Optional[dict] = None
     branch_id: Optional[str] = None
     branch_ids: Optional[List[str]] = []
     platform_ids: Optional[List[str]] = []

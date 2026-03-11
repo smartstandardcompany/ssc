@@ -221,6 +221,103 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
     }
 
 
+@router.get("/dashboard/period-compare")
+async def get_period_compare(period: str = "day", branch_ids: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    """Compare current period vs previous period. period: day, week, month"""
+    now = datetime.now(timezone.utc)
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    if period == "day":
+        curr_start = today
+        curr_end = today + timedelta(days=1)
+        prev_start = today - timedelta(days=1)
+        prev_end = today
+    elif period == "week":
+        day_of_week = today.weekday()
+        curr_start = today - timedelta(days=day_of_week)
+        curr_end = curr_start + timedelta(days=7)
+        prev_start = curr_start - timedelta(days=7)
+        prev_end = curr_start
+    else:  # month
+        curr_start = today.replace(day=1)
+        if curr_start.month == 12:
+            curr_end = curr_start.replace(year=curr_start.year + 1, month=1)
+        else:
+            curr_end = curr_start.replace(month=curr_start.month + 1)
+        prev_end = curr_start
+        if curr_start.month == 1:
+            prev_start = curr_start.replace(year=curr_start.year - 1, month=12)
+        else:
+            prev_start = curr_start.replace(month=curr_start.month - 1)
+
+    query = {}
+    if branch_ids:
+        bid_list = [b.strip() for b in branch_ids.split(",") if b.strip()]
+        if bid_list:
+            query["branch_id"] = {"$in": bid_list}
+    elif current_user.branch_id and current_user.role != "admin":
+        query["branch_id"] = current_user.branch_id
+
+    async def get_period_data(start, end):
+        date_filter = {"$gte": start.isoformat(), "$lt": end.isoformat()}
+        s = await db.sales.find({**query, "date": date_filter}, {"_id": 0, "amount": 1, "credit_amount": 1, "credit_received": 1, "payment_details": 1}).to_list(10000)
+        e_agg = await db.expenses.aggregate([
+            {"$match": {**query, "date": date_filter}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]).to_list(1)
+        sp_agg = await db.supplier_payments.aggregate([
+            {"$match": {**query, "date": date_filter, "payment_mode": {"$ne": "credit"}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]).to_list(1)
+        orders_count = await db.orders.count_documents({**query, "created_at": date_filter})
+
+        total_sales = sum(sale["amount"] - (sale.get("credit_amount", 0) - sale.get("credit_received", 0)) for sale in s)
+        total_expenses = e_agg[0]["total"] if e_agg else 0
+        total_sp = sp_agg[0]["total"] if sp_agg else 0
+        cash = sum(p["amount"] for sale in s for p in sale.get("payment_details", []) if p.get("mode") == "cash")
+        bank = sum(p["amount"] for sale in s for p in sale.get("payment_details", []) if p.get("mode") == "bank")
+
+        return {
+            "sales": round(total_sales, 2),
+            "expenses": round(total_expenses, 2),
+            "supplier_payments": round(total_sp, 2),
+            "profit": round(total_sales - total_expenses - total_sp, 2),
+            "orders": orders_count,
+            "transactions": len(s),
+            "cash": round(cash, 2),
+            "bank": round(bank, 2),
+        }
+
+    curr_data = await get_period_data(curr_start, curr_end)
+    prev_data = await get_period_data(prev_start, prev_end)
+
+    def pct(curr, prev):
+        if prev == 0:
+            return 100.0 if curr > 0 else 0.0
+        return round((curr - prev) / abs(prev) * 100, 1)
+
+    change = {}
+    for key in curr_data:
+        change[key] = pct(curr_data[key], prev_data[key])
+
+    period_labels = {
+        "day": {"current": "Today", "previous": "Yesterday"},
+        "week": {"current": "This Week", "previous": "Last Week"},
+        "month": {"current": "This Month", "previous": "Last Month"},
+    }
+
+    return {
+        "period": period,
+        "labels": period_labels.get(period, period_labels["day"]),
+        "current": curr_data,
+        "previous": prev_data,
+        "change": change,
+        "current_range": {"start": curr_start.isoformat(), "end": curr_end.isoformat()},
+        "previous_range": {"start": prev_start.isoformat(), "end": prev_end.isoformat()},
+    }
+
+
+
 @router.get("/dashboard/today-vs-yesterday")
 async def get_today_vs_yesterday(branch_ids: Optional[str] = None, current_user: User = Depends(get_current_user)):
     """Compare today's performance vs yesterday."""

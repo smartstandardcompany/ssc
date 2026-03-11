@@ -14,7 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import {
   Plus, Search, Edit, Trash2, X, UtensilsCrossed,
-  Save, Loader2, Star, Upload, Building2, Globe, Check, Download, Tag, Package, ListChecks
+  Save, Loader2, Star, Upload, Building2, Globe, Check, Download, Tag, Package, ListChecks, Eye, EyeOff, Clock
 } from 'lucide-react';
 import api from '@/lib/api';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -270,7 +270,8 @@ export default function MenuItemsPage() {
     sizes: [], sizesBranchAvail: {},
     linkedAddonIds: [], addonsBranchAvail: {},
     optionGroups: [],
-    branch_prices: {}
+    branch_prices: {},
+    schedule: { enabled: false, available_days: [0,1,2,3,4,5,6], start_time: '00:00', end_time: '23:59', unavailable_behavior: 'disabled' }
   };
   const [formData, setFormData] = useState(emptyForm);
 
@@ -379,7 +380,8 @@ export default function MenuItemsPage() {
       branch_ids: item.branch_ids || [], platform_ids: item.platform_ids || [],
       platform_prices: item.platform_prices || {},
       ...parsed,
-      branch_prices: item.branch_prices || {}
+      branch_prices: item.branch_prices || {},
+      schedule: item.schedule || { enabled: false, available_days: [0,1,2,3,4,5,6], start_time: '00:00', end_time: '23:59', unavailable_behavior: 'disabled' }
     });
     setShowDialog(true);
   };
@@ -449,7 +451,8 @@ export default function MenuItemsPage() {
         is_available: formData.is_available, tags: formData.tags,
         branch_ids: formData.branch_ids, platform_ids: formData.platform_ids,
         platform_prices: formData.platform_prices, branch_prices: formData.branch_prices || {},
-        modifier_groups, modifiers
+        modifier_groups, modifiers,
+        schedule: formData.schedule?.enabled ? formData.schedule : null
       };
 
       if (editingItem) {
@@ -609,6 +612,7 @@ export default function MenuItemsPage() {
                   <div className="absolute top-2 right-2 flex gap-1 flex-col items-end">
                     {item.tags?.includes('popular') && <Badge className="bg-amber-500 text-[10px]"><Star size={10} className="mr-0.5" />Popular</Badge>}
                     {!item.is_available && <Badge variant="destructive" className="text-[10px]">Unavailable</Badge>}
+                    {item.schedule?.enabled && <Badge className="bg-blue-500 text-[10px]"><Clock size={10} className="mr-0.5" />Scheduled</Badge>}
                   </div>
                 </div>
                 <CardContent className="p-3">
@@ -670,6 +674,7 @@ export default function MenuItemsPage() {
               <TabsTrigger value="options" className="flex-1 min-w-[80px]" data-testid="options-tab">Options</TabsTrigger>
               <TabsTrigger value="branches" className="flex-1 min-w-[80px]" data-testid="branches-tab">Branches</TabsTrigger>
               <TabsTrigger value="platforms" className="flex-1 min-w-[80px]" data-testid="platforms-tab">Platforms</TabsTrigger>
+              <TabsTrigger value="schedule" className="flex-1 min-w-[80px]" data-testid="schedule-tab">Schedule</TabsTrigger>
             </TabsList>
 
             {/* Details Tab */}
@@ -798,6 +803,119 @@ export default function MenuItemsPage() {
                   </div>
                 ))}
               </div>
+            </TabsContent>
+
+            {/* Schedule Tab */}
+            <TabsContent value="schedule" className="space-y-4">
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/10 rounded-lg">
+                <p className="text-xs text-amber-700 dark:text-amber-400">Set specific days and hours when this item is available. Perfect for <strong>daily specials</strong> or <strong>limited-time items</strong>.</p>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 bg-stone-50 dark:bg-stone-800 rounded-lg">
+                <div>
+                  <Label className="font-semibold">Enable Schedule</Label>
+                  <p className="text-xs text-muted-foreground">Restrict when this item can be ordered</p>
+                </div>
+                <Switch checked={formData.schedule?.enabled || false} onCheckedChange={v => setFormData(prev => ({...prev, schedule: {...(prev.schedule || {}), enabled: v}}))} data-testid="schedule-enabled-switch" />
+              </div>
+
+              {formData.schedule?.enabled && (
+                <>
+                  {/* Available Days */}
+                  <div>
+                    <Label className="font-semibold mb-2 block">Available Days</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { day: 0, label: 'Sun', labelAr: 'الأحد' },
+                        { day: 1, label: 'Mon', labelAr: 'الإثنين' },
+                        { day: 2, label: 'Tue', labelAr: 'الثلاثاء' },
+                        { day: 3, label: 'Wed', labelAr: 'الأربعاء' },
+                        { day: 4, label: 'Thu', labelAr: 'الخميس' },
+                        { day: 5, label: 'Fri', labelAr: 'الجمعة' },
+                        { day: 6, label: 'Sat', labelAr: 'السبت' },
+                      ].map(({ day, label }) => {
+                        const days = formData.schedule?.available_days || [];
+                        const isSelected = days.includes(day);
+                        return (
+                          <button key={day} type="button" data-testid={`schedule-day-${day}`}
+                            onClick={() => {
+                              const current = formData.schedule?.available_days || [];
+                              const updated = isSelected ? current.filter(d => d !== day) : [...current, day].sort();
+                              setFormData(prev => ({...prev, schedule: {...prev.schedule, available_days: updated}}));
+                            }}
+                            className={`w-12 h-12 rounded-xl text-xs font-bold border-2 transition-all ${
+                              isSelected 
+                                ? 'bg-primary text-white border-primary shadow-sm' 
+                                : 'bg-white dark:bg-stone-800 text-stone-400 border-stone-200 dark:border-stone-600 hover:border-primary/50'
+                            }`}>
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <Button type="button" size="sm" variant="ghost" className="text-xs"
+                        onClick={() => setFormData(prev => ({...prev, schedule: {...prev.schedule, available_days: [0,1,2,3,4,5,6]}}))}>Select All</Button>
+                      <Button type="button" size="sm" variant="ghost" className="text-xs"
+                        onClick={() => setFormData(prev => ({...prev, schedule: {...prev.schedule, available_days: [1,2,3,4]}}))}>Weekdays Only</Button>
+                      <Button type="button" size="sm" variant="ghost" className="text-xs"
+                        onClick={() => setFormData(prev => ({...prev, schedule: {...prev.schedule, available_days: [5,6,0]}}))}>Weekends Only</Button>
+                    </div>
+                  </div>
+
+                  {/* Time Window */}
+                  <div>
+                    <Label className="font-semibold mb-2 block">Available Time Window</Label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">From</Label>
+                        <Input type="time" value={formData.schedule?.start_time || '00:00'} 
+                          onChange={e => setFormData(prev => ({...prev, schedule: {...prev.schedule, start_time: e.target.value}}))}
+                          data-testid="schedule-start-time" />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">To</Label>
+                        <Input type="time" value={formData.schedule?.end_time || '23:59'} 
+                          onChange={e => setFormData(prev => ({...prev, schedule: {...prev.schedule, end_time: e.target.value}}))}
+                          data-testid="schedule-end-time" />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <Button type="button" size="sm" variant="ghost" className="text-xs"
+                        onClick={() => setFormData(prev => ({...prev, schedule: {...prev.schedule, start_time: '00:00', end_time: '23:59'}}))}>All Day</Button>
+                      <Button type="button" size="sm" variant="ghost" className="text-xs"
+                        onClick={() => setFormData(prev => ({...prev, schedule: {...prev.schedule, start_time: '11:00', end_time: '15:00'}}))}>Lunch (11-3)</Button>
+                      <Button type="button" size="sm" variant="ghost" className="text-xs"
+                        onClick={() => setFormData(prev => ({...prev, schedule: {...prev.schedule, start_time: '18:00', end_time: '23:00'}}))}>Dinner (6-11)</Button>
+                    </div>
+                  </div>
+
+                  {/* Unavailable Behavior */}
+                  <div>
+                    <Label className="font-semibold mb-2 block">When Unavailable in POS</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button type="button" data-testid="behavior-disabled"
+                        onClick={() => setFormData(prev => ({...prev, schedule: {...prev.schedule, unavailable_behavior: 'disabled'}}))}
+                        className={`p-3 rounded-xl border-2 text-left transition-all ${
+                          formData.schedule?.unavailable_behavior === 'disabled' ? 'border-primary bg-primary/5' : 'border-stone-200 dark:border-stone-600 hover:border-primary/50'
+                        }`}>
+                        <EyeOff size={16} className="mb-1 text-stone-500" />
+                        <p className="text-sm font-semibold">Show as Disabled</p>
+                        <p className="text-[11px] text-muted-foreground">Visible but greyed out, can't be ordered</p>
+                      </button>
+                      <button type="button" data-testid="behavior-hide"
+                        onClick={() => setFormData(prev => ({...prev, schedule: {...prev.schedule, unavailable_behavior: 'hide'}}))}
+                        className={`p-3 rounded-xl border-2 text-left transition-all ${
+                          formData.schedule?.unavailable_behavior === 'hide' ? 'border-primary bg-primary/5' : 'border-stone-200 dark:border-stone-600 hover:border-primary/50'
+                        }`}>
+                        <Eye size={16} className="mb-1 text-stone-500" />
+                        <p className="text-sm font-semibold">Completely Hide</p>
+                        <p className="text-[11px] text-muted-foreground">Not visible in POS at all</p>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </TabsContent>
           </Tabs>
 

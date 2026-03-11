@@ -1,0 +1,59 @@
+{
+  "summary": "Iteration 136: Dashboard Compare Toggle and Menu Item Schedule features - All tests PASSED",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter136_dashboard_compare_schedule.py",
+    "/app/test_reports/pytest/pytest_results_iter136.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iter136_dashboard_compare_schedule.py"
+  ],
+  "success_rate": {
+    "backend": "100% (11/11 tests passed)",
+    "frontend": "100% (all tested features working)"
+  },
+  "test_credentials": {
+    "admin": {"email": "ss@ssc.com", "password": "Aa147258369Ssc@"}
+  },
+  "seed_data_creation": "Created and cleaned up TEST_Scheduled_Item_136 during backend tests",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Dashboard Compare Toggle and Menu Item Schedule features fully implemented and tested. All 11 backend API tests passed. UI testing confirmed: 1) Dashboard Compare Toggle shows Day/Week/Month buttons with Compare switch, clicking Week auto-enables compare and displays 6 comparison cards (Sales, Expenses, Profit, Transactions, Cash, Bank) with current vs previous period values and % change. 2) Menu Item edit dialog has Schedule tab with: Enable Schedule toggle, 7 day buttons (Sun-Sat), quick select buttons (Select All, Weekdays Only, Weekends Only), time window inputs (From/To) with presets (All Day, Lunch 11-3, Dinner 6-11), and unavailable behavior options (Show as Disabled, Completely Hide). CashierPOS has isItemScheduleActive() function that filters items based on schedule.",
+  "tests_executed": {
+    "backend_api_tests": [
+      "test_01_period_compare_day - PASS: Returns period=day, labels (Today/Yesterday), current/previous/change metrics",
+      "test_02_period_compare_week - PASS: Returns period=week, labels (This Week/Last Week), all metrics with % change",
+      "test_03_period_compare_month - PASS: Returns period=month, labels (This Month/Last Month), date ranges",
+      "test_04_period_compare_with_branch_filter - PASS: Accepts branch_ids parameter",
+      "test_05_create_menu_item_with_schedule - PASS: Creates item with schedule enabled, days, times, behavior",
+      "test_06_get_menu_item_with_schedule - PASS: Schedule persists on GET",
+      "test_07_update_menu_item_schedule_to_hide - PASS: Updates schedule to hide behavior",
+      "test_08_disable_menu_item_schedule - PASS: Disables schedule",
+      "test_09_cleanup_test_menu_item - PASS: Deleted test item",
+      "test_10_cashier_menu_returns_schedule_field - PASS: /cashier/menu includes schedule",
+      "test_11_menu_all_includes_schedule_data - PASS: /cashier/menu-all includes schedule"
+    ],
+    "frontend_ui_tests": [
+      "Dashboard Compare Toggle - VERIFIED: Day/Week/Month buttons visible and clickable",
+      "Dashboard Compare Toggle - VERIFIED: Week click auto-enables Compare switch",
+      "Dashboard Compare Toggle - VERIFIED: 6 comparison cards appear (Sales, Expenses, Profit, Transactions, Cash, Bank)",
+      "Dashboard Compare Toggle - VERIFIED: Cards show current vs previous values with % change",
+      "Menu Item Schedule Tab - VERIFIED: Schedule tab visible in edit dialog (7 tabs total)",
+      "Menu Item Schedule Tab - VERIFIED: Enable Schedule toggle works",
+      "Menu Item Schedule Tab - VERIFIED: Day buttons (Sun-Sat) all displayed",
+      "Menu Item Schedule Tab - VERIFIED: Quick select buttons (Select All, Weekdays Only, Weekends Only)",
+      "Menu Item Schedule Tab - VERIFIED: Time window inputs (From/To) with presets",
+      "Menu Item Schedule Tab - VERIFIED: Unavailable behavior options (Show as Disabled, Completely Hide)"
+    ]
+  }
+}

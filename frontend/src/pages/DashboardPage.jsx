@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { DollarSign, TrendingUp, TrendingDown, AlertCircle, Wallet, Building2, CreditCard, AlertTriangle, ArrowLeftRight, MessageCircle, Settings2, Eye, EyeOff, GripVertical, Lock, Unlock, Package, Clock, Users, Brain, Sparkles, Zap, Plus, Receipt, FileText, CalendarCheck, Banknote, ShoppingCart, UserPlus, FileSpreadsheet, Camera, HelpCircle } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, AlertCircle, Wallet, Building2, CreditCard, AlertTriangle, ArrowLeftRight, MessageCircle, Settings2, Eye, EyeOff, GripVertical, Lock, Unlock, Package, Clock, Users, Brain, Sparkles, Zap, Plus, Receipt, FileText, CalendarCheck, Banknote, ShoppingCart, UserPlus, FileSpreadsheet, Camera, HelpCircle, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -138,6 +139,12 @@ export default function DashboardPage() {
   const t = THEMES[theme] || THEMES.default;
   const { t: tr, language } = useLanguage();
   const [showTour, setShowTour] = useState(false);
+  
+  // Compare Toggle state
+  const [comparePeriod, setComparePeriod] = useState('day'); // day, week, month
+  const [compareEnabled, setCompareEnabled] = useState(false);
+  const [compareData, setCompareData] = useState(null);
+  const [compareLoading, setCompareLoading] = useState(false);
 
   // User permissions from Zustand
   const userPermissions = user?.permissions || {};
@@ -275,6 +282,22 @@ export default function DashboardPage() {
       setLoading(false);
     }
   };
+
+  // Fetch compare data when toggle is enabled or period changes
+  useEffect(() => {
+    if (!compareEnabled) { setCompareData(null); return; }
+    const fetchCompare = async () => {
+      setCompareLoading(true);
+      try {
+        const params = new URLSearchParams({ period: comparePeriod });
+        if (branchFilter.length > 0) params.set('branch_ids', branchFilter.join(','));
+        const res = await api.get(`/dashboard/period-compare?${params.toString()}`);
+        setCompareData(res.data);
+      } catch { toast.error('Failed to fetch comparison data'); }
+      finally { setCompareLoading(false); }
+    };
+    fetchCompare();
+  }, [compareEnabled, comparePeriod, branchFilter]);
 
   if (loading) {
     return (
@@ -432,6 +455,73 @@ export default function DashboardPage() {
           <BranchFilter onChange={setBranchFilter} />
           <DateFilter onFilterChange={setDateFilter} />
         </div>
+
+        {/* Foodics-style Period Compare Toggle */}
+        <Card className="border-0 shadow-sm" data-testid="compare-toggle-card">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2 bg-stone-100 dark:bg-stone-800 rounded-lg p-1">
+                {['day', 'week', 'month'].map(p => (
+                  <button key={p} data-testid={`compare-period-${p}`}
+                    onClick={() => { setComparePeriod(p); if (!compareEnabled) setCompareEnabled(true); }}
+                    className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all capitalize ${
+                      comparePeriod === p && compareEnabled ? 'bg-white dark:bg-stone-700 text-primary shadow-sm' : 'text-stone-500 hover:text-stone-700'
+                    }`}>
+                    {p === 'day' ? 'Day' : p === 'week' ? 'Week' : 'Month'}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="compare-switch" className="text-xs font-medium text-stone-500">Compare</Label>
+                <Switch id="compare-switch" checked={compareEnabled} onCheckedChange={setCompareEnabled} data-testid="compare-switch" />
+              </div>
+            </div>
+            
+            {/* Compare Cards */}
+            {compareEnabled && compareData && (
+              <div className="mt-3 pt-3 border-t border-stone-100 dark:border-stone-700">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <ArrowLeftRight size={14} className="text-primary" />
+                    <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">{compareData.labels?.current} vs {compareData.labels?.previous}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                  {[
+                    { key: 'sales', label: 'Sales', icon: DollarSign, color: 'emerald' },
+                    { key: 'expenses', label: 'Expenses', icon: TrendingDown, color: 'red', invert: true },
+                    { key: 'profit', label: 'Profit', icon: TrendingUp, color: 'primary' },
+                    { key: 'transactions', label: 'Transactions', icon: ShoppingCart, color: 'blue' },
+                    { key: 'cash', label: 'Cash', icon: Wallet, color: 'green' },
+                    { key: 'bank', label: 'Bank', icon: Building2, color: 'indigo' },
+                  ].map(({ key, label, icon: Icon, color, invert }) => {
+                    const curr = compareData.current?.[key] ?? 0;
+                    const prev = compareData.previous?.[key] ?? 0;
+                    const change = compareData.change?.[key] ?? 0;
+                    const isPositive = change > 0;
+                    const isGood = invert ? !isPositive : isPositive;
+                    return (
+                      <div key={key} className="bg-stone-50 dark:bg-stone-800 rounded-xl p-3 border border-stone-100 dark:border-stone-700" data-testid={`compare-${key}`}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] font-medium text-stone-400 uppercase">{label}</span>
+                          <Icon size={13} className={`text-${color}-500`} />
+                        </div>
+                        <p className="text-base font-bold text-stone-800 dark:text-stone-100">SAR {curr.toLocaleString()}</p>
+                        <p className="text-[10px] text-stone-400 mt-0.5">was SAR {prev.toLocaleString()}</p>
+                        <div className={`mt-1.5 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${isGood ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                          {isPositive ? '+' : ''}{change}%
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            {compareEnabled && compareLoading && (
+              <div className="mt-3 pt-3 border-t text-center py-4 text-xs text-muted-foreground">Loading comparison...</div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Main Stats Grid */}
         {widgets.stats && (

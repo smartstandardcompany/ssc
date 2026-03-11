@@ -168,7 +168,24 @@ export default function CashierPOSPage() {
   };
 
   // Filter menu items
+  // Check if menu item is within its schedule
+  const isItemScheduleActive = (item) => {
+    if (!item.schedule?.enabled) return true;
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    if (!(item.schedule.available_days || []).includes(dayOfWeek)) return false;
+    const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const start = item.schedule.start_time || '00:00';
+    const end = item.schedule.end_time || '23:59';
+    return timeStr >= start && timeStr <= end;
+  };
+
   const filteredItems = menuItems.filter(item => {
+    // Schedule-based filtering
+    if (item.schedule?.enabled) {
+      const active = isItemScheduleActive(item);
+      if (!active && item.schedule.unavailable_behavior === 'hide') return false;
+    }
     if (selectedCategory !== 'all' && selectedCategory !== 'popular') {
       if (item.category !== selectedCategory) return false;
     }
@@ -481,13 +498,17 @@ export default function CashierPOSPage() {
         {/* Menu Grid */}
         <div className="flex-1 p-3 overflow-y-auto pb-20 md:pb-3">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
-            {filteredItems.map(item => (
+            {filteredItems.map(item => {
+              const scheduleInactive = item.schedule?.enabled && !isItemScheduleActive(item);
+              const isDisabled = !item.is_available || scheduleInactive;
+              return (
               <Card 
                 key={item.id}
                 className={`cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] border-2 ${
+                  scheduleInactive ? 'opacity-40 border-blue-200 grayscale' :
                   !item.is_available ? 'opacity-50 border-red-200' : 'border-transparent hover:border-orange-200'
                 }`}
-                onClick={() => item.is_available && handleAddItem(item)}
+                onClick={() => !isDisabled && handleAddItem(item)}
                 data-testid={`menu-item-${item.id}`}
               >
                 <CardContent className="p-3">
@@ -507,9 +528,13 @@ export default function CashierPOSPage() {
                   {item.modifiers?.length > 0 && (
                     <Badge variant="secondary" className="text-[10px] mt-1">Has options</Badge>
                   )}
+                  {scheduleInactive && (
+                    <Badge className="text-[10px] mt-1 bg-blue-100 text-blue-600">Not available now</Badge>
+                  )}
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
             {filteredItems.length === 0 && (
               <div className="col-span-full text-center py-12 text-muted-foreground">
                 No items found
