@@ -239,29 +239,29 @@ export default function EmployeePortalPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6" data-testid="employee-portal-page">
+      <div className="space-y-5" data-testid="employee-portal-page">
         {/* Header with Time In/Out */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold font-outfit dark:text-white" data-testid="portal-title">My Portal</h1>
-            <p className="text-sm text-muted-foreground">Welcome back, {profile?.name}</p>
+            <h1 className="text-xl sm:text-2xl font-bold font-outfit text-stone-800 dark:text-white" data-testid="portal-title">My Portal</h1>
+            <p className="text-sm text-stone-400">Welcome back, {profile?.name}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {!todayAttendance?.time_in ? (
-              <Button onClick={handleTimeIn} className="bg-emerald-500 hover:bg-emerald-600" data-testid="time-in-btn"><LogIn size={16} className="mr-1.5" />Time In</Button>
+              <Button onClick={handleTimeIn} className="bg-emerald-500 hover:bg-emerald-600 rounded-xl" data-testid="time-in-btn"><LogIn size={15} className="mr-1.5" />Time In</Button>
             ) : !todayAttendance?.time_out ? (
-              <Button onClick={handleTimeOut} variant="outline" className="border-red-300 text-red-600" data-testid="time-out-btn"><LogOut size={16} className="mr-1.5" />Time Out</Button>
+              <Button onClick={handleTimeOut} variant="outline" className="border-red-200 text-red-600 rounded-xl" data-testid="time-out-btn"><LogOut size={15} className="mr-1.5" />Time Out</Button>
             ) : (
-              <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 py-2 px-4"><CheckCircle size={14} className="mr-1.5" />Done for today</Badge>
+              <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 py-2 px-4 rounded-xl border-0"><CheckCircle size={14} className="mr-1.5" />Done for today</Badge>
             )}
-            <Button onClick={() => setShowLeaveForm(true)} variant="outline" size="sm"><Calendar size={14} className="mr-1" />Leave</Button>
-            <Button onClick={() => setShowRequestForm(true)} variant="outline" size="sm"><Send size={14} className="mr-1" />Request</Button>
+            <Button onClick={() => setShowLeaveForm(true)} variant="outline" size="sm" className="rounded-xl border-stone-200"><Calendar size={14} className="mr-1" />Leave</Button>
+            <Button onClick={() => setShowRequestForm(true)} variant="outline" size="sm" className="rounded-xl border-stone-200"><Send size={14} className="mr-1" />Request</Button>
             <div className="relative">
-              <Button variant="outline" size="sm" className={unreadCount > 0 ? 'border-orange-400' : ''} onClick={() => {
+              <Button variant="outline" size="sm" className={`rounded-xl ${unreadCount > 0 ? 'border-primary' : 'border-stone-200'}`} onClick={() => {
                 const el = document.querySelector('[data-testid="notif-tab"]');
                 if (el) el.click();
               }} data-testid="notif-bell-btn">
-                {unreadCount > 0 ? <BellRing size={14} className="text-orange-500" /> : <Bell size={14} />}
+                {unreadCount > 0 ? <BellRing size={14} className="text-primary" /> : <Bell size={14} />}
                 {unreadCount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{unreadCount}</span>
                 )}
@@ -273,69 +273,63 @@ export default function EmployeePortalPage() {
         {/* Profile Card + Leave Balance */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Profile Info */}
-          <Card className="dark:bg-stone-900 dark:border-stone-700" data-testid="profile-card">
-            <CardContent className="p-5">
+          <div className="bg-white dark:bg-stone-800 rounded-2xl shadow-sm p-5" data-testid="profile-card">
               <div className="flex items-start gap-4">
-                <div className="w-14 h-14 bg-orange-100 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center shrink-0">
-                  <User size={28} className="text-orange-600" />
+                <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
+                  <User size={24} className="text-primary" />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="font-bold text-lg font-outfit dark:text-white truncate">{profile?.name}</h2>
-                  <p className="text-sm text-muted-foreground">{profile?.position || 'Employee'}</p>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs text-muted-foreground">
-                    {profile?.phone && <span className="flex items-center gap-1"><Phone size={11} />{profile.phone}</span>}
-                    {profile?.email && <span className="flex items-center gap-1"><Mail size={11} />{profile.email}</span>}
-                    {profile?.branch_name && <span className="flex items-center gap-1"><Building size={11} />{profile.branch_name}</span>}
+                  <h2 className="font-bold text-base font-outfit text-stone-800 dark:text-white truncate">{profile?.name}</h2>
+                  <p className="text-xs text-stone-400">{profile?.position || 'Employee'}</p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2.5 text-[11px] text-stone-400">
+                    {profile?.phone && <span className="flex items-center gap-1"><Phone size={10} />{profile.phone}</span>}
+                    {profile?.email && <span className="flex items-center gap-1"><Mail size={10} />{profile.email}</span>}
+                    {profile?.branch_name && <span className="flex items-center gap-1"><Building size={10} />{profile.branch_name}</span>}
                   </div>
-                  <Button variant="ghost" size="sm" className="mt-2 text-xs h-7 px-2" onClick={() => setShowEditProfile(true)} data-testid="edit-profile-btn">
+                  <Button variant="ghost" size="sm" className="mt-2 text-[11px] h-7 px-2 text-primary hover:bg-primary/5 rounded-lg" onClick={() => setShowEditProfile(true)} data-testid="edit-profile-btn">
                     Edit Info
                   </Button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+          </div>
 
           {/* Financial Summary */}
-          <Card className="dark:bg-stone-900 dark:border-stone-700" data-testid="financial-card">
-            <CardContent className="p-5">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Financial</h3>
+          <div className="bg-white dark:bg-stone-800 rounded-2xl shadow-sm p-5" data-testid="financial-card">
+              <h3 className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-3">Financial</h3>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-xs text-muted-foreground">Salary</p>
-                  <p className="text-lg font-bold font-outfit dark:text-white">SAR {(profile?.salary || 0).toLocaleString()}</p>
+                  <p className="text-[10px] text-stone-400">Salary</p>
+                  <p className="text-lg font-bold font-outfit text-stone-800 dark:text-white">SAR {(profile?.salary || 0).toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Due Balance</p>
+                  <p className="text-[10px] text-stone-400">Due Balance</p>
                   <p className={`text-lg font-bold font-outfit ${dueBalance > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
                     SAR {dueBalance.toLocaleString()}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Loan Balance</p>
+                  <p className="text-[10px] text-stone-400">Loan Balance</p>
                   <p className="text-lg font-bold font-outfit text-amber-500">SAR {totalLoanBalance.toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Active Loans</p>
-                  <p className="text-lg font-bold font-outfit dark:text-white">{activeLoans.length}</p>
+                  <p className="text-[10px] text-stone-400">Active Loans</p>
+                  <p className="text-lg font-bold font-outfit text-stone-800 dark:text-white">{activeLoans.length}</p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+          </div>
 
           {/* Leave Balances */}
-          <Card className="dark:bg-stone-900 dark:border-stone-700" data-testid="leave-balance-card">
-            <CardContent className="p-5">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Leave Balance</h3>
+          <div className="bg-white dark:bg-stone-800 rounded-2xl shadow-sm p-5" data-testid="leave-balance-card">
+              <h3 className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-3">Leave Balance</h3>
               <div className="space-y-3">
                 <LeaveBalanceBar label="Annual Leave" used={annualUsed} total={profile?.annual_leave_entitled || 30} color="bg-emerald-500" />
                 <LeaveBalanceBar label="Sick Leave" used={sickUsed} total={profile?.sick_leave_entitled || 15} color="bg-blue-500" />
-                <div className="flex items-center justify-between text-xs mt-2 pt-2 border-t dark:border-stone-700">
-                  <span className="text-muted-foreground">Ticket Balance</span>
-                  <Badge variant="outline" className="text-xs">{(profile?.ticket_entitled || 1) - (profile?.ticket_used || 0)} remaining</Badge>
+                <div className="flex items-center justify-between text-xs mt-2 pt-2 border-t border-stone-100 dark:border-stone-700">
+                  <span className="text-stone-400">Ticket Balance</span>
+                  <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">{(profile?.ticket_entitled || 1) - (profile?.ticket_used || 0)} remaining</span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+          </div>
         </div>
 
         {/* Pending Payments Alert */}

@@ -318,22 +318,22 @@ export default function SuppliersPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-5">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
-            <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-2" data-testid="suppliers-page-title">Suppliers</h1>
-            <p className="text-muted-foreground text-sm">Manage suppliers and track credit</p>
+            <h1 className="text-xl sm:text-2xl font-bold font-outfit text-stone-800 dark:text-white" data-testid="suppliers-page-title">Suppliers</h1>
+            <p className="text-stone-400 text-sm">Manage suppliers and track credit</p>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
             <ExportButtons dataType="suppliers" />
             <Button variant="outline" size="sm" onClick={previewMigration}
-              className="text-amber-600 border-amber-300 hover:bg-amber-50" data-testid="migrate-payments-btn">
-              <ArrowUpCircle size={16} className="mr-1" /> Fix Data
+              className="text-amber-600 border-amber-300 hover:bg-amber-50 rounded-xl" data-testid="migrate-payments-btn">
+              <ArrowUpCircle size={14} className="mr-1" /> Fix Data
             </Button>
             <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) resetForm(); }}>
               <DialogTrigger asChild>
-                <Button className="rounded-full" data-testid="add-supplier-button">
-                  <Plus size={18} className="mr-2" /> Add Supplier
+                <Button className="rounded-xl bg-primary hover:bg-primary/90" size="sm" data-testid="add-supplier-button">
+                  <Plus size={14} className="mr-1" /> Add Supplier
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto" data-testid="supplier-dialog" aria-describedby="supplier-dialog-description">
@@ -473,61 +473,60 @@ export default function SuppliersPage() {
           }}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {applySearchFilters(suppliers, searchFilters).map((supplier) => {
             const branchName = branches.find((b) => b.id === supplier.branch_id)?.name || 'All Branches';
             const creditUtilization = supplier.credit_limit > 0 ? (supplier.current_credit / supplier.credit_limit) * 100 : 0;
             const totalPurchases = supplier.total_purchases || 0;
 
             return (
-              <Card key={supplier.id} className="border-border hover:shadow-lg transition-shadow" data-testid="supplier-card">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="font-outfit text-lg">{supplier.name}</CardTitle>
+              <div key={supplier.id} className="bg-white dark:bg-stone-800 rounded-2xl shadow-sm hover:shadow-lg transition-all p-4 space-y-3" data-testid="supplier-card">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-sm text-stone-800 dark:text-white truncate">{supplier.name}</h3>
+                    <div className="flex items-center gap-2 mt-1">
                       {supplier.category && (
-                        <span className="inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">{supplier.category}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">{supplier.category}</span>
                       )}
-                      <p className="text-sm text-muted-foreground mt-1">{branchName}</p>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => handleEdit(supplier)} data-testid="edit-supplier-button"><Edit size={16} /></Button>
-                      <Button size="sm" variant="ghost" onClick={() => handleDelete(supplier.id)} data-testid="delete-supplier-button" className="text-error hover:text-error"><Trash2 size={16} /></Button>
+                      <span className="text-[10px] text-stone-400">{branchName}</span>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {supplier.phone && <p className="text-sm">Phone: {supplier.phone}</p>}
-
-                  {/* Total Purchases */}
-                  <div className="p-2.5 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg border border-amber-200" data-testid={`total-purchases-${supplier.id}`}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-amber-700 flex items-center gap-1"><Receipt size={12} /> Total Purchases</span>
-                      <span className="text-sm font-bold text-amber-800">SAR {totalPurchases.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    </div>
+                  <div className="flex gap-1">
+                    <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg text-stone-400 hover:text-primary" onClick={() => handleEdit(supplier)} data-testid="edit-supplier-button"><Edit size={13} /></Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg text-stone-400 hover:text-red-500" onClick={() => handleDelete(supplier.id)} data-testid="delete-supplier-button"><Trash2 size={13} /></Button>
                   </div>
+                </div>
+                {supplier.phone && <p className="text-xs text-stone-400">{supplier.phone}</p>}
 
-                  {/* Cash/Bank Paid Breakdown */}
-                  {paySummaries[supplier.id] && (paySummaries[supplier.id].cash > 0 || paySummaries[supplier.id].bank > 0) && (
-                    <div className="pt-2 border-t space-y-2">
-                      <div className="flex gap-2">
-                        <div className="flex-1 p-2 bg-cash/10 rounded text-center">
-                          <div className="text-xs text-muted-foreground">Cash Paid</div>
-                          <div className="text-sm font-bold text-cash">SAR {paySummaries[supplier.id].cash.toFixed(2)}</div>
-                        </div>
-                        <div className="flex-1 p-2 bg-bank/10 rounded text-center">
-                          <div className="text-xs text-muted-foreground">Bank Paid</div>
-                          <div className="text-sm font-bold text-bank">SAR {paySummaries[supplier.id].bank.toFixed(2)}</div>
-                        </div>
+                {/* Total Purchases */}
+                <div className="p-2.5 bg-amber-50/80 dark:bg-amber-900/10 rounded-xl" data-testid={`total-purchases-${supplier.id}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-amber-600 flex items-center gap-1"><Receipt size={11} /> Total Purchases</span>
+                    <span className="text-sm font-bold text-amber-700">SAR {totalPurchases.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+
+                {/* Cash/Bank Paid Breakdown */}
+                {paySummaries[supplier.id] && (paySummaries[supplier.id].cash > 0 || paySummaries[supplier.id].bank > 0) && (
+                  <div className="pt-2 border-t border-stone-100 dark:border-stone-700 space-y-2">
+                    <div className="flex gap-2">
+                      <div className="flex-1 p-2 bg-emerald-50/80 dark:bg-emerald-900/10 rounded-lg text-center">
+                        <div className="text-[10px] text-stone-400">Cash Paid</div>
+                        <div className="text-xs font-bold text-emerald-600">SAR {paySummaries[supplier.id].cash.toFixed(2)}</div>
+                      </div>
+                      <div className="flex-1 p-2 bg-blue-50/80 dark:bg-blue-900/10 rounded-lg text-center">
+                        <div className="text-[10px] text-stone-400">Bank Paid</div>
+                        <div className="text-xs font-bold text-blue-600">SAR {paySummaries[supplier.id].bank.toFixed(2)}</div>
                       </div>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {/* Bank Accounts Preview */}
-                  {supplier.bank_accounts && supplier.bank_accounts.length > 0 && (
-                    <div className="pt-2 border-t">
-                      <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Building2 size={11} /> Bank Accounts ({supplier.bank_accounts.length})</p>
-                      {supplier.bank_accounts.map((ba, i) => (
+                {/* Bank Accounts Preview */}
+                {supplier.bank_accounts && supplier.bank_accounts.length > 0 && (
+                  <div className="pt-2 border-t border-stone-100 dark:border-stone-700">
+                    <p className="text-[10px] text-stone-400 mb-1 flex items-center gap-1"><Building2 size={10} /> Bank Accounts ({supplier.bank_accounts.length})</p>
+                    {supplier.bank_accounts.map((ba, i) => (
                         <div key={i} className="text-xs text-stone-600 bg-stone-50 px-2 py-1 rounded mb-1">
                           {ba.bank_name || 'Bank'}: {ba.account_number || ba.iban || '-'}
                         </div>
@@ -535,44 +534,41 @@ export default function SuppliersPage() {
                     </div>
                   )}
 
-                  <div className="pt-3 border-t">
+                  <div className="pt-3 border-t border-stone-100 dark:border-stone-700">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium">Credit Status</span>
-                      <span className="text-sm font-bold">SAR {supplier.current_credit?.toFixed(2) || '0.00'} / {supplier.credit_limit?.toFixed(2) || '0.00'}</span>
+                      <span className="text-xs font-medium text-stone-500">Credit Status</span>
+                      <span className="text-xs font-bold text-stone-700 dark:text-stone-200">SAR {supplier.current_credit?.toFixed(2) || '0.00'} / {supplier.credit_limit?.toFixed(2) || '0.00'}</span>
                     </div>
-                    <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
-                      <div className={`h-full transition-all ${creditUtilization > 80 ? 'bg-error' : creditUtilization > 50 ? 'bg-warning' : 'bg-success'}`}
+                    <div className="w-full bg-stone-100 dark:bg-stone-700 h-1.5 rounded-full overflow-hidden">
+                      <div className={`h-full transition-all rounded-full ${creditUtilization > 80 ? 'bg-red-500' : creditUtilization > 50 ? 'bg-amber-500' : 'bg-emerald-500'}`}
                         style={{ width: `${Math.min(creditUtilization, 100)}%` }} />
                     </div>
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="grid grid-cols-2 gap-2 mt-3">
+                  <div className="grid grid-cols-3 gap-2 mt-3">
                     <Button size="sm" variant="outline" onClick={() => { setPayingSupplier(supplier); setShowAddBillDialog(true); setBillData({ amount: '', category: '', payment_mode: 'credit', description: '', branch_id: supplier.branch_id || '' }); }}
-                      data-testid={`add-bill-${supplier.id}`} className="text-amber-600 border-amber-300 hover:bg-amber-50">
-                      <Receipt size={14} className="mr-1" /> Add Bill
+                      data-testid={`add-bill-${supplier.id}`} className="text-amber-600 border-amber-200 hover:bg-amber-50 rounded-lg text-xs h-8">
+                      <Receipt size={12} className="mr-1" /> Bill
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => { setPayingSupplier(supplier); setShowPayDialog(true); }}
                       data-testid="pay-credit-button"
-                      className={`${supplier.current_credit > 0 ? 'text-blue-600 border-blue-300 hover:bg-blue-50' : 'text-stone-400 border-stone-200'}`}
+                      className={`rounded-lg text-xs h-8 ${supplier.current_credit > 0 ? 'text-blue-600 border-blue-200 hover:bg-blue-50' : 'text-stone-300 border-stone-200'}`}
                       disabled={!supplier.current_credit || supplier.current_credit <= 0}>
-                      <DollarSign size={14} className="mr-1" /> Pay Credit
+                      <DollarSign size={12} className="mr-1" /> Pay
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => { setLedgerStartDate(''); setLedgerEndDate(''); viewLedger(supplier); }}
+                      data-testid={`view-ledger-${supplier.id}`} className="text-stone-500 border-stone-200 hover:bg-stone-50 rounded-lg text-xs h-8">
+                      <FileText size={12} className="mr-1" /> Ledger
                     </Button>
                   </div>
-
-                  {/* View Ledger Button */}
-                  <Button size="sm" variant="ghost" onClick={() => { setLedgerStartDate(''); setLedgerEndDate(''); viewLedger(supplier); }}
-                    data-testid={`view-ledger-${supplier.id}`} className="w-full mt-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                    <FileText size={14} className="mr-1" /> View Ledger
-                  </Button>
-                </CardContent>
-              </Card>
+              </div>
             );
           })}
           {suppliers.length === 0 && (
-            <Card className="col-span-full border-dashed">
-              <CardContent className="p-12 text-center"><p className="text-muted-foreground">No suppliers yet. Add your first supplier to get started!</p></CardContent>
-            </Card>
+            <div className="col-span-full text-center py-16 text-stone-400">
+              <p className="text-sm">No suppliers yet. Add your first supplier to get started!</p>
+            </div>
           )}
         </div>
 

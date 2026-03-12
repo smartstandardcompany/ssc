@@ -364,8 +364,8 @@ export default function SalesPage() {
 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
-            <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-1" data-testid="sales-page-title">Sales Management</h1>
-            <p className="text-sm text-muted-foreground">Track sales with flexible payment options</p>
+            <h1 className="text-xl sm:text-2xl font-bold font-outfit text-stone-800 dark:text-white" data-testid="sales-page-title">Sales Management</h1>
+            <p className="text-sm text-stone-400">Track sales with flexible payment options</p>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
             <ExportButtons dataType="sales" />
@@ -373,7 +373,7 @@ export default function SalesPage() {
             <Button
             onClick={() => setShowForm(!showForm)}
             data-testid="add-sale-button"
-            className="rounded-full"
+            className="rounded-xl bg-primary hover:bg-primary/90"
             size="sm"
           >
             <Plus size={16} className="mr-1" />

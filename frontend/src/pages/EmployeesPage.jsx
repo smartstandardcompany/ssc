@@ -246,18 +246,18 @@ export default function EmployeesPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
           <div>
-            <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-1" data-testid="employees-page-title">Employees</h1>
-            <p className="text-sm text-muted-foreground">Payroll, loans, leaves & document tracking</p>
+            <h1 className="text-xl sm:text-2xl font-bold font-outfit text-stone-800 dark:text-white" data-testid="employees-page-title">Employees</h1>
+            <p className="text-sm text-stone-400">Payroll, loans, leaves & document tracking</p>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
             <BranchFilter onChange={setBranchFilter} />
             <ExportButtons dataType="employees" />
             <BulkSalaryPayment onComplete={fetchData} />
-            <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowJobTitleManager(true)} data-testid="manage-job-titles-btn"><Briefcase size={14} className="mr-1" />Job Titles</Button>
+            <Button size="sm" variant="outline" className="rounded-xl border-stone-200" onClick={() => setShowJobTitleManager(true)} data-testid="manage-job-titles-btn"><Briefcase size={14} className="mr-1" />Job Titles</Button>
             <Dialog open={showDialog} onOpenChange={(o) => { setShowDialog(o); if (!o) resetForm(); }}>
               <ExportButton dataType="employees" label="Employees" />
               <ExportButton dataType="attendance" label="Attendance" />
-              <DialogTrigger asChild><Button size="sm" className="rounded-full" data-testid="add-employee-button"><Plus size={14} className="mr-1" />Add Employee</Button></DialogTrigger>
+              <DialogTrigger asChild><Button size="sm" className="rounded-xl bg-primary hover:bg-primary/90" data-testid="add-employee-button"><Plus size={14} className="mr-1" />Add Employee</Button></DialogTrigger>
               <DialogContent className="max-w-2xl" data-testid="employee-dialog">
                 <DialogHeader><DialogTitle className="font-outfit">{editingEmp ? 'Edit' : 'Add'} Employee</DialogTitle></DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 max-h-[65vh] overflow-y-auto pr-2">
@@ -320,25 +320,25 @@ export default function EmployeesPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Total Employees</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-primary">{employees.length}</div></CardContent></Card>
-          <Card className={`border-border cursor-pointer transition-all ${statusFilter === 'active' ? 'ring-2 ring-emerald-400' : ''}`} onClick={() => setStatusFilter('active')} data-testid="filter-active">
-            <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Active</CardTitle></CardHeader>
-            <CardContent><div className="text-2xl font-bold font-outfit text-emerald-600">{employees.filter(e => !e.status || e.status === 'active').length}</div></CardContent>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <Card className="border-0 shadow-sm bg-white dark:bg-stone-800"><CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-[11px] text-stone-400 uppercase tracking-wide">Total Employees</CardTitle></CardHeader><CardContent className="px-4 pb-3"><div className="text-2xl font-bold font-outfit text-primary">{employees.length}</div></CardContent></Card>
+          <Card className={`border-0 shadow-sm cursor-pointer transition-all ${statusFilter === 'active' ? 'ring-2 ring-emerald-400' : 'bg-white dark:bg-stone-800'}`} onClick={() => setStatusFilter('active')} data-testid="filter-active">
+            <CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-[11px] text-stone-400 uppercase tracking-wide">Active</CardTitle></CardHeader>
+            <CardContent className="px-4 pb-3"><div className="text-2xl font-bold font-outfit text-emerald-600">{employees.filter(e => !e.status || e.status === 'active').length}</div></CardContent>
           </Card>
-          <Card className={`border-border cursor-pointer transition-all ${statusFilter === 'left' ? 'ring-2 ring-red-400' : ''}`} onClick={() => setStatusFilter('left')} data-testid="filter-left">
-            <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Left / Terminated</CardTitle></CardHeader>
-            <CardContent><div className="text-2xl font-bold font-outfit text-red-600">{employees.filter(e => ['left', 'terminated', 'resigned', 'end_of_contract'].includes(e.status)).length}</div></CardContent>
+          <Card className={`border-0 shadow-sm cursor-pointer transition-all ${statusFilter === 'left' ? 'ring-2 ring-red-400' : 'bg-white dark:bg-stone-800'}`} onClick={() => setStatusFilter('left')} data-testid="filter-left">
+            <CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-[11px] text-stone-400 uppercase tracking-wide">Left / Terminated</CardTitle></CardHeader>
+            <CardContent className="px-4 pb-3"><div className="text-2xl font-bold font-outfit text-red-600">{employees.filter(e => ['left', 'terminated', 'resigned', 'end_of_contract'].includes(e.status)).length}</div></CardContent>
           </Card>
-          <Card className="border-border"><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Monthly Payroll</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold font-outfit text-error"> SAR {totalSalary.toFixed(0)}</div></CardContent></Card>
-          <Card className={`border-border cursor-pointer transition-all ${statusFilter === 'all' ? 'ring-2 ring-blue-400' : ''}`} onClick={() => setStatusFilter('all')} data-testid="filter-all">
-            <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Show All</CardTitle></CardHeader>
-            <CardContent><div className="text-2xl font-bold font-outfit text-blue-600">{employees.length}</div></CardContent>
+          <Card className="border-0 shadow-sm bg-white dark:bg-stone-800"><CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-[11px] text-stone-400 uppercase tracking-wide">Monthly Payroll</CardTitle></CardHeader><CardContent className="px-4 pb-3"><div className="text-2xl font-bold font-outfit text-red-600">SAR {totalSalary.toFixed(0)}</div></CardContent></Card>
+          <Card className={`border-0 shadow-sm cursor-pointer transition-all ${statusFilter === 'all' ? 'ring-2 ring-blue-400' : 'bg-white dark:bg-stone-800'}`} onClick={() => setStatusFilter('all')} data-testid="filter-all">
+            <CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-[11px] text-stone-400 uppercase tracking-wide">Show All</CardTitle></CardHeader>
+            <CardContent className="px-4 pb-3"><div className="text-2xl font-bold font-outfit text-blue-600">{employees.length}</div></CardContent>
           </Card>
         </div>
 
-        <Card className="border-border">
-          <CardHeader><CardTitle className="font-outfit">All Employees</CardTitle></CardHeader>
+        <Card className="border-0 shadow-sm bg-white dark:bg-stone-800">
+          <CardHeader><CardTitle className="font-outfit text-sm font-semibold">All Employees</CardTitle></CardHeader>
           <CardContent>
             {/* Mobile card view */}
             <div className="sm:hidden space-y-2">
@@ -351,7 +351,7 @@ export default function EmployeesPage() {
                 const pend = getPending(emp.id);
                 const jt = jobTitles.find(j => j.id === emp.job_title_id);
                 return (
-                  <div key={emp.id} className={`p-3 border rounded-xl space-y-2 ${emp.status === 'resigned' || emp.status === 'on_notice' || emp.status === 'end_of_contract' ? 'bg-amber-50/30 border-amber-200' : emp.status === 'left' || emp.status === 'terminated' ? 'bg-red-50/30 border-red-200' : 'bg-white'}`} data-testid={`employee-card-${emp.id}`}>
+                  <div key={emp.id} className={`p-3 rounded-2xl space-y-2 ${emp.status === 'resigned' || emp.status === 'on_notice' || emp.status === 'end_of_contract' ? 'bg-amber-50/30 border border-amber-200' : emp.status === 'left' || emp.status === 'terminated' ? 'bg-red-50/30 border border-red-200' : 'bg-white shadow-sm'}`} data-testid={`employee-card-${emp.id}`}>
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="text-sm font-bold">{emp.name}</p>

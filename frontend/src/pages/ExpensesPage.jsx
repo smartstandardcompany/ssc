@@ -294,7 +294,7 @@ export default function ExpensesPage() {
 
         <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
           <div>
-            <h1 className="text-2xl sm:text-4xl font-bold font-outfit mb-1">{t('expenses_title')}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold font-outfit text-stone-800 dark:text-white">{t('expenses_title')}</h1>
             <p className="text-sm text-muted-foreground">{t('expenses_subtitle')}</p>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
