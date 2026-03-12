@@ -49,8 +49,11 @@ const NAV_GROUPS = [
   {
     label: 'Accounting',
     items: [
+      { path: '/financial-dashboard', icon: Activity, label: 'Financial Dashboard', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/chart-of-accounts', icon: Tags, label: 'Chart of Accounts', perm: 'settings', roles: ['admin'] },
+      { path: '/journal-entries', icon: FileText, label: 'Journal Entries', perm: 'settings', roles: ['admin'] },
       { path: '/profit-loss', icon: TrendingUp, label: 'Profit & Loss', perm: 'reports', roles: ['admin', 'manager'] },
+      { path: '/balance-sheet', icon: BarChart3, label: 'Balance Sheet', perm: 'reports', roles: ['admin', 'manager'] },
       { path: '/tax-settings', icon: Receipt, label: 'Tax & Currency', perm: 'settings', roles: ['admin'] },
     ]
   },

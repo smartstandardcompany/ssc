@@ -81,6 +81,10 @@ import ChartOfAccountsPage from "./pages/ChartOfAccountsPage";
 import BillsPage from "./pages/BillsPage";
 import ProfitLossPage from "./pages/ProfitLossPage";
 import TaxSettingsPage from "./pages/TaxSettingsPage";
+import BalanceSheetPage from "./pages/BalanceSheetPage";
+import JournalEntriesPage from "./pages/JournalEntriesPage";
+import FinancialDashboardPage from "./pages/FinancialDashboardPage";
+import LandingPage from "./pages/LandingPage";
 import OrderTrackingPage from "./pages/OrderTrackingPage";
 import BrandingSettingsPage from "./pages/BrandingSettingsPage";
 import ScheduledReportsPage from "./pages/ScheduledReportsPage";
@@ -200,6 +204,7 @@ function App() {
         <ShortcutHelpDialog />
         <Routes>
           {/* Public routes */}
+          <Route path="/landing" element={<LandingPage />} />
           <Route path="/login" element={!isAuthenticated ? <LoginPage setIsAuthenticated={setIsAuthenticated} /> : <Navigate to="/" />} />
           <Route path="/register" element={!isAuthenticated ? <RegisterPage setIsAuthenticated={setIsAuthenticated} /> : <Navigate to="/" />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -254,6 +259,9 @@ function App() {
           <Route path="/bills" element={<AuthRoute><ProtectedRoute perm="expenses" roles={['admin', 'manager']}><BillsPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/profit-loss" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><ProfitLossPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/tax-settings" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><TaxSettingsPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/balance-sheet" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><BalanceSheetPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/journal-entries" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><JournalEntriesPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/financial-dashboard" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><FinancialDashboardPage /></ProtectedRoute></AuthRoute>} />
 
           {/* People */}
           <Route path="/customers" element={<AuthRoute><ProtectedRoute perm="customers"><CustomersPage /></ProtectedRoute></AuthRoute>} />

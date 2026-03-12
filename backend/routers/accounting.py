@@ -511,3 +511,283 @@ async def get_accounting_summary(current_user=Depends(get_current_user)):
         "month_revenue": round(month_sales[0]["total"] if month_sales else 0, 2),
         "month_expenses": round(month_expenses[0]["total"] if month_expenses else 0, 2),
     }
+
+
+# ── Journal Entries ─────────────────────────────────────────────
+
+@router.get("/accounting/journal-entries")
+async def get_journal_entries(
+    page: int = 1,
+    limit: int = 50,
+    entry_type: Optional[str] = None,
+    current_user=Depends(get_current_user),
+):
+    query = {}
+    if entry_type:
+        query["entry_type"] = entry_type
+    total = await db.journal_entries.count_documents(query)
+    skip = (page - 1) * limit
+    entries = await db.journal_entries.find(query, {"_id": 0}).sort("date", -1).skip(skip).limit(limit).to_list(limit)
+    return {"entries": entries, "total": total, "page": page, "pages": (total + limit - 1) // limit}
+
+
+@router.post("/accounting/journal-entries")
+async def create_journal_entry(body: dict, current_user=Depends(get_current_user)):
+    lines = body.get("lines", [])
+    total_debit = sum(l.get("debit", 0) for l in lines)
+    total_credit = sum(l.get("credit", 0) for l in lines)
+    if abs(total_debit - total_credit) > 0.01:
+        raise HTTPException(status_code=400, detail=f"Debits ({total_debit}) must equal Credits ({total_credit})")
+    if len(lines) < 2:
+        raise HTTPException(status_code=400, detail="At least 2 lines required")
+
+    entry = {
+        "id": str(uuid.uuid4()),
+        "entry_number": f"JE-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:4].upper()}",
+        "date": body.get("date", datetime.now(timezone.utc).isoformat()),
+        "description": body.get("description", ""),
+        "entry_type": body.get("entry_type", "manual"),
+        "reference": body.get("reference", ""),
+        "lines": lines,
+        "total_debit": round(total_debit, 2),
+        "total_credit": round(total_credit, 2),
+        "status": "posted",
+        "created_by": getattr(current_user, "name", None) or getattr(current_user, "email", ""),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.journal_entries.insert_one(entry)
+    entry.pop("_id", None)
+    return entry
+
+
+@router.delete("/accounting/journal-entries/{entry_id}")
+async def delete_journal_entry(entry_id: str, current_user=Depends(get_current_user)):
+    result = await db.journal_entries.delete_one({"id": entry_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    return {"success": True}
+
+
+# ── Balance Sheet ──────────────────────────────────────────────
+
+@router.get("/accounting/balance-sheet")
+async def get_balance_sheet(
+    as_of_date: Optional[str] = None,
+    branch_id: Optional[str] = None,
+    current_user=Depends(get_current_user),
+):
+    if not as_of_date:
+        as_of_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    date_query = {"$lte": as_of_date + "T23:59:59"}
+    branch_query = {"branch_id": branch_id} if branch_id else {}
+
+    # Assets
+    # Cash: sum of sales cash - expenses cash
+    sales_cash_pipeline = [
+        {"$match": {**branch_query, "date": date_query}},
+        {"$group": {"_id": None, "cash": {"$sum": "$cash"}, "bank": {"$sum": "$bank"}, "online": {"$sum": "$online"}}}
+    ]
+    sales_cash = await db.sales.aggregate(sales_cash_pipeline).to_list(1)
+    total_cash_in = sales_cash[0]["cash"] if sales_cash else 0
+    total_bank_in = (sales_cash[0].get("bank", 0) + sales_cash[0].get("online", 0)) if sales_cash else 0
+
+    expense_cash_pipeline = [
+        {"$match": {**branch_query, "date": date_query}},
+        {"$group": {"_id": "$payment_mode", "total": {"$sum": "$amount"}}}
+    ]
+    expense_results = await db.expenses.aggregate(expense_cash_pipeline).to_list(20)
+    expense_by_mode = {r["_id"]: r["total"] for r in expense_results}
+    total_cash_out = expense_by_mode.get("Cash", 0) + expense_by_mode.get("cash", 0)
+    total_bank_out = expense_by_mode.get("Bank Transfer", 0) + expense_by_mode.get("bank", 0) + expense_by_mode.get("Card", 0)
+
+    # Accounts Receivable (outstanding credits from sales)
+    ar_pipeline = [
+        {"$match": {**branch_query, "credit": {"$gt": 0}}},
+        {"$group": {"_id": None, "total": {"$sum": "$credit"}}}
+    ]
+    ar_result = await db.sales.aggregate(ar_pipeline).to_list(1)
+    accounts_receivable = ar_result[0]["total"] if ar_result else 0
+
+    # Inventory value
+    inv_pipeline = [
+        {"$match": {"quantity": {"$gt": 0}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$multiply": ["$quantity", {"$ifNull": ["$cost_price", 0]}]}}}}
+    ]
+    inv_result = await db.inventory.aggregate(inv_pipeline).to_list(1)
+    inventory_value = inv_result[0]["total"] if inv_result else 0
+
+    # Liabilities
+    # Accounts Payable (unpaid bills + supplier credit)
+    ap_pipeline = [
+        {"$match": {"status": {"$in": ["unpaid", "partial"]}}},
+        {"$group": {"_id": None, "total": {"$sum": "$balance_due"}}}
+    ]
+    ap_result = await db.bills.aggregate(ap_pipeline).to_list(1)
+    accounts_payable = ap_result[0]["total"] if ap_result else 0
+
+    # Supplier credits
+    supplier_credit_pipeline = [
+        {"$match": {"credit_balance": {"$gt": 0}}},
+        {"$group": {"_id": None, "total": {"$sum": "$credit_balance"}}}
+    ]
+    supplier_credit = await db.suppliers.aggregate(supplier_credit_pipeline).to_list(1)
+    supplier_credit_total = supplier_credit[0]["total"] if supplier_credit else 0
+
+    # VAT Payable (estimated)
+    total_sales_pipeline = [
+        {"$match": {**branch_query, "date": date_query}},
+        {"$group": {"_id": None, "total": {"$sum": "$total"}}}
+    ]
+    total_sales = await db.sales.aggregate(total_sales_pipeline).to_list(1)
+    vat_payable = round((total_sales[0]["total"] if total_sales else 0) * 15 / 115, 2)
+
+    # Equity = Total Revenue - Total Expenses (retained earnings)
+    total_revenue = total_sales[0]["total"] if total_sales else 0
+    total_exp_pipeline = [
+        {"$match": {**branch_query, "date": date_query}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]
+    total_exp = await db.expenses.aggregate(total_exp_pipeline).to_list(1)
+    total_expenses = total_exp[0]["total"] if total_exp else 0
+    retained_earnings = total_revenue - total_expenses
+
+    # Build balance sheet
+    cash_balance = round(total_cash_in - total_cash_out, 2)
+    bank_balance = round(total_bank_in - total_bank_out, 2)
+
+    assets = {
+        "current_assets": {
+            "Cash on Hand": round(max(cash_balance, 0), 2),
+            "Bank Accounts": round(max(bank_balance, 0), 2),
+            "Accounts Receivable": round(accounts_receivable, 2),
+            "Inventory": round(inventory_value, 2),
+        },
+        "fixed_assets": {},
+        "total": round(max(cash_balance, 0) + max(bank_balance, 0) + accounts_receivable + inventory_value, 2),
+    }
+
+    liabilities = {
+        "current_liabilities": {
+            "Accounts Payable": round(accounts_payable, 2),
+            "Supplier Credits": round(supplier_credit_total, 2),
+            "VAT Payable": round(vat_payable, 2),
+        },
+        "long_term_liabilities": {},
+        "total": round(accounts_payable + supplier_credit_total + vat_payable, 2),
+    }
+
+    equity = {
+        "items": {
+            "Retained Earnings": round(retained_earnings, 2),
+        },
+        "total": round(retained_earnings, 2),
+    }
+
+    return {
+        "as_of_date": as_of_date,
+        "assets": assets,
+        "liabilities": liabilities,
+        "equity": equity,
+        "total_liabilities_equity": round(liabilities["total"] + equity["total"], 2),
+        "is_balanced": abs(assets["total"] - (liabilities["total"] + equity["total"])) < 1,
+    }
+
+
+# ── Financial Dashboard ───────────────────────────────────────
+
+@router.get("/accounting/financial-dashboard")
+async def get_financial_dashboard(
+    current_user=Depends(get_current_user),
+):
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1).strftime("%Y-%m-%d")
+    month_end = now.strftime("%Y-%m-%d")
+    end_filter = month_end + "T23:59:59"
+
+    # Monthly revenue trend (last 6 months)
+    revenue_trend = []
+    for i in range(5, -1, -1):
+        m = now.month - i
+        y = now.year
+        while m <= 0:
+            m += 12
+            y -= 1
+        ms = f"{y}-{m:02d}-01"
+        if m == 12:
+            me = f"{y + 1}-01-01"
+        else:
+            me = f"{y}-{m + 1:02d}-01"
+        pipeline = [
+            {"$match": {"date": {"$gte": ms, "$lt": me}}},
+            {"$group": {"_id": None, "revenue": {"$sum": "$total"}, "count": {"$sum": 1}}}
+        ]
+        result = await db.sales.aggregate(pipeline).to_list(1)
+        exp_pipeline = [
+            {"$match": {"date": {"$gte": ms, "$lt": me}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]
+        exp_result = await db.expenses.aggregate(exp_pipeline).to_list(1)
+        revenue_trend.append({
+            "month": f"{y}-{m:02d}",
+            "revenue": round(result[0]["revenue"], 2) if result else 0,
+            "expenses": round(exp_result[0]["total"], 2) if exp_result else 0,
+            "profit": round((result[0]["revenue"] if result else 0) - (exp_result[0]["total"] if exp_result else 0), 2),
+            "sales_count": result[0]["count"] if result else 0,
+        })
+
+    # Expense breakdown by category (current month)
+    expense_cat_pipeline = [
+        {"$match": {"date": {"$gte": month_start, "$lte": end_filter}}},
+        {"$group": {"_id": "$category", "total": {"$sum": "$amount"}, "count": {"$sum": 1}}}
+    ]
+    expense_cats = await db.expenses.aggregate(expense_cat_pipeline).to_list(50)
+    expense_breakdown = [{"category": r["_id"] or "Other", "amount": round(r["total"], 2), "count": r["count"]} for r in expense_cats]
+    expense_breakdown.sort(key=lambda x: x["amount"], reverse=True)
+
+    # Revenue by payment method (current month)
+    revenue_method_pipeline = [
+        {"$match": {"date": {"$gte": month_start, "$lte": end_filter}}},
+        {"$group": {"_id": None, "cash": {"$sum": "$cash"}, "bank": {"$sum": "$bank"},
+                    "online": {"$sum": "$online"}, "credit": {"$sum": "$credit"}, "total": {"$sum": "$total"}}}
+    ]
+    rev_method = await db.sales.aggregate(revenue_method_pipeline).to_list(1)
+    payment_breakdown = []
+    if rev_method:
+        rm = rev_method[0]
+        for k in ["cash", "bank", "online", "credit"]:
+            if rm.get(k, 0) > 0:
+                payment_breakdown.append({"method": k.capitalize(), "amount": round(rm[k], 2)})
+
+    # Cash flow (in vs out this month)
+    total_in = rev_method[0]["total"] if rev_method else 0
+    total_out_pipeline = [
+        {"$match": {"date": {"$gte": month_start, "$lte": end_filter}}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]
+    total_out_result = await db.expenses.aggregate(total_out_pipeline).to_list(1)
+    total_out = total_out_result[0]["total"] if total_out_result else 0
+
+    # Outstanding amounts
+    ar_pipeline = [{"$match": {"credit": {"$gt": 0}}}, {"$group": {"_id": None, "total": {"$sum": "$credit"}, "count": {"$sum": 1}}}]
+    ar = await db.sales.aggregate(ar_pipeline).to_list(1)
+    ap_pipeline = [{"$match": {"status": {"$in": ["unpaid", "partial"]}}}, {"$group": {"_id": None, "total": {"$sum": "$balance_due"}, "count": {"$sum": 1}}}]
+    ap = await db.bills.aggregate(ap_pipeline).to_list(1)
+
+    return {
+        "revenue_trend": revenue_trend,
+        "expense_breakdown": expense_breakdown,
+        "payment_breakdown": payment_breakdown,
+        "cash_flow": {
+            "inflow": round(total_in, 2),
+            "outflow": round(total_out, 2),
+            "net": round(total_in - total_out, 2),
+        },
+        "outstanding": {
+            "receivable": round(ar[0]["total"] if ar else 0, 2),
+            "receivable_count": ar[0]["count"] if ar else 0,
+            "payable": round(ap[0]["total"] if ap else 0, 2),
+            "payable_count": ap[0]["count"] if ap else 0,
+        },
+        "month": month_start,
+    }
