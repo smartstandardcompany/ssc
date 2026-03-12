@@ -10,6 +10,7 @@ from database import client, db
 
 from routers import (
     access_policies,
+    accounting,
     activity_logs,
     addons,
     assets,
@@ -77,6 +78,7 @@ app.add_middleware(
 # Include all routers with /api prefix
 for module in [
     access_policies,
+    accounting,
     activity_logs,
     addons,
     anomaly_detection,

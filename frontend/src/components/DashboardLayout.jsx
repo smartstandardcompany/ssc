@@ -39,10 +39,19 @@ const NAV_GROUPS = [
       { path: '/platforms', icon: Truck, label: 'Online Platforms', perm: 'sales' },
       { path: '/invoices', icon: FileInput, label: 'Invoices', perm: 'invoices' },
       { path: '/expenses', icon: Receipt, label: 'Expenses', perm: 'expenses' },
+      { path: '/bills', icon: FileText, label: 'Bills', perm: 'expenses', roles: ['admin', 'manager'] },
       { path: '/supplier-payments', icon: Receipt, label: 'Supplier Payments', perm: 'supplier_payments', roles: ['admin', 'manager'] },
       { path: '/supplier-aging', icon: Clock, label: 'Supplier Aging', perm: 'suppliers', roles: ['admin', 'manager'] },
       { path: '/supplier-reminders', icon: Bell, label: 'Payment Reminders', perm: 'suppliers', roles: ['admin', 'manager'] },
       { path: '/cash-transfers', icon: ArrowLeftRight, label: 'Cash Transfers', perm: 'cash_transfers', roles: ['admin', 'manager'] },
+    ]
+  },
+  {
+    label: 'Accounting',
+    items: [
+      { path: '/chart-of-accounts', icon: Tags, label: 'Chart of Accounts', perm: 'settings', roles: ['admin'] },
+      { path: '/profit-loss', icon: TrendingUp, label: 'Profit & Loss', perm: 'reports', roles: ['admin', 'manager'] },
+      { path: '/tax-settings', icon: Receipt, label: 'Tax & Currency', perm: 'settings', roles: ['admin'] },
     ]
   },
   {

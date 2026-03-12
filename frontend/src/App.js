@@ -77,6 +77,10 @@ import TrendComparisonPage from "./pages/TrendComparisonPage";
 import SupplierRemindersPage from "./pages/SupplierRemindersPage";
 import StockReorderPage from "./pages/StockReorderPage";
 import EnhancedPnLPage from "./pages/EnhancedPnLPage";
+import ChartOfAccountsPage from "./pages/ChartOfAccountsPage";
+import BillsPage from "./pages/BillsPage";
+import ProfitLossPage from "./pages/ProfitLossPage";
+import TaxSettingsPage from "./pages/TaxSettingsPage";
 import OrderTrackingPage from "./pages/OrderTrackingPage";
 import BrandingSettingsPage from "./pages/BrandingSettingsPage";
 import ScheduledReportsPage from "./pages/ScheduledReportsPage";
@@ -244,6 +248,12 @@ function App() {
           <Route path="/expenses" element={<AuthRoute><ProtectedRoute perm="expenses"><ExpensesPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/supplier-payments" element={<AuthRoute><ProtectedRoute perm="supplier_payments" roles={['admin', 'manager']}><SupplierPaymentsPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/cash-transfers" element={<AuthRoute><ProtectedRoute perm="cash_transfers" roles={['admin', 'manager']}><CashTransfersPage /></ProtectedRoute></AuthRoute>} />
+
+          {/* Accounting */}
+          <Route path="/chart-of-accounts" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><ChartOfAccountsPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/bills" element={<AuthRoute><ProtectedRoute perm="expenses" roles={['admin', 'manager']}><BillsPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/profit-loss" element={<AuthRoute><ProtectedRoute perm="reports" roles={['admin', 'manager']}><ProfitLossPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/tax-settings" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><TaxSettingsPage /></ProtectedRoute></AuthRoute>} />
 
           {/* People */}
           <Route path="/customers" element={<AuthRoute><ProtectedRoute perm="customers"><CustomersPage /></ProtectedRoute></AuthRoute>} />
