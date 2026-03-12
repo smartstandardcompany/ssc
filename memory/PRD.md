@@ -20,9 +20,14 @@ A comprehensive business management ERP system named "SSC Track" for a restauran
   - **Bills Management** - Supplier bills with line items, VAT calculation, due dates, payment terms, partial/full payment tracking, multi-currency
   - **Profit & Loss Report** - Real-time P&L with Revenue, Cost of Sales, Gross Profit, Operating Expenses, Net Profit. Quick range filters + branch filter
   - **Tax & Currency Settings** - VAT rates (15% Saudi default, 5% UAE/Bahrain, Zero Rated, Exempt), 11 Middle East + global currencies
-  - **New Sidebar Section** - "Accounting" nav group with 3 pages. Bills added under Finance
-  - Backend: `/api/accounting/*` endpoints (accounts, tax-rates, bills, profit-loss, currencies, summary)
-  - All tests passed (iteration_140): 23/23 backend, all 4 frontend pages verified
+  - All tests passed (iteration_140)
+- **Accounting Module (P1) — Expanded:**
+  - **Balance Sheet** - Assets (Cash, Bank, AR, Inventory) vs Liabilities (AP, Supplier Credits, VAT Payable) vs Equity (Retained Earnings) with date/branch filters and accounting equation display
+  - **Journal Entries** - Full double-entry bookkeeping: create balanced debit/credit entries, account selector from Chart of Accounts, balance validation, entry types (manual, adjustment, closing, opening)
+  - **Financial Dashboard** - Separate from ops dashboard. 5 metric cards (Cash Inflow/Outflow, Net Cash Flow, AR, AP), Revenue vs Expenses area chart (6 months), Net Profit trend bar chart, Expense breakdown pie chart, Payment method chart, Monthly summary table
+  - Sidebar "Accounting" section now has 6 items: Financial Dashboard, Chart of Accounts, Journal Entries, Profit & Loss, Balance Sheet, Tax & Currency
+  - All tests passed (iteration_141): 17/17 backend, all frontend pages verified
+- **Commercial Landing Page** - Public route `/landing` with hero, features, modular architecture showcase, 3-tier pricing (Starter/Business/Enterprise), stats, CTA, and footer. Links to sign-in/register. Fully separate from app.
 
 ### Session 2026-03-11
 - **Foodics-Inspired Sidebar** - Light gray bg, collapsible nav groups, clean active states
@@ -69,14 +74,13 @@ A comprehensive business management ERP system named "SSC Track" for a restauran
 - SMTP Email: BLOCKED - user needs to disable Security Defaults in M365/Azure AD
 
 ## Backlog
-- P1: Balance Sheet report
-- P1: Accounts Receivable / Payable detailed reports
-- P1: Journal Entries (manual debit/credit)
-- P2: Bank Reconciliation
+- P1: Multi-tenancy for commercial version (data isolation per tenant)
+- P1: Self-service registration & onboarding flow
+- P2: Subscription billing (Stripe integration)
+- P2: Admin super panel to manage all tenants
+- P2: White-label/branding per tenant
 - P2: Email automation (blocked on SMTP)
-- P2: Multi-tenancy for commercial version
 - P3: Scheduled PDF report delivery (blocked on SMTP)
-- P3: Landing page / marketing site for commercial launch
 
 ## Credentials
 - Admin: ss@ssc.com / Aa147258369Ssc@
