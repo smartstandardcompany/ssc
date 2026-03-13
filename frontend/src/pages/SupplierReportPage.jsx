@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { ExportButtons } from '@/components/ExportButtons';
 import { BranchFilter } from '@/components/BranchFilter';
+import { Input } from '@/components/ui/input';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -19,15 +20,22 @@ export default function SupplierReportPage() {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState('all');
   const [branchFilter, setBranchFilter] = useState([]);
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
 
   useEffect(() => {
     fetchReport();
-  }, [period, branchFilter]);
+  }, [period, branchFilter, customStartDate, customEndDate]);
 
   const fetchReport = async () => {
     try {
       const params = new URLSearchParams();
-      if (period !== 'all') params.append('period', period);
+      if (period === 'custom' && customStartDate && customEndDate) {
+        params.append('start_date', customStartDate);
+        params.append('end_date', customEndDate);
+      } else if (period !== 'all') {
+        params.append('period', period);
+      }
       if (branchFilter.length === 1) params.append('branch_id', branchFilter[0]);
       const qs = params.toString() ? `?${params.toString()}` : '';
       const response = await api.get(`/reports/supplier-balance${qs}`);
@@ -100,9 +108,17 @@ export default function SupplierReportPage() {
                 <SelectItem value="today">Today</SelectItem>
                 <SelectItem value="month">This Month</SelectItem>
                 <SelectItem value="year">This Year</SelectItem>
+                <SelectItem value="custom">Custom Range</SelectItem>
               </SelectContent>
             </Select>
-            <ExportButtons dataType="suppliers" />
+            {period === 'custom' && (
+              <>
+                <Input type="date" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} className="w-36" data-testid="custom-start-date" />
+                <span className="text-stone-400 text-sm">to</span>
+                <Input type="date" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} className="w-36" data-testid="custom-end-date" />
+              </>
+            )}
+            <ExportButtons dataType="suppliers" startDate={period === 'custom' ? customStartDate : undefined} endDate={period === 'custom' ? customEndDate : undefined} />
           </div>
         </div>
 

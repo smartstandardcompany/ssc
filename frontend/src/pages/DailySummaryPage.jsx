@@ -191,7 +191,7 @@ export default function DailySummaryPage() {
                   <p className="text-xs text-emerald-600">{data.sales.count} transactions</p>
                 </CardContent>
               </Card>
-              <Card className="border-red-200 bg-red-50/50 cursor-pointer hover:shadow-md transition-shadow card-enter" onClick={() => navigate(`/expenses?date=${selectedDate}`)} data-testid="card-total-expenses">
+              <Card className="border-red-200 bg-red-50/50 cursor-pointer hover:shadow-md transition-shadow card-enter" onClick={() => navigate(`/expenses?date=${selectedDate}${selectedBranch ? `&branch=${selectedBranch}` : ''}`)} data-testid="card-total-expenses">
                 <CardContent className="pt-4 pb-3">
                   <div className="flex items-center gap-2 mb-1">
                     <ArrowDownRight className="text-red-600" size={18} />
@@ -616,7 +616,7 @@ export default function DailySummaryPage() {
                               <td className="px-3 py-2.5 text-right text-emerald-600">{formatCurrency(day.sales_bank)}</td>
                               <td className="px-3 py-2.5 text-right">
                                 {day.expenses > 0 ? (
-                                  <button onClick={() => navigate(`/expenses?date=${day.date}`)}
+                                  <button onClick={() => navigate(`/expenses?date=${day.date}${selectedBranch ? `&branch=${selectedBranch}` : ''}`)}
                                     className="text-red-700 font-semibold hover:underline cursor-pointer" data-testid={`click-exp-${day.date}`}>
                                     {formatCurrency(day.expenses)}
                                   </button>

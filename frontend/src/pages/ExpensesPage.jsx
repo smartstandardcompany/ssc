@@ -37,6 +37,7 @@ export default function ExpensesPage() {
   const [searchFilters, setSearchFilters] = useState({});
   const [searchParams] = useSearchParams();
   const urlDateFilter = searchParams.get('date');
+  const urlBranchFilter = searchParams.get('branch');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -51,7 +52,10 @@ export default function ExpensesPage() {
       setDateRange({ start: urlDateFilter, end: urlDateFilter });
       setSearchFilters(prev => ({ ...prev, date: { start: urlDateFilter, end: urlDateFilter } }));
     }
-  }, [urlDateFilter]);
+    if (urlBranchFilter) {
+      setActiveBackendFilters(prev => ({ ...prev, branch_id: urlBranchFilter }));
+    }
+  }, [urlDateFilter, urlBranchFilter]);
   const [showCatManager, setShowCatManager] = useState(false);
   const [showRenewDialog, setShowRenewDialog] = useState(false);
   const [renewingRec, setRenewingRec] = useState(null);
@@ -299,7 +303,7 @@ export default function ExpensesPage() {
             <p className="text-sm text-muted-foreground">{t('expenses_subtitle')}</p>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
-            <ExportButtons dataType="expenses" startDate={dateRange?.start} endDate={dateRange?.end} />
+            <ExportButtons dataType="expenses" startDate={dateRange?.start} endDate={dateRange?.end} filters={{ branch_id: activeBackendFilters.branch_id }} />
             <PDFExportButton reportType="expenses" label="Branded PDF" />
             <Button size="sm" variant="outline" className="rounded-xl text-red-600 border-red-200 hover:bg-red-50" onClick={() => setShowRefundDialog(true)} data-testid="add-refund-btn"><RotateCcw size={14} className="mr-1" />Refund</Button>
             <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowWhatsApp(true)} data-testid="expenses-whatsapp-btn"><MessageCircle size={14} className="mr-1" />WhatsApp</Button>
