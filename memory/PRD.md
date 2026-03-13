@@ -32,6 +32,10 @@ A comprehensive business management ERP system named "SSC Track" for a restauran
   - Daily Summary → Expenses card now correctly redirects with date filter applied
   - Expenses page now shows supplier name column in expanded detail rows
   - All exports (XL/PDF) now include date range filtering and dates in filenames
+- **Bug Fixes (3 more):**
+  - Daily Summary → Expenses now passes branch filter in URL so expenses show for specific branch
+  - Export endpoint filters data by date range; verified smaller file sizes for date-filtered exports
+  - Supplier Report page now has 'Custom Range' option with start/end date pickers
 
 ### Session 2026-03-11
 - **Foodics-Inspired Sidebar** - Light gray bg, collapsible nav groups, clean active states
