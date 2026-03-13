@@ -19,13 +19,35 @@ router = APIRouter()
 async def export_data(request: dict, current_user: User = Depends(get_current_user)):
     data_type = request.get("type", "sales")
     fmt = request.get("format", "excel")
+    start_date = request.get("start_date")
+    end_date = request.get("end_date")
+    filters = request.get("filters", {})
     branches = await db.branches.find({}, {"_id": 0}).to_list(100)
     branch_map = {b["id"]: b["name"] for b in branches}
+
+    # Build date filter
+    date_filter = {}
+    if start_date:
+        date_filter["$gte"] = start_date
+    if end_date:
+        date_filter["$lte"] = end_date + "T23:59:59"
+    date_query = {"date": date_filter} if date_filter else {}
+
+    # Date label for title
+    date_label = ""
+    if start_date and end_date:
+        date_label = f" ({start_date} to {end_date})"
+    elif start_date:
+        date_label = f" (from {start_date})"
+
     buffer = BytesIO()
     if data_type == "sales":
-        sales = await db.sales.find({}, {"_id": 0}).sort("date", -1).to_list(10000)
+        query = {**date_query}
+        if filters.get("branch_id"):
+            query["branch_id"] = filters["branch_id"]
+        sales = await db.sales.find(query, {"_id": 0}).sort("date", -1).to_list(10000)
         customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
-        cust_map = {c["id"]: c["name"] for c in customers}
+        cust_map = {c["id"]: c["name"] for c in customers if c.get("id")}
         rows = []
         for s in sales:
             modes = ", ".join(f'{p["mode"]}:${p["amount"]:.2f}' for p in s.get("payment_details", []))
@@ -36,9 +58,14 @@ async def export_data(request: dict, current_user: User = Depends(get_current_us
                 s.get("credit_amount", 0) - s.get("credit_received", 0)
             ])
         headers = ["Date", "Type", "Branch", "Customer", "Amount", "Discount", "Final", "Payments", "Credit Remaining"]
-        title = "Sales Report"
+        title = f"Sales Report{date_label}"
     elif data_type == "expenses":
-        expenses = await db.expenses.find({}, {"_id": 0}).sort("date", -1).to_list(10000)
+        query = {**date_query}
+        if filters.get("branch_id"):
+            query["branch_id"] = filters["branch_id"]
+        if filters.get("category"):
+            query["category"] = filters["category"]
+        expenses = await db.expenses.find(query, {"_id": 0}).sort("date", -1).to_list(10000)
         suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
         sup_map = {s["id"]: s["name"] for s in suppliers}
         rows = []
@@ -49,9 +76,10 @@ async def export_data(request: dict, current_user: User = Depends(get_current_us
                 branch_map.get(e.get("branch_id"), "-"), e["amount"], e["payment_mode"].capitalize()
             ])
         headers = ["Date", "Category", "Description", "Supplier", "Branch", "Amount", "Payment Mode"]
-        title = "Expenses Report"
+        title = f"Expenses Report{date_label}"
     elif data_type == "supplier-payments":
-        payments = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).sort("date", -1).to_list(10000)
+        query = {**date_query, "supplier_id": {"$exists": True, "$ne": None}}
+        payments = await db.supplier_payments.find(query, {"_id": 0}).sort("date", -1).to_list(10000)
         rows = []
         for p in payments:
             rows.append([
@@ -59,7 +87,7 @@ async def export_data(request: dict, current_user: User = Depends(get_current_us
                 p["supplier_name"], branch_map.get(p.get("branch_id"), "-"), p["amount"], p["payment_mode"].capitalize(), p.get("notes", "")
             ])
         headers = ["Date", "Supplier", "Branch", "Amount", "Payment Mode", "Notes"]
-        title = "Supplier Payments Report"
+        title = f"Supplier Payments Report{date_label}"
     elif data_type == "customers":
         customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
         rows = [[c["name"], branch_map.get(c.get("branch_id"), "All Branches"), c.get("phone", "-"), c.get("email", "-")] for c in customers]
@@ -123,16 +151,27 @@ async def export_data(request: dict, current_user: User = Depends(get_current_us
         for col_cells in ws.columns:
             max_len = max(len(str(cell.value or "")) for cell in col_cells)
             ws.column_dimensions[col_cells[0].column_letter].width = min(max_len + 4, 30)
+        # Build filename with dates
+        date_suffix = ""
+        if start_date and end_date:
+            date_suffix = f"_{start_date}_to_{end_date}"
+        elif start_date:
+            date_suffix = f"_from_{start_date}"
         wb.save(buffer)
         buffer.seek(0)
         return StreamingResponse(buffer, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                 headers={"Content-Disposition": f"attachment; filename={data_type}_report.xlsx"})
+                                 headers={"Content-Disposition": f"attachment; filename={data_type}_report{date_suffix}.xlsx"})
     else:
         doc = SimpleDocTemplate(buffer, pagesize=A4)
         elements = []
         styles = getSampleStyleSheet()
         title_style = ParagraphStyle('T', parent=styles['Heading1'], fontSize=18, textColor=colors.HexColor('#F5841F'), alignment=1)
         elements.append(Paragraph(title, title_style))
+        # Add date range subtitle
+        if start_date or end_date:
+            date_info = f"Period: {start_date or 'All'} to {end_date or 'Present'}"
+            sub_style = ParagraphStyle('Sub', parent=styles['Normal'], fontSize=10, textColor=colors.grey, alignment=1)
+            elements.append(Paragraph(date_info, sub_style))
         elements.append(Spacer(1, 0.2*inch))
         table_data = [headers] + [[str(c) for c in row] for row in rows[:50]]
         col_count = len(headers)
@@ -140,10 +179,16 @@ async def export_data(request: dict, current_user: User = Depends(get_current_us
         t = Table(table_data, colWidths=[col_width] * col_count)
         t.setStyle(TableStyle([('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F5841F')), ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke), ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'), ('FONTSIZE', (0, 0), (-1, -1), 7), ('GRID', (0, 0), (-1, -1), 0.5, colors.grey), ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F5F3FF')])]))
         elements.append(t)
+        # Build filename with dates for PDF
+        date_suffix = ""
+        if start_date and end_date:
+            date_suffix = f"_{start_date}_to_{end_date}"
+        elif start_date:
+            date_suffix = f"_from_{start_date}"
         doc.build(elements)
         buffer.seek(0)
         return StreamingResponse(buffer, media_type="application/pdf",
-                                 headers={"Content-Disposition": f"attachment; filename={data_type}_report.pdf"})
+                                 headers={"Content-Disposition": f"attachment; filename={data_type}_report{date_suffix}.pdf"})
 
 @router.post("/export/reports")
 async def export_reports(export_request: ExportRequest, current_user: User = Depends(get_current_user)):

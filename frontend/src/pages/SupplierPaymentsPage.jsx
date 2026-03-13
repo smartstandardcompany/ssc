@@ -295,7 +295,7 @@ export default function SupplierPaymentsPage() {
           <div className="flex gap-2 items-center flex-wrap">
             <BranchFilter onChange={setBranchFilter} />
             <DateFilter onFilterChange={setDateFilter} />
-            <ExportButtons dataType="supplier-payments" />
+            <ExportButtons dataType="supplier-payments" startDate={dateFilter?.start} endDate={dateFilter?.end} />
             <Button onClick={() => openForm('bill')} variant="outline" data-testid="add-bill-button"
               className="rounded-full text-amber-600 border-amber-300 hover:bg-amber-50">
               <Receipt size={16} className="mr-1" /> Add Bill

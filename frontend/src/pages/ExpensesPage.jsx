@@ -48,6 +48,7 @@ export default function ExpensesPage() {
 
   useEffect(() => {
     if (urlDateFilter) {
+      setDateRange({ start: urlDateFilter, end: urlDateFilter });
       setSearchFilters(prev => ({ ...prev, date: { start: urlDateFilter, end: urlDateFilter } }));
     }
   }, [urlDateFilter]);
@@ -298,7 +299,7 @@ export default function ExpensesPage() {
             <p className="text-sm text-muted-foreground">{t('expenses_subtitle')}</p>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
-            <ExportButtons dataType="expenses" />
+            <ExportButtons dataType="expenses" startDate={dateRange?.start} endDate={dateRange?.end} />
             <PDFExportButton reportType="expenses" label="Branded PDF" />
             <Button size="sm" variant="outline" className="rounded-xl text-red-600 border-red-200 hover:bg-red-50" onClick={() => setShowRefundDialog(true)} data-testid="add-refund-btn"><RotateCcw size={14} className="mr-1" />Refund</Button>
             <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowWhatsApp(true)} data-testid="expenses-whatsapp-btn"><MessageCircle size={14} className="mr-1" />WhatsApp</Button>
@@ -687,8 +688,9 @@ export default function ExpensesPage() {
                                               )}
                                             </div>
                                           </td>
-                                          <td className="px-3 py-2 text-sm truncate w-[22%]">{exp.description || '-'}</td>
-                                          <td className="px-3 py-2 text-sm w-[12%]">{branches.find(b => b.id === exp.branch_id)?.name || '-'}</td>
+                                          <td className="px-3 py-2 text-sm truncate w-[18%]">{exp.description || '-'}</td>
+                                          <td className="px-3 py-2 text-sm truncate w-[10%]">{exp.supplier_id ? (suppliers.find(s => s.id === exp.supplier_id)?.name || '-') : '-'}</td>
+                                          <td className="px-3 py-2 text-sm w-[10%]">{branches.find(b => b.id === exp.branch_id)?.name || '-'}</td>
                                           <td className="px-3 py-2 text-right w-[12%]"><span className="font-bold text-sm">SAR {exp.amount.toFixed(2)}</span></td>
                                           <td className="px-3 py-2 w-[10%]">
                                             <Badge className={`capitalize text-[10px] ${exp.payment_mode === 'cash' ? 'bg-cash/20 text-cash' : exp.payment_mode === 'bank' ? 'bg-bank/20 text-bank' : 'bg-credit/20 text-credit'}`}>{exp.payment_mode}</Badge>

@@ -368,7 +368,7 @@ export default function SalesPage() {
             <p className="text-sm text-stone-400">Track sales with flexible payment options</p>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
-            <ExportButtons dataType="sales" />
+            <ExportButtons dataType="sales" startDate={dateRange?.start} endDate={dateRange?.end} />
             <PDFExportButton reportType="sales" label="Branded PDF" />
             <Button
             onClick={() => setShowForm(!showForm)}
