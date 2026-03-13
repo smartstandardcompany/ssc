@@ -28,6 +28,10 @@ A comprehensive business management ERP system named "SSC Track" for a restauran
   - Sidebar "Accounting" section now has 6 items: Financial Dashboard, Chart of Accounts, Journal Entries, Profit & Loss, Balance Sheet, Tax & Currency
   - All tests passed (iteration_141): 17/17 backend, all frontend pages verified
 - **Commercial Landing Page** - Public route `/landing` with hero, features, modular architecture showcase, 3-tier pricing (Starter/Business/Enterprise), stats, CTA, and footer. Links to sign-in/register. Fully separate from app.
+- **Bug Fixes (3):**
+  - Daily Summary → Expenses card now correctly redirects with date filter applied
+  - Expenses page now shows supplier name column in expanded detail rows
+  - All exports (XL/PDF) now include date range filtering and dates in filenames
 
 ### Session 2026-03-11
 - **Foodics-Inspired Sidebar** - Light gray bg, collapsible nav groups, clean active states
