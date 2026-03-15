@@ -92,6 +92,8 @@ import DataManagementPage from "./pages/DataManagementPage";
 import AuditTrailPage from "./pages/AuditTrailPage";
 import ReportBuilderPage from "./pages/ReportBuilderPage";
 import SuperAdminPage from "./pages/SuperAdminPage";
+import OnboardingWizardPage from "./pages/OnboardingWizardPage";
+import SubscriptionPage from "./pages/SubscriptionPage";
 import BankAccountsPage from "./pages/finance/BankAccountsPage";
 import PlatformReconciliationPage from "./pages/finance/PlatformReconciliationPage";
 import MonthlyReconReportPage from "./pages/finance/MonthlyReconReportPage";
@@ -225,6 +227,10 @@ function App() {
 
           {/* Super Admin */}
           <Route path="/super-admin" element={<AuthRoute><SuperAdminPage /></AuthRoute>} />
+
+          {/* Onboarding & Subscription */}
+          <Route path="/onboarding" element={<AuthRoute><OnboardingWizardPage /></AuthRoute>} />
+          <Route path="/subscription" element={<AuthRoute><SubscriptionPage /></AuthRoute>} />
 
           {/* Dashboard / Home */}
           <Route path="/" element={isAuthenticated ? (() => {

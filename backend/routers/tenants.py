@@ -147,6 +147,74 @@ async def get_current_tenant(current_user=Depends(get_current_user)):
     return {"tenant": tenant, "is_super_admin": current_user.is_super_admin}
 
 
+@router.get("/tenants/subscription")
+async def get_subscription(current_user=Depends(get_current_user)):
+    """Get current tenant subscription details + usage."""
+    tenant_id = current_user.tenant_id
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="No tenant associated")
+    tenant = await db.tenants.find_one({"id": tenant_id}, {"_id": 0})
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    user_count = await db.users.count_documents({"tenant_id": tenant_id})
+    branch_count = await db.branches.count_documents({"tenant_id": tenant_id})
+    employee_count = await db.employees.count_documents({"tenant_id": tenant_id})
+    plan_details = tenant.get("plan_details", PLANS.get(tenant.get("plan", "starter"), PLANS["starter"]))
+
+    return {
+        "tenant_id": tenant_id,
+        "company_name": tenant.get("company_name", ""),
+        "plan": tenant.get("plan", "starter"),
+        "plan_details": plan_details,
+        "subscription_status": tenant.get("subscription_status", "trial"),
+        "trial_ends_at": tenant.get("trial_ends_at"),
+        "created_at": tenant.get("created_at"),
+        "usage": {
+            "users": user_count,
+            "max_users": plan_details.get("max_users", 5),
+            "branches": branch_count,
+            "max_branches": plan_details.get("max_branches", 1),
+            "employees": employee_count,
+        },
+        "available_plans": PLANS,
+    }
+
+
+@router.put("/tenants/subscription/change-plan")
+async def change_plan(body: dict, current_user=Depends(get_current_user)):
+    """Change subscription plan (self-service, no payment yet)."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    tenant_id = current_user.tenant_id
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="No tenant associated")
+
+    new_plan = body.get("plan")
+    if new_plan not in PLANS:
+        raise HTTPException(status_code=400, detail=f"Invalid plan. Choose from: {list(PLANS.keys())}")
+
+    plan_details = PLANS[new_plan]
+
+    # Check if downgrade is valid (current usage must fit new limits)
+    if plan_details["max_branches"] > 0:
+        branch_count = await db.branches.count_documents({"tenant_id": tenant_id})
+        if branch_count > plan_details["max_branches"]:
+            raise HTTPException(status_code=400, detail=f"Cannot downgrade: you have {branch_count} branches but {new_plan} allows {plan_details['max_branches']}")
+    if plan_details["max_users"] > 0:
+        user_count = await db.users.count_documents({"tenant_id": tenant_id})
+        if user_count > plan_details["max_users"]:
+            raise HTTPException(status_code=400, detail=f"Cannot downgrade: you have {user_count} users but {new_plan} allows {plan_details['max_users']}")
+
+    await db.tenants.update_one({"id": tenant_id}, {"$set": {
+        "plan": new_plan,
+        "plan_details": plan_details,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }})
+
+    return {"success": True, "plan": new_plan, "plan_details": plan_details}
+
+
 # ── Super Admin Endpoints ──────────────────────────────────────
 
 @router.get("/admin/tenants")

@@ -138,6 +138,7 @@ const NAV_GROUPS = [
       { path: '/audit-trail', icon: Shield, label: 'Audit Trail', perm: 'settings', roles: ['admin'] },
       { path: '/data-management', icon: Database, label: 'Data Management', perm: 'settings', roles: ['admin'] },
       { path: '/notification-preferences', icon: Bell, label: 'Notif. Settings' },
+      { path: '/subscription', icon: CreditCard, label: 'Subscription', roles: ['admin'] },
       { path: '/help', icon: HelpCircle, label: 'Help & Guide' },
       { path: '/super-admin', icon: Crown, label: 'Platform Admin', superAdmin: true },
     ]
@@ -254,6 +255,23 @@ export const DashboardLayout = ({ children }) => {
   useEffect(() => {
     if (!isEmployee) fetchBranches();
   }, [isEmployee, fetchBranches]);
+
+  // Check onboarding status for new tenants
+  useEffect(() => {
+    if (currentUser.role === 'admin' && !currentUser.is_super_admin) {
+      const checkOnboarding = async () => {
+        try {
+          const res = await api.get('/tenants/current');
+          if (res.data?.tenant && !res.data.tenant.onboarding_completed) {
+            if (location.pathname !== '/onboarding') {
+              navigate('/onboarding');
+            }
+          }
+        } catch {}
+      };
+      checkOnboarding();
+    }
+  }, []); // eslint-disable-line
 
   useEffect(() => {
     const fetchNotifs = async () => {
