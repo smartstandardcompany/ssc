@@ -75,14 +75,39 @@ SSC Track is a comprehensive, multi-tenant ERP/accounting SaaS platform purpose-
 
 ---
 
+### P5: White-Label Branding (DONE - Feb 2026)
+- Platform identity customization (app name, tagline, logo upload)
+- Color scheme: primary, accent, sidebar, login background
+- Live preview of sidebar header
+- "Hide Powered By" toggle
+- Frontend at `/white-label`, Backend at `GET/PUT /api/branding`, `POST /api/branding/upload-logo`
+
+### P5: Scheduled Reports (DONE - Feb 2026)
+- CRUD for report schedules (daily/weekly/monthly)
+- Report types: Daily Summary, Sales Report, P&L
+- Manual "Run Now" with report history
+- Frontend at `/scheduled-reports`, Backend CRUD at `/api/scheduled-reports`
+
+### P5: API Rate Limiting (DONE - Feb 2026)
+- Per-tenant rate limiting middleware on all `/api/` endpoints
+- Plan-based limits: Starter=100/min, Business=500/min, Enterprise=unlimited
+- `X-RateLimit-Limit/Remaining/Reset` headers on responses
+- 429 response when limit exceeded
+
+### P5: Usage Alerts (DONE - Feb 2026)
+- Real-time plan usage monitoring (users, branches)
+- Visual progress bars with plan comparison table
+- Alert banners at 80% (warning) and 100% (critical)
+- Super-admin bulk alert check for all tenants
+- Frontend at `/usage-alerts`, Backend at `GET /api/usage-alerts`
+
+---
+
 ## Backlog
 
 ### P4: SMTP Email Delivery
-- Blocked on user's Microsoft 365 configuration
+- Blocked on user's Microsoft 365 configuration (Security Defaults must be disabled in Azure AD)
 
 ### Future
-- White-label/branding per tenant
-- Scheduled PDF report delivery
-- API rate limiting per tenant
 - Tenant data export/migration tools
 - Audit log for role template changes
