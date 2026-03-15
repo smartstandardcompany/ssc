@@ -23,17 +23,18 @@ async def get_platforms(current_user: User = Depends(get_current_user)):
     platforms = await db.delivery_platforms.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     
     # Calculate pending amounts for each platform
+    tf = get_tenant_filter(current_user)
     for platform in platforms:
         # Get total sales for this platform
         sales = await db.sales.find({
-            "platform_id": platform["id"]
+            "platform_id": platform["id"], **tf
         }, {"_id": 0, "final_amount": 1, "amount": 1}).to_list(10000)
         
         total_sales = sum(s.get("final_amount", s.get("amount", 0)) for s in sales)
         
         # Get total payments received from this platform
         payments = await db.platform_payments.find({
-            "platform_id": platform["id"]
+            "platform_id": platform["id"], **tf
         }, {"_id": 0, "amount_received": 1}).to_list(1000)
         
         total_received = sum(p.get("amount_received", 0) for p in payments)

@@ -20,8 +20,9 @@ async def get_suppliers(current_user: User = Depends(get_current_user)):
     suppliers = await db.suppliers.find(query, {"_id": 0}).to_list(1000)
     
     # Use MongoDB aggregation pipeline for total purchases (fast)
+    tf = get_tenant_filter(current_user)
     pipeline = [
-        {"$match": {"supplier_id": {"$exists": True, "$ne": None}}},
+        {"$match": {"supplier_id": {"$exists": True, "$ne": None}, **tf}},
         {"$group": {"_id": "$supplier_id", "total": {"$sum": "$amount"}}}
     ]
     agg_result = await db.expenses.aggregate(pipeline).to_list(1000)
@@ -29,14 +30,14 @@ async def get_suppliers(current_user: User = Depends(get_current_user)):
     
     # Compute actual credit balance: credit expenses - cash/bank payments
     credit_pipeline = [
-        {"$match": {"supplier_id": {"$exists": True, "$ne": None}, "payment_mode": "credit"}},
+        {"$match": {"supplier_id": {"$exists": True, "$ne": None}, "payment_mode": "credit", **tf}},
         {"$group": {"_id": "$supplier_id", "total": {"$sum": "$amount"}}}
     ]
     credit_result = await db.expenses.aggregate(credit_pipeline).to_list(1000)
     credit_totals = {r["_id"]: r["total"] for r in credit_result}
     
     payment_pipeline = [
-        {"$match": {"supplier_id": {"$exists": True, "$ne": None}, "payment_mode": {"$in": ["cash", "bank"]}}},
+        {"$match": {"supplier_id": {"$exists": True, "$ne": None}, "payment_mode": {"$in": ["cash", "bank"]}, **tf}},
         {"$group": {"_id": "$supplier_id", "total": {"$sum": "$amount"}}}
     ]
     payment_result = await db.supplier_payments.aggregate(payment_pipeline).to_list(1000)
@@ -70,9 +71,10 @@ async def get_supplier_names(current_user: User = Depends(get_current_user)):
 async def recalculate_all_supplier_balances(current_user: User = Depends(get_current_user)):
     """Recalculate all supplier balances based on actual expenses and payments."""
     require_permission(current_user, "suppliers", "write")
-    suppliers = await db.suppliers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
-    all_credit_expenses = await db.expenses.find({"payment_mode": "credit", "supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(50000)
-    all_payments = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(50000)
+    tf = get_tenant_filter(current_user)
+    suppliers = await db.suppliers.find(tf, {"_id": 0}).to_list(1000)
+    all_credit_expenses = await db.expenses.find({"payment_mode": "credit", "supplier_id": {"$exists": True, "$ne": None}, **tf}, {"_id": 0}).to_list(50000)
+    all_payments = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}, **tf}, {"_id": 0}).to_list(50000)
     
     results = []
     for supplier in suppliers:
@@ -172,7 +174,7 @@ async def get_supplier_payments(
     current_user: User = Depends(get_current_user)
 ):
     require_permission(current_user, "supplier_payments", "read")
-    query = {"supplier_id": {"$exists": True, "$ne": None}}
+    query = {"supplier_id": {"$exists": True, "$ne": None}, **get_tenant_filter(current_user)}
     if supplier_id: query["supplier_id"] = supplier_id
     if start_date:
         query["date"] = query.get("date", {}); query["date"]["$gte"] = start_date
@@ -224,10 +226,7 @@ async def create_supplier_payment(payment_data: SupplierPaymentCreate, current_u
     payment_dict["created_at"] = payment_dict["created_at"].isoformat()
     stamp_tenant(payment_dict, current_user)
     await db.supplier_payments.insert_one(payment_dict)
-    if payment_data.payment_mode == "credit":
-        new_credit = supplier.get("current_credit", 0) + payment_data.amount
-        await db.suppliers.update_one({"id": payment_data.supplier_id, **get_tenant_filter(current_user)}, {"$set": {"current_credit": new_credit}})
-    elif payment_data.payment_mode in ("cash", "bank"):
+    if payment_data.payment_mode in ("cash", "bank"):
         # Cash/bank payment to supplier reduces their credit balance
         current_credit = supplier.get("current_credit", 0)
         new_credit = max(0, current_credit - payment_data.amount)
@@ -254,20 +253,14 @@ async def delete_supplier_payment(payment_id: str, current_user: User = Depends(
         if supplier:
             current_credit = supplier.get("current_credit", 0)
             
-            if payment_mode == "credit":
-                # Credit payment was adding to supplier credit - reverse by reducing
-                new_credit = max(0, current_credit - amount)
-            elif payment_mode in ["cash", "bank"]:
+            if payment_mode in ["cash", "bank"]:
                 # Cash/Bank payment was reducing supplier credit (paying them back)
                 # Reverse by increasing credit (you now owe them again)
                 new_credit = current_credit + amount
-            else:
-                new_credit = current_credit
-            
-            await db.suppliers.update_one(
-                {"id": supplier_id},
-                {"$set": {"current_credit": new_credit}}
-            )
+                await db.suppliers.update_one(
+                    {"id": supplier_id, **get_tenant_filter(current_user)},
+                    {"$set": {"current_credit": new_credit}}
+                )
     
     result = await db.supplier_payments.delete_one({"id": payment_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
