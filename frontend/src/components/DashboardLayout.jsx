@@ -138,9 +138,11 @@ const NAV_GROUPS = [
       { path: '/audit-trail', icon: Shield, label: 'Audit Trail', perm: 'settings', roles: ['admin'] },
       { path: '/data-management', icon: Database, label: 'Data Management', perm: 'settings', roles: ['admin'] },
       { path: '/notification-preferences', icon: Bell, label: 'Notif. Settings' },
+      { path: '/role-management', icon: Shield, label: 'Roles & Permissions', roles: ['admin'] },
       { path: '/subscription', icon: CreditCard, label: 'Subscription', roles: ['admin'] },
       { path: '/help', icon: HelpCircle, label: 'Help & Guide' },
       { path: '/super-admin', icon: Crown, label: 'Platform Admin', superAdmin: true },
+      { path: '/analytics-dashboard', icon: BarChart3, label: 'Platform Analytics', superAdmin: true },
     ]
   },
 ];

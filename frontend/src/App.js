@@ -94,6 +94,8 @@ import ReportBuilderPage from "./pages/ReportBuilderPage";
 import SuperAdminPage from "./pages/SuperAdminPage";
 import OnboardingWizardPage from "./pages/OnboardingWizardPage";
 import SubscriptionPage from "./pages/SubscriptionPage";
+import TenantAnalyticsPage from "./pages/TenantAnalyticsPage";
+import RoleManagementPage from "./pages/RoleManagementPage";
 import BankAccountsPage from "./pages/finance/BankAccountsPage";
 import PlatformReconciliationPage from "./pages/finance/PlatformReconciliationPage";
 import MonthlyReconReportPage from "./pages/finance/MonthlyReconReportPage";
@@ -231,6 +233,8 @@ function App() {
           {/* Onboarding & Subscription */}
           <Route path="/onboarding" element={<AuthRoute><OnboardingWizardPage /></AuthRoute>} />
           <Route path="/subscription" element={<AuthRoute><SubscriptionPage /></AuthRoute>} />
+          <Route path="/role-management" element={<AuthRoute><RoleManagementPage /></AuthRoute>} />
+          <Route path="/analytics-dashboard" element={<AuthRoute><TenantAnalyticsPage /></AuthRoute>} />
 
           {/* Dashboard / Home */}
           <Route path="/" element={isAuthenticated ? (() => {

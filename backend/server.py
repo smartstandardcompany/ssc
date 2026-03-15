@@ -64,6 +64,7 @@ from routers import (
     targets,
     ai_insights,
     tenants,
+    rbac_payments,
 )
 
 app = FastAPI()
@@ -133,6 +134,7 @@ for module in [
     targets,
     ai_insights,
     tenants,
+    rbac_payments,
 ]:
     app.include_router(module.router, prefix="/api")
 

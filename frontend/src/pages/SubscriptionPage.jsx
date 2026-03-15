@@ -55,15 +55,49 @@ export default function SubscriptionPage() {
     }
     setChanging(true);
     try {
-      await api.put('/tenants/subscription/change-plan', { plan });
-      toast.success(`Plan changed to ${plan}`);
-      fetchSubscription();
+      // Create Stripe checkout session
+      const res = await api.post('/payments/checkout', {
+        plan,
+        origin_url: window.location.origin,
+      });
+      if (res.data?.url) {
+        window.location.href = res.data.url;
+      }
     } catch (e) {
-      toast.error(e.response?.data?.detail || 'Failed to change plan');
+      toast.error(e.response?.data?.detail || 'Failed to initiate payment');
     } finally {
       setChanging(false);
     }
   };
+
+  // Check for payment status from redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+    const status = params.get('status');
+
+    if (sessionId && status === 'success') {
+      const checkPayment = async () => {
+        try {
+          const res = await api.get(`/payments/status/${sessionId}`);
+          if (res.data.payment_status === 'paid') {
+            toast.success('Payment successful! Plan upgraded.');
+            fetchSubscription();
+          } else {
+            toast.info('Payment is being processed...');
+          }
+        } catch {
+          toast.error('Could not verify payment status');
+        }
+        // Clean URL
+        window.history.replaceState({}, '', '/subscription');
+      };
+      checkPayment();
+    } else if (status === 'cancelled') {
+      toast.info('Payment was cancelled');
+      window.history.replaceState({}, '', '/subscription');
+    }
+  }, []); // eslint-disable-line
 
   if (loading) {
     return (
@@ -231,15 +265,8 @@ export default function SubscriptionPage() {
           </div>
         </div>
 
-        {/* Payment info placeholder */}
-        <Card className="border-stone-100 border-dashed" data-testid="payment-placeholder">
-          <CardContent className="p-6 text-center">
-            <Shield className="w-8 h-8 text-stone-300 mx-auto mb-2" />
-            <p className="text-sm text-stone-400">
-              Payment integration coming soon. Plan changes are currently free during beta.
-            </p>
-          </CardContent>
-        </Card>
+        {/* Payment History */}
+        <PaymentHistory />
       </div>
     </DashboardLayout>
   );
@@ -283,6 +310,49 @@ function UsageCard({ icon: Icon, label, used, max, color, testId }) {
             <p className="text-xs text-stone-400 text-right">{Math.round(percentage)}% used</p>
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+
+function PaymentHistory() {
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/payments/history').then(res => setTransactions(res.data)).catch(() => {}).finally(() => setLoading(false));
+  }, []);
+
+  if (loading || transactions.length === 0) return null;
+
+  return (
+    <Card className="border-stone-100" data-testid="payment-history">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <CreditCard className="w-4 h-4 text-orange-500" />
+          Payment History
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {transactions.map(t => (
+            <div key={t.id} className="flex items-center justify-between p-3 rounded-lg bg-stone-50 text-sm">
+              <div className="flex items-center gap-3">
+                <Badge className={
+                  t.payment_status === 'paid' ? 'bg-emerald-100 text-emerald-700' :
+                  t.payment_status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                  'bg-stone-100 text-stone-500'
+                }>{t.payment_status}</Badge>
+                <span className="text-stone-700 font-medium capitalize">{t.plan} Plan</span>
+              </div>
+              <div className="flex items-center gap-4 text-stone-500">
+                <span>${t.amount}</span>
+                <span>{new Date(t.created_at).toLocaleDateString()}</span>
+              </div>
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
