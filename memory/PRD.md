@@ -28,7 +28,27 @@ SSC Track is a comprehensive, multi-tenant ERP/accounting SaaS platform purpose-
 - Registration page (3-step wizard): company name, admin details, country, industry, currency, plan
 - Super Admin Dashboard at `/super-admin`: stats, tenant management, activate/deactivate
 - Data isolation verified: new tenants see zero data from other tenants
-- Full test suite: 15 backend + 12 frontend tests passed (iteration_144)
+
+### P0.5: Onboarding Wizard (DONE - March 2026)
+- 3-step setup wizard at `/onboarding` for new tenants
+- Step 1: Create first branch
+- Step 2: Add first employee
+- Step 3: Configure VAT/tax settings
+- Auto-redirect on first login if `onboarding_completed=false`
+- Skip/Back navigation, finish marks onboarding complete
+
+### P1: Subscription Management UI (DONE - March 2026)
+- Subscription page at `/subscription` with current plan display
+- Usage stats: users, branches, employees vs plan limits
+- Plan comparison (Starter SAR 199, Business SAR 499, Enterprise Custom)
+- Plan switching with downgrade protection (validates usage fits new limits)
+- "Contact Sales" for Enterprise plan
+- Sidebar link visible for admin users only
+
+### Bug Fix: Employee→User Auto-Creation (DONE - March 2026)
+- Fixed: Employee creation with email now properly creates user with branch_id
+- Fixed: Tenant-scoped email uniqueness check
+- Default password: `emp@123` for auto-created employee users
 
 ### Full Accounting Module (DONE)
 - Financial Dashboard, Chart of Accounts, Journal Entries
@@ -38,35 +58,18 @@ SSC Track is a comprehensive, multi-tenant ERP/accounting SaaS platform purpose-
 - Currency settings
 
 ### ERP Core (DONE)
-- Sales & POS system
-- Expense management with supplier payments
-- Employee/HR management
-- Inventory & stock management
-- Multi-branch management
-- Customer & supplier management
-- Invoicing system
-- Document management
-- Shift scheduling
-- Loan management
-- Partner P&L reports
-- Activity logs & audit trail
-- Data management & export center
+- Sales & POS system, Expense management, Employee/HR management
+- Inventory & stock, Multi-branch, Customer/Supplier management
+- Invoicing, Document management, Shift scheduling
+- Loan management, Partner P&L, Activity logs, Data export
 
 ### UI (DONE)
-- Foodics-inspired modern design
-- Dark mode support
-- Multi-language support (EN/AR)
-- Keyboard shortcuts
-- PWA support
+- Foodics-inspired modern design, Dark mode, Multi-language (EN/AR)
+- Keyboard shortcuts, PWA support
 
 ---
 
 ## Backlog (Priority Order)
-
-### P1: Subscription Management UI
-- Build subscription plans page (Starter/Business/Enterprise)
-- Tenant billing/plan management UI
-- No Stripe integration yet
 
 ### P2: Advanced User Permissions (RBAC)
 - Granular role-based access control within each tenant
@@ -78,7 +81,6 @@ SSC Track is a comprehensive, multi-tenant ERP/accounting SaaS platform purpose-
 
 ### P4: SMTP Email Delivery
 - Blocked on user's Microsoft 365 configuration
-- User needs to disable "Security Defaults" in Azure AD
 
 ### Future
 - White-label/branding per tenant
