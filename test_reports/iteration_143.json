@@ -37,7 +37,7 @@
     "bug_1_daily_summary_expenses_redirect_with_branch": {
       "status": "VERIFIED",
       "test_method": "Playwright - selected 'Test Branch' from branch dropdown, then clicked Total Expenses card",
-      "result": "Successfully redirected to /expenses?date=2026-03-13&branch=1c348f2b-294e-4353-bac1-0e32f759f109",
+      "result": "Successfully redirected to /expenses?date=2026-03-13&branch=ssc-saas-build",
       "code_reference": "DailySummaryPage.jsx line 194: onClick={() => navigate(`/expenses?date=${selectedDate}${selectedBranch ? `&branch=${selectedBranch}` : ''}`)}"
     },
     "bug_2_export_with_date_filtering": {

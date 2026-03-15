@@ -63,6 +63,7 @@ from routers import (
     whatsapp,
     targets,
     ai_insights,
+    tenants,
 )
 
 app = FastAPI()
@@ -131,6 +132,7 @@ for module in [
     whatsapp,
     targets,
     ai_insights,
+    tenants,
 ]:
     app.include_router(module.router, prefix="/api")
 
@@ -156,6 +158,7 @@ async def startup_event():
     """Initialize database with default admin user if empty"""
     await seed_database()
     await create_indexes()
+    await migrate_tenancy()
 
 
 async def create_indexes():
@@ -336,6 +339,91 @@ async def seed_database():
             
     except Exception as e:
         logger.error(f"Error seeding database: {str(e)}")
+
+
+
+async def migrate_tenancy():
+    """One-time migration: assign tenant_id to existing data, make ss@ssc.com super admin."""
+    import uuid as _uuid
+
+    # Check if migration already done
+    admin = await db.users.find_one({"email": "ss@ssc.com"})
+    if not admin:
+        return
+    if admin.get("is_super_admin"):
+        return  # Already migrated
+
+    logger.info("Running tenancy migration...")
+
+    # Create default tenant for existing data
+    default_tenant_id = str(_uuid.uuid4())
+    existing_tenant = await db.tenants.find_one({"email": "ss@ssc.com"})
+    if existing_tenant:
+        default_tenant_id = existing_tenant["id"]
+    else:
+        tenant = {
+            "id": default_tenant_id,
+            "company_name": "SSC",
+            "industry": "restaurant",
+            "country": "Saudi Arabia",
+            "city": "",
+            "address": "",
+            "phone": "",
+            "email": "ss@ssc.com",
+            "currency": "SAR",
+            "timezone": "Asia/Riyadh",
+            "plan": "enterprise",
+            "plan_details": {"name": "Enterprise", "max_branches": -1, "max_users": -1, "modules": ["all"]},
+            "subscription_status": "active",
+            "is_active": True,
+            "onboarding_completed": True,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await db.tenants.insert_one(tenant)
+
+    # Make admin super admin + assign tenant
+    await db.users.update_one(
+        {"email": "ss@ssc.com"},
+        {"$set": {"is_super_admin": True, "tenant_id": default_tenant_id}}
+    )
+
+    # Assign tenant_id to all existing users
+    await db.users.update_many(
+        {"tenant_id": {"$exists": False}},
+        {"$set": {"tenant_id": default_tenant_id}}
+    )
+    await db.users.update_many(
+        {"tenant_id": None},
+        {"$set": {"tenant_id": default_tenant_id}}
+    )
+
+    # Assign tenant_id to all major collections
+    collections = [
+        "branches", "sales", "expenses", "suppliers", "employees",
+        "customers", "inventory", "invoices", "categories", "menu_items",
+        "bills", "journal_entries", "chart_of_accounts", "tax_rates",
+        "accounting_settings", "supplier_payments", "cash_transfers",
+        "documents", "schedules", "shifts", "loans", "fines",
+        "leave_requests", "tasks", "platforms", "addons",
+    ]
+    for coll in collections:
+        count = await db[coll].update_many(
+            {"tenant_id": {"$exists": False}},
+            {"$set": {"tenant_id": default_tenant_id}}
+        )
+        if count.modified_count > 0:
+            logger.info(f"  Migrated {count.modified_count} docs in {coll}")
+
+    # Add tenant_id index to key collections
+    for coll in collections + ["users"]:
+        try:
+            await db[coll].create_index("tenant_id")
+        except Exception:
+            pass
+
+    logger.info(f"Tenancy migration complete. Default tenant: {default_tenant_id}")
+
 
 
 @app.on_event("shutdown")

@@ -20,6 +20,8 @@ class User(BaseModel):
     name: str
     role: str = "operator"
     branch_id: Optional[str] = None
+    tenant_id: Optional[str] = None
+    is_super_admin: bool = False
     permissions: Dict[str, str] = {}  # {"sales": "write", "expenses": "read", ...}
     must_change_password: bool = False  # Force password change on next login
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

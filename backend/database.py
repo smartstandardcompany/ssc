@@ -65,6 +65,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
                 "name": employee.get("name", "Cashier"),
                 "role": "cashier",
                 "branch_id": employee.get("branch_id"),
+                "tenant_id": employee.get("tenant_id"),
                 "permissions": {"cashier": "write", "pos": "write", "sales": "write"},
                 "created_at": employee.get("created_at", datetime.now(timezone.utc).isoformat())
             }
@@ -173,3 +174,30 @@ def require_permission(user, module, level="read"):
             status_code=403, 
             detail=f"Permission denied: You don't have {level} access to {module}"
         )
+
+
+def get_tenant_filter(user):
+    """Return a MongoDB query filter for tenant isolation.
+    Super admins see all data. Regular users see only their tenant's data."""
+    if getattr(user, 'is_super_admin', False):
+        return {}
+    tenant_id = getattr(user, 'tenant_id', None)
+    if tenant_id:
+        return {"tenant_id": tenant_id}
+    return {}
+
+
+def get_tenant_branch_filter(user, branch_field="branch_id"):
+    """Combines tenant filter + branch filter for non-admin users."""
+    tf = get_tenant_filter(user)
+    bf = get_branch_filter(user, branch_field)
+    return {**tf, **bf}
+
+
+def stamp_tenant(doc, user):
+    """Add tenant_id to a document before insertion."""
+    tenant_id = getattr(user, 'tenant_id', None)
+    if tenant_id:
+        doc["tenant_id"] = tenant_id
+    return doc
+
