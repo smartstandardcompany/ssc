@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime, timezone
 import uuid
 
-from database import db, get_current_user, require_permission
+from database import db, get_current_user, require_permission, get_tenant_filter, stamp_tenant
 from models import User, StockTransfer, StockEntry, StockUsage
 
 router = APIRouter()
@@ -22,8 +22,8 @@ async def get_stock_transfers(status: str = None, branch_id: str = None, current
         query["$or"] = [{"from_branch_id": effective_branch}, {"to_branch_id": effective_branch}]
     transfers = await db.stock_transfers.find(query, {"_id": 0}).sort("requested_at", -1).to_list(500)
     # Enrich with branch names
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
-    users = await db.users.find({}, {"_id": 0}).to_list(500)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
+    users = await db.users.find(get_tenant_filter(current_user), {"_id": 0}).to_list(500)
     b_map = {b["id"]: b["name"] for b in branches}
     u_map = {u["id"]: u["name"] for u in users}
     for t in transfers:
@@ -47,7 +47,7 @@ async def create_stock_transfer(body: dict, current_user: User = Depends(get_cur
         raise HTTPException(status_code=400, detail="At least one item required")
     # Validate items exist
     for item in items:
-        db_item = await db.items.find_one({"id": item["item_id"]}, {"_id": 0})
+        db_item = await db.items.find_one({"id": item["item_id"], **get_tenant_filter(current_user)}, {"_id": 0})
         if not db_item:
             raise HTTPException(status_code=404, detail=f"Item {item.get('item_id')} not found")
         item["item_name"] = db_item["name"]
@@ -59,9 +59,10 @@ async def create_stock_transfer(body: dict, current_user: User = Depends(get_cur
     )
     t_dict = transfer.model_dump()
     t_dict["requested_at"] = t_dict["requested_at"].isoformat()
+    stamp_tenant(t_dict, current_user)
     await db.stock_transfers.insert_one(t_dict)
     # Create notification
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     b_map = {b["id"]: b["name"] for b in branches}
     await db.notifications.insert_one({
         "id": str(uuid.uuid4()), "type": "stock_transfer_request",
@@ -71,7 +72,7 @@ async def create_stock_transfer(body: dict, current_user: User = Depends(get_cur
     })
     # Try WhatsApp notification
     try:
-        config = await db.whatsapp_config.find_one({}, {"_id": 0})
+        config = await db.whatsapp_config.find_one(get_tenant_filter(current_user), {"_id": 0})
         if config and config.get("account_sid") and config.get("auth_token"):
             from twilio.rest import Client
             client = Client(config["account_sid"], config["auth_token"])
@@ -90,12 +91,12 @@ async def create_stock_transfer(body: dict, current_user: User = Depends(get_cur
 
 @router.put("/stock-transfers/{transfer_id}/approve")
 async def approve_transfer(transfer_id: str, body: dict = {}, current_user: User = Depends(get_current_user)):
-    t = await db.stock_transfers.find_one({"id": transfer_id}, {"_id": 0})
+    t = await db.stock_transfers.find_one({"id": transfer_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not t:
         raise HTTPException(status_code=404, detail="Transfer not found")
     if t["status"] != "pending":
         raise HTTPException(status_code=400, detail=f"Transfer is already {t['status']}")
-    await db.stock_transfers.update_one({"id": transfer_id}, {"$set": {
+    await db.stock_transfers.update_one({"id": transfer_id, **get_tenant_filter(current_user)}, {"$set": {
         "status": "approved", "reviewed_by": current_user.id,
         "reviewed_at": datetime.now(timezone.utc).isoformat(),
     }})
@@ -104,12 +105,12 @@ async def approve_transfer(transfer_id: str, body: dict = {}, current_user: User
 
 @router.put("/stock-transfers/{transfer_id}/reject")
 async def reject_transfer(transfer_id: str, body: dict = {}, current_user: User = Depends(get_current_user)):
-    t = await db.stock_transfers.find_one({"id": transfer_id}, {"_id": 0})
+    t = await db.stock_transfers.find_one({"id": transfer_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not t:
         raise HTTPException(status_code=404, detail="Transfer not found")
     if t["status"] != "pending":
         raise HTTPException(status_code=400, detail=f"Transfer is already {t['status']}")
-    await db.stock_transfers.update_one({"id": transfer_id}, {"$set": {
+    await db.stock_transfers.update_one({"id": transfer_id, **get_tenant_filter(current_user)}, {"$set": {
         "status": "rejected", "reviewed_by": current_user.id,
         "reviewed_at": datetime.now(timezone.utc).isoformat(),
         "rejection_reason": body.get("reason", ""),
@@ -119,7 +120,7 @@ async def reject_transfer(transfer_id: str, body: dict = {}, current_user: User 
 
 @router.put("/stock-transfers/{transfer_id}/complete")
 async def complete_transfer(transfer_id: str, current_user: User = Depends(get_current_user)):
-    t = await db.stock_transfers.find_one({"id": transfer_id}, {"_id": 0})
+    t = await db.stock_transfers.find_one({"id": transfer_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not t:
         raise HTTPException(status_code=404, detail="Transfer not found")
     if t["status"] != "approved":
@@ -128,7 +129,7 @@ async def complete_transfer(transfer_id: str, current_user: User = Depends(get_c
     # Stock-out from source branch, Stock-in at destination branch
     for item in t["items"]:
         qty = float(item["quantity"])
-        item_doc = await db.items.find_one({"id": item["item_id"]}, {"_id": 0})
+        item_doc = await db.items.find_one({"id": item["item_id"], **get_tenant_filter(current_user)}, {"_id": 0})
         unit_cost = item_doc.get("cost_price", 0) if item_doc else 0
         # Stock OUT from source
         usage = StockUsage(
@@ -140,6 +141,7 @@ async def complete_transfer(transfer_id: str, current_user: User = Depends(get_c
         u_dict = usage.model_dump()
         u_dict["date"] = u_dict["date"].isoformat()
         u_dict["created_at"] = u_dict["created_at"].isoformat()
+        stamp_tenant(u_dict, current_user)
         await db.stock_usage.insert_one(u_dict)
         # Stock IN at destination
         entry = StockEntry(
@@ -152,8 +154,9 @@ async def complete_transfer(transfer_id: str, current_user: User = Depends(get_c
         e_dict = entry.model_dump()
         e_dict["date"] = e_dict["date"].isoformat()
         e_dict["created_at"] = e_dict["created_at"].isoformat()
+        stamp_tenant(e_dict, current_user)
         await db.stock_entries.insert_one(e_dict)
-    await db.stock_transfers.update_one({"id": transfer_id}, {"$set": {
+    await db.stock_transfers.update_one({"id": transfer_id, **get_tenant_filter(current_user)}, {"$set": {
         "status": "completed", "completed_at": now.isoformat(),
     }})
     return {"message": "Transfer completed. Stock adjusted."}
@@ -161,10 +164,10 @@ async def complete_transfer(transfer_id: str, current_user: User = Depends(get_c
 
 @router.delete("/stock-transfers/{transfer_id}")
 async def delete_transfer(transfer_id: str, current_user: User = Depends(get_current_user)):
-    t = await db.stock_transfers.find_one({"id": transfer_id}, {"_id": 0})
+    t = await db.stock_transfers.find_one({"id": transfer_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not t:
         raise HTTPException(status_code=404, detail="Transfer not found")
     if t["status"] == "completed":
         raise HTTPException(status_code=400, detail="Cannot delete completed transfer")
-    await db.stock_transfers.delete_one({"id": transfer_id})
+    await db.stock_transfers.delete_one({"id": transfer_id, **get_tenant_filter(current_user)})
     return {"message": "Transfer deleted"}

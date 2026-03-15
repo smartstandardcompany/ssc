@@ -7,7 +7,7 @@ import json
 import os
 import logging
 
-from database import db, get_current_user
+from database import db, get_current_user, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter()
@@ -19,11 +19,9 @@ VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
 VAPID_CLAIMS = {"sub": "mailto:admin@ssctrack.com"}
 
-
 class PushSubscription(BaseModel):
     endpoint: str
     keys: dict  # {p256dh, auth}
-
 
 class NotificationPreferences(BaseModel):
     low_stock_alerts: bool = True
@@ -36,12 +34,10 @@ class NotificationPreferences(BaseModel):
     channel_push: bool = True
     channel_whatsapp: bool = False
 
-
 @router.get("/push/vapid-key")
 async def get_vapid_public_key():
     """Return the VAPID public key for push subscription."""
     return {"publicKey": VAPID_PUBLIC_KEY}
-
 
 @router.post("/push/subscribe")
 async def subscribe_push(subscription: PushSubscription, current_user: User = Depends(get_current_user)):
@@ -62,13 +58,11 @@ async def subscribe_push(subscription: PushSubscription, current_user: User = De
     )
     return {"message": "Subscribed to push notifications"}
 
-
 @router.delete("/push/unsubscribe")
 async def unsubscribe_push(current_user: User = Depends(get_current_user)):
     """Remove all push subscriptions for user."""
     await db.push_subscriptions.delete_many({"user_id": current_user.id})
     return {"message": "Unsubscribed from push notifications"}
-
 
 @router.get("/push/preferences")
 async def get_notification_preferences(current_user: User = Depends(get_current_user)):
@@ -89,7 +83,6 @@ async def get_notification_preferences(current_user: User = Depends(get_current_
         }
     return prefs
 
-
 @router.put("/push/preferences")
 async def update_notification_preferences(prefs: NotificationPreferences, current_user: User = Depends(get_current_user)):
     """Update notification preferences."""
@@ -104,13 +97,11 @@ async def update_notification_preferences(prefs: NotificationPreferences, curren
     )
     return {"message": "Preferences updated"}
 
-
 @router.get("/push/status")
 async def get_push_status(current_user: User = Depends(get_current_user)):
     """Check if user has active push subscription."""
     count = await db.push_subscriptions.count_documents({"user_id": current_user.id, "active": True})
     return {"subscribed": count > 0, "subscription_count": count}
-
 
 async def send_push_to_user(user_id: str, title: str, body: str, data: dict = None):
     """Send push notification to a specific user. Called internally."""
@@ -145,13 +136,11 @@ async def send_push_to_user(user_id: str, title: str, body: str, data: dict = No
     except ImportError:
         logger.warning("pywebpush not installed")
 
-
 async def send_push_to_admins(title: str, body: str, data: dict = None):
     """Send push notification to all admin users."""
     admins = await db.users.find({"role": "admin"}, {"_id": 0, "id": 1}).to_list(100)
     for admin in admins:
         await send_push_to_user(admin["id"], title, body, data)
-
 
 async def create_and_push_notification(user_id: str, notif_type: str, title: str, message: str, data: dict = None):
     """Create in-app notification and optionally send push."""
@@ -165,6 +154,7 @@ async def create_and_push_notification(user_id: str, notif_type: str, title: str
         "read": False,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
+    stamp_tenant(n_dict, current_user)
     await db.notifications.insert_one(n_dict)
 
     # Check preferences
@@ -188,8 +178,6 @@ async def create_and_push_notification(user_id: str, notif_type: str, title: str
             await send_push_to_user(user_id, title, message, data)
         if prefs.get("channel_whatsapp", False):
             await send_whatsapp_notification(message)
-
-
 
 async def send_whatsapp_notification(message: str):
     """Send a WhatsApp notification via Twilio."""

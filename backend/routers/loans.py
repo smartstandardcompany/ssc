@@ -7,7 +7,7 @@ from typing import Optional
 from datetime import datetime, timezone
 import math
 
-from database import db, get_current_user
+from database import db, get_current_user, get_tenant_filter, stamp_tenant
 from models import User, Loan, LoanCreate, LoanInstallment, Notification, Expense
 
 router = APIRouter()
@@ -26,7 +26,7 @@ async def get_loans(status: Optional[str] = None, employee_id: Optional[str] = N
 
 @router.post("/loans")
 async def create_loan(data: LoanCreate, current_user: User = Depends(get_current_user)):
-    emp = await db.employees.find_one({"id": data.employee_id}, {"_id": 0})
+    emp = await db.employees.find_one({"id": data.employee_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found")
 
@@ -57,6 +57,7 @@ async def create_loan(data: LoanCreate, current_user: User = Depends(get_current
     for f in ["start_date", "created_at", "approved_at"]:
         if l_dict.get(f) and isinstance(l_dict[f], datetime):
             l_dict[f] = l_dict[f].isoformat()
+    stamp_tenant(l_dict, current_user)
     await db.loans.insert_one(l_dict)
 
     # Notify employee
@@ -70,6 +71,7 @@ async def create_loan(data: LoanCreate, current_user: User = Depends(get_current
         )
         n_dict = n.model_dump()
         n_dict["created_at"] = n_dict["created_at"].isoformat()
+        stamp_tenant(n_dict, current_user)
         await db.notifications.insert_one(n_dict)
 
     return {k: v for k, v in l_dict.items() if k != "_id"}
@@ -77,7 +79,7 @@ async def create_loan(data: LoanCreate, current_user: User = Depends(get_current
 
 @router.get("/loans/{loan_id}")
 async def get_loan(loan_id: str, current_user: User = Depends(get_current_user)):
-    loan = await db.loans.find_one({"id": loan_id}, {"_id": 0})
+    loan = await db.loans.find_one({"id": loan_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
     installments = await db.loan_installments.find({"loan_id": loan_id}, {"_id": 0}).sort("date", -1).to_list(500)
@@ -86,7 +88,7 @@ async def get_loan(loan_id: str, current_user: User = Depends(get_current_user))
 
 @router.post("/loans/{loan_id}/approve")
 async def approve_loan(loan_id: str, body: dict, current_user: User = Depends(get_current_user)):
-    loan = await db.loans.find_one({"id": loan_id}, {"_id": 0})
+    loan = await db.loans.find_one({"id": loan_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
     if loan["status"] not in ["pending"]:
@@ -101,10 +103,10 @@ async def approve_loan(loan_id: str, body: dict, current_user: User = Depends(ge
             {"$set": {"status": "active", "approved_by": current_user.id, "approved_at": now}},
         )
         # Update employee loan balance
-        emp = await db.employees.find_one({"id": loan["employee_id"]}, {"_id": 0})
+        emp = await db.employees.find_one({"id": loan["employee_id"], **get_tenant_filter(current_user)}, {"_id": 0})
         if emp:
             new_balance = emp.get("loan_balance", 0) + loan["amount"]
-            await db.employees.update_one({"id": loan["employee_id"]}, {"$set": {"loan_balance": new_balance}})
+            await db.employees.update_one({"id": loan["employee_id"], **get_tenant_filter(current_user)}, {"$set": {"loan_balance": new_balance}})
 
         # Notify
         if emp and emp.get("user_id"):
@@ -117,17 +119,18 @@ async def approve_loan(loan_id: str, body: dict, current_user: User = Depends(ge
             )
             n_dict = n.model_dump()
             n_dict["created_at"] = n_dict["created_at"].isoformat()
+            stamp_tenant(n_dict, current_user)
             await db.notifications.insert_one(n_dict)
 
         return {"message": "Loan approved", "status": "active"}
     else:
-        await db.loans.update_one({"id": loan_id}, {"$set": {"status": "rejected", "notes": body.get("reason", "")}})
+        await db.loans.update_one({"id": loan_id, **get_tenant_filter(current_user)}, {"$set": {"status": "rejected", "notes": body.get("reason", "")}})
         return {"message": "Loan rejected", "status": "rejected"}
 
 
 @router.post("/loans/{loan_id}/installment")
 async def record_installment(loan_id: str, body: dict, current_user: User = Depends(get_current_user)):
-    loan = await db.loans.find_one({"id": loan_id}, {"_id": 0})
+    loan = await db.loans.find_one({"id": loan_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
     if loan["status"] != "active":
@@ -159,6 +162,7 @@ async def record_installment(loan_id: str, body: dict, current_user: User = Depe
     i_dict = installment.model_dump()
     i_dict["date"] = i_dict["date"].isoformat()
     i_dict["created_at"] = i_dict["created_at"].isoformat()
+    stamp_tenant(i_dict, current_user)
     await db.loan_installments.insert_one(i_dict)
 
     await db.loans.update_one(
@@ -167,29 +171,29 @@ async def record_installment(loan_id: str, body: dict, current_user: User = Depe
     )
 
     # Update employee loan balance
-    emp = await db.employees.find_one({"id": loan["employee_id"]}, {"_id": 0})
+    emp = await db.employees.find_one({"id": loan["employee_id"], **get_tenant_filter(current_user)}, {"_id": 0})
     if emp:
         new_emp_balance = max(0, emp.get("loan_balance", 0) - amount)
-        await db.employees.update_one({"id": loan["employee_id"]}, {"$set": {"loan_balance": round(new_emp_balance, 2)}})
+        await db.employees.update_one({"id": loan["employee_id"], **get_tenant_filter(current_user)}, {"$set": {"loan_balance": round(new_emp_balance, 2)}})
 
     return {k: v for k, v in i_dict.items() if k != "_id"}
 
 
 @router.delete("/loans/{loan_id}")
 async def delete_loan(loan_id: str, current_user: User = Depends(get_current_user)):
-    loan = await db.loans.find_one({"id": loan_id}, {"_id": 0})
+    loan = await db.loans.find_one({"id": loan_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
     if loan["status"] == "active" and loan["paid_installments"] > 0:
         raise HTTPException(status_code=400, detail="Cannot delete a loan with paid installments")
-    await db.loans.delete_one({"id": loan_id})
+    await db.loans.delete_one({"id": loan_id, **get_tenant_filter(current_user)})
     await db.loan_installments.delete_many({"loan_id": loan_id})
     return {"message": "Loan deleted"}
 
 
 @router.get("/loans/summary/stats")
 async def get_loan_stats(current_user: User = Depends(get_current_user)):
-    loans = await db.loans.find({}, {"_id": 0}).to_list(5000)
+    loans = await db.loans.find(get_tenant_filter(current_user), {"_id": 0}).to_list(5000)
     active = [l for l in loans if l["status"] == "active"]
     pending = [l for l in loans if l["status"] == "pending"]
     completed = [l for l in loans if l["status"] == "completed"]

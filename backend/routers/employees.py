@@ -9,7 +9,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
 from reportlab.lib.units import inch
 
-from database import db, hash_password, get_current_user, ROOT_DIR, require_permission, get_branch_filter
+from database import db, hash_password, get_current_user, ROOT_DIR, require_permission, get_branch_filter, get_tenant_filter, stamp_tenant
 from models import (User, Employee, EmployeeCreate, SalaryPayment, SalaryPaymentCreate,
                     Leave, LeaveCreate, Notification, Attendance, EmployeeDocument,
                     EmployeeDocumentCreate, EmployeeRequest, EmployeeRequestCreate,
@@ -41,51 +41,54 @@ async def create_employee(data: EmployeeCreate, current_user: User = Depends(get
             user_dict = user.model_dump()
             user_dict["password"] = hash_password("emp@123")
             user_dict["created_at"] = user_dict["created_at"].isoformat()
+            stamp_tenant(user_dict, current_user)
             await db.users.insert_one(user_dict)
             emp_dict["user_id"] = user.id
         else:
             emp_dict["user_id"] = existing_user["id"]
     for f in ['created_at', 'join_date', 'document_expiry']:
         if emp_dict.get(f): emp_dict[f] = emp_dict[f].isoformat()
+    stamp_tenant(emp_dict, current_user)
     await db.employees.insert_one(emp_dict)
     return {k: v for k, v in emp_dict.items() if k != '_id'}
 
 @router.post("/employees/{emp_id}/link-user")
 async def link_employee_user(emp_id: str, body: dict, current_user: User = Depends(get_current_user)):
-    emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    emp = await db.employees.find_one({"id": emp_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not emp: raise HTTPException(status_code=404, detail="Employee not found")
     email = body.get("email")
     if not email: raise HTTPException(status_code=400, detail="Email required")
     # Resolve permissions from job title
     jt_perms = ["self_service"]
     if emp.get("job_title_id"):
-        jt = await db.job_titles.find_one({"id": emp["job_title_id"]}, {"_id": 0})
+        jt = await db.job_titles.find_one({"id": emp["job_title_id"], **get_tenant_filter(current_user)}, {"_id": 0})
         if jt and jt.get("permissions"):
             jt_perms = list(set(jt_perms) | set(jt["permissions"]))
     existing = await db.users.find_one({"email": email}, {"_id": 0})
     if existing:
-        await db.employees.update_one({"id": emp_id}, {"$set": {"user_id": existing["id"]}})
+        await db.employees.update_one({"id": emp_id, **get_tenant_filter(current_user)}, {"$set": {"user_id": existing["id"]}})
         # Merge job title permissions into existing user
         merged = list(set(existing.get("permissions", [])) | set(jt_perms))
-        await db.users.update_one({"id": existing["id"]}, {"$set": {"permissions": merged}})
+        await db.users.update_one({"id": existing["id"], **get_tenant_filter(current_user)}, {"$set": {"permissions": merged}})
         return {"message": f"Linked to existing user {email}", "user_id": existing["id"]}
     user = User(email=email, name=emp["name"], role="employee", permissions=jt_perms)
     user_dict = user.model_dump()
     user_dict["password"] = hash_password("emp@123")
     user_dict["created_at"] = user_dict["created_at"].isoformat()
+    stamp_tenant(user_dict, current_user)
     await db.users.insert_one(user_dict)
-    await db.employees.update_one({"id": emp_id}, {"$set": {"user_id": user.id}})
+    await db.employees.update_one({"id": emp_id, **get_tenant_filter(current_user)}, {"$set": {"user_id": user.id}})
     return {"message": f"Created account for {email} (password: emp@123)", "user_id": user.id}
 
 @router.put("/employees/{emp_id}")
 async def update_employee(emp_id: str, data: EmployeeCreate, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "employees", "write")
-    result = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    result = await db.employees.find_one({"id": emp_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not result: raise HTTPException(status_code=404, detail="Employee not found")
     update = data.model_dump()
     for f in ['join_date', 'document_expiry']:
         if update.get(f): update[f] = update[f].isoformat()
-    await db.employees.update_one({"id": emp_id}, {"$set": update})
+    await db.employees.update_one({"id": emp_id, **get_tenant_filter(current_user)}, {"$set": update})
     
     # Sync email to linked user account if employee has a user_id
     if result.get("user_id") and update.get("email"):
@@ -97,13 +100,13 @@ async def update_employee(emp_id: str, data: EmployeeCreate, current_user: User 
                 {"$set": {"email": new_email}}
             )
     
-    return await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    return await db.employees.find_one({"id": emp_id, **get_tenant_filter(current_user)}, {"_id": 0})
 
 @router.post("/employees/{emp_id}/send-email")
 async def send_employee_email(emp_id: str, body: dict, current_user: User = Depends(get_current_user)):
     """Send an email to an employee"""
     require_permission(current_user, "employees", "write")
-    emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    emp = await db.employees.find_one({"id": emp_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not emp: raise HTTPException(status_code=404, detail="Employee not found")
     if not emp.get("email"): raise HTTPException(status_code=400, detail="Employee has no email address")
     
@@ -146,12 +149,12 @@ async def send_employee_email(emp_id: str, body: dict, current_user: User = Depe
 @router.delete("/employees/{emp_id}")
 async def delete_employee(emp_id: str, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "employees", "write")
-    emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    emp = await db.employees.find_one({"id": emp_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found")
     from routers.access_policies import check_delete_permission
     await check_delete_permission(current_user, "employees", emp.get("created_at"), f"Employee: {emp.get('name', emp_id[:8])}")
-    result = await db.employees.delete_one({"id": emp_id})
+    result = await db.employees.delete_one({"id": emp_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Employee not found")
     from routers.activity_logs import log_activity
@@ -162,7 +165,7 @@ async def delete_employee(emp_id: str, current_user: User = Depends(get_current_
 # Employee Status Management (Resignation / Termination)
 @router.post("/employees/{emp_id}/resign")
 async def resign_employee(emp_id: str, body: dict, current_user: User = Depends(get_current_user)):
-    emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    emp = await db.employees.find_one({"id": emp_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found")
     resignation_date = body.get("resignation_date", datetime.now(timezone.utc).strftime("%Y-%m-%d"))
@@ -188,11 +191,11 @@ async def resign_employee(emp_id: str, body: dict, current_user: User = Depends(
             "exit_interview_done": False,
         }),
     }
-    await db.employees.update_one({"id": emp_id}, {"$set": update})
+    await db.employees.update_one({"id": emp_id, **get_tenant_filter(current_user)}, {"$set": update})
     
     # --- Send automated offboarding emails ---
     branding = await db.settings.find_one({"type": "branding"}, {"_id": 0}) or {}
-    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one(get_tenant_filter(current_user), {"_id": 0}) or {}
     co_name = company.get("company_name", branding.get("company_name", "SSC Track"))
     primary_color = branding.get("primary_color", "#F5841F")
     exit_label = {"resigned": "Resignation", "terminated": "Termination", "end_of_contract": "End of Contract"}.get(status, status.replace("_", " ").title())
@@ -291,18 +294,18 @@ async def resign_employee(emp_id: str, body: dict, current_user: User = Depends(
 @router.put("/employees/{emp_id}/clearance")
 async def update_clearance(emp_id: str, body: dict, current_user: User = Depends(get_current_user)):
     """Update clearance checklist items"""
-    emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    emp = await db.employees.find_one({"id": emp_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found")
     clearance = emp.get("clearance", {})
     clearance.update(body)
-    await db.employees.update_one({"id": emp_id}, {"$set": {"clearance": clearance}})
+    await db.employees.update_one({"id": emp_id, **get_tenant_filter(current_user)}, {"$set": {"clearance": clearance}})
     return {"success": True, "clearance": clearance}
 
 
 @router.get("/employees/{emp_id}/settlement")
 async def get_settlement(emp_id: str, current_user: User = Depends(get_current_user)):
-    emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    emp = await db.employees.find_one({"id": emp_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found")
     
@@ -414,14 +417,14 @@ async def get_settlement(emp_id: str, current_user: User = Depends(get_current_u
 @router.get("/employees/{emp_id}/settlement/pdf")
 async def settlement_pdf(emp_id: str, current_user: User = Depends(get_current_user)):
     """Generate a settlement PDF for download"""
-    emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    emp = await db.employees.find_one({"id": emp_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found")
     
     # Reuse settlement calculation
     settlement_data = await get_settlement(emp_id, current_user)
     
-    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one(get_tenant_filter(current_user), {"_id": 0}) or {}
     co_name = company.get("company_name", "Smart Standard Company")
     addr_parts = [company.get("address_line1",""), company.get("address_line2",""), company.get("city",""), company.get("country","")]
     co_addr = ", ".join([p for p in addr_parts if p])
@@ -563,23 +566,23 @@ async def settlement_pdf(emp_id: str, current_user: User = Depends(get_current_u
 
 @router.post("/employees/{emp_id}/complete-exit")
 async def complete_exit(emp_id: str, body: dict, current_user: User = Depends(get_current_user)):
-    emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    emp = await db.employees.find_one({"id": emp_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found")
     settlement_amount = float(body.get("settlement_amount", 0))
-    await db.employees.update_one({"id": emp_id}, {"$set": {
+    await db.employees.update_one({"id": emp_id, **get_tenant_filter(current_user)}, {"$set": {
         "active": False, "status": body.get("status", "left"),
         "final_settlement_amount": settlement_amount,
         "final_settlement_paid": body.get("paid", True),
     }})
     # Deactivate user account
     if emp.get("user_id"):
-        await db.users.update_one({"id": emp["user_id"]}, {"$set": {"permissions": [], "active": False}})
+        await db.users.update_one({"id": emp["user_id"], **get_tenant_filter(current_user)}, {"$set": {"permissions": [], "active": False}})
     
     # --- Send settlement summary email to employee ---
     if emp.get("email"):
         branding = await db.settings.find_one({"type": "branding"}, {"_id": 0}) or {}
-        company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+        company = await db.company_settings.find_one(get_tenant_filter(current_user), {"_id": 0}) or {}
         co_name = company.get("company_name", branding.get("company_name", "SSC Track"))
         primary_color = branding.get("primary_color", "#F5841F")
         
@@ -623,7 +626,7 @@ async def complete_exit(emp_id: str, body: dict, current_user: User = Depends(ge
 # Salary Payments
 @router.get("/salary-payments")
 async def get_salary_payments(current_user: User = Depends(get_current_user)):
-    payments = await db.salary_payments.find({}, {"_id": 0}).sort("date", -1).to_list(1000)
+    payments = await db.salary_payments.find(get_tenant_filter(current_user), {"_id": 0}).sort("date", -1).to_list(1000)
     for p in payments:
         for f in ['date', 'created_at']:
             if isinstance(p.get(f), str): p[f] = datetime.fromisoformat(p[f])
@@ -631,7 +634,7 @@ async def get_salary_payments(current_user: User = Depends(get_current_user)):
 
 @router.post("/salary-payments")
 async def create_salary_payment(data: SalaryPaymentCreate, current_user: User = Depends(get_current_user)):
-    emp = await db.employees.find_one({"id": data.employee_id}, {"_id": 0})
+    emp = await db.employees.find_one({"id": data.employee_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not emp: raise HTTPException(status_code=404, detail="Employee not found")
     if data.payment_type == "salary":
         existing = await db.salary_payments.find_one({"employee_id": data.employee_id, "period": data.period, "payment_type": "salary"}, {"_id": 0})
@@ -640,32 +643,35 @@ async def create_salary_payment(data: SalaryPaymentCreate, current_user: User = 
     p_dict = payment.model_dump()
     p_dict["date"] = p_dict["date"].isoformat()
     p_dict["created_at"] = p_dict["created_at"].isoformat()
+    stamp_tenant(p_dict, current_user)
     await db.salary_payments.insert_one(p_dict)
     loan_balance = emp.get("loan_balance", 0)
     if data.payment_type == "advance":
-        await db.employees.update_one({"id": data.employee_id}, {"$set": {"loan_balance": loan_balance + data.amount}})
+        await db.employees.update_one({"id": data.employee_id, **get_tenant_filter(current_user)}, {"$set": {"loan_balance": loan_balance + data.amount}})
     elif data.payment_type == "loan_repayment":
-        await db.employees.update_one({"id": data.employee_id}, {"$set": {"loan_balance": max(0, loan_balance - data.amount)}})
+        await db.employees.update_one({"id": data.employee_id, **get_tenant_filter(current_user)}, {"$set": {"loan_balance": max(0, loan_balance - data.amount)}})
     if data.payment_type == "old_balance":
         old_bal = emp.get("old_salary_balance", 0)
-        await db.employees.update_one({"id": data.employee_id}, {"$set": {"old_salary_balance": max(0, old_bal - data.amount)}})
+        await db.employees.update_one({"id": data.employee_id, **get_tenant_filter(current_user)}, {"$set": {"old_salary_balance": max(0, old_bal - data.amount)}})
     if data.payment_type != "loan_repayment":
         cat_map = {"salary": "salary", "advance": "salary", "overtime": "salary", "bonus": "salary", "old_balance": "salary", "tickets": "tickets", "id_card": "id_card"}
         type_label = data.payment_type.replace("_", " ").title()
         expense = Expense(category=cat_map.get(data.payment_type, "salary"), description=f"{type_label} - {emp['name']} - {data.period}", amount=data.amount, payment_mode=data.payment_mode, branch_id=data.branch_id, date=data.date, notes=data.notes or f"Employee: {emp['name']}", created_by=current_user.id)
         e_dict = expense.model_dump()
         e_dict["date"] = e_dict["date"].isoformat(); e_dict["created_at"] = e_dict["created_at"].isoformat()
+        stamp_tenant(e_dict, current_user)
         await db.expenses.insert_one(e_dict)
     if emp.get("user_id"):
         type_label = data.payment_type.replace("_", " ").title()
         notif = Notification(user_id=emp["user_id"], title=f"{type_label} Payment Received", message=f"SAR {data.amount:.2f} {type_label} for {data.period} via {data.payment_mode}. Please acknowledge receipt.", type="salary_paid", related_id=payment.id)
         n_dict = notif.model_dump(); n_dict["created_at"] = n_dict["created_at"].isoformat()
+        stamp_tenant(n_dict, current_user)
         await db.notifications.insert_one(n_dict)
     return {k: v for k, v in p_dict.items() if k != '_id'}
 
 @router.get("/employees/{emp_id}/summary")
 async def get_employee_summary(emp_id: str, current_user: User = Depends(get_current_user)):
-    emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    emp = await db.employees.find_one({"id": emp_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not emp: raise HTTPException(status_code=404, detail="Employee not found")
     payments = await db.salary_payments.find({"employee_id": emp_id}, {"_id": 0}).sort("date", -1).to_list(1000)
     leaves = await db.leaves.find({"employee_id": emp_id}, {"_id": 0}).to_list(1000)
@@ -695,7 +701,7 @@ async def get_employee_summary(emp_id: str, current_user: User = Depends(get_cur
 
 @router.delete("/salary-payments/{payment_id}")
 async def delete_salary_payment(payment_id: str, current_user: User = Depends(get_current_user)):
-    result = await db.salary_payments.delete_one({"id": payment_id})
+    result = await db.salary_payments.delete_one({"id": payment_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0: raise HTTPException(status_code=404, detail="Payment not found")
     return {"message": "Salary payment deleted"}
 
@@ -713,7 +719,7 @@ async def get_leaves(employee_id: Optional[str] = None, status: Optional[str] = 
 
 @router.post("/leaves")
 async def create_leave(data: LeaveCreate, current_user: User = Depends(get_current_user)):
-    emp = await db.employees.find_one({"id": data.employee_id}, {"_id": 0})
+    emp = await db.employees.find_one({"id": data.employee_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not emp: raise HTTPException(status_code=404, detail="Employee not found")
     if data.with_ticket:
         ticket_balance = emp.get("ticket_entitled", 1) - emp.get("ticket_used", 0)
@@ -722,58 +728,62 @@ async def create_leave(data: LeaveCreate, current_user: User = Depends(get_curre
     l_dict = leave.model_dump()
     for f in ['start_date', 'end_date', 'created_at', 'approved_at']:
         if l_dict.get(f): l_dict[f] = l_dict[f].isoformat()
+    stamp_tenant(l_dict, current_user)
     await db.leaves.insert_one(l_dict)
     if data.status == "pending":
         admins = await db.users.find({"role": "admin"}, {"_id": 0}).to_list(100)
         for admin in admins:
             notif = Notification(user_id=admin["id"], title="New Leave Request", message=f"{emp['name']} has requested {data.days} days {data.leave_type} leave", type="leave_request", related_id=leave.id)
             n_dict = notif.model_dump(); n_dict["created_at"] = n_dict["created_at"].isoformat()
+            stamp_tenant(n_dict, current_user)
             await db.notifications.insert_one(n_dict)
     return {k: v for k, v in l_dict.items() if k != '_id'}
 
 @router.put("/leaves/{leave_id}/approve")
 async def approve_leave(leave_id: str, current_user: User = Depends(get_current_user)):
-    leave = await db.leaves.find_one({"id": leave_id}, {"_id": 0})
+    leave = await db.leaves.find_one({"id": leave_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not leave: raise HTTPException(status_code=404, detail="Leave not found")
-    await db.leaves.update_one({"id": leave_id}, {"$set": {"status": "approved", "approved_by": current_user.id, "approved_at": datetime.now(timezone.utc).isoformat()}})
+    await db.leaves.update_one({"id": leave_id, **get_tenant_filter(current_user)}, {"$set": {"status": "approved", "approved_by": current_user.id, "approved_at": datetime.now(timezone.utc).isoformat()}})
     if leave.get("with_ticket"):
-        emp_doc = await db.employees.find_one({"id": leave["employee_id"]}, {"_id": 0})
-        if emp_doc: await db.employees.update_one({"id": leave["employee_id"]}, {"$set": {"ticket_used": emp_doc.get("ticket_used", 0) + 1}})
-    emp = await db.employees.find_one({"id": leave["employee_id"]}, {"_id": 0})
+        emp_doc = await db.employees.find_one({"id": leave["employee_id"], **get_tenant_filter(current_user)}, {"_id": 0})
+        if emp_doc: await db.employees.update_one({"id": leave["employee_id"], **get_tenant_filter(current_user)}, {"$set": {"ticket_used": emp_doc.get("ticket_used", 0) + 1}})
+    emp = await db.employees.find_one({"id": leave["employee_id"], **get_tenant_filter(current_user)}, {"_id": 0})
     if emp and emp.get("user_id"):
         notif = Notification(user_id=emp["user_id"], title="Leave Approved", message=f"Your {leave['days']} days {leave['leave_type']} leave has been approved", type="leave_approved", related_id=leave_id)
         n_dict = notif.model_dump(); n_dict["created_at"] = n_dict["created_at"].isoformat()
+        stamp_tenant(n_dict, current_user)
         await db.notifications.insert_one(n_dict)
     return {"message": "Leave approved"}
 
 @router.put("/leaves/{leave_id}/reject")
 async def reject_leave(leave_id: str, reason: Optional[dict] = None, current_user: User = Depends(get_current_user)):
-    leave = await db.leaves.find_one({"id": leave_id}, {"_id": 0})
+    leave = await db.leaves.find_one({"id": leave_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not leave: raise HTTPException(status_code=404, detail="Leave not found")
     rej_reason = reason.get("reason", "") if reason else ""
-    await db.leaves.update_one({"id": leave_id}, {"$set": {"status": "rejected", "approved_by": current_user.id, "approved_at": datetime.now(timezone.utc).isoformat(), "rejection_reason": rej_reason}})
-    emp = await db.employees.find_one({"id": leave["employee_id"]}, {"_id": 0})
+    await db.leaves.update_one({"id": leave_id, **get_tenant_filter(current_user)}, {"$set": {"status": "rejected", "approved_by": current_user.id, "approved_at": datetime.now(timezone.utc).isoformat(), "rejection_reason": rej_reason}})
+    emp = await db.employees.find_one({"id": leave["employee_id"], **get_tenant_filter(current_user)}, {"_id": 0})
     if emp and emp.get("user_id"):
         notif = Notification(user_id=emp["user_id"], title="Leave Rejected", message=f"Your {leave['leave_type']} leave request was rejected. {rej_reason}", type="leave_rejected", related_id=leave_id)
         n_dict = notif.model_dump(); n_dict["created_at"] = n_dict["created_at"].isoformat()
+        stamp_tenant(n_dict, current_user)
         await db.notifications.insert_one(n_dict)
     return {"message": "Leave rejected"}
 
 @router.delete("/leaves/{leave_id}")
 async def delete_leave(leave_id: str, current_user: User = Depends(get_current_user)):
-    result = await db.leaves.delete_one({"id": leave_id})
+    result = await db.leaves.delete_one({"id": leave_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0: raise HTTPException(status_code=404, detail="Leave not found")
     return {"message": "Leave deleted"}
 
 # Employee Report PDF
 @router.get("/employees/{emp_id}/report/pdf")
 async def employee_report_pdf(emp_id: str, current_user: User = Depends(get_current_user)):
-    emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    emp = await db.employees.find_one({"id": emp_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not emp: raise HTTPException(status_code=404, detail="Employee not found")
     payments = await db.salary_payments.find({"employee_id": emp_id}, {"_id": 0}).sort("date", -1).to_list(1000)
     leaves = await db.leaves.find({"employee_id": emp_id}, {"_id": 0}).to_list(1000)
     deductions = await db.salary_deductions.find({"employee_id": emp_id}, {"_id": 0}).to_list(1000)
-    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one(get_tenant_filter(current_user), {"_id": 0}) or {}
     co_name = company.get("company_name", "Smart Standard Company")
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=40, bottomMargin=40)
@@ -817,9 +827,9 @@ async def employee_report_pdf(emp_id: str, current_user: User = Depends(get_curr
 # Salary Acknowledgment
 @router.post("/salary-payments/{payment_id}/acknowledge")
 async def acknowledge_salary(payment_id: str, current_user: User = Depends(get_current_user)):
-    payment = await db.salary_payments.find_one({"id": payment_id}, {"_id": 0})
+    payment = await db.salary_payments.find_one({"id": payment_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not payment: raise HTTPException(status_code=404, detail="Payment not found")
-    await db.salary_payments.update_one({"id": payment_id}, {"$set": {"acknowledged": True, "acknowledged_at": datetime.now(timezone.utc).isoformat()}})
+    await db.salary_payments.update_one({"id": payment_id, **get_tenant_filter(current_user)}, {"$set": {"acknowledged": True, "acknowledged_at": datetime.now(timezone.utc).isoformat()}})
     return {"message": "Payment acknowledged"}
 
 # Notifications
@@ -850,10 +860,11 @@ async def time_in(current_user: User = Depends(get_current_user)):
     if existing and existing.get("time_in"): raise HTTPException(status_code=400, detail="Already timed in today")
     now = datetime.now(timezone.utc)
     if existing:
-        await db.attendance.update_one({"id": existing["id"]}, {"$set": {"time_in": now.isoformat()}})
+        await db.attendance.update_one({"id": existing["id"], **get_tenant_filter(current_user)}, {"$set": {"time_in": now.isoformat()}})
     else:
         att = Attendance(employee_id=emp["id"], employee_name=emp["name"], date=today, time_in=now)
         a_dict = att.model_dump(); a_dict["time_in"] = a_dict["time_in"].isoformat(); a_dict["created_at"] = a_dict["created_at"].isoformat()
+        stamp_tenant(a_dict, current_user)
         await db.attendance.insert_one(a_dict)
     return {"message": "Timed in", "time": now.isoformat()}
 
@@ -866,7 +877,7 @@ async def time_out(current_user: User = Depends(get_current_user)):
     if not existing or not existing.get("time_in"): raise HTTPException(status_code=400, detail="Not timed in today")
     if existing.get("time_out"): raise HTTPException(status_code=400, detail="Already timed out today")
     now = datetime.now(timezone.utc)
-    await db.attendance.update_one({"id": existing["id"]}, {"$set": {"time_out": now.isoformat()}})
+    await db.attendance.update_one({"id": existing["id"], **get_tenant_filter(current_user)}, {"$set": {"time_out": now.isoformat()}})
     return {"message": "Timed out", "time": now.isoformat()}
 
 @router.get("/attendance")
@@ -902,19 +913,20 @@ async def create_employee_document(data: EmployeeDocumentCreate, current_user: U
     d_dict = doc.model_dump()
     for f in ['issue_date', 'expiry_date', 'created_at']:
         if d_dict.get(f): d_dict[f] = d_dict[f].isoformat()
+    stamp_tenant(d_dict, current_user)
     await db.employee_documents.insert_one(d_dict)
     return {k: v for k, v in d_dict.items() if k != '_id'}
 
 @router.delete("/employee-documents/{doc_id}")
 async def delete_employee_document(doc_id: str, current_user: User = Depends(get_current_user)):
-    await db.employee_documents.delete_one({"id": doc_id})
+    await db.employee_documents.delete_one({"id": doc_id, **get_tenant_filter(current_user)})
     return {"message": "Document deleted"}
 
 # Letter Generation
 @router.post("/letters/generate")
 async def generate_letter(body: dict, current_user: User = Depends(get_current_user)):
     emp_id = body.get("employee_id"); letter_type = body.get("letter_type", "salary_certificate")
-    emp = await db.employees.find_one({"id": emp_id}, {"_id": 0})
+    emp = await db.employees.find_one({"id": emp_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not emp: raise HTTPException(status_code=404, detail="Employee not found")
     buffer = BytesIO()
     doc_pdf = SimpleDocTemplate(buffer, pagesize=A4, topMargin=50, bottomMargin=50, leftMargin=60, rightMargin=60)
@@ -929,7 +941,7 @@ async def generate_letter(body: dict, current_user: User = Depends(get_current_u
         try:
             logo = RLImage(str(logo_path), width=1.5*inch, height=0.7*inch); logo.hAlign = 'CENTER'; elements.append(logo)
         except: pass
-    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one(get_tenant_filter(current_user), {"_id": 0}) or {}
     co_name = company.get("company_name", "Smart Standard Company")
     addr_parts = [company.get("address_line1",""), company.get("address_line2",""), company.get("city",""), company.get("country","")]
     co_addr = ", ".join([p for p in addr_parts if p])
@@ -943,7 +955,7 @@ async def generate_letter(body: dict, current_user: User = Depends(get_current_u
     elements.append(Spacer(1, 0.2*inch))
     name = emp["name"]; doc_id = emp.get("document_id", "N/A"); position = emp.get("position", "N/A")
     if emp.get("job_title_id"):
-        jt = await db.job_titles.find_one({"id": emp["job_title_id"]}, {"_id": 0})
+        jt = await db.job_titles.find_one({"id": emp["job_title_id"], **get_tenant_filter(current_user)}, {"_id": 0})
         if jt: position = jt["title"]
     salary = emp.get("salary", 0)
     join = emp.get("join_date", "")
@@ -1079,11 +1091,13 @@ async def create_employee_request(data: EmployeeRequestCreate, current_user: Use
     if not emp: raise HTTPException(status_code=404, detail="No employee profile linked")
     req = EmployeeRequest(**data.model_dump(), employee_id=emp["id"], employee_name=emp["name"])
     r_dict = req.model_dump(); r_dict["created_at"] = r_dict["created_at"].isoformat()
+    stamp_tenant(r_dict, current_user)
     await db.employee_requests.insert_one(r_dict)
     admins = await db.users.find({"role": {"$in": ["admin", "manager"]}}, {"_id": 0}).to_list(100)
     for admin in admins:
         n = Notification(user_id=admin["id"], title=f"New Request: {data.request_type.replace('_',' ').title()}", message=f"{emp['name']}: {data.subject}", type="employee_request", related_id=req.id)
         n_dict = n.model_dump(); n_dict["created_at"] = n_dict["created_at"].isoformat()
+        stamp_tenant(n_dict, current_user)
         await db.notifications.insert_one(n_dict)
     return {k: v for k, v in r_dict.items() if k != '_id'}
 
@@ -1098,14 +1112,15 @@ async def get_my_requests(current_user: User = Depends(get_current_user)):
 
 @router.put("/employee-requests/{req_id}/respond")
 async def respond_to_request(req_id: str, body: dict, current_user: User = Depends(get_current_user)):
-    req = await db.employee_requests.find_one({"id": req_id}, {"_id": 0})
+    req = await db.employee_requests.find_one({"id": req_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not req: raise HTTPException(status_code=404, detail="Request not found")
     status = body.get("status", "approved"); response = body.get("response", "")
-    await db.employee_requests.update_one({"id": req_id}, {"$set": {"status": status, "response": response, "processed_by": current_user.id}})
-    emp = await db.employees.find_one({"id": req["employee_id"]}, {"_id": 0})
+    await db.employee_requests.update_one({"id": req_id, **get_tenant_filter(current_user)}, {"$set": {"status": status, "response": response, "processed_by": current_user.id}})
+    emp = await db.employees.find_one({"id": req["employee_id"], **get_tenant_filter(current_user)}, {"_id": 0})
     if emp and emp.get("user_id"):
         n = Notification(user_id=emp["user_id"], title=f"Request {status.title()}", message=f"Your {req['request_type'].replace('_',' ')} request: {response or status}", type="request_response", related_id=req_id)
         n_dict = n.model_dump(); n_dict["created_at"] = n_dict["created_at"].isoformat()
+        stamp_tenant(n_dict, current_user)
         await db.notifications.insert_one(n_dict)
     return {"message": f"Request {status}"}
 
@@ -1118,22 +1133,24 @@ async def send_announcement(body: dict, current_user: User = Depends(get_current
         for emp in employees:
             n = Notification(user_id=emp["user_id"], title=title, message=message, type="announcement")
             n_dict = n.model_dump(); n_dict["created_at"] = n_dict["created_at"].isoformat()
+            stamp_tenant(n_dict, current_user)
             await db.notifications.insert_one(n_dict)
         return {"message": f"Announcement sent to {len(employees)} employees"}
     else:
-        emp = await db.employees.find_one({"id": target}, {"_id": 0})
+        emp = await db.employees.find_one({"id": target, **get_tenant_filter(current_user)}, {"_id": 0})
         if emp and emp.get("user_id"):
             n = Notification(user_id=emp["user_id"], title=title, message=message, type="announcement")
             n_dict = n.model_dump(); n_dict["created_at"] = n_dict["created_at"].isoformat()
+            stamp_tenant(n_dict, current_user)
             await db.notifications.insert_one(n_dict)
         return {"message": f"Announcement sent to {emp['name'] if emp else 'unknown'}"}
 
 # Payslip PDF
 @router.get("/salary-payments/{payment_id}/payslip")
 async def generate_payslip(payment_id: str, current_user: User = Depends(get_current_user)):
-    payment = await db.salary_payments.find_one({"id": payment_id}, {"_id": 0})
+    payment = await db.salary_payments.find_one({"id": payment_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not payment: raise HTTPException(status_code=404, detail="Payment not found")
-    emp = await db.employees.find_one({"id": payment["employee_id"]}, {"_id": 0})
+    emp = await db.employees.find_one({"id": payment["employee_id"], **get_tenant_filter(current_user)}, {"_id": 0})
     if not emp: raise HTTPException(status_code=404, detail="Employee not found")
     period_payments = await db.salary_payments.find({"employee_id": payment["employee_id"], "period": payment["period"]}, {"_id": 0}).to_list(100)
     buffer = BytesIO()
@@ -1148,7 +1165,7 @@ async def generate_payslip(payment_id: str, current_user: User = Depends(get_cur
         try:
             logo = RLImage(str(logo_path), width=1.5*inch, height=0.7*inch); logo.hAlign = 'CENTER'; elements.append(logo); elements.append(Spacer(1, 0.1*inch))
         except: pass
-    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one(get_tenant_filter(current_user), {"_id": 0}) or {}
     co_name = company.get("company_name", "Smart Standard Company")
     addr_parts = [company.get("address_line1",""), company.get("address_line2",""), company.get("city",""), company.get("country","")]
     co_addr = ", ".join([p for p in addr_parts if p])
@@ -1208,24 +1225,26 @@ async def get_salary_deductions(employee_id: Optional[str] = None, current_user:
 
 @router.post("/salary-deductions")
 async def create_salary_deduction(data: SalaryDeductionCreate, current_user: User = Depends(get_current_user)):
-    emp = await db.employees.find_one({"id": data.employee_id}, {"_id": 0})
+    emp = await db.employees.find_one({"id": data.employee_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not emp: raise HTTPException(status_code=404, detail="Employee not found")
     deduction = SalaryDeduction(**data.model_dump(), employee_name=emp["name"], created_by=current_user.id)
     d_dict = deduction.model_dump()
     d_dict["date"] = d_dict["date"].isoformat(); d_dict["created_at"] = d_dict["created_at"].isoformat()
     for k in ['branch_id', 'fine_id']:
         if d_dict.get(k) == '': d_dict[k] = None
+    stamp_tenant(d_dict, current_user)
     await db.salary_deductions.insert_one(d_dict)
     if emp.get("user_id"):
         type_label = data.deduction_type.replace('_', ' ').title()
         n = Notification(user_id=emp["user_id"], title=f"Salary Deduction: {type_label}", message=f"SAR {data.amount:.2f} deducted from your salary ({data.period}). Reason: {data.reason}", type="salary_deduction", related_id=deduction.id)
         n_dict = n.model_dump(); n_dict["created_at"] = n_dict["created_at"].isoformat()
+        stamp_tenant(n_dict, current_user)
         await db.notifications.insert_one(n_dict)
     return {k: v for k, v in d_dict.items() if k != '_id'}
 
 @router.delete("/salary-deductions/{ded_id}")
 async def delete_salary_deduction(ded_id: str, current_user: User = Depends(get_current_user)):
-    await db.salary_deductions.delete_one({"id": ded_id})
+    await db.salary_deductions.delete_one({"id": ded_id, **get_tenant_filter(current_user)})
     return {"message": "Deduction deleted"}
 
 # Salary History
@@ -1238,21 +1257,22 @@ async def get_salary_history(emp_id: str, current_user: User = Depends(get_curre
 
 @router.post("/salary-history")
 async def add_salary_history(body: dict, current_user: User = Depends(get_current_user)):
-    emp = await db.employees.find_one({"id": body["employee_id"]}, {"_id": 0})
+    emp = await db.employees.find_one({"id": body["employee_id"], **get_tenant_filter(current_user)}, {"_id": 0})
     if not emp: raise HTTPException(status_code=404, detail="Employee not found")
     old_salary = emp.get("salary", 0); new_salary = float(body["new_salary"])
     record = SalaryHistory(employee_id=body["employee_id"], old_salary=old_salary, new_salary=new_salary, effective_date=datetime.fromisoformat(body["effective_date"]), reason=body.get("reason", ""))
     r_dict = record.model_dump(); r_dict["effective_date"] = r_dict["effective_date"].isoformat(); r_dict["created_at"] = r_dict["created_at"].isoformat()
+    stamp_tenant(r_dict, current_user)
     await db.salary_history.insert_one(r_dict)
-    await db.employees.update_one({"id": body["employee_id"]}, {"$set": {"salary": new_salary}})
+    await db.employees.update_one({"id": body["employee_id"], **get_tenant_filter(current_user)}, {"$set": {"salary": new_salary}})
     return {k: v for k, v in r_dict.items() if k != '_id'}
 
 # Employee Pending Summary
 @router.get("/employees/pending-summary")
 async def get_employees_pending(current_user: User = Depends(get_current_user)):
     employees = await db.employees.find({"active": {"$ne": False}}, {"_id": 0}).to_list(1000)
-    payments = await db.salary_payments.find({}, {"_id": 0}).to_list(10000)
-    leaves = await db.leaves.find({}, {"_id": 0}).to_list(10000)
+    payments = await db.salary_payments.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
+    leaves = await db.leaves.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
     now = datetime.now(timezone.utc); current_period = now.strftime("%b %Y")
     result = []
     for emp in employees:
@@ -1276,7 +1296,7 @@ async def get_employees_pending(current_user: User = Depends(get_current_user)):
                     if start <= now <= end:
                         on_leave = {"from": start.strftime("%d %b"), "to": end.strftime("%d %b %Y"), "type": l.get("leave_type", "")}; break
         result.append({"id": eid, "name": emp["name"], "position": emp.get("position", ""), "branch_id": emp.get("branch_id"), "salary": emp.get("salary", 0), "salary_paid": salary_paid, "pending_salary": max(0, pending), "loan_balance": emp.get("loan_balance", 0), "on_leave": on_leave, "annual_leave_remaining": emp.get("annual_leave_entitled", 30) - annual_used, "sick_leave_remaining": emp.get("sick_leave_entitled", 15) - sick_used, "pending_leave_requests": pending_leaves})
-    branch_map = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
+    branch_map = {b["id"]: b["name"] for b in await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)}
     branch_summary = {}
     for emp in result:
         bid = emp.get("branch_id"); bname = branch_map.get(bid, "No Branch") if bid else "No Branch"
@@ -1361,6 +1381,7 @@ async def create_bulk_salary_payments(body: dict, current_user: User = Depends(g
             p_dict = payment.model_dump()
             p_dict["date"] = p_dict["date"].isoformat()
             p_dict["created_at"] = p_dict["created_at"].isoformat()
+            stamp_tenant(p_dict, current_user)
             await db.salary_payments.insert_one(p_dict)
             
             # Create corresponding expense
@@ -1377,6 +1398,7 @@ async def create_bulk_salary_payments(body: dict, current_user: User = Depends(g
             e_dict = expense.model_dump()
             e_dict["date"] = e_dict["date"].isoformat()
             e_dict["created_at"] = e_dict["created_at"].isoformat()
+            stamp_tenant(e_dict, current_user)
             await db.expenses.insert_one(e_dict)
             
             # Send notification if user linked
@@ -1390,6 +1412,7 @@ async def create_bulk_salary_payments(body: dict, current_user: User = Depends(g
                 )
                 n_dict = notif.model_dump()
                 n_dict["created_at"] = n_dict["created_at"].isoformat()
+                stamp_tenant(n_dict, current_user)
                 await db.notifications.insert_one(n_dict)
             
             results["paid"].append({
@@ -1408,7 +1431,7 @@ async def create_bulk_salary_payments(body: dict, current_user: User = Depends(g
             })
     
     # Get branch names for response
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     branch_map = {b["id"]: b["name"] for b in branches}
     
     # Group paid by branch
@@ -1469,7 +1492,7 @@ async def preview_bulk_salary(
             to_pay.append({"id": emp["id"], "name": emp["name"], "salary": emp.get("salary", 0), "branch_id": emp.get("branch_id")})
     
     # Get branch names
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     branch_map = {b["id"]: b["name"] for b in branches}
     
     for emp in to_pay:
@@ -1493,7 +1516,7 @@ async def preview_bulk_salary(
 # Items Master
 @router.get("/items")
 async def get_items(current_user: User = Depends(get_current_user)):
-    return await db.items.find({}, {"_id": 0}).to_list(1000)
+    return await db.items.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
 
 @router.post("/items")
 async def create_item(data: dict, current_user: User = Depends(get_current_user)):
@@ -1501,18 +1524,19 @@ async def create_item(data: dict, current_user: User = Depends(get_current_user)
     item_data = ItemCreate(**data) if isinstance(data, dict) else data
     item = Item(**item_data.model_dump())
     i_dict = item.model_dump(); i_dict["created_at"] = i_dict["created_at"].isoformat()
+    stamp_tenant(i_dict, current_user)
     await db.items.insert_one(i_dict)
     return {k: v for k, v in i_dict.items() if k != '_id'}
 
 @router.put("/items/{item_id}")
 async def update_item(item_id: str, data: dict, current_user: User = Depends(get_current_user)):
     data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    await db.items.update_one({"id": item_id}, {"$set": data})
-    return await db.items.find_one({"id": item_id}, {"_id": 0})
+    await db.items.update_one({"id": item_id, **get_tenant_filter(current_user)}, {"$set": data})
+    return await db.items.find_one({"id": item_id, **get_tenant_filter(current_user)}, {"_id": 0})
 
 @router.delete("/items/{item_id}")
 async def delete_item(item_id: str, current_user: User = Depends(get_current_user)):
-    await db.items.delete_one({"id": item_id})
+    await db.items.delete_one({"id": item_id, **get_tenant_filter(current_user)})
     return {"message": "Item deleted"}
 
 

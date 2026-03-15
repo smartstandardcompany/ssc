@@ -7,7 +7,7 @@ from typing import Optional
 from datetime import datetime, timezone
 import uuid
 
-from database import db, get_current_user
+from database import db, get_current_user, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter()
@@ -43,6 +43,7 @@ async def create_addon(body: dict, current_user: User = Depends(get_current_user
         "is_active": True,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
+    stamp_tenant(addon, current_user)
     await db.addons.insert_one(addon)
     return {k: v for k, v in addon.items() if k != "_id"}
 
@@ -52,7 +53,7 @@ async def update_addon(addon_id: str, body: dict, current_user: User = Depends(g
     if current_user.role not in ("admin", "manager"):
         raise HTTPException(status_code=403, detail="Admin or manager only")
 
-    existing = await db.addons.find_one({"id": addon_id})
+    existing = await db.addons.find_one({"id": addon_id, **get_tenant_filter(current_user)})
     if not existing:
         raise HTTPException(status_code=404, detail="Add-on not found")
 
@@ -69,8 +70,8 @@ async def update_addon(addon_id: str, body: dict, current_user: User = Depends(g
         update["is_active"] = bool(body["is_active"])
 
     if update:
-        await db.addons.update_one({"id": addon_id}, {"$set": update})
-    return await db.addons.find_one({"id": addon_id}, {"_id": 0})
+        await db.addons.update_one({"id": addon_id, **get_tenant_filter(current_user)}, {"$set": update})
+    return await db.addons.find_one({"id": addon_id, **get_tenant_filter(current_user)}, {"_id": 0})
 
 
 @router.delete("/addons/{addon_id}")
@@ -78,7 +79,7 @@ async def delete_addon(addon_id: str, current_user: User = Depends(get_current_u
     if current_user.role not in ("admin", "manager"):
         raise HTTPException(status_code=403, detail="Admin or manager only")
 
-    result = await db.addons.delete_one({"id": addon_id})
+    result = await db.addons.delete_one({"id": addon_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Add-on not found")
     return {"message": "Add-on deleted"}

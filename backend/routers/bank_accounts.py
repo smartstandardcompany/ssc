@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
 
-from database import db, get_current_user, require_permission
+from database import db, get_current_user, require_permission, get_tenant_filter, stamp_tenant
 from models import User, BankAccount, BankAccountCreate
 
 router = APIRouter()
@@ -9,7 +9,7 @@ router = APIRouter()
 
 @router.get("/bank-accounts")
 async def get_bank_accounts(current_user: User = Depends(get_current_user)):
-    accounts = await db.bank_accounts.find({}, {"_id": 0}).to_list(50)
+    accounts = await db.bank_accounts.find(get_tenant_filter(current_user), {"_id": 0}).to_list(50)
     return accounts
 
 
@@ -21,6 +21,7 @@ async def create_bank_account(data: BankAccountCreate, current_user: User = Depe
     # If setting as default, unset other defaults
     if doc.get("is_default"):
         await db.bank_accounts.update_many({}, {"$set": {"is_default": False}})
+    stamp_tenant(doc, current_user)
     await db.bank_accounts.insert_one(doc)
     doc.pop("_id", None)
     return doc
@@ -29,20 +30,20 @@ async def create_bank_account(data: BankAccountCreate, current_user: User = Depe
 @router.put("/bank-accounts/{account_id}")
 async def update_bank_account(account_id: str, data: BankAccountCreate, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "settings", "write")
-    existing = await db.bank_accounts.find_one({"id": account_id}, {"_id": 0})
+    existing = await db.bank_accounts.find_one({"id": account_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Bank account not found")
     update = data.model_dump()
     if update.get("is_default"):
         await db.bank_accounts.update_many({"id": {"$ne": account_id}}, {"$set": {"is_default": False}})
-    await db.bank_accounts.update_one({"id": account_id}, {"$set": update})
+    await db.bank_accounts.update_one({"id": account_id, **get_tenant_filter(current_user)}, {"$set": update})
     return {**existing, **update}
 
 
 @router.delete("/bank-accounts/{account_id}")
 async def delete_bank_account(account_id: str, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "settings", "write")
-    result = await db.bank_accounts.delete_one({"id": account_id})
+    result = await db.bank_accounts.delete_one({"id": account_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Bank account not found")
     return {"message": "Bank account deleted"}
@@ -51,10 +52,10 @@ async def delete_bank_account(account_id: str, current_user: User = Depends(get_
 @router.get("/reports/branch-dues-detail")
 async def get_branch_dues_detail(current_user: User = Depends(get_current_user)):
     """Return detailed entries that make up branch dues for drill-down."""
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     branch_map = {b["id"]: b["name"] for b in branches}
-    suppliers = {s["id"]: s for s in await db.suppliers.find({}, {"_id": 0}).to_list(1000)}
-    employees = {e["id"]: e for e in await db.employees.find({}, {"_id": 0}).to_list(1000)}
+    suppliers = {s["id"]: s for s in await db.suppliers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)}
+    employees = {e["id"]: e for e in await db.employees.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)}
 
     entries = []
 
@@ -134,7 +135,7 @@ async def get_branch_dues_detail(current_user: User = Depends(get_current_user))
             })
 
     # Cash transfers
-    transfers = await db.cash_transfers.find({}, {"_id": 0}).to_list(10000)
+    transfers = await db.cash_transfers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
     for t in transfers:
         from_b = t.get("from_branch_id")
         to_b = t.get("to_branch_id")
@@ -161,11 +162,11 @@ async def get_bank_account_summary(current_user: User = Depends(get_current_user
     Logic: Each bank account is assigned to a branch. All bank-mode sales for that branch
     go to its assigned bank account. Unassigned branches go to the default bank account."""
 
-    accounts = await db.bank_accounts.find({}, {"_id": 0}).to_list(50)
+    accounts = await db.bank_accounts.find(get_tenant_filter(current_user), {"_id": 0}).to_list(50)
     if not accounts:
         return {"accounts": [], "total_bank": 0}
 
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
 
     # Build mapping: branch_id -> bank_account_id
     branch_to_bank = {}
@@ -181,7 +182,7 @@ async def get_bank_account_summary(current_user: User = Depends(get_current_user
         default_bank = accounts[0]["id"]
 
     # Get all sales with bank payments
-    all_sales = await db.sales.find({}, {"_id": 0}).to_list(100000)
+    all_sales = await db.sales.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100000)
 
     # Calculate totals per bank account
     bank_totals = {acc["id"]: 0.0 for acc in accounts}

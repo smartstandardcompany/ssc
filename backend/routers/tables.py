@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pydantic import BaseModel
 import uuid
 
-from database import db, get_current_user
+from database import db, get_current_user, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter()
@@ -60,7 +60,7 @@ class SectionCreate(BaseModel):
 @router.get("/tables/sections")
 async def get_sections(current_user: User = Depends(get_current_user)):
     """Get all table sections/areas"""
-    sections = await db.table_sections.find({}, {"_id": 0}).to_list(100)
+    sections = await db.table_sections.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     if not sections:
         # Create default sections
         defaults = [
@@ -81,6 +81,7 @@ async def create_section(section: SectionCreate, current_user: User = Depends(ge
         **section.model_dump(),
         "created_at": datetime.now(timezone.utc).isoformat()
     }
+    stamp_tenant(section_dict, current_user)
     await db.table_sections.insert_one(section_dict)
     section_dict.pop("_id", None)  # Remove MongoDB ObjectId
     return section_dict
@@ -89,7 +90,7 @@ async def create_section(section: SectionCreate, current_user: User = Depends(ge
 @router.delete("/tables/sections/{section_id}")
 async def delete_section(section_id: str, current_user: User = Depends(get_current_user)):
     """Delete a section"""
-    result = await db.table_sections.delete_one({"id": section_id})
+    result = await db.table_sections.delete_one({"id": section_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Section not found")
     return {"message": "Section deleted"}
@@ -120,7 +121,7 @@ async def get_tables(
     # Get current orders for occupied tables
     for table in tables:
         if table.get("status") == "occupied" and table.get("current_order_id"):
-            order = await db.pos_orders.find_one({"id": table["current_order_id"]}, {"_id": 0})
+            order = await db.pos_orders.find_one({"id": table["current_order_id"], **get_tenant_filter(current_user)}, {"_id": 0})
             if order:
                 table["current_order"] = {
                     "id": order["id"],
@@ -151,6 +152,7 @@ async def create_table(table: TableCreate, current_user: User = Depends(get_curr
         "occupied_at": None,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
+    stamp_tenant(table_dict, current_user)
     await db.tables.insert_one(table_dict)
     table_dict.pop("_id", None)  # Remove MongoDB ObjectId
     return table_dict
@@ -165,17 +167,17 @@ async def update_table(table_id: str, table: TableUpdate, current_user: User = D
     
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     
-    result = await db.tables.update_one({"id": table_id}, {"$set": update_data})
+    result = await db.tables.update_one({"id": table_id, **get_tenant_filter(current_user)}, {"$set": update_data})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Table not found")
     
-    return await db.tables.find_one({"id": table_id}, {"_id": 0})
+    return await db.tables.find_one({"id": table_id, **get_tenant_filter(current_user)}, {"_id": 0})
 
 
 @router.delete("/tables/{table_id}")
 async def delete_table(table_id: str, current_user: User = Depends(get_current_user)):
     """Delete a table"""
-    result = await db.tables.delete_one({"id": table_id})
+    result = await db.tables.delete_one({"id": table_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Table not found")
     return {"message": "Table deleted"}
@@ -188,7 +190,7 @@ async def update_table_status(
     current_user: User = Depends(get_current_user)
 ):
     """Update table status (available, occupied, reserved, cleaning)"""
-    table = await db.tables.find_one({"id": table_id})
+    table = await db.tables.find_one({"id": table_id, **get_tenant_filter(current_user)})
     if not table:
         raise HTTPException(status_code=404, detail="Table not found")
     
@@ -211,9 +213,9 @@ async def update_table_status(
     if status_update.notes:
         update_data["notes"] = status_update.notes
     
-    await db.tables.update_one({"id": table_id}, {"$set": update_data})
+    await db.tables.update_one({"id": table_id, **get_tenant_filter(current_user)}, {"$set": update_data})
     
-    return await db.tables.find_one({"id": table_id}, {"_id": 0})
+    return await db.tables.find_one({"id": table_id, **get_tenant_filter(current_user)}, {"_id": 0})
 
 
 @router.post("/tables/{table_id}/assign-waiter")
@@ -225,7 +227,7 @@ async def assign_waiter_to_table(
     """Assign a waiter to a table"""
     waiter_id = body.get("waiter_id")
     
-    table = await db.tables.find_one({"id": table_id})
+    table = await db.tables.find_one({"id": table_id, **get_tenant_filter(current_user)})
     if not table:
         raise HTTPException(status_code=404, detail="Table not found")
     
@@ -285,6 +287,7 @@ async def create_waiter(body: dict, current_user: User = Depends(get_current_use
         "is_active": True,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
+    stamp_tenant(waiter, current_user)
     await db.cashier_pins.insert_one(waiter)
     waiter.pop("_id", None)  # Remove MongoDB ObjectId
     return waiter
@@ -329,7 +332,7 @@ async def get_waiter_tables(waiter_id: str, current_user: User = Depends(get_cur
     # Get order details for each table
     for table in tables:
         if table.get("current_order_id"):
-            order = await db.pos_orders.find_one({"id": table["current_order_id"]}, {"_id": 0})
+            order = await db.pos_orders.find_one({"id": table["current_order_id"], **get_tenant_filter(current_user)}, {"_id": 0})
             if order:
                 table["current_order"] = order
     
@@ -347,13 +350,13 @@ async def start_table_order(
     current_user: User = Depends(get_current_user)
 ):
     """Start a new order for a table"""
-    table = await db.tables.find_one({"id": table_id}, {"_id": 0})
+    table = await db.tables.find_one({"id": table_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not table:
         raise HTTPException(status_code=404, detail="Table not found")
     
     if table.get("status") == "occupied" and table.get("current_order_id"):
         # Return existing order
-        existing_order = await db.pos_orders.find_one({"id": table["current_order_id"]}, {"_id": 0})
+        existing_order = await db.pos_orders.find_one({"id": table["current_order_id"], **get_tenant_filter(current_user)}, {"_id": 0})
         if existing_order:
             return {"message": "Table already has an order", "order": existing_order, "table": table}
     
@@ -377,6 +380,7 @@ async def start_table_order(
         "order_type": "dine_in",
         "created_at": datetime.now(timezone.utc).isoformat()
     }
+    stamp_tenant(order, current_user)
     await db.pos_orders.insert_one(order)
     order.pop("_id", None)  # Remove MongoDB ObjectId
     
@@ -392,7 +396,7 @@ async def start_table_order(
         }}
     )
     
-    updated_table = await db.tables.find_one({"id": table_id}, {"_id": 0})
+    updated_table = await db.tables.find_one({"id": table_id, **get_tenant_filter(current_user)}, {"_id": 0})
     
     return {"message": "Order started", "order": order, "table": updated_table}
 
@@ -404,14 +408,14 @@ async def add_items_to_table_order(
     current_user: User = Depends(get_current_user)
 ):
     """Add items to table's current order"""
-    table = await db.tables.find_one({"id": table_id}, {"_id": 0})
+    table = await db.tables.find_one({"id": table_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not table:
         raise HTTPException(status_code=404, detail="Table not found")
     
     if not table.get("current_order_id"):
         raise HTTPException(status_code=400, detail="Table has no active order")
     
-    order = await db.pos_orders.find_one({"id": table["current_order_id"]}, {"_id": 0})
+    order = await db.pos_orders.find_one({"id": table["current_order_id"], **get_tenant_filter(current_user)}, {"_id": 0})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     
@@ -458,9 +462,10 @@ async def add_items_to_table_order(
             "status": "pending",
             "created_at": datetime.now(timezone.utc).isoformat()
         }
+        stamp_tenant(kitchen_item, current_user)
         await db.kitchen_queue.insert_one(kitchen_item)
     
-    updated_order = await db.pos_orders.find_one({"id": order["id"]}, {"_id": 0})
+    updated_order = await db.pos_orders.find_one({"id": order["id"], **get_tenant_filter(current_user)}, {"_id": 0})
     return {"message": "Items added", "order": updated_order}
 
 
@@ -471,14 +476,14 @@ async def close_table_order(
     current_user: User = Depends(get_current_user)
 ):
     """Close/pay the table's order"""
-    table = await db.tables.find_one({"id": table_id}, {"_id": 0})
+    table = await db.tables.find_one({"id": table_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not table:
         raise HTTPException(status_code=404, detail="Table not found")
     
     if not table.get("current_order_id"):
         raise HTTPException(status_code=400, detail="Table has no active order")
     
-    order = await db.pos_orders.find_one({"id": table["current_order_id"]}, {"_id": 0})
+    order = await db.pos_orders.find_one({"id": table["current_order_id"], **get_tenant_filter(current_user)}, {"_id": 0})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     
@@ -517,6 +522,7 @@ async def close_table_order(
         "date": datetime.now(timezone.utc).isoformat(),
         "created_at": datetime.now(timezone.utc).isoformat()
     }
+    stamp_tenant(sale, current_user)
     await db.sales.insert_one(sale)
     
     # Free up the table
@@ -567,7 +573,7 @@ async def mark_table_available(table_id: str, current_user: User = Depends(get_c
 @router.get("/tables/stats")
 async def get_table_stats(current_user: User = Depends(get_current_user)):
     """Get table statistics"""
-    total = await db.tables.count_documents({})
+    total = await db.tables.count_documents(get_tenant_filter(current_user))
     available = await db.tables.count_documents({"status": "available"})
     occupied = await db.tables.count_documents({"status": "occupied"})
     reserved = await db.tables.count_documents({"status": "reserved"})
@@ -641,7 +647,7 @@ async def get_reservations(
     reservations = await db.reservations.find(query, {"_id": 0}).sort([("date", 1), ("time_slot", 1)]).to_list(500)
     
     # Enrich with table info
-    tables = {t["id"]: t for t in await db.tables.find({}, {"_id": 0}).to_list(500)}
+    tables = {t["id"]: t for t in await db.tables.find(get_tenant_filter(current_user), {"_id": 0}).to_list(500)}
     for res in reservations:
         table = tables.get(res.get("table_id"))
         if table:
@@ -670,7 +676,7 @@ async def get_upcoming_reservations(days: int = 7, current_user: User = Depends(
         "status": {"$nin": ["cancelled", "no_show"]}
     }, {"_id": 0}).sort([("date", 1), ("time_slot", 1)]).to_list(500)
     
-    tables = {t["id"]: t for t in await db.tables.find({}, {"_id": 0}).to_list(500)}
+    tables = {t["id"]: t for t in await db.tables.find(get_tenant_filter(current_user), {"_id": 0}).to_list(500)}
     for res in reservations:
         table = tables.get(res.get("table_id"))
         if table:
@@ -684,7 +690,7 @@ async def get_upcoming_reservations(days: int = 7, current_user: User = Depends(
 async def create_reservation(data: ReservationCreate, current_user: User = Depends(get_current_user)):
     """Create a new table reservation"""
     # Validate table exists
-    table = await db.tables.find_one({"id": data.table_id}, {"_id": 0})
+    table = await db.tables.find_one({"id": data.table_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not table:
         raise HTTPException(status_code=404, detail="Table not found")
     
@@ -721,6 +727,7 @@ async def create_reservation(data: ReservationCreate, current_user: User = Depen
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
+    stamp_tenant(reservation, current_user)
     await db.reservations.insert_one(reservation)
     
     # Send confirmation (placeholder for SMS/WhatsApp)
@@ -732,7 +739,7 @@ async def create_reservation(data: ReservationCreate, current_user: User = Depen
 @router.put("/reservations/{reservation_id}")
 async def update_reservation(reservation_id: str, data: ReservationUpdate, current_user: User = Depends(get_current_user)):
     """Update a reservation"""
-    reservation = await db.reservations.find_one({"id": reservation_id}, {"_id": 0})
+    reservation = await db.reservations.find_one({"id": reservation_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not reservation:
         raise HTTPException(status_code=404, detail="Reservation not found")
     
@@ -740,23 +747,23 @@ async def update_reservation(reservation_id: str, data: ReservationUpdate, curre
     
     # If changing table, validate new table
     if data.table_id:
-        table = await db.tables.find_one({"id": data.table_id}, {"_id": 0})
+        table = await db.tables.find_one({"id": data.table_id, **get_tenant_filter(current_user)}, {"_id": 0})
         if not table:
             raise HTTPException(status_code=404, detail="Table not found")
         if (data.party_size or reservation.get("party_size", 2)) > table.get("capacity", 4):
             raise HTTPException(status_code=400, detail="Party size exceeds table capacity")
     
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    await db.reservations.update_one({"id": reservation_id}, {"$set": update_data})
+    await db.reservations.update_one({"id": reservation_id, **get_tenant_filter(current_user)}, {"$set": update_data})
     
-    updated = await db.reservations.find_one({"id": reservation_id}, {"_id": 0})
+    updated = await db.reservations.find_one({"id": reservation_id, **get_tenant_filter(current_user)}, {"_id": 0})
     return updated
 
 
 @router.delete("/reservations/{reservation_id}")
 async def delete_reservation(reservation_id: str, current_user: User = Depends(get_current_user)):
     """Cancel/delete a reservation"""
-    result = await db.reservations.delete_one({"id": reservation_id})
+    result = await db.reservations.delete_one({"id": reservation_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Reservation not found")
     return {"message": "Reservation deleted"}
@@ -765,7 +772,7 @@ async def delete_reservation(reservation_id: str, current_user: User = Depends(g
 @router.post("/reservations/{reservation_id}/status")
 async def update_reservation_status(reservation_id: str, body: dict, current_user: User = Depends(get_current_user)):
     """Update reservation status (confirm, seat, complete, cancel, no_show)"""
-    reservation = await db.reservations.find_one({"id": reservation_id}, {"_id": 0})
+    reservation = await db.reservations.find_one({"id": reservation_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not reservation:
         raise HTTPException(status_code=404, detail="Reservation not found")
     
@@ -801,7 +808,7 @@ async def update_reservation_status(reservation_id: str, body: dict, current_use
             }}
         )
     
-    await db.reservations.update_one({"id": reservation_id}, {"$set": update})
+    await db.reservations.update_one({"id": reservation_id, **get_tenant_filter(current_user)}, {"$set": update})
     return {"message": f"Reservation status updated to {new_status}"}
 
 

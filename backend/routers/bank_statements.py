@@ -7,7 +7,7 @@ import os
 import re
 import pandas as pd
 
-from database import db, get_current_user
+from database import db, get_current_user, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter()
@@ -254,6 +254,7 @@ async def upload_bank_statement(file: UploadFile = File(...), bank_name: str = F
         "transaction_count": len(transactions), "transactions": transactions,
         "created_at": datetime.now(timezone.utc).isoformat(), "created_by": current_user.id
     }
+    stamp_tenant(statement, current_user)
     await db.bank_statements.insert_one(statement)
     cats = {}; machines = {}
     for t in transactions:
@@ -274,7 +275,7 @@ async def get_bank_statements(current_user: User = Depends(get_current_user)):
 
 @router.get("/bank-statements/{stmt_id}")
 async def get_bank_statement_detail(stmt_id: str, current_user: User = Depends(get_current_user)):
-    stmt = await db.bank_statements.find_one({"id": stmt_id}, {"_id": 0})
+    stmt = await db.bank_statements.find_one({"id": stmt_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not stmt: raise HTTPException(status_code=404, detail="Not found")
     txns = stmt.get("transactions", [])
     cats = {}; machines = {}; daily = {}
@@ -295,13 +296,13 @@ async def get_bank_statement_detail(stmt_id: str, current_user: User = Depends(g
 
 @router.delete("/bank-statements/{stmt_id}")
 async def delete_bank_statement(stmt_id: str, current_user: User = Depends(get_current_user)):
-    await db.bank_statements.delete_one({"id": stmt_id})
+    await db.bank_statements.delete_one({"id": stmt_id, **get_tenant_filter(current_user)})
     return {"message": "Statement deleted"}
 
 # POS Machine Mapping
 @router.get("/pos-machines")
 async def get_pos_machines(current_user: User = Depends(get_current_user)):
-    return await db.pos_machines.find({}, {"_id": 0}).to_list(100)
+    return await db.pos_machines.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
 
 @router.post("/pos-machines")
 async def save_pos_machine(body: dict, current_user: User = Depends(get_current_user)):
@@ -321,12 +322,12 @@ async def delete_pos_machine(machine_id: str, current_user: User = Depends(get_c
 # Statement Analysis
 @router.get("/bank-statements/{stmt_id}/analysis")
 async def analyze_statement(stmt_id: str, current_user: User = Depends(get_current_user)):
-    stmt = await db.bank_statements.find_one({"id": stmt_id}, {"_id": 0})
+    stmt = await db.bank_statements.find_one({"id": stmt_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not stmt: raise HTTPException(status_code=404, detail="Not found")
     txns = stmt.get("transactions", [])
-    pos_mappings = {m["machine_id"]: m for m in await db.pos_machines.find({}, {"_id": 0}).to_list(100)}
-    branches = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
-    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+    pos_mappings = {m["machine_id"]: m for m in await db.pos_machines.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)}
+    branches = {b["id"]: b["name"] for b in await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)}
+    suppliers = await db.suppliers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
     raw_senders = {}
     for t in txns:
         cat = t.get("category", ""); mid = t.get("machine_id")
@@ -380,7 +381,7 @@ async def analyze_statement(stmt_id: str, current_user: User = Depends(get_curre
         if bname not in pos_by_branch: pos_by_branch[bname] = {"count": 0, "total": 0, "fees": 0, "vat": 0, "machines": []}
         pos_by_branch[bname]["count"] += data["sales_count"]; pos_by_branch[bname]["total"] += data["sales_total"]
         pos_by_branch[bname]["fees"] += data["fees"]; pos_by_branch[bname]["vat"] += data["vat"]; pos_by_branch[bname]["machines"].append(mid)
-    system_sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+    system_sales = await db.sales.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
     sys_by_branch = {}
     for s in system_sales:
         bid = s.get("branch_id", ""); bname = branches.get(bid, "Unknown")
@@ -411,12 +412,12 @@ async def analyze_statement(stmt_id: str, current_user: User = Depends(get_curre
 # POS Reconciliation
 @router.get("/bank-statements/{stmt_id}/reconciliation")
 async def get_pos_reconciliation(stmt_id: str, current_user: User = Depends(get_current_user)):
-    stmt = await db.bank_statements.find_one({"id": stmt_id}, {"_id": 0})
+    stmt = await db.bank_statements.find_one({"id": stmt_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not stmt: raise HTTPException(status_code=404, detail="Statement not found")
     txns = stmt.get("transactions", [])
-    branches_list = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branches_list = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     branch_map = {b["id"]: b["name"] for b in branches_list}
-    pos_mappings = {m["machine_id"]: m for m in await db.pos_machines.find({}, {"_id": 0}).to_list(100)}
+    pos_mappings = {m["machine_id"]: m for m in await db.pos_machines.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)}
     bank_pos_by_date = {}
     for t in txns:
         if t.get("category") != "pos_sales": continue
@@ -428,7 +429,7 @@ async def get_pos_reconciliation(stmt_id: str, current_user: User = Depends(get_
         if key not in bank_pos_by_date: bank_pos_by_date[key] = {"date": date_str, "branch": branch_name, "bank_amount": 0, "txn_count": 0, "machines": set()}
         bank_pos_by_date[key]["bank_amount"] += t.get("credit", 0); bank_pos_by_date[key]["txn_count"] += 1
         if mid: bank_pos_by_date[key]["machines"].add(mid)
-    all_sales = await db.sales.find({}, {"_id": 0}).to_list(50000)
+    all_sales = await db.sales.find(get_tenant_filter(current_user), {"_id": 0}).to_list(50000)
     app_sales_by_date = {}
     for s in all_sales:
         bid = s.get("branch_id", ""); bname = branch_map.get(bid, "Unknown")
@@ -483,7 +484,7 @@ async def get_reconciliation_flags(stmt_id: str, current_user: User = Depends(ge
 @router.post("/bank-statements/{stmt_id}/auto-match")
 async def auto_match_transactions(stmt_id: str, tolerance: float = 1.0, date_range: int = 2, current_user: User = Depends(get_current_user)):
     """Smart auto-matching of bank transactions to system records."""
-    stmt = await db.bank_statements.find_one({"id": stmt_id}, {"_id": 0})
+    stmt = await db.bank_statements.find_one({"id": stmt_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not stmt:
         raise HTTPException(status_code=404, detail="Statement not found")
 
@@ -492,9 +493,9 @@ async def auto_match_transactions(stmt_id: str, tolerance: float = 1.0, date_ran
     matched_txn_indices = {m["txn_index"] for m in existing_matches}
 
     # Load system records
-    sales = await db.sales.find({}, {"_id": 0}).to_list(50000)
-    expenses = await db.expenses.find({}, {"_id": 0}).to_list(20000)
-    supplier_payments = await db.supplier_payments.find({}, {"_id": 0}).to_list(20000)
+    sales = await db.sales.find(get_tenant_filter(current_user), {"_id": 0}).to_list(50000)
+    expenses = await db.expenses.find(get_tenant_filter(current_user), {"_id": 0}).to_list(20000)
+    supplier_payments = await db.supplier_payments.find(get_tenant_filter(current_user), {"_id": 0}).to_list(20000)
     suppliers = {s["id"]: s["name"] for s in await db.suppliers.find({}, {"_id": 0, "id": 1, "name": 1}).to_list(1000)}
 
     def parse_date(d):
@@ -591,6 +592,7 @@ async def auto_match_transactions(stmt_id: str, tolerance: float = 1.0, date_ran
                 "status": "auto",
                 "created_at": datetime.now(timezone.utc).isoformat()
             }
+            stamp_tenant(match_record, current_user)
             await db.auto_matches.insert_one(match_record)
             del match_record["_id"]
             matched.append(match_record)
@@ -631,7 +633,7 @@ async def confirm_match(stmt_id: str, match_id: str, current_user: User = Depend
 @router.delete("/bank-statements/{stmt_id}/matches/{match_id}")
 async def reject_match(stmt_id: str, match_id: str, current_user: User = Depends(get_current_user)):
     """Reject/delete an auto-match."""
-    await db.auto_matches.delete_one({"id": match_id, "statement_id": stmt_id})
+    await db.auto_matches.delete_one({"id": match_id, "statement_id": stmt_id, **get_tenant_filter(current_user)})
     return {"message": "Match rejected"}
 
 
@@ -642,7 +644,7 @@ async def reject_match(stmt_id: str, match_id: str, current_user: User = Depends
 @router.get("/bank-statements/{stmt_id}/unmatched")
 async def get_unmatched_transactions(stmt_id: str, current_user: User = Depends(get_current_user)):
     """Get unmatched bank transactions with best match suggestions."""
-    stmt = await db.bank_statements.find_one({"id": stmt_id}, {"_id": 0})
+    stmt = await db.bank_statements.find_one({"id": stmt_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not stmt:
         raise HTTPException(status_code=404, detail="Statement not found")
 
@@ -650,9 +652,9 @@ async def get_unmatched_transactions(stmt_id: str, current_user: User = Depends(
     existing_matches = await db.auto_matches.find({"statement_id": stmt_id}, {"_id": 0}).to_list(50000)
     matched_indices = {m["txn_index"] for m in existing_matches}
 
-    sales = await db.sales.find({}, {"_id": 0}).to_list(50000)
-    expenses = await db.expenses.find({}, {"_id": 0}).to_list(20000)
-    supplier_payments = await db.supplier_payments.find({}, {"_id": 0}).to_list(20000)
+    sales = await db.sales.find(get_tenant_filter(current_user), {"_id": 0}).to_list(50000)
+    expenses = await db.expenses.find(get_tenant_filter(current_user), {"_id": 0}).to_list(20000)
+    supplier_payments = await db.supplier_payments.find(get_tenant_filter(current_user), {"_id": 0}).to_list(20000)
     suppliers = {s["id"]: s["name"] for s in await db.suppliers.find({}, {"_id": 0, "id": 1, "name": 1}).to_list(1000)}
 
     def parse_date(d):
@@ -735,7 +737,7 @@ async def get_unmatched_transactions(stmt_id: str, current_user: User = Depends(
 @router.post("/bank-statements/{stmt_id}/manual-match")
 async def manual_match_transaction(stmt_id: str, body: dict, current_user: User = Depends(get_current_user)):
     """Manually link a bank transaction to a system record."""
-    stmt = await db.bank_statements.find_one({"id": stmt_id}, {"_id": 0})
+    stmt = await db.bank_statements.find_one({"id": stmt_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not stmt:
         raise HTTPException(status_code=404, detail="Statement not found")
 
@@ -764,7 +766,7 @@ async def manual_match_transaction(stmt_id: str, body: dict, current_user: User 
     if not coll_name:
         raise HTTPException(status_code=400, detail="Invalid match_type")
 
-    record = await db[coll_name].find_one({"id": match_id}, {"_id": 0})
+    record = await db[coll_name].find_one({"id": match_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not record:
         raise HTTPException(status_code=404, detail=f"{match_type} record not found")
 
@@ -790,6 +792,7 @@ async def manual_match_transaction(stmt_id: str, body: dict, current_user: User 
         "created_by": current_user.id,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
+    stamp_tenant(match_record, current_user)
     await db.auto_matches.insert_one(match_record)
     del match_record["_id"]
     return match_record

@@ -6,7 +6,7 @@ Manage sales from HungerStation, Jahez, ToYou, Keta, Ninja, etc.
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional, List
 from datetime import datetime, timezone, timedelta
-from database import db, get_current_user, require_permission
+from database import db, get_current_user, require_permission, get_tenant_filter, stamp_tenant
 from models import User
 import uuid
 
@@ -20,7 +20,7 @@ router = APIRouter(tags=["Online Platforms"])
 @router.get("/platforms")
 async def get_platforms(current_user: User = Depends(get_current_user)):
     """Get all delivery platforms"""
-    platforms = await db.delivery_platforms.find({}, {"_id": 0}).to_list(100)
+    platforms = await db.delivery_platforms.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     
     # Calculate pending amounts for each platform
     for platform in platforms:
@@ -68,6 +68,7 @@ async def create_platform(body: dict, current_user: User = Depends(get_current_u
         "created_by": current_user.id
     }
     
+    stamp_tenant(platform, current_user)
     await db.delivery_platforms.insert_one(platform)
     # Remove MongoDB _id before returning
     platform.pop("_id", None)
@@ -94,7 +95,7 @@ async def update_platform(platform_id: str, body: dict, current_user: User = Dep
         "updated_by": current_user.id
     }
     
-    result = await db.delivery_platforms.update_one({"id": platform_id}, {"$set": update_data})
+    result = await db.delivery_platforms.update_one({"id": platform_id, **get_tenant_filter(current_user)}, {"$set": update_data})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Platform not found")
     
@@ -116,7 +117,7 @@ async def delete_platform(platform_id: str, current_user: User = Depends(get_cur
         )
         return {"message": "Platform deactivated (has existing sales)"}
     
-    await db.delivery_platforms.delete_one({"id": platform_id})
+    await db.delivery_platforms.delete_one({"id": platform_id, **get_tenant_filter(current_user)})
     return {"message": "Platform deleted"}
 
 
@@ -171,7 +172,7 @@ async def calculate_platform_payment(
     require_permission(current_user, "sales", "read")
     
     # Get platform
-    platform = await db.delivery_platforms.find_one({"id": platform_id}, {"_id": 0})
+    platform = await db.delivery_platforms.find_one({"id": platform_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not platform:
         raise HTTPException(status_code=404, detail="Platform not found")
     
@@ -213,7 +214,7 @@ async def calculate_platform_payment(
     # Build branch breakdown
     branch_breakdown = []
     for branch_id, branch_total in branch_sales.items():
-        branch = await db.branches.find_one({"id": branch_id}, {"_id": 0, "name": 1})
+        branch = await db.branches.find_one({"id": branch_id, **get_tenant_filter(current_user)}, {"_id": 0, "name": 1})
         branch_name = branch.get("name") if branch else "Unknown Branch"
         share_percent = (branch_total / total_sales) * 100 if total_sales > 0 else 0
         branch_commission = round((branch_total / total_sales) * calculated_commission, 2) if total_sales > 0 else 0
@@ -281,7 +282,7 @@ async def record_platform_payment(body: dict, current_user: User = Depends(get_c
         raise HTTPException(status_code=400, detail="platform_id is required")
     
     # Verify platform exists
-    platform = await db.delivery_platforms.find_one({"id": platform_id}, {"_id": 0})
+    platform = await db.delivery_platforms.find_one({"id": platform_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not platform:
         raise HTTPException(status_code=404, detail="Platform not found")
     
@@ -324,7 +325,7 @@ async def record_platform_payment(body: dict, current_user: User = Depends(get_c
                 branch_commission = round((branch_total / total_from_db) * commission_paid, 2)
                 
                 # Get branch name
-                branch = await db.branches.find_one({"id": branch_id}, {"_id": 0, "name": 1})
+                branch = await db.branches.find_one({"id": branch_id, **get_tenant_filter(current_user)}, {"_id": 0, "name": 1})
                 branch_name = branch.get("name") if branch else "Unknown Branch"
                 
                 branch_breakdown.append({
@@ -355,6 +356,7 @@ async def record_platform_payment(body: dict, current_user: User = Depends(get_c
         "created_by": current_user.id
     }
     
+    stamp_tenant(payment, current_user)
     await db.platform_payments.insert_one(payment)
     payment.pop('_id', None)
     
@@ -392,7 +394,7 @@ async def update_platform_payment(payment_id: str, body: dict, current_user: Use
         "updated_by": current_user.id
     }
     
-    result = await db.platform_payments.update_one({"id": payment_id}, {"$set": update_data})
+    result = await db.platform_payments.update_one({"id": payment_id, **get_tenant_filter(current_user)}, {"$set": update_data})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Payment not found")
     
@@ -410,7 +412,7 @@ async def delete_platform_payment(payment_id: str, current_user: User = Depends(
         {"$set": {"platform_status": "pending"}, "$unset": {"settlement_id": ""}}
     )
     
-    await db.platform_payments.delete_one({"id": payment_id})
+    await db.platform_payments.delete_one({"id": payment_id, **get_tenant_filter(current_user)})
     return {"message": "Payment deleted"}
 
 
@@ -491,7 +493,7 @@ async def get_platform_reconciliation(
     current_user: User = Depends(get_current_user)
 ):
     """Get detailed reconciliation for a platform"""
-    platform = await db.delivery_platforms.find_one({"id": platform_id}, {"_id": 0})
+    platform = await db.delivery_platforms.find_one({"id": platform_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not platform:
         raise HTTPException(status_code=404, detail="Platform not found")
     
@@ -563,6 +565,7 @@ async def seed_default_platforms(current_user: User = Depends(get_current_user))
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "created_by": current_user.id
             }
+            stamp_tenant(platform, current_user)
             await db.delivery_platforms.insert_one(platform)
             created += 1
     

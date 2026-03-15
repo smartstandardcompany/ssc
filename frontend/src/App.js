@@ -91,6 +91,7 @@ import ScheduledReportsPage from "./pages/ScheduledReportsPage";
 import DataManagementPage from "./pages/DataManagementPage";
 import AuditTrailPage from "./pages/AuditTrailPage";
 import ReportBuilderPage from "./pages/ReportBuilderPage";
+import SuperAdminPage from "./pages/SuperAdminPage";
 import BankAccountsPage from "./pages/finance/BankAccountsPage";
 import PlatformReconciliationPage from "./pages/finance/PlatformReconciliationPage";
 import MonthlyReconReportPage from "./pages/finance/MonthlyReconReportPage";
@@ -221,6 +222,9 @@ function App() {
           <Route path="/notifications" element={<AuthRoute><NotificationsPage /></AuthRoute>} />
           <Route path="/notification-preferences" element={<AuthRoute><NotificationPreferencesPage /></AuthRoute>} />
           <Route path="/help" element={<AuthRoute><HelpPage /></AuthRoute>} />
+
+          {/* Super Admin */}
+          <Route path="/super-admin" element={<AuthRoute><SuperAdminPage /></AuthRoute>} />
 
           {/* Dashboard / Home */}
           <Route path="/" element={isAuthenticated ? (() => {

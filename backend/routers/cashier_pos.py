@@ -11,7 +11,7 @@ import string
 import os
 import shutil
 
-from database import db, get_current_user, hash_password, verify_password
+from database import db, get_current_user, hash_password, verify_password, get_tenant_filter, stamp_tenant
 from models import (User, MenuItem, MenuItemCreate, POSOrder, POSOrderCreate, 
                     MenuCategory, Customer)
 
@@ -106,7 +106,6 @@ async def cashier_login(body: dict):
         }
     }
 
-
 # =====================================================
 # CASHIER PIN MANAGEMENT
 # =====================================================
@@ -118,7 +117,7 @@ def generate_pin(length=4):
 @router.post("/cashier/generate-pin/{employee_id}")
 async def generate_cashier_pin(employee_id: str, current_user: User = Depends(get_current_user)):
     """Generate a new cashier PIN for an employee"""
-    employee = await db.employees.find_one({"id": employee_id})
+    employee = await db.employees.find_one({"id": employee_id, **get_tenant_filter(current_user)})
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     
@@ -129,7 +128,7 @@ async def generate_cashier_pin(employee_id: str, current_user: User = Depends(ge
         if not existing:
             break
     
-    await db.employees.update_one({"id": employee_id}, {"$set": {"cashier_pin": new_pin}})
+    await db.employees.update_one({"id": employee_id, **get_tenant_filter(current_user)}, {"$set": {"cashier_pin": new_pin}})
     return {"employee_id": employee_id, "name": employee["name"], "pin": new_pin}
 
 @router.get("/cashier/pins")
@@ -141,7 +140,7 @@ async def get_cashier_pins(current_user: User = Depends(get_current_user)):
     ).to_list(500)
     
     # Get branch names
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     branch_map = {b["id"]: b["name"] for b in branches}
     
     for emp in employees:
@@ -152,11 +151,10 @@ async def get_cashier_pins(current_user: User = Depends(get_current_user)):
 @router.delete("/cashier/pin/{employee_id}")
 async def revoke_cashier_pin(employee_id: str, current_user: User = Depends(get_current_user)):
     """Revoke a cashier's PIN"""
-    result = await db.employees.update_one({"id": employee_id}, {"$unset": {"cashier_pin": ""}})
+    result = await db.employees.update_one({"id": employee_id, **get_tenant_filter(current_user)}, {"$unset": {"cashier_pin": ""}})
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Employee not found or no PIN to revoke")
     return {"message": "PIN revoked successfully"}
-
 
 # =====================================================
 # CUSTOMER ORDER STATUS (Public endpoint)
@@ -195,7 +193,6 @@ async def get_active_orders_for_display(branch_id: Optional[str] = None):
         "total_preparing": len(preparing),
         "total_ready": len(ready)
     }
-
 
 # =====================================================
 # MENU CATEGORIES
@@ -261,9 +258,9 @@ async def create_menu_category(body: dict, current_user: User = Depends(get_curr
     )
     cat_dict = category.model_dump()
     cat_dict["created_at"] = cat_dict["created_at"].isoformat()
+    stamp_tenant(cat_dict, current_user)
     await db.menu_categories.insert_one(cat_dict)
     return {k: v for k, v in cat_dict.items() if k != '_id'}
-
 
 # =====================================================
 # MENU ITEMS
@@ -363,7 +360,7 @@ async def get_menu_items(
 @router.get("/cashier/menu/{item_id}")
 async def get_menu_item(item_id: str, current_user: User = Depends(get_current_user)):
     """Get a single menu item with full details"""
-    item = await db.menu_items.find_one({"id": item_id}, {"_id": 0})
+    item = await db.menu_items.find_one({"id": item_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     return item
@@ -374,6 +371,7 @@ async def create_menu_item(data: MenuItemCreate, current_user: User = Depends(ge
     item = MenuItem(**data.model_dump())
     item_dict = item.model_dump()
     item_dict["created_at"] = item_dict["created_at"].isoformat()
+    stamp_tenant(item_dict, current_user)
     await db.menu_items.insert_one(item_dict)
     return {k: v for k, v in item_dict.items() if k != '_id'}
 
@@ -397,28 +395,27 @@ async def bulk_assign_platforms(body: dict, current_user: User = Depends(get_cur
 @router.put("/cashier/menu/{item_id}")
 async def update_menu_item(item_id: str, data: MenuItemCreate, current_user: User = Depends(get_current_user)):
     """Update a menu item"""
-    existing = await db.menu_items.find_one({"id": item_id})
+    existing = await db.menu_items.find_one({"id": item_id, **get_tenant_filter(current_user)})
     if not existing:
         raise HTTPException(status_code=404, detail="Item not found")
     
     update_data = data.model_dump()
-    await db.menu_items.update_one({"id": item_id}, {"$set": update_data})
-    return await db.menu_items.find_one({"id": item_id}, {"_id": 0})
+    await db.menu_items.update_one({"id": item_id, **get_tenant_filter(current_user)}, {"$set": update_data})
+    return await db.menu_items.find_one({"id": item_id, **get_tenant_filter(current_user)}, {"_id": 0})
 
 @router.delete("/cashier/menu/{item_id}")
 async def delete_menu_item(item_id: str, current_user: User = Depends(get_current_user)):
     """Delete (deactivate) a menu item"""
-    result = await db.menu_items.update_one({"id": item_id}, {"$set": {"is_available": False}})
+    result = await db.menu_items.update_one({"id": item_id, **get_tenant_filter(current_user)}, {"$set": {"is_available": False}})
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Item not found")
     return {"message": "Item deleted"}
-
 
 @router.put("/cashier/menu/{item_id}/branches")
 async def update_menu_item_branches(item_id: str, body: dict, current_user: User = Depends(get_current_user)):
     """Update which branches a menu item is available at"""
     branch_ids = body.get("branch_ids", [])
-    result = await db.menu_items.update_one({"id": item_id}, {"$set": {"branch_ids": branch_ids}})
+    result = await db.menu_items.update_one({"id": item_id, **get_tenant_filter(current_user)}, {"$set": {"branch_ids": branch_ids}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Item not found")
     return {"success": True, "branch_ids": branch_ids}
@@ -428,7 +425,7 @@ async def update_menu_item_platforms(item_id: str, body: dict, current_user: Use
     """Update which platforms a menu item is listed on"""
     platform_ids = body.get("platform_ids", [])
     platform_prices = body.get("platform_prices", {})
-    result = await db.menu_items.update_one({"id": item_id}, {"$set": {"platform_ids": platform_ids, "platform_prices": platform_prices}})
+    result = await db.menu_items.update_one({"id": item_id, **get_tenant_filter(current_user)}, {"$set": {"platform_ids": platform_ids, "platform_prices": platform_prices}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Item not found")
     return {"success": True, "platform_ids": platform_ids}
@@ -436,7 +433,7 @@ async def update_menu_item_platforms(item_id: str, body: dict, current_user: Use
 @router.get("/cashier/menu/export/{platform_id}")
 async def export_menu_for_platform(platform_id: str, current_user: User = Depends(get_current_user)):
     """Export menu items for a specific platform"""
-    platform = await db.delivery_platforms.find_one({"id": platform_id}, {"_id": 0})
+    platform = await db.delivery_platforms.find_one({"id": platform_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not platform:
         raise HTTPException(status_code=404, detail="Platform not found")
     
@@ -468,10 +465,8 @@ async def export_menu_for_platform(platform_id: str, current_user: User = Depend
 @router.get("/cashier/menu-all")
 async def get_all_menu_items(current_user: User = Depends(get_current_user)):
     """Get ALL menu items including unavailable ones - for admin menu management"""
-    items = await db.menu_items.find({}, {"_id": 0}).sort("display_order", 1).to_list(500)
+    items = await db.menu_items.find(get_tenant_filter(current_user), {"_id": 0}).sort("display_order", 1).to_list(500)
     return items
-
-
 
 # =====================================================
 # POS ORDERS
@@ -497,7 +492,7 @@ async def create_pos_order(data: POSOrderCreate, current_user: User = Depends(ge
     processed_items = []
     
     for item in data.items:
-        item_data = await db.menu_items.find_one({"id": item["item_id"]}, {"_id": 0})
+        item_data = await db.menu_items.find_one({"id": item["item_id"], **get_tenant_filter(current_user)}, {"_id": 0})
         if not item_data:
             raise HTTPException(status_code=404, detail=f"Item {item['item_id']} not found")
         
@@ -537,7 +532,7 @@ async def create_pos_order(data: POSOrderCreate, current_user: User = Depends(ge
     # Get customer name if provided
     customer_name = None
     if data.customer_id:
-        customer = await db.customers.find_one({"id": data.customer_id}, {"_id": 0})
+        customer = await db.customers.find_one({"id": data.customer_id, **get_tenant_filter(current_user)}, {"_id": 0})
         if customer:
             customer_name = customer["name"]
     
@@ -572,6 +567,7 @@ async def create_pos_order(data: POSOrderCreate, current_user: User = Depends(ge
         if order_dict.get(f):
             order_dict[f] = order_dict[f].isoformat()
     
+    stamp_tenant(order_dict, current_user)
     await db.pos_orders.insert_one(order_dict)
     
     # If payment includes credit, update customer credit
@@ -598,6 +594,7 @@ async def create_pos_order(data: POSOrderCreate, current_user: User = Depends(ge
         "created_by": current_user.id,
         "pos_order_id": order.id
     }
+    stamp_tenant(sale_dict, current_user)
     await db.sales.insert_one(sale_dict)
     
     return {k: v for k, v in order_dict.items() if k != '_id'}
@@ -631,7 +628,7 @@ async def get_pos_orders(
 @router.get("/cashier/orders/{order_id}")
 async def get_pos_order(order_id: str, current_user: User = Depends(get_current_user)):
     """Get a single POS order"""
-    order = await db.pos_orders.find_one({"id": order_id}, {"_id": 0})
+    order = await db.pos_orders.find_one({"id": order_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     return order
@@ -639,7 +636,7 @@ async def get_pos_order(order_id: str, current_user: User = Depends(get_current_
 @router.put("/cashier/orders/{order_id}/status")
 async def update_order_status(order_id: str, body: dict, current_user: User = Depends(get_current_user)):
     """Update order status"""
-    order = await db.pos_orders.find_one({"id": order_id})
+    order = await db.pos_orders.find_one({"id": order_id, **get_tenant_filter(current_user)})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     
@@ -649,13 +646,13 @@ async def update_order_status(order_id: str, body: dict, current_user: User = De
     if new_status == "completed":
         update["completed_at"] = datetime.now(timezone.utc).isoformat()
     
-    await db.pos_orders.update_one({"id": order_id}, {"$set": update})
-    return await db.pos_orders.find_one({"id": order_id}, {"_id": 0})
+    await db.pos_orders.update_one({"id": order_id, **get_tenant_filter(current_user)}, {"$set": update})
+    return await db.pos_orders.find_one({"id": order_id, **get_tenant_filter(current_user)}, {"_id": 0})
 
 @router.post("/cashier/orders/{order_id}/send-kitchen")
 async def send_to_kitchen(order_id: str, current_user: User = Depends(get_current_user)):
     """Send order to kitchen display"""
-    order = await db.pos_orders.find_one({"id": order_id})
+    order = await db.pos_orders.find_one({"id": order_id, **get_tenant_filter(current_user)})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     
@@ -679,15 +676,15 @@ async def send_to_kitchen(order_id: str, current_user: User = Depends(get_curren
         "read": False,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
+    stamp_tenant(notification, current_user)
     await db.notifications.insert_one(notification)
     
     return {"message": "Order sent to kitchen", "order_id": order_id}
 
-
 @router.put("/cashier/orders/{order_id}")
 async def edit_pos_order(order_id: str, body: dict, current_user: User = Depends(get_current_user)):
     """Edit an existing POS order - update items, payment, discount, notes"""
-    order = await db.pos_orders.find_one({"id": order_id})
+    order = await db.pos_orders.find_one({"id": order_id, **get_tenant_filter(current_user)})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
@@ -697,7 +694,7 @@ async def edit_pos_order(order_id: str, body: dict, current_user: User = Depends
         subtotal = 0
         processed_items = []
         for item in body["items"]:
-            item_data = await db.menu_items.find_one({"id": item["item_id"]}, {"_id": 0})
+            item_data = await db.menu_items.find_one({"id": item["item_id"], **get_tenant_filter(current_user)}, {"_id": 0})
             if not item_data:
                 continue
             unit_price = item_data["price"]
@@ -743,14 +740,14 @@ async def edit_pos_order(order_id: str, body: dict, current_user: User = Depends
     update["updated_at"] = datetime.now(timezone.utc).isoformat()
     update["updated_by"] = current_user.id
 
-    await db.pos_orders.update_one({"id": order_id}, {"$set": update})
-    updated = await db.pos_orders.find_one({"id": order_id}, {"_id": 0})
+    await db.pos_orders.update_one({"id": order_id, **get_tenant_filter(current_user)}, {"$set": update})
+    updated = await db.pos_orders.find_one({"id": order_id, **get_tenant_filter(current_user)}, {"_id": 0})
     return updated
 
 @router.delete("/cashier/orders/{order_id}")
 async def delete_pos_order(order_id: str, current_user: User = Depends(get_current_user)):
     """Void/delete a POS order and its linked sale"""
-    order = await db.pos_orders.find_one({"id": order_id})
+    order = await db.pos_orders.find_one({"id": order_id, **get_tenant_filter(current_user)})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     # If payment was credit, reverse the customer credit
@@ -762,9 +759,8 @@ async def delete_pos_order(order_id: str, current_user: User = Depends(get_curre
     # Delete linked sale record
     await db.sales.delete_one({"pos_order_id": order_id})
     # Delete the order
-    await db.pos_orders.delete_one({"id": order_id})
+    await db.pos_orders.delete_one({"id": order_id, **get_tenant_filter(current_user)})
     return {"message": f"Order #{order.get('order_number')} voided successfully"}
-
 
 # =====================================================
 # POS SHIFT MANAGEMENT
@@ -801,6 +797,7 @@ async def start_cashier_shift(body: dict, current_user: User = Depends(get_curre
         "ended_at": None,
         "notes": body.get("notes")
     }
+    stamp_tenant(shift, current_user)
     await db.cashier_shifts.insert_one(shift)
     return {k: v for k, v in shift.items() if k != '_id'}
 
@@ -879,11 +876,10 @@ async def end_cashier_shift(body: dict, current_user: User = Depends(get_current
         "notes": body.get("notes")
     }
     
-    await db.cashier_shifts.update_one({"id": shift["id"]}, {"$set": update})
+    await db.cashier_shifts.update_one({"id": shift["id"], **get_tenant_filter(current_user)}, {"$set": update})
     
     result = {**shift, **update}
     return {k: v for k, v in result.items() if k != '_id'}
-
 
 # =====================================================
 # CUSTOMERS (Quick access for POS)
@@ -920,9 +916,9 @@ async def quick_create_customer(body: dict, current_user: User = Depends(get_cur
     cust_dict = customer.model_dump()
     cust_dict["created_at"] = cust_dict["created_at"].isoformat()
     cust_dict["credit_balance"] = 0
+    stamp_tenant(cust_dict, current_user)
     await db.customers.insert_one(cust_dict)
     return {k: v for k, v in cust_dict.items() if k != '_id'}
-
 
 # =====================================================
 # POS STATISTICS
@@ -975,7 +971,6 @@ async def get_pos_stats(branch_id: Optional[str] = None, current_user: User = De
         "pending_orders": len([o for o in orders if o.get("status") in ["pending", "preparing"]])
     }
 
-
 # =====================================================
 # MENU ITEM IMAGE UPLOAD
 # =====================================================
@@ -991,7 +986,7 @@ async def upload_menu_item_image(
 ):
     """Upload an image for a menu item"""
     # Verify item exists
-    item = await db.menu_items.find_one({"id": item_id})
+    item = await db.menu_items.find_one({"id": item_id, **get_tenant_filter(current_user)})
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     
@@ -1024,14 +1019,14 @@ async def upload_menu_item_image(
     
     # Update database with relative URL
     image_url = f"/uploads/menu/{filename}"
-    await db.menu_items.update_one({"id": item_id}, {"$set": {"image_url": image_url}})
+    await db.menu_items.update_one({"id": item_id, **get_tenant_filter(current_user)}, {"$set": {"image_url": image_url}})
     
     return {"message": "Image uploaded successfully", "image_url": image_url}
 
 @router.delete("/cashier/menu/{item_id}/image")
 async def delete_menu_item_image(item_id: str, current_user: User = Depends(get_current_user)):
     """Delete menu item image"""
-    item = await db.menu_items.find_one({"id": item_id})
+    item = await db.menu_items.find_one({"id": item_id, **get_tenant_filter(current_user)})
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     
@@ -1041,9 +1036,8 @@ async def delete_menu_item_image(item_id: str, current_user: User = Depends(get_
         if os.path.exists(filepath):
             os.remove(filepath)
     
-    await db.menu_items.update_one({"id": item_id}, {"$set": {"image_url": None}})
+    await db.menu_items.update_one({"id": item_id, **get_tenant_filter(current_user)}, {"$set": {"image_url": None}})
     return {"message": "Image deleted successfully"}
-
 
 # =====================================================
 # SEED SAMPLE MENU DATA
@@ -1073,7 +1067,7 @@ async def get_daily_shift_report(
     shifts = await db.cashier_shifts.find(query, {"_id": 0}).to_list(500)
     
     # Get branch names
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     branch_map = {b["id"]: b["name"] for b in branches}
     
     # Aggregate data
@@ -1158,7 +1152,6 @@ async def get_daily_shift_report(
         "top_items": top_items
     }
 
-
 @router.get("/cashier/shift-report/range")
 async def get_shift_report_range(
     start_date: str,
@@ -1206,13 +1199,12 @@ async def get_shift_report_range(
         "daily_breakdown": [{"date": k, **v} for k, v in sorted(daily_data.items())]
     }
 
-
 @router.post("/cashier/seed-menu")
 async def seed_menu_data(current_user: User = Depends(get_current_user)):
     """Seed sample menu items for testing"""
     
     # Check if menu already has items
-    existing = await db.menu_items.count_documents({})
+    existing = await db.menu_items.count_documents(get_tenant_filter(current_user))
     if existing > 0:
         return {"message": f"Menu already has {existing} items", "seeded": False}
     
@@ -1285,10 +1277,10 @@ async def seed_menu_data(current_user: User = Depends(get_current_user)):
         )
         item_dict = item.model_dump()
         item_dict["created_at"] = item_dict["created_at"].isoformat()
+        stamp_tenant(item_dict, current_user)
         await db.menu_items.insert_one(item_dict)
     
     return {"message": f"Seeded {len(sample_items)} menu items", "seeded": True}
-
 
 # =====================================================
 # PRINTER MANAGEMENT
@@ -1297,7 +1289,7 @@ async def seed_menu_data(current_user: User = Depends(get_current_user)):
 @router.get("/cashier/printers")
 async def get_printers(current_user: User = Depends(get_current_user)):
     """Get all configured printers"""
-    printers = await db.printers.find({}, {"_id": 0}).to_list(50)
+    printers = await db.printers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(50)
     return printers
 
 @router.post("/cashier/printers")
@@ -1324,6 +1316,7 @@ async def create_printer(body: dict, current_user: User = Depends(get_current_us
             {"type": printer["type"], "branch_id": printer.get("branch_id")},
             {"$set": {"is_default": False}}
         )
+    stamp_tenant(printer, current_user)
     await db.printers.insert_one(printer)
     return {k: v for k, v in printer.items() if k != '_id'}
 
@@ -1335,22 +1328,22 @@ async def update_printer(printer_id: str, body: dict, current_user: User = Depen
         if field in body:
             update_fields[field] = body[field]
     if update_fields.get("is_default"):
-        p = await db.printers.find_one({"id": printer_id}, {"_id": 0})
+        p = await db.printers.find_one({"id": printer_id, **get_tenant_filter(current_user)}, {"_id": 0})
         if p:
             await db.printers.update_many(
                 {"type": p["type"], "branch_id": p.get("branch_id"), "id": {"$ne": printer_id}},
                 {"$set": {"is_default": False}}
             )
-    result = await db.printers.update_one({"id": printer_id}, {"$set": update_fields})
+    result = await db.printers.update_one({"id": printer_id, **get_tenant_filter(current_user)}, {"$set": update_fields})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Printer not found")
-    updated = await db.printers.find_one({"id": printer_id}, {"_id": 0})
+    updated = await db.printers.find_one({"id": printer_id, **get_tenant_filter(current_user)}, {"_id": 0})
     return updated
 
 @router.delete("/cashier/printers/{printer_id}")
 async def delete_printer(printer_id: str, current_user: User = Depends(get_current_user)):
     """Remove a printer"""
-    result = await db.printers.delete_one({"id": printer_id})
+    result = await db.printers.delete_one({"id": printer_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Printer not found")
     return {"message": "Printer deleted"}
@@ -1358,7 +1351,7 @@ async def delete_printer(printer_id: str, current_user: User = Depends(get_curre
 @router.post("/cashier/printers/{printer_id}/test")
 async def test_printer(printer_id: str, current_user: User = Depends(get_current_user)):
     """Test printer connection"""
-    printer = await db.printers.find_one({"id": printer_id}, {"_id": 0})
+    printer = await db.printers.find_one({"id": printer_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not printer:
         raise HTTPException(status_code=404, detail="Printer not found")
     # In production, this would send a test print. For now, we just verify the config exists.

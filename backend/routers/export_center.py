@@ -14,7 +14,7 @@ from reportlab.lib.units import inch
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
-from database import db, get_current_user
+from database import db, get_current_user, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter(prefix="/export-center", tags=["export-center"])
@@ -94,7 +94,7 @@ async def generate_export(request: ExportRequest, current_user: User = Depends(g
     report_type = request.report_type
     fmt = request.format
 
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     branch_map = {b["id"]: b["name"] for b in branches}
     branch_name = branch_map.get(branch_id, "All Branches") if branch_id else "All Branches"
 
@@ -113,7 +113,7 @@ async def generate_export(request: ExportRequest, current_user: User = Depends(g
     title = ""
 
     if report_type == "sales":
-        sales = await db.sales.find({}, {"_id": 0}).sort("date", -1).to_list(10000)
+        sales = await db.sales.find(get_tenant_filter(current_user), {"_id": 0}).sort("date", -1).to_list(10000)
         if start or end:
             sales = filter_by_date(sales, start, end)
         if branch_id:
@@ -141,7 +141,7 @@ async def generate_export(request: ExportRequest, current_user: User = Depends(g
                          cash, bank, online, credit, s.get("notes", "")])
 
     elif report_type == "expenses":
-        expenses = await db.expenses.find({}, {"_id": 0}).sort("date", -1).to_list(10000)
+        expenses = await db.expenses.find(get_tenant_filter(current_user), {"_id": 0}).sort("date", -1).to_list(10000)
         if start or end:
             expenses = filter_by_date(expenses, start, end)
         if branch_id:
@@ -175,8 +175,8 @@ async def generate_export(request: ExportRequest, current_user: User = Depends(g
                          p.get("type", "payment"), p.get("notes", "")])
 
     elif report_type == "profit_loss":
-        sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
-        expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
+        sales = await db.sales.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
+        expenses = await db.expenses.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
         if start or end:
             sales = filter_by_date(sales, start, end)
             expenses = filter_by_date(expenses, start, end)
@@ -208,8 +208,8 @@ async def generate_export(request: ExportRequest, current_user: User = Depends(g
         rows.append(["NET PROFIT", f"{net_profit:,.2f}", f"{(net_profit / total_sales * 100):.1f}%" if total_sales > 0 else "N/A"])
 
     elif report_type == "daily_summary":
-        sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
-        expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
+        sales = await db.sales.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
+        expenses = await db.expenses.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
         if start or end:
             sales = filter_by_date(sales, start, end)
             expenses = filter_by_date(expenses, start, end)
@@ -248,7 +248,7 @@ async def generate_export(request: ExportRequest, current_user: User = Depends(g
                          f"{v['sales'] - v['expenses']:,.2f}", f"{v['cash_in']:,.2f}", f"{v['bank_in']:,.2f}"])
 
     elif report_type == "customers":
-        customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
+        customers = await db.customers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
         headers = ["Name", "Branch", "Phone", "Email", "Credit Balance"]
         title = "Customers Report"
         for c in customers:
@@ -256,7 +256,7 @@ async def generate_export(request: ExportRequest, current_user: User = Depends(g
                          c.get("phone", "-"), c.get("email", "-"), c.get("credit_balance", 0)])
 
     elif report_type == "employees":
-        employees = await db.employees.find({}, {"_id": 0}).to_list(1000)
+        employees = await db.employees.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
         headers = ["Name", "Position", "Branch", "Salary", "Pay Frequency", "Document Expiry"]
         title = "Employees Report"
         for emp in employees:
@@ -269,7 +269,7 @@ async def generate_export(request: ExportRequest, current_user: User = Depends(g
                          emp.get("pay_frequency", "monthly"), exp])
 
     elif report_type == "stock":
-        items = await db.stock.find({}, {"_id": 0}).to_list(5000)
+        items = await db.stock.find(get_tenant_filter(current_user), {"_id": 0}).to_list(5000)
         headers = ["Item", "Category", "Branch", "Current Qty", "Unit", "Min Level", "Value (SAR)"]
         title = "Inventory Report"
         for item in items:

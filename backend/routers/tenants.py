@@ -221,6 +221,11 @@ async def admin_dashboard(current_user=Depends(get_current_user)):
     total_users = await db.users.count_documents({})
     total_branches = await db.branches.count_documents({})
 
+    # Count new tenants this month
+    from datetime import timedelta
+    month_start = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
+    new_this_month = await db.tenants.count_documents({"created_at": {"$gte": month_start}})
+
     # Recent tenants
     recent = await db.tenants.find({}, {"_id": 0}).sort("created_at", -1).limit(10).to_list(10)
 
@@ -233,6 +238,7 @@ async def admin_dashboard(current_user=Depends(get_current_user)):
         "active_tenants": active_tenants,
         "total_users": total_users,
         "total_branches": total_branches,
+        "new_this_month": new_this_month,
         "recent_tenants": recent,
         "plan_distribution": {r["_id"]: r["count"] for r in plan_dist},
     }

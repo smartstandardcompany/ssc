@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import os
 import uuid
 
-from database import db, get_current_user, require_permission, get_branch_filter
+from database import db, get_current_user, require_permission, get_branch_filter, get_tenant_filter, stamp_tenant
 from models import User, StockEntry, StockUsage, Item
 
 router = APIRouter()
@@ -55,7 +55,7 @@ async def get_smart_stock_alerts(
     """
     from datetime import timedelta
     
-    items = await db.items.find({}, {"_id": 0}).to_list(1000)
+    items = await db.items.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
     if not items:
         return {"alerts": [], "summary": {}}
     
@@ -196,7 +196,7 @@ async def get_stock_entries(
 @router.post("/stock/entries")
 async def create_stock_entry(body: dict, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "stock", "write")
-    item = await db.items.find_one({"id": body["item_id"]}, {"_id": 0})
+    item = await db.items.find_one({"id": body["item_id"], **get_tenant_filter(current_user)}, {"_id": 0})
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     entry = StockEntry(
@@ -211,6 +211,7 @@ async def create_stock_entry(body: dict, current_user: User = Depends(get_curren
     e_dict = entry.model_dump()
     e_dict["date"] = e_dict["date"].isoformat()
     e_dict["created_at"] = e_dict["created_at"].isoformat()
+    stamp_tenant(e_dict, current_user)
     await db.stock_entries.insert_one(e_dict)
     return {k: v for k, v in e_dict.items() if k != '_id'}
 
@@ -237,6 +238,7 @@ async def create_stock_entries_bulk(body: dict, current_user: User = Depends(get
                                unit=item_data.get("unit", "piece"), category=item_data.get("category", ""))
                 ni_dict = new_item.model_dump()
                 ni_dict["created_at"] = ni_dict["created_at"].isoformat()
+                stamp_tenant(ni_dict, current_user)
                 await db.items.insert_one(ni_dict)
                 item_id = new_item.id
                 item_name = new_item.name
@@ -251,6 +253,7 @@ async def create_stock_entries_bulk(body: dict, current_user: User = Depends(get
         e_dict = entry.model_dump()
         e_dict["date"] = e_dict["date"].isoformat()
         e_dict["created_at"] = e_dict["created_at"].isoformat()
+        stamp_tenant(e_dict, current_user)
         await db.stock_entries.insert_one(e_dict)
         created.append({k: v for k, v in e_dict.items() if k != '_id'})
     return {"created": len(created), "entries": created}
@@ -278,7 +281,7 @@ async def get_stock_usage(
 @router.post("/stock/usage")
 async def create_stock_usage(body: dict, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "stock", "write")
-    item = await db.items.find_one({"id": body["item_id"]}, {"_id": 0})
+    item = await db.items.find_one({"id": body["item_id"], **get_tenant_filter(current_user)}, {"_id": 0})
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     usage = StockUsage(
@@ -292,6 +295,7 @@ async def create_stock_usage(body: dict, current_user: User = Depends(get_curren
     u_dict = usage.model_dump()
     u_dict["date"] = u_dict["date"].isoformat()
     u_dict["created_at"] = u_dict["created_at"].isoformat()
+    stamp_tenant(u_dict, current_user)
     await db.stock_usage.insert_one(u_dict)
     return {k: v for k, v in u_dict.items() if k != '_id'}
 
@@ -303,7 +307,7 @@ async def create_stock_usage_bulk(body: dict, current_user: User = Depends(get_c
     date_str = body.get("date", datetime.now(timezone.utc).isoformat())
     created = []
     for item_data in items_data:
-        item = await db.items.find_one({"id": item_data["item_id"]}, {"_id": 0})
+        item = await db.items.find_one({"id": item_data["item_id"], **get_tenant_filter(current_user)}, {"_id": 0})
         if not item:
             continue
         usage = StockUsage(
@@ -316,13 +320,14 @@ async def create_stock_usage_bulk(body: dict, current_user: User = Depends(get_c
         u_dict = usage.model_dump()
         u_dict["date"] = u_dict["date"].isoformat()
         u_dict["created_at"] = u_dict["created_at"].isoformat()
+        stamp_tenant(u_dict, current_user)
         await db.stock_usage.insert_one(u_dict)
         created.append({k: v for k, v in u_dict.items() if k != '_id'})
     return {"created": len(created), "entries": created}
 
 @router.get("/stock/balance")
 async def get_stock_balance(branch_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
-    items = await db.items.find({}, {"_id": 0}).to_list(1000)
+    items = await db.items.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
     e_query = {"branch_id": branch_id} if branch_id else {}
     u_query = {"branch_id": branch_id} if branch_id else {}
     entries = await db.stock_entries.find(e_query, {"_id": 0}).to_list(10000)
@@ -374,7 +379,7 @@ async def get_consumption_report(branch_id: Optional[str] = None, days: int = 30
     if branch_id:
         u_query["branch_id"] = branch_id
     usage = await db.stock_usage.find(u_query, {"_id": 0}).to_list(50000)
-    items = await db.items.find({}, {"_id": 0}).to_list(1000)
+    items = await db.items.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
     item_map = {i["id"]: i for i in items}
     # Per item: total used, daily average, daily breakdown
     item_usage = {}
@@ -409,7 +414,7 @@ async def get_consumption_report(branch_id: Optional[str] = None, days: int = 30
 @router.get("/stock/report/profitability")
 async def get_profitability_report(branch_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
     """Item profitability: cost price vs sale price, margin analysis."""
-    items = await db.items.find({}, {"_id": 0}).to_list(1000)
+    items = await db.items.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
     e_query = {"branch_id": branch_id} if branch_id else {}
     entries = await db.stock_entries.find(e_query, {"_id": 0}).to_list(50000)
     usage = await db.stock_usage.find(e_query, {"_id": 0}).to_list(50000)
@@ -469,7 +474,7 @@ async def get_wastage_report(branch_id: Optional[str] = None, days: int = 30, cu
     if branch_id:
         u_query["branch_id"] = branch_id
     all_usage = await db.stock_usage.find(u_query, {"_id": 0}).to_list(50000)
-    items = await db.items.find({}, {"_id": 0}).to_list(1000)
+    items = await db.items.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
     item_map = {i["id"]: i for i in items}
     # Separate wastage from regular usage
     waste_usage = [u for u in all_usage if u.get("used_by", "").lower() in ("waste", "wastage", "expired", "damaged")]

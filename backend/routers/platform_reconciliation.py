@@ -3,7 +3,7 @@ from typing import Optional
 from datetime import datetime, timezone
 import uuid
 
-from database import db, get_current_user, require_permission
+from database import db, get_current_user, require_permission, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter()
@@ -16,8 +16,8 @@ async def get_platform_reconciliation(
     current_user: User = Depends(get_current_user)
 ):
     """Calculate platform sales vs received amounts, showing platform cuts per branch."""
-    platforms = await db.delivery_platforms.find({}, {"_id": 0}).to_list(50)
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    platforms = await db.delivery_platforms.find(get_tenant_filter(current_user), {"_id": 0}).to_list(50)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     branch_map = {b["id"]: b["name"] for b in branches}
 
     # Build date filter for sales - match online/online_platform types or any sale with platform_id
@@ -142,6 +142,7 @@ async def record_platform_payment(data: dict, current_user: User = Depends(get_c
         "created_at": datetime.now(timezone.utc).isoformat(),
         "created_by": current_user.id,
     }
+    stamp_tenant(record, current_user)
     await db.platform_reconciliations.insert_one(record)
     record.pop("_id", None)
     return record
@@ -150,14 +151,14 @@ async def record_platform_payment(data: dict, current_user: User = Depends(get_c
 @router.get("/platform-reconciliation/history")
 async def get_reconciliation_history(current_user: User = Depends(get_current_user)):
     """Get all recorded platform payments."""
-    records = await db.platform_reconciliations.find({}, {"_id": 0}).sort("date", -1).to_list(500)
+    records = await db.platform_reconciliations.find(get_tenant_filter(current_user), {"_id": 0}).sort("date", -1).to_list(500)
     return records
 
 
 @router.delete("/platform-reconciliation/{record_id}")
 async def delete_reconciliation(record_id: str, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "sales", "write")
-    result = await db.platform_reconciliations.delete_one({"id": record_id})
+    result = await db.platform_reconciliations.delete_one({"id": record_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Record not found")
     return {"message": "Deleted"}

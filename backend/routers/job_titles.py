@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from database import db, get_current_user
+from database import db, get_current_user, get_tenant_filter, stamp_tenant
 from models import User, JobTitle
 
 router = APIRouter()
@@ -25,14 +25,15 @@ DEFAULT_JOB_TITLES = [
 
 @router.get("/job-titles")
 async def get_job_titles(current_user: User = Depends(get_current_user)):
-    titles = await db.job_titles.find({}, {"_id": 0}).to_list(200)
+    titles = await db.job_titles.find(get_tenant_filter(current_user), {"_id": 0}).to_list(200)
     if not titles:
         for jt in DEFAULT_JOB_TITLES:
             title_obj = JobTitle(**jt)
             td = title_obj.model_dump()
             td["created_at"] = td["created_at"].isoformat()
+            stamp_tenant(td, current_user)
             await db.job_titles.insert_one(td)
-        titles = await db.job_titles.find({}, {"_id": 0}).to_list(200)
+        titles = await db.job_titles.find(get_tenant_filter(current_user), {"_id": 0}).to_list(200)
     return titles
 
 @router.post("/job-titles")
@@ -45,6 +46,7 @@ async def create_job_title(body: dict, current_user: User = Depends(get_current_
     )
     td = jt.model_dump()
     td["created_at"] = td["created_at"].isoformat()
+    stamp_tenant(td, current_user)
     await db.job_titles.insert_one(td)
     return {k: v for k, v in td.items() if k != '_id'}
 
@@ -58,21 +60,21 @@ async def update_job_title(title_id: str, body: dict, current_user: User = Depen
         update_data["min_salary"] = float(update_data["min_salary"])
     if "max_salary" in update_data:
         update_data["max_salary"] = float(update_data["max_salary"])
-    await db.job_titles.update_one({"id": title_id}, {"$set": update_data})
-    updated = await db.job_titles.find_one({"id": title_id}, {"_id": 0})
+    await db.job_titles.update_one({"id": title_id, **get_tenant_filter(current_user)}, {"$set": update_data})
+    updated = await db.job_titles.find_one({"id": title_id, **get_tenant_filter(current_user)}, {"_id": 0})
     # Sync permissions to all linked employees/users when permissions change
     if "permissions" in update_data:
         employees = await db.employees.find({"job_title_id": title_id}, {"_id": 0}).to_list(1000)
         for emp in employees:
             if emp.get("user_id"):
-                user_doc = await db.users.find_one({"id": emp["user_id"]}, {"_id": 0})
+                user_doc = await db.users.find_one({"id": emp["user_id"], **get_tenant_filter(current_user)}, {"_id": 0})
                 if user_doc:
                     base = {"self_service"} if user_doc.get("role") == "employee" else set()
                     merged = list(base | set(update_data["permissions"]))
-                    await db.users.update_one({"id": emp["user_id"]}, {"$set": {"permissions": merged}})
+                    await db.users.update_one({"id": emp["user_id"], **get_tenant_filter(current_user)}, {"$set": {"permissions": merged}})
     return updated
 
 @router.delete("/job-titles/{title_id}")
 async def delete_job_title(title_id: str, current_user: User = Depends(get_current_user)):
-    await db.job_titles.delete_one({"id": title_id})
+    await db.job_titles.delete_one({"id": title_id, **get_tenant_filter(current_user)})
     return {"message": "Job title deleted"}

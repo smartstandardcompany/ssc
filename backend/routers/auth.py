@@ -4,7 +4,7 @@ from datetime import datetime, timezone, timedelta
 import uuid
 import secrets
 
-from database import db, hash_password, verify_password, create_access_token, get_current_user
+from database import db, hash_password, verify_password, create_access_token, get_current_user, get_tenant_filter, stamp_tenant
 from models import User, UserCreate, UserUpdate, UserLogin, Token, Category, CategoryCreate, PasswordReset, ForgotPasswordRequest, ResetPasswordWithToken, ChangePassword
 
 router = APIRouter()
@@ -116,7 +116,8 @@ async def get_me(current_user: User = Depends(get_current_user)):
 async def get_users(current_user: User = Depends(get_current_user)):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
-    users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(1000)
+    tf = get_tenant_filter(current_user)
+    users = await db.users.find({**tf}, {"_id": 0, "password": 0}).to_list(1000)
     for user in users:
         if isinstance(user.get('created_at'), str):
             user['created_at'] = datetime.fromisoformat(user['created_at'])
@@ -139,14 +140,13 @@ async def create_user(user_data: UserCreate, current_user: User = Depends(get_cu
     user_dict = user.model_dump()
     user_dict["password"] = hash_password(user_data.password)
     user_dict["created_at"] = user_dict["created_at"].isoformat()
+    stamp_tenant(user_dict, current_user)
     await db.users.insert_one(user_dict)
-    return user
-
-@router.put("/users/{user_id}", response_model=User)
+    return user@router.put("/users/{user_id}", response_model=User)
 async def update_user(user_id: str, user_update: UserUpdate, current_user: User = Depends(get_current_user)):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
-    result = await db.users.find_one({"id": user_id}, {"_id": 0})
+    result = await db.users.find_one({"id": user_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not result:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -165,7 +165,7 @@ async def update_user(user_id: str, user_update: UserUpdate, current_user: User 
         update_data['password'] = hash_password(update_data['password'])
     
     if update_data:
-        await db.users.update_one({"id": user_id}, {"$set": update_data})
+        await db.users.update_one({"id": user_id, **get_tenant_filter(current_user)}, {"$set": update_data})
     updated = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
     if isinstance(updated.get('created_at'), str):
         updated['created_at'] = datetime.fromisoformat(updated['created_at'])
@@ -182,11 +182,13 @@ async def delete_user(user_id: str, current_user: User = Depends(get_current_use
         raise HTTPException(status_code=400, detail="Cannot delete your own account")
     
     # Check if trying to delete protected admin
-    user = await db.users.find_one({"id": user_id}, {"_id": 0})
-    if user and user.get("email") == PROTECTED_ADMIN_EMAIL:
+    user = await db.users.find_one({"id": user_id, **get_tenant_filter(current_user)}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.get("email") == PROTECTED_ADMIN_EMAIL:
         raise HTTPException(status_code=403, detail="This admin account is protected and cannot be deleted")
     
-    result = await db.users.delete_one({"id": user_id})
+    result = await db.users.delete_one({"id": user_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
     return {"message": "User deleted successfully"}
@@ -194,7 +196,7 @@ async def delete_user(user_id: str, current_user: User = Depends(get_current_use
 # Category Management Routes
 @router.get("/categories")
 async def get_categories(category_type: Optional[str] = None, current_user: User = Depends(get_current_user)):
-    query = {}
+    query = get_tenant_filter(current_user)
     if category_type:
         query["type"] = category_type
     categories = await db.categories.find(query, {"_id": 0}).to_list(1000)
@@ -205,18 +207,20 @@ async def get_categories(category_type: Optional[str] = None, current_user: User
 
 @router.post("/categories", response_model=Category)
 async def create_category(category_data: CategoryCreate, current_user: User = Depends(get_current_user)):
-    existing = await db.categories.find_one({"name": category_data.name, "type": category_data.type}, {"_id": 0})
+    tf = get_tenant_filter(current_user)
+    existing = await db.categories.find_one({**tf, "name": category_data.name, "type": category_data.type}, {"_id": 0})
     if existing:
         raise HTTPException(status_code=400, detail="Category already exists")
     category = Category(**category_data.model_dump())
     category_dict = category.model_dump()
     category_dict["created_at"] = category_dict["created_at"].isoformat()
+    stamp_tenant(category_dict, current_user)
     await db.categories.insert_one(category_dict)
     return category
 
 @router.delete("/categories/{category_id}")
 async def delete_category(category_id: str, current_user: User = Depends(get_current_user)):
-    result = await db.categories.delete_one({"id": category_id})
+    result = await db.categories.delete_one({"id": category_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Category not found")
     return {"message": "Category deleted successfully"}

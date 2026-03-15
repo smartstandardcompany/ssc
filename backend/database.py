@@ -117,43 +117,31 @@ def has_permission(user, module, level="read"):
 
 def get_branch_filter(user, branch_field="branch_id"):
     """Return a MongoDB query filter for branch-restricted users.
-    
-    Args:
-        user: User object with role and branch_id
-        branch_field: The field name to filter on (default: "branch_id")
-    
-    Returns:
-        dict: MongoDB query filter, empty dict for admins/unrestricted users
+    Automatically includes tenant isolation.
     """
+    base = get_tenant_filter(user)
     if user.role == "admin":
-        return {}
+        return base
     if user.branch_id:
-        return {branch_field: user.branch_id}
-    return {}
+        return {**base, branch_field: user.branch_id}
+    return base
 
 
 def get_branch_filter_with_global(user, branch_field="branch_id"):
     """Return a MongoDB query filter that includes branch-specific AND global (no branch) items.
-    
-    Use this for entities like suppliers that can be "all branches" (no branch assigned).
-    
-    Args:
-        user: User object with role and branch_id
-        branch_field: The field name to filter on (default: "branch_id")
-    
-    Returns:
-        dict: MongoDB query filter including items with no branch
+    Automatically includes tenant isolation.
     """
+    base = get_tenant_filter(user)
     if user.role == "admin":
-        return {}
+        return base
     if user.branch_id:
-        return {"$or": [
+        return {**base, "$or": [
             {branch_field: user.branch_id},
             {branch_field: None},
             {branch_field: ""},
             {branch_field: {"$exists": False}}
         ]}
-    return {}
+    return base
 
 
 def require_permission(user, module, level="read"):

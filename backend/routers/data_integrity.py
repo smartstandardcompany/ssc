@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timezone
 
-from database import db, get_current_user
+from database import db, get_current_user, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter(prefix="/data-integrity", tags=["data-integrity"])
@@ -24,8 +24,8 @@ async def scan_integrity(current_user: User = Depends(get_current_user)):
     if current_user.role != "admin":
         return {"error": "Admin only"}
 
-    sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    sales = await db.sales.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     branch_map = {b["id"]: b["name"] for b in branches}
 
     issues = []
@@ -119,7 +119,7 @@ async def fix_issue(request: FixRequest, current_user: User = Depends(get_curren
     if current_user.role != "admin":
         return {"error": "Admin only"}
 
-    sale = await db.sales.find_one({"id": request.sale_id})
+    sale = await db.sales.find_one({"id": request.sale_id, **get_tenant_filter(current_user)})
     if not sale:
         return {"error": "Sale not found", "success": False}
 
@@ -127,7 +127,7 @@ async def fix_issue(request: FixRequest, current_user: User = Depends(get_curren
         amount = sale.get("amount", 0)
         discount = sale.get("discount", 0)
         new_final = request.fix_value if request.fix_value is not None else (amount - discount)
-        await db.sales.update_one({"id": request.sale_id}, {"$set": {"final_amount": new_final}})
+        await db.sales.update_one({"id": request.sale_id, **get_tenant_filter(current_user)}, {"$set": {"final_amount": new_final}})
         return {"success": True, "message": f"Set final_amount to {new_final:.2f}"}
 
     elif request.issue_type == "unusual_mode":
@@ -135,7 +135,7 @@ async def fix_issue(request: FixRequest, current_user: User = Depends(get_curren
             pd = sale.get("payment_details", [])
             if 0 <= request.payment_index < len(pd):
                 pd[request.payment_index]["mode"] = request.fix_mode
-                await db.sales.update_one({"id": request.sale_id}, {"$set": {"payment_details": pd}})
+                await db.sales.update_one({"id": request.sale_id, **get_tenant_filter(current_user)}, {"$set": {"payment_details": pd}})
                 return {"success": True, "message": f"Changed mode to '{request.fix_mode}'"}
         return {"error": "Invalid fix parameters", "success": False}
 
@@ -157,13 +157,13 @@ async def fix_all(request: BulkFixRequest, current_user: User = Depends(get_curr
         sales = await db.sales.find({"final_amount": None}, {"_id": 0, "id": 1, "amount": 1, "discount": 1}).to_list(10000)
         for s in sales:
             new_final = s.get("amount", 0) - s.get("discount", 0)
-            await db.sales.update_one({"id": s["id"]}, {"$set": {"final_amount": new_final}})
+            await db.sales.update_one({"id": s["id"], **get_tenant_filter(current_user)}, {"$set": {"final_amount": new_final}})
             fixed += 1
         # Also fix sales where final_amount field doesn't exist
         missing = await db.sales.find({"final_amount": {"$exists": False}}, {"_id": 0, "id": 1, "amount": 1, "discount": 1}).to_list(10000)
         for s in missing:
             new_final = s.get("amount", 0) - s.get("discount", 0)
-            await db.sales.update_one({"id": s["id"]}, {"$set": {"final_amount": new_final}})
+            await db.sales.update_one({"id": s["id"], **get_tenant_filter(current_user)}, {"$set": {"final_amount": new_final}})
             fixed += 1
 
     elif request.issue_type == "unusual_mode":

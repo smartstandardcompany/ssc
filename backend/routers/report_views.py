@@ -4,7 +4,7 @@ from typing import Optional
 from datetime import datetime, timezone
 import uuid
 
-from database import db, get_current_user
+from database import db, get_current_user, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter()
@@ -50,6 +50,7 @@ async def create_report_view(view: ReportViewCreate, current_user: User = Depend
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
+    stamp_tenant(view_dict, current_user)
     await db.report_views.insert_one(view_dict)
     del view_dict["_id"]
     return view_dict
@@ -57,7 +58,7 @@ async def create_report_view(view: ReportViewCreate, current_user: User = Depend
 
 @router.put("/report-views/{view_id}")
 async def update_report_view(view_id: str, update: ReportViewUpdate, current_user: User = Depends(get_current_user)):
-    existing = await db.report_views.find_one({"id": view_id, "user_id": current_user.id})
+    existing = await db.report_views.find_one({"id": view_id, "user_id": current_user.id, **get_tenant_filter(current_user)})
     if not existing:
         raise HTTPException(status_code=404, detail="View not found")
 
@@ -67,13 +68,13 @@ async def update_report_view(view_id: str, update: ReportViewUpdate, current_use
         if val is not None:
             updates[field] = val
 
-    await db.report_views.update_one({"id": view_id}, {"$set": updates})
+    await db.report_views.update_one({"id": view_id, **get_tenant_filter(current_user)}, {"$set": updates})
     return {"message": "Updated"}
 
 
 @router.delete("/report-views/{view_id}")
 async def delete_report_view(view_id: str, current_user: User = Depends(get_current_user)):
-    result = await db.report_views.delete_one({"id": view_id, "user_id": current_user.id})
+    result = await db.report_views.delete_one({"id": view_id, "user_id": current_user.id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="View not found")
     return {"message": "Deleted"}

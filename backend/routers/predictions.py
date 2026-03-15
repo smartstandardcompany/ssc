@@ -3,7 +3,7 @@ from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 import math
 
-from database import db, get_current_user
+from database import db, get_current_user, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter()
@@ -16,7 +16,7 @@ async def get_inventory_demand_forecast(days: int = 14, current_user: User = Dep
     start_date = (now - timedelta(days=90)).isoformat()[:10]
 
     sales = await db.sales.find({"date": {"$gte": start_date}}, {"_id": 0}).to_list(50000)
-    items = await db.items.find({}, {"_id": 0}).to_list(1000)
+    items = await db.items.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
     item_map = {i["id"]: i for i in items}
 
     # Calculate daily demand per item
@@ -114,7 +114,7 @@ async def get_inventory_demand_forecast(days: int = 14, current_user: User = Dep
 async def get_customer_clv(current_user: User = Depends(get_current_user)):
     """Predict Customer Lifetime Value based on purchase history."""
     now = datetime.now(timezone.utc)
-    customers = await db.customers.find({}, {"_id": 0}).to_list(10000)
+    customers = await db.customers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
     sales = await db.sales.find({"customer_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(50000)
 
     customer_sales = defaultdict(list)

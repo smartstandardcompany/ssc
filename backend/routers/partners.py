@@ -3,7 +3,7 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 import os
 
-from database import db, get_current_user
+from database import db, get_current_user, get_tenant_filter, stamp_tenant
 from models import User, Partner, PartnerCreate, PartnerTransaction, PartnerTransactionCreate, CompanyLoan, CompanyLoanPayment, Fine, FineCreate, Expense, Notification
 from fastapi import UploadFile, File
 from fastapi.responses import FileResponse
@@ -174,8 +174,8 @@ async def get_partner_pl_report(
 # Partner Routes
 @router.get("/partners")
 async def get_partners(current_user: User = Depends(get_current_user)):
-    partners = await db.partners.find({}, {"_id": 0}).to_list(100)
-    transactions = await db.partner_transactions.find({}, {"_id": 0}).to_list(10000)
+    partners = await db.partners.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
+    transactions = await db.partner_transactions.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
     for p in partners:
         pt = [t for t in transactions if t.get("partner_id") == p["id"]]
         invested = sum(t["amount"] for t in pt if t.get("transaction_type") in ["investment"])
@@ -186,17 +186,18 @@ async def get_partners(current_user: User = Depends(get_current_user)):
 @router.post("/partners")
 async def create_partner(data: PartnerCreate, current_user: User = Depends(get_current_user)):
     partner = Partner(**data.model_dump()); p_dict = partner.model_dump(); p_dict["created_at"] = p_dict["created_at"].isoformat()
+    stamp_tenant(p_dict, current_user)
     await db.partners.insert_one(p_dict)
     return {k: v for k, v in p_dict.items() if k != '_id'}
 
 @router.put("/partners/{partner_id}")
 async def update_partner(partner_id: str, data: PartnerCreate, current_user: User = Depends(get_current_user)):
-    await db.partners.update_one({"id": partner_id}, {"$set": data.model_dump()})
-    return await db.partners.find_one({"id": partner_id}, {"_id": 0})
+    await db.partners.update_one({"id": partner_id, **get_tenant_filter(current_user)}, {"$set": data.model_dump()})
+    return await db.partners.find_one({"id": partner_id, **get_tenant_filter(current_user)}, {"_id": 0})
 
 @router.delete("/partners/{partner_id}")
 async def delete_partner(partner_id: str, current_user: User = Depends(get_current_user)):
-    await db.partners.delete_one({"id": partner_id}); return {"message": "Partner deleted"}
+    await db.partners.delete_one({"id": partner_id, **get_tenant_filter(current_user)}); return {"message": "Partner deleted"}
 
 @router.get("/partner-transactions")
 async def get_partner_transactions(partner_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
@@ -210,21 +211,22 @@ async def get_partner_transactions(partner_id: Optional[str] = None, current_use
 
 @router.post("/partner-transactions")
 async def create_partner_transaction(data: PartnerTransactionCreate, current_user: User = Depends(get_current_user)):
-    partner = await db.partners.find_one({"id": data.partner_id}, {"_id": 0})
+    partner = await db.partners.find_one({"id": data.partner_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not partner: raise HTTPException(status_code=404, detail="Partner not found")
     txn = PartnerTransaction(**data.model_dump(), partner_name=partner["name"], created_by=current_user.id)
     t_dict = txn.model_dump(); t_dict["date"] = t_dict["date"].isoformat(); t_dict["created_at"] = t_dict["created_at"].isoformat()
     if t_dict.get("branch_id") == '': t_dict["branch_id"] = None
+    stamp_tenant(t_dict, current_user)
     await db.partner_transactions.insert_one(t_dict)
     return {k: v for k, v in t_dict.items() if k != '_id'}
 
 @router.delete("/partner-transactions/{txn_id}")
 async def delete_partner_transaction(txn_id: str, current_user: User = Depends(get_current_user)):
-    await db.partner_transactions.delete_one({"id": txn_id}); return {"message": "Transaction deleted"}
+    await db.partner_transactions.delete_one({"id": txn_id, **get_tenant_filter(current_user)}); return {"message": "Transaction deleted"}
 
 @router.post("/partners/{partner_id}/pay-salary")
 async def pay_partner_salary(partner_id: str, body: dict, current_user: User = Depends(get_current_user)):
-    partner = await db.partners.find_one({"id": partner_id}, {"_id": 0})
+    partner = await db.partners.find_one({"id": partner_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not partner: raise HTTPException(status_code=404, detail="Partner not found")
     amount = float(body.get("amount", partner.get("salary", 0))); period = body.get("period", ""); ptype = body.get("type", "salary")
     mode = body.get("payment_mode", "cash"); branch_id = body.get("branch_id") or None
@@ -237,19 +239,21 @@ async def pay_partner_salary(partner_id: str, body: dict, current_user: User = D
             pass
     txn = PartnerTransaction(partner_id=partner_id, partner_name=partner["name"], transaction_type="withdrawal" if ptype in ["salary", "advance"] else ptype, amount=amount, payment_mode=mode, branch_id=branch_id, description=f"{ptype.replace('_',' ').title()} - {period}", date=salary_date, created_by=current_user.id)
     t_dict = txn.model_dump(); t_dict["date"] = t_dict["date"].isoformat(); t_dict["created_at"] = t_dict["created_at"].isoformat()
+    stamp_tenant(t_dict, current_user)
     await db.partner_transactions.insert_one(t_dict)
-    if ptype == "advance": await db.partners.update_one({"id": partner_id}, {"$inc": {"loan_balance": amount}})
-    elif ptype == "loan_repayment": await db.partners.update_one({"id": partner_id}, {"$inc": {"loan_balance": -amount}})
+    if ptype == "advance": await db.partners.update_one({"id": partner_id, **get_tenant_filter(current_user)}, {"$inc": {"loan_balance": amount}})
+    elif ptype == "loan_repayment": await db.partners.update_one({"id": partner_id, **get_tenant_filter(current_user)}, {"$inc": {"loan_balance": -amount}})
     expense = Expense(category="partner_salary", description=f"Partner {ptype.title()} - {partner['name']} - {period}", amount=amount, payment_mode=mode, branch_id=branch_id, date=salary_date, created_by=current_user.id)
     e_dict = expense.model_dump(); e_dict["date"] = e_dict["date"].isoformat(); e_dict["created_at"] = e_dict["created_at"].isoformat()
+    stamp_tenant(e_dict, current_user)
     await db.expenses.insert_one(e_dict)
     return {"message": f"Partner {ptype} SAR {amount:.2f} recorded & added to expenses"}
 
 # Company Loans
 @router.get("/company-loans")
 async def get_company_loans(current_user: User = Depends(get_current_user)):
-    loans = await db.company_loans.find({}, {"_id": 0}).to_list(100)
-    payments = await db.company_loan_payments.find({}, {"_id": 0}).to_list(10000)
+    loans = await db.company_loans.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
+    payments = await db.company_loan_payments.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
     for l in loans:
         l["paid_amount"] = sum(p["amount"] for p in payments if p.get("loan_id") == l["id"])
         l["remaining"] = l["total_amount"] - l["paid_amount"]; l["status"] = "paid" if l["remaining"] <= 0 else "active"
@@ -261,25 +265,28 @@ async def get_company_loans(current_user: User = Depends(get_current_user)):
 async def create_company_loan(body: dict, current_user: User = Depends(get_current_user)):
     loan = CompanyLoan(lender=body["lender"], loan_type=body.get("loan_type", "bank"), total_amount=float(body["total_amount"]), monthly_payment=float(body.get("monthly_payment", 0)), interest_rate=float(body.get("interest_rate", 0)), branch_id=body.get("branch_id") or None, start_date=datetime.fromisoformat(body["start_date"]), notes=body.get("notes", ""))
     l_dict = loan.model_dump(); l_dict["start_date"] = l_dict["start_date"].isoformat(); l_dict["created_at"] = l_dict["created_at"].isoformat()
+    stamp_tenant(l_dict, current_user)
     await db.company_loans.insert_one(l_dict)
     return {k: v for k, v in l_dict.items() if k != '_id'}
 
 @router.post("/company-loans/{loan_id}/pay")
 async def pay_company_loan(loan_id: str, body: dict, current_user: User = Depends(get_current_user)):
-    loan = await db.company_loans.find_one({"id": loan_id}, {"_id": 0})
+    loan = await db.company_loans.find_one({"id": loan_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not loan: raise HTTPException(status_code=404, detail="Loan not found")
     amount = float(body["amount"]); mode = body.get("payment_mode", "bank"); branch_id = body.get("branch_id") or loan.get("branch_id")
     payment = CompanyLoanPayment(loan_id=loan_id, amount=amount, payment_mode=mode, branch_id=branch_id, date=datetime.now(timezone.utc), notes=body.get("notes", ""))
     p_dict = payment.model_dump(); p_dict["date"] = p_dict["date"].isoformat(); p_dict["created_at"] = p_dict["created_at"].isoformat()
+    stamp_tenant(p_dict, current_user)
     await db.company_loan_payments.insert_one(p_dict)
     expense = Expense(category="loan_repayment", description=f"Loan repayment - {loan['lender']}", amount=amount, payment_mode=mode, branch_id=branch_id, date=datetime.now(timezone.utc), created_by=current_user.id)
     e_dict = expense.model_dump(); e_dict["date"] = e_dict["date"].isoformat(); e_dict["created_at"] = e_dict["created_at"].isoformat()
+    stamp_tenant(e_dict, current_user)
     await db.expenses.insert_one(e_dict)
     return {"message": f"Loan payment SAR {amount:.2f} recorded"}
 
 @router.delete("/company-loans/{loan_id}")
 async def delete_company_loan(loan_id: str, current_user: User = Depends(get_current_user)):
-    await db.company_loans.delete_one({"id": loan_id}); return {"message": "Loan deleted"}
+    await db.company_loans.delete_one({"id": loan_id, **get_tenant_filter(current_user)}); return {"message": "Loan deleted"}
 
 @router.get("/company-loan-payments")
 async def get_loan_payments(loan_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
@@ -313,36 +320,38 @@ async def create_fine(data: FineCreate, current_user: User = Depends(get_current
         if f_dict.get(k): f_dict[k] = f_dict[k].isoformat()
     for k in ['branch_id', 'employee_id']:
         if f_dict.get(k) == '': f_dict[k] = None
+    stamp_tenant(f_dict, current_user)
     await db.fines.insert_one(f_dict)
     if data.employee_id:
-        emp = await db.employees.find_one({"id": data.employee_id}, {"_id": 0})
+        emp = await db.employees.find_one({"id": data.employee_id, **get_tenant_filter(current_user)}, {"_id": 0})
         if emp and emp.get("user_id"):
             msg = f"SAR {data.amount:.2f} fine ({data.fine_type}) from {data.department}. {data.description}"
             if data.deduct_from_salary and data.monthly_deduction: msg += f" | SAR {data.monthly_deduction:.2f}/month will be deducted from salary."
             n = Notification(user_id=emp["user_id"], title="Fine Charged to You", message=msg, type="fine_charged", related_id=fine.id)
             n_dict = n.model_dump(); n_dict["created_at"] = n_dict["created_at"].isoformat()
+            stamp_tenant(n_dict, current_user)
             await db.notifications.insert_one(n_dict)
     return {k: v for k, v in f_dict.items() if k != '_id'}
 
 @router.put("/fines/{fine_id}/pay")
 async def pay_fine(fine_id: str, body: dict, current_user: User = Depends(get_current_user)):
-    fine = await db.fines.find_one({"id": fine_id}, {"_id": 0})
+    fine = await db.fines.find_one({"id": fine_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not fine: raise HTTPException(status_code=404, detail="Fine not found")
     amount = float(body.get("amount", 0)); mode = body.get("payment_mode", "cash")
     new_paid = fine.get("paid_amount", 0) + amount; status = "paid" if new_paid >= fine["amount"] else "partial"
-    await db.fines.update_one({"id": fine_id}, {"$set": {"paid_amount": new_paid, "payment_status": status, "payment_mode": mode, "paid_date": datetime.now(timezone.utc).isoformat()}})
+    await db.fines.update_one({"id": fine_id, **get_tenant_filter(current_user)}, {"$set": {"paid_amount": new_paid, "payment_status": status, "payment_mode": mode, "paid_date": datetime.now(timezone.utc).isoformat()}})
     return {"message": "Fine payment recorded", "paid_amount": new_paid, "status": status}
 
 @router.delete("/fines/{fine_id}")
 async def delete_fine(fine_id: str, current_user: User = Depends(get_current_user)):
-    fine = await db.fines.find_one({"id": fine_id}, {"_id": 0})
+    fine = await db.fines.find_one({"id": fine_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not fine:
         raise HTTPException(status_code=404, detail="Fine not found")
     from routers.access_policies import check_delete_permission
     await check_delete_permission(current_user, "employees", fine.get("date"), f"Fine: {fine.get('employee_name', '')} - SAR {fine.get('amount', 0)}")
     if fine.get("file_path") and os.path.exists(fine["file_path"]):
         os.remove(fine["file_path"])
-    await db.fines.delete_one({"id": fine_id})
+    await db.fines.delete_one({"id": fine_id, **get_tenant_filter(current_user)})
     from routers.activity_logs import log_activity
     await log_activity(current_user, "delete", "fines", fine_id)
     return {"message": "Fine deleted"}
@@ -352,12 +361,12 @@ async def upload_fine_proof(fine_id: str, file: UploadFile = File(...), current_
     upload_dir = ROOT_DIR / "uploads" / "fines"; upload_dir.mkdir(parents=True, exist_ok=True)
     ext = Path(file.filename).suffix; file_path = upload_dir / f"{fine_id}{ext}"
     with open(file_path, "wb") as f: f.write(await file.read())
-    await db.fines.update_one({"id": fine_id}, {"$set": {"file_path": str(file_path), "file_name": file.filename}})
+    await db.fines.update_one({"id": fine_id, **get_tenant_filter(current_user)}, {"$set": {"file_path": str(file_path), "file_name": file.filename}})
     return {"message": "Proof uploaded", "file_name": file.filename}
 
 @router.get("/fines/{fine_id}/download")
 async def download_fine_proof(fine_id: str, current_user: User = Depends(get_current_user)):
-    fine = await db.fines.find_one({"id": fine_id}, {"_id": 0})
+    fine = await db.fines.find_one({"id": fine_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not fine or not fine.get("file_path"): raise HTTPException(status_code=404, detail="No file")
     if not os.path.exists(fine["file_path"]): raise HTTPException(status_code=404, detail="File missing")
     return FileResponse(fine["file_path"], filename=fine.get("file_name", "proof"))

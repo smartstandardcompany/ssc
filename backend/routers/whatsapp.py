@@ -8,7 +8,7 @@ import re
 import pandas as pd
 from twilio.rest import Client
 
-from database import db, get_current_user
+from database import db, get_current_user, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter()
@@ -54,7 +54,7 @@ async def send_whatsapp_message(message: str):
 # Test WhatsApp
 @router.post("/settings/whatsapp/test")
 async def test_whatsapp(current_user: User = Depends(get_current_user)):
-    config = await db.whatsapp_config.find_one({}, {"_id": 0})
+    config = await db.whatsapp_config.find_one(get_tenant_filter(current_user), {"_id": 0})
     if not config or not config.get("account_sid") or not config.get("auth_token"):
         raise HTTPException(status_code=400, detail="WhatsApp not configured")
     try:
@@ -73,12 +73,12 @@ async def test_whatsapp(current_user: User = Depends(get_current_user)):
 # Send daily sales report
 @router.post("/send-daily-report")
 async def send_daily_report(current_user: User = Depends(get_current_user)):
-    prefs = await db.notification_prefs.find_one({}, {"_id": 0}) or {}
+    prefs = await db.notification_prefs.find_one(get_tenant_filter(current_user), {"_id": 0}) or {}
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     today_end = today_start + timedelta(days=1)
     sales = await db.sales.find({"date": {"$gte": today_start.isoformat(), "$lt": today_end.isoformat()}}, {"_id": 0}).to_list(1000)
     expenses = await db.expenses.find({"date": {"$gte": today_start.isoformat(), "$lt": today_end.isoformat()}}, {"_id": 0}).to_list(1000)
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     total_sales = sum(s.get("final_amount", s["amount"]) for s in sales)
     total_expenses = sum(e["amount"] for e in expenses)
     branch_lines = ""
@@ -94,7 +94,7 @@ async def send_daily_report(current_user: User = Depends(get_current_user)):
         sent = await send_email_notification("SSC Track - Daily Sales Report", report)
         results.append(f"Email: {'sent' if sent else 'failed (check email settings)'}")
     if prefs.get("whatsapp_daily_sales"):
-        config = await db.whatsapp_config.find_one({}, {"_id": 0})
+        config = await db.whatsapp_config.find_one(get_tenant_filter(current_user), {"_id": 0})
         if config and config.get("account_sid") and config.get("auth_token"):
             try:
                 client = Client(config["account_sid"], config["auth_token"])
@@ -112,13 +112,13 @@ async def send_daily_report(current_user: User = Depends(get_current_user)):
 @router.post("/whatsapp/send-branch-report")
 async def send_branch_report_wa(body: dict, current_user: User = Depends(get_current_user)):
     branch_id = body.get("branch_id")
-    all_branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    all_branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     if branch_id:
         target_branches = [b for b in all_branches if b["id"] == branch_id]
     else:
         target_branches = all_branches
-    sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
-    expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
+    sales = await db.sales.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
     sp = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
     lines = ["SSC Track - Branch Report\n"]
     for br in target_branches:
@@ -171,10 +171,10 @@ async def send_whatsapp_to_number(body: dict, current_user: User = Depends(get_c
     branch_id = body.get("branch_id")
     if not phone:
         raise HTTPException(status_code=400, detail="Phone number required")
-    config = await db.whatsapp_config.find_one({}, {"_id": 0})
+    config = await db.whatsapp_config.find_one(get_tenant_filter(current_user), {"_id": 0})
     if not config or not config.get("account_sid") or not config.get("auth_token"):
         raise HTTPException(status_code=400, detail="WhatsApp not configured. Go to Settings -> WhatsApp to set up Twilio credentials.")
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     branch_map = {b["id"]: b["name"] for b in branches}
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     today_end = today_start + timedelta(days=1)
@@ -191,7 +191,7 @@ async def send_whatsapp_to_number(body: dict, current_user: User = Depends(get_c
         if branch_lines: msg += f"\nBranch Sales:\n{branch_lines}"
     elif report_type == "low_stock":
         query = {"branch_id": branch_id} if branch_id else {}
-        items = await db.items.find({}, {"_id": 0}).to_list(1000)
+        items = await db.items.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
         entries = await db.stock_entries.find(query, {"_id": 0}).to_list(10000)
         usage_records = await db.stock_usage.find(query, {"_id": 0}).to_list(10000)
         stock_in = {}
@@ -217,8 +217,8 @@ async def send_whatsapp_to_number(body: dict, current_user: User = Depends(get_c
         msg = f"*SSC Track - Expense Summary*\n{datetime.now().strftime('%d %b %Y')}\n\nTotal: SAR {total:,.2f}\n"
         if cat_lines: msg += f"\nBy Category:\n{cat_lines}"
     elif report_type == "branch_report":
-        sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
-        expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
+        sales = await db.sales.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
+        expenses = await db.expenses.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
         lines = ["*SSC Track - Branch Report*\n"]
         target = [b for b in branches if b["id"] == branch_id] if branch_id else branches
         for br in target:
@@ -256,10 +256,10 @@ async def send_whatsapp_to_number(body: dict, current_user: User = Depends(get_c
         msg += f"\n*Net Profit:* SAR {(ts - te - tsp):,.2f}\n"
         msg += f"*Cash in Hand:* SAR {(s_cash - sum(e['amount'] for e in expenses if e.get('payment_mode')=='cash') - sum(p['amount'] for p in sp if p.get('payment_mode')=='cash')):,.2f}"
     elif report_type == "partner_pnl":
-        partners = await db.partners.find({}, {"_id": 0}).to_list(100)
-        transactions_data = await db.partner_transactions.find({}, {"_id": 0}).to_list(10000)
-        sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
-        expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
+        partners = await db.partners.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
+        transactions_data = await db.partner_transactions.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
+        sales = await db.sales.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
+        expenses = await db.expenses.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
         sp = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
         total_rev = sum(s.get("final_amount", s["amount"]) for s in sales)
         total_exp = sum(e["amount"] for e in expenses)
@@ -286,7 +286,7 @@ async def send_whatsapp_to_number(body: dict, current_user: User = Depends(get_c
 
 @router.post("/whatsapp/send-supplier-report")
 async def send_supplier_report_wa(current_user: User = Depends(get_current_user)):
-    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+    suppliers = await db.suppliers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
     total_credit = sum(s.get("current_credit", 0) for s in suppliers)
     lines = [f"SSC Track - Supplier Report\n\nTotal Suppliers: {len(suppliers)}\nTotal Credit Due: SAR {total_credit:,.2f}\n"]
     for s in suppliers[:10]:
@@ -296,12 +296,11 @@ async def send_supplier_report_wa(current_user: User = Depends(get_current_user)
     if ok: return {"message": "Supplier report sent"}
     raise HTTPException(status_code=500, detail=err)
 
-
 # Send Low Stock Alert via WhatsApp
 @router.post("/whatsapp/send-low-stock-alert")
 async def send_low_stock_alert_wa(current_user: User = Depends(get_current_user)):
     """Send low stock alert notification via WhatsApp"""
-    items = await db.stock_items.find({}, {"_id": 0}).to_list(1000)
+    items = await db.stock_items.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
     low_stock_items = [i for i in items if i.get("current_stock", 0) <= i.get("min_stock", 0) and i.get("min_stock", 0) > 0]
     
     if not low_stock_items:
@@ -322,11 +321,11 @@ async def send_leave_notification_wa(body: dict, current_user: User = Depends(ge
     leave_id = body.get("leave_id")
     status = body.get("status", "approved")  # approved/rejected
     
-    leave = await db.leave_requests.find_one({"id": leave_id}, {"_id": 0})
+    leave = await db.leave_requests.find_one({"id": leave_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not leave:
         raise HTTPException(status_code=404, detail="Leave request not found")
     
-    employee = await db.employees.find_one({"id": leave.get("employee_id")}, {"_id": 0})
+    employee = await db.employees.find_one({"id": leave.get("employee_id"), **get_tenant_filter(current_user)}, {"_id": 0})
     emp_name = employee.get("name", "Employee") if employee else "Employee"
     emp_phone = employee.get("phone") if employee else None
     
@@ -338,7 +337,7 @@ async def send_leave_notification_wa(body: dict, current_user: User = Depends(ge
     
     # Send to employee if phone available
     if emp_phone:
-        config = await db.whatsapp_config.find_one({}, {"_id": 0})
+        config = await db.whatsapp_config.find_one(get_tenant_filter(current_user), {"_id": 0})
         if config and config.get("account_sid"):
             try:
                 client = Client(config["account_sid"], config["auth_token"])
@@ -360,7 +359,7 @@ async def send_salary_notification_wa(body: dict, current_user: User = Depends(g
     amount = body.get("amount", 0)
     period = body.get("period", "")
     
-    employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    employee = await db.employees.find_one({"id": employee_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     
@@ -370,7 +369,7 @@ async def send_salary_notification_wa(body: dict, current_user: User = Depends(g
     msg = f"💰 SSC Track - Salary Payment\n\nDear {emp_name},\n\nYour salary for {period} has been processed.\n\nAmount: SAR {amount:,.2f}\n\nPlease acknowledge receipt.\n\nThank you!"
     
     if emp_phone:
-        config = await db.whatsapp_config.find_one({}, {"_id": 0})
+        config = await db.whatsapp_config.find_one(get_tenant_filter(current_user), {"_id": 0})
         if config and config.get("account_sid"):
             try:
                 client = Client(config["account_sid"], config["auth_token"])
@@ -393,7 +392,7 @@ async def send_bulk_salary_notification_wa(body: dict, current_user: User = Depe
     
     employees = await db.employees.find({"id": {"$in": employee_ids}}, {"_id": 0}).to_list(500)
     
-    config = await db.whatsapp_config.find_one({}, {"_id": 0})
+    config = await db.whatsapp_config.find_one(get_tenant_filter(current_user), {"_id": 0})
     if not config or not config.get("account_sid"):
         raise HTTPException(status_code=400, detail="WhatsApp not configured")
     
@@ -425,7 +424,7 @@ async def send_custom_wa(body: dict, current_user: User = Depends(get_current_us
         raise HTTPException(status_code=400, detail="Message is required")
     
     if phone:
-        config = await db.whatsapp_config.find_one({}, {"_id": 0})
+        config = await db.whatsapp_config.find_one(get_tenant_filter(current_user), {"_id": 0})
         if not config or not config.get("account_sid"):
             raise HTTPException(status_code=400, detail="WhatsApp not configured")
         try:
@@ -438,7 +437,6 @@ async def send_custom_wa(body: dict, current_user: User = Depends(get_current_us
         ok, err = await send_whatsapp_message(message)
         if ok: return {"message": "Message sent to configured recipients"}
         raise HTTPException(status_code=500, detail=err)
-
 
 # =====================================================
 # WHATSAPP CHATBOT - Incoming Message Handler
@@ -632,7 +630,6 @@ Margin: {margin:.1f}%"""
     # Default response
     return "🤖 I didn't understand that. Type *help* to see available commands."
 
-
 # Twilio Webhook for incoming WhatsApp messages
 @router.post("/whatsapp/webhook")
 async def whatsapp_webhook(
@@ -689,7 +686,6 @@ async def whatsapp_webhook(
     # Return TwiML response (empty response to acknowledge receipt)
     return {"status": "processed"}
 
-
 # Get chatbot message history
 @router.get("/whatsapp/messages")
 async def get_whatsapp_messages(
@@ -704,7 +700,6 @@ async def get_whatsapp_messages(
     
     messages = await db.whatsapp_messages.find(query, {"_id": 0}).sort("timestamp", -1).limit(limit).to_list(limit)
     return messages
-
 
 # Test chatbot command (for debugging)
 @router.post("/whatsapp/test-command")

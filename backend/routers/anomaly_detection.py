@@ -5,11 +5,10 @@ from collections import defaultdict
 import uuid
 import math
 
-from database import db, get_current_user
+from database import db, get_current_user, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter()
-
 
 def _std_dev(values):
     """Calculate standard deviation."""
@@ -19,13 +18,11 @@ def _std_dev(values):
     variance = sum((x - mean) ** 2 for x in values) / len(values)
     return math.sqrt(variance)
 
-
 def _z_score(value, mean, std):
     """Calculate z-score."""
     if std == 0:
         return 0
     return (value - mean) / std
-
 
 def _severity(z):
     """Map z-score to severity level."""
@@ -37,7 +34,6 @@ def _severity(z):
     elif az >= 1.5:
         return "info"
     return None
-
 
 # =====================================================
 # SALES ANOMALIES
@@ -180,7 +176,6 @@ async def detect_sales_anomalies(days=90):
 
     return anomalies
 
-
 # =====================================================
 # EXPENSE ANOMALIES
 # =====================================================
@@ -285,7 +280,6 @@ async def detect_expense_anomalies(days=180):
 
     return anomalies
 
-
 # =====================================================
 # BANK RECONCILIATION ANOMALIES
 # =====================================================
@@ -387,7 +381,6 @@ async def detect_bank_anomalies():
 
     return anomalies
 
-
 # =====================================================
 # COMBINED ANOMALY API
 # =====================================================
@@ -422,6 +415,7 @@ async def run_anomaly_scan(
             "bank": len(bank_anomalies),
         },
     }
+    stamp_tenant(scan_record, current_user)
     await db.anomaly_scans.insert_one(scan_record)
     del scan_record["_id"]
 
@@ -430,13 +424,11 @@ async def run_anomaly_scan(
         "anomalies": all_anomalies,
     }
 
-
 @router.get("/anomaly-detection/history")
 async def get_anomaly_history(current_user: User = Depends(get_current_user)):
     """Get anomaly scan history."""
-    scans = await db.anomaly_scans.find({}, {"_id": 0}).sort("scanned_at", -1).to_list(20)
+    scans = await db.anomaly_scans.find(get_tenant_filter(current_user), {"_id": 0}).sort("scanned_at", -1).to_list(20)
     return scans
-
 
 # =====================================================
 # SCHEDULED AUTO-SCAN SETTINGS & JOB
@@ -445,7 +437,7 @@ async def get_anomaly_history(current_user: User = Depends(get_current_user)):
 @router.get("/anomaly-detection/schedule")
 async def get_schedule_settings(current_user: User = Depends(get_current_user)):
     """Get auto-scan schedule settings."""
-    settings = await db.anomaly_scan_settings.find_one({}, {"_id": 0})
+    settings = await db.anomaly_scan_settings.find_one(get_tenant_filter(current_user), {"_id": 0})
     if not settings:
         settings = {
             "enabled": False,
@@ -459,7 +451,6 @@ async def get_schedule_settings(current_user: User = Depends(get_current_user)):
             "last_auto_scan": None,
         }
     return settings
-
 
 @router.put("/anomaly-detection/schedule")
 async def update_schedule_settings(body: dict, current_user: User = Depends(get_current_user)):
@@ -481,7 +472,6 @@ async def update_schedule_settings(body: dict, current_user: User = Depends(get_
     _register_anomaly_job(settings)
 
     return settings
-
 
 def _register_anomaly_job(settings):
     """Register or remove the anomaly auto-scan scheduler job."""
@@ -511,7 +501,6 @@ def _register_anomaly_job(settings):
         await _run_auto_scan(settings)
 
     scheduler.add_job(_auto_scan_job, trigger, id=job_id, replace_existing=True)
-
 
 async def _run_auto_scan(settings=None):
     """Execute the auto-scan and send notifications if anomalies found."""
@@ -555,6 +544,7 @@ async def _run_auto_scan(settings=None):
         },
         "source": "auto",
     }
+
     await db.anomaly_scans.insert_one(scan_record)
     await db.anomaly_scan_settings.update_one({}, {"$set": {"last_auto_scan": now.isoformat()}})
 
@@ -625,11 +615,10 @@ async def _run_auto_scan(settings=None):
 
     logger.info(f"Auto-scan alert sent: {critical}C/{warning}W/{info}I via {channels}")
 
-
 @router.post("/anomaly-detection/test-scan")
 async def test_auto_scan(current_user: User = Depends(get_current_user)):
     """Manually trigger an auto-scan with notifications (for testing)."""
-    settings = await db.anomaly_scan_settings.find_one({}, {"_id": 0})
+    settings = await db.anomaly_scan_settings.find_one(get_tenant_filter(current_user), {"_id": 0})
     if not settings:
         settings = {"period_days": 90, "alert_threshold": "warning", "channels": ["push", "whatsapp"]}
     await _run_auto_scan(settings)

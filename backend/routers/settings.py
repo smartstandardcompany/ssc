@@ -8,7 +8,7 @@ from openpyxl.styles import Font, PatternFill
 import uuid
 import pandas as pd
 
-from database import db, get_current_user, ROOT_DIR, require_permission
+from database import db, get_current_user, ROOT_DIR, require_permission, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter()
@@ -16,20 +16,21 @@ router = APIRouter()
 # Company Settings
 @router.get("/settings/company")
 async def get_company_settings(current_user: User = Depends(get_current_user)):
-    settings = await db.company_settings.find_one({}, {"_id": 0})
+    settings = await db.company_settings.find_one(get_tenant_filter(current_user), {"_id": 0})
     return settings or {"company_name": "Smart Standard Company", "address_line1": "", "address_line2": "", "city": "", "country": "", "phone": "", "email": "", "cr_number": "", "vat_number": "", "vat_enabled": False, "vat_rate": 15}
 
 @router.post("/settings/company")
 async def save_company_settings(body: dict, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "settings", "write")
-    existing = await db.company_settings.find_one({})
+    existing = await db.company_settings.find_one(get_tenant_filter(current_user))
     data = {k: body.get(k, "") for k in ["company_name", "address_line1", "address_line2", "city", "country", "phone", "email", "cr_number", "vat_number"]}
     data["vat_enabled"] = body.get("vat_enabled", False)
     data["vat_rate"] = float(body.get("vat_rate", 15) or 15)
     data["updated_at"] = datetime.now(timezone.utc).isoformat()
     if existing:
-        await db.company_settings.update_one({}, {"$set": data})
+        await db.company_settings.update_one(get_tenant_filter(current_user), {"$set": data})
     else:
+        stamp_tenant(data, current_user)
         await db.company_settings.insert_one(data)
     # Log activity
     from routers.activity_logs import log_activity
@@ -49,14 +50,14 @@ async def upload_logo(file: UploadFile = File(...), current_user: User = Depends
 # Email Settings
 @router.get("/settings/email")
 async def get_email_settings(current_user: User = Depends(get_current_user)):
-    settings = await db.email_settings.find_one({}, {"_id": 0})
+    settings = await db.email_settings.find_one(get_tenant_filter(current_user), {"_id": 0})
     if settings and settings.get("password"):
         settings["password"] = "••••••••"
     return settings
 
 @router.post("/settings/email")
 async def save_email_settings(body: dict, current_user: User = Depends(get_current_user)):
-    existing = await db.email_settings.find_one({})
+    existing = await db.email_settings.find_one(get_tenant_filter(current_user))
     data = {
         "smtp_host": body.get("smtp_host", ""),
         "smtp_port": int(body.get("smtp_port", 587)),
@@ -72,6 +73,7 @@ async def save_email_settings(body: dict, current_user: User = Depends(get_curre
         await db.email_settings.update_one({}, {"$set": data})
     else:
         data["password"] = body.get("password", "")
+        stamp_tenant(data, current_user)
         await db.email_settings.insert_one(data)
     return {"message": "Email settings saved"}
 
@@ -79,7 +81,7 @@ async def save_email_settings(body: dict, current_user: User = Depends(get_curre
 async def test_email(body: dict, current_user: User = Depends(get_current_user)):
     import aiosmtplib
     from email.mime.text import MIMEText
-    settings = await db.email_settings.find_one({}, {"_id": 0})
+    settings = await db.email_settings.find_one(get_tenant_filter(current_user), {"_id": 0})
     if not settings or not settings.get("smtp_host"):
         raise HTTPException(status_code=400, detail="Email not configured. Save settings first.")
     try:
@@ -107,14 +109,14 @@ async def test_email(body: dict, current_user: User = Depends(get_current_user))
 # WhatsApp Settings
 @router.get("/settings/whatsapp")
 async def get_whatsapp_settings(current_user: User = Depends(get_current_user)):
-    settings = await db.whatsapp_config.find_one({}, {"_id": 0})
+    settings = await db.whatsapp_config.find_one(get_tenant_filter(current_user), {"_id": 0})
     if settings and settings.get("auth_token"):
         settings["auth_token"] = "••••••••"
     return settings
 
 @router.post("/settings/whatsapp")
 async def save_whatsapp_settings(body: dict, current_user: User = Depends(get_current_user)):
-    existing = await db.whatsapp_config.find_one({})
+    existing = await db.whatsapp_config.find_one(get_tenant_filter(current_user))
     data = {
         "account_sid": body.get("account_sid", ""),
         "phone_number": body.get("phone_number", ""),
@@ -128,13 +130,14 @@ async def save_whatsapp_settings(body: dict, current_user: User = Depends(get_cu
         await db.whatsapp_config.update_one({}, {"$set": data})
     else:
         data["auth_token"] = body.get("auth_token", "")
+        stamp_tenant(data, current_user)
         await db.whatsapp_config.insert_one(data)
     return {"message": "WhatsApp settings saved"}
 
 # Notification Preferences
 @router.get("/settings/notifications")
 async def get_notification_prefs(current_user: User = Depends(get_current_user)):
-    prefs = await db.notification_prefs.find_one({}, {"_id": 0})
+    prefs = await db.notification_prefs.find_one(get_tenant_filter(current_user), {"_id": 0})
     return prefs or {
         "email_daily_sales": False,
         "email_document_expiry": True,
@@ -145,7 +148,7 @@ async def get_notification_prefs(current_user: User = Depends(get_current_user))
 
 @router.post("/settings/notifications")
 async def save_notification_prefs(body: dict, current_user: User = Depends(get_current_user)):
-    existing = await db.notification_prefs.find_one({})
+    existing = await db.notification_prefs.find_one(get_tenant_filter(current_user))
     data = {
         "email_daily_sales": body.get("email_daily_sales", False),
         "email_document_expiry": body.get("email_document_expiry", True),
@@ -157,6 +160,7 @@ async def save_notification_prefs(body: dict, current_user: User = Depends(get_c
     if existing:
         await db.notification_prefs.update_one({}, {"$set": data})
     else:
+        stamp_tenant(data, current_user)
         await db.notification_prefs.insert_one(data)
     return {"message": "Notification preferences saved"}
 
@@ -175,7 +179,7 @@ async def backup_database(current_user: User = Depends(get_current_user)):
     for col_name in collections:
         try:
             col = db[col_name]
-            docs = await col.find({}, {"_id": 0}).to_list(100000)
+            docs = await col.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100000)
             backup_data["collections"][col_name] = docs
         except:
             backup_data["collections"][col_name] = []
@@ -214,26 +218,31 @@ async def import_data(file: UploadFile = File(...), data_type: str = Form(...), 
             if data_type == "customers":
                 doc = {"id": str(uuid.uuid4()), "name": str(clean.get("name", "")), "phone": str(clean.get("phone", "")) if clean.get("phone") else None, "email": str(clean.get("email", "")) if clean.get("email") else None, "branch_id": None, "created_at": datetime.now(timezone.utc).isoformat()}
                 if doc["name"]:
+                    stamp_tenant(doc, current_user)
                     await db.customers.insert_one(doc)
                     imported += 1
             elif data_type == "suppliers":
                 doc = {"id": str(uuid.uuid4()), "name": str(clean.get("name", "")), "category": str(clean.get("category", "")) if clean.get("category") else None, "phone": str(clean.get("phone", "")) if clean.get("phone") else None, "email": str(clean.get("email", "")) if clean.get("email") else None, "branch_id": None, "credit_limit": float(clean.get("credit_limit", 0) or 0), "current_credit": 0, "created_at": datetime.now(timezone.utc).isoformat()}
                 if doc["name"]:
+                    stamp_tenant(doc, current_user)
                     await db.suppliers.insert_one(doc)
                     imported += 1
             elif data_type == "employees":
                 doc = {"id": str(uuid.uuid4()), "name": str(clean.get("name", "")), "document_id": str(clean.get("document_id", "")) if clean.get("document_id") else None, "phone": str(clean.get("phone", "")) if clean.get("phone") else None, "email": str(clean.get("email", "")) if clean.get("email") else None, "position": str(clean.get("position", "")) if clean.get("position") else None, "salary": float(clean.get("salary", 0) or 0), "branch_id": None, "loan_balance": 0, "annual_leave_entitled": 30, "sick_leave_entitled": 15, "ticket_entitled": 1, "ticket_years": 2, "ticket_used": 0, "active": True, "created_at": datetime.now(timezone.utc).isoformat()}
                 if doc["name"]:
+                    stamp_tenant(doc, current_user)
                     await db.employees.insert_one(doc)
                     imported += 1
             elif data_type == "items":
                 doc = {"id": str(uuid.uuid4()), "name": str(clean.get("name", "")), "unit_price": float(clean.get("unit_price", clean.get("price", 0)) or 0), "category": str(clean.get("category", "")) if clean.get("category") else None, "active": True, "created_at": datetime.now(timezone.utc).isoformat()}
                 if doc["name"]:
+                    stamp_tenant(doc, current_user)
                     await db.items.insert_one(doc)
                     imported += 1
             elif data_type == "branches":
                 doc = {"id": str(uuid.uuid4()), "name": str(clean.get("name", "")), "location": str(clean.get("location", "")) if clean.get("location") else None, "created_at": datetime.now(timezone.utc).isoformat()}
                 if doc["name"]:
+                    stamp_tenant(doc, current_user)
                     await db.branches.insert_one(doc)
                     imported += 1
             elif data_type == "sales":
@@ -241,12 +250,14 @@ async def import_data(file: UploadFile = File(...), data_type: str = Form(...), 
                 disc = float(clean.get("discount", 0) or 0)
                 mode = str(clean.get("payment_mode", "cash") or "cash").lower()
                 doc = {"id": str(uuid.uuid4()), "sale_type": str(clean.get("sale_type", "branch")), "branch_id": None, "customer_id": None, "amount": amt, "discount": disc, "final_amount": amt - disc, "payment_details": [{"mode": mode, "amount": amt - disc}], "credit_amount": 0, "credit_received": 0, "date": str(clean.get("date", datetime.now(timezone.utc).isoformat())), "notes": str(clean.get("notes", "") or ""), "created_by": current_user.id, "created_at": datetime.now(timezone.utc).isoformat()}
+                stamp_tenant(doc, current_user)
                 await db.sales.insert_one(doc)
                 imported += 1
             elif data_type == "expenses_import":
                 amt = float(clean.get("amount", 0) or 0)
                 doc = {"id": str(uuid.uuid4()), "category": str(clean.get("category", "other")), "description": str(clean.get("description", "")), "amount": amt, "payment_mode": str(clean.get("payment_mode", "cash") or "cash"), "branch_id": None, "supplier_id": None, "date": str(clean.get("date", datetime.now(timezone.utc).isoformat())), "notes": "", "created_by": current_user.id, "created_at": datetime.now(timezone.utc).isoformat()}
                 if doc["description"]:
+                    stamp_tenant(doc, current_user)
                     await db.expenses.insert_one(doc)
                     imported += 1
         except Exception as e:
@@ -280,13 +291,11 @@ async def download_import_template(data_type: str, current_user: User = Depends(
     return StreamingResponse(buffer, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                              headers={"Content-Disposition": f"attachment; filename={data_type}_import_template.xlsx"})
 
-
-
 # ZATCA Phase 2 Settings
 @router.get("/settings/zatca")
 async def get_zatca_settings(current_user: User = Depends(get_current_user)):
     """Get ZATCA Phase 2 configuration"""
-    settings = await db.zatca_settings.find_one({}, {"_id": 0})
+    settings = await db.zatca_settings.find_one(get_tenant_filter(current_user), {"_id": 0})
     if settings:
         # Mask sensitive fields
         if settings.get("csid_secret"):
@@ -309,11 +318,10 @@ async def get_zatca_settings(current_user: User = Depends(get_current_user)):
         "invoice_counter": 1
     }
 
-
 @router.post("/settings/zatca")
 async def save_zatca_settings(body: dict, current_user: User = Depends(get_current_user)):
     """Save ZATCA Phase 2 configuration"""
-    existing = await db.zatca_settings.find_one({})
+    existing = await db.zatca_settings.find_one(get_tenant_filter(current_user))
     
     data = {
         "enabled": body.get("enabled", False),
@@ -350,15 +358,15 @@ async def save_zatca_settings(body: dict, current_user: User = Depends(get_curre
     if existing:
         await db.zatca_settings.update_one({}, {"$set": data})
     else:
+        stamp_tenant(data, current_user)
         await db.zatca_settings.insert_one(data)
     
     return {"message": "ZATCA settings saved successfully"}
 
-
 @router.post("/settings/zatca/test")
 async def test_zatca_connection(current_user: User = Depends(get_current_user)):
     """Test ZATCA API connection with stored credentials"""
-    settings = await db.zatca_settings.find_one({}, {"_id": 0})
+    settings = await db.zatca_settings.find_one(get_tenant_filter(current_user), {"_id": 0})
     
     if not settings:
         return {"success": False, "message": "No ZATCA settings configured"}
@@ -401,15 +409,14 @@ async def test_zatca_connection(current_user: User = Depends(get_current_user)):
         "note": "Full API test requires ZATCA SDK integration. Credentials appear to be properly formatted."
     }
 
-
 @router.get("/settings/zatca/status")
 async def get_zatca_status(current_user: User = Depends(get_current_user)):
     """Get ZATCA integration status summary"""
-    settings = await db.zatca_settings.find_one({}, {"_id": 0})
-    company = await db.company_settings.find_one({}, {"_id": 0})
+    settings = await db.zatca_settings.find_one(get_tenant_filter(current_user), {"_id": 0})
+    company = await db.company_settings.find_one(get_tenant_filter(current_user), {"_id": 0})
     
     # Count invoices with ZATCA data
-    total_invoices = await db.invoices.count_documents({})
+    total_invoices = await db.invoices.count_documents(get_tenant_filter(current_user))
     zatca_invoices = await db.invoices.count_documents({"uuid": {"$exists": True, "$ne": None}})
     submitted_invoices = await db.invoices.count_documents({"zatca_status": "submitted"})
     
@@ -451,11 +458,10 @@ async def get_zatca_status(current_user: User = Depends(get_current_user)):
         }
     }
 
-
 @router.post("/settings/zatca/check-expiry")
 async def check_csid_expiry(current_user: User = Depends(get_current_user)):
     """Check CSID expiry and send alerts if needed"""
-    settings = await db.zatca_settings.find_one({}, {"_id": 0})
+    settings = await db.zatca_settings.find_one(get_tenant_filter(current_user), {"_id": 0})
     
     if not settings or not settings.get("enabled"):
         return {"success": False, "message": "ZATCA not enabled"}
@@ -491,7 +497,6 @@ async def check_csid_expiry(current_user: User = Depends(get_current_user)):
         
     except ValueError:
         return {"success": False, "message": "Invalid expiry date format"}
-
 
 async def create_csid_expiry_notification(days_until_expiry: int, expiry_date: str, environment: str):
     """Create notification for CSID expiry"""
@@ -538,6 +543,7 @@ async def create_csid_expiry_notification(days_until_expiry: int, expiry_date: s
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
+
     await db.notifications.insert_one(notification)
     
     # Also try to send WhatsApp/Email if configured

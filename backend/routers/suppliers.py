@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import os
 import shutil
 
-from database import db, get_current_user, require_permission, get_branch_filter_with_global
+from database import db, get_current_user, require_permission, get_branch_filter_with_global, get_tenant_filter, stamp_tenant
 from models import User, Supplier, SupplierCreate, SupplierPayment, SupplierPaymentCreate, SupplierCreditPayment
 
 BILL_DIR = "/app/uploads/bills"
@@ -70,7 +70,7 @@ async def get_supplier_names(current_user: User = Depends(get_current_user)):
 async def recalculate_all_supplier_balances(current_user: User = Depends(get_current_user)):
     """Recalculate all supplier balances based on actual expenses and payments."""
     require_permission(current_user, "suppliers", "write")
-    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+    suppliers = await db.suppliers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
     all_credit_expenses = await db.expenses.find({"payment_mode": "credit", "supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(50000)
     all_payments = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(50000)
     
@@ -86,7 +86,7 @@ async def recalculate_all_supplier_balances(current_user: User = Depends(get_cur
         old_balance = supplier.get("current_credit", 0)
         
         if old_balance != correct_balance:
-            await db.suppliers.update_one({"id": sid}, {"$set": {"current_credit": correct_balance}})
+            await db.suppliers.update_one({"id": sid, **get_tenant_filter(current_user)}, {"$set": {"current_credit": correct_balance}})
             results.append({
                 "supplier_name": supplier["name"],
                 "old_balance": old_balance,
@@ -108,21 +108,22 @@ async def create_supplier(supplier_data: SupplierCreate, current_user: User = De
     supplier = Supplier(**data)
     supplier_dict = supplier.model_dump()
     supplier_dict["created_at"] = supplier_dict["created_at"].isoformat()
+    stamp_tenant(supplier_dict, current_user)
     await db.suppliers.insert_one(supplier_dict)
     return supplier
 
 @router.put("/suppliers/{supplier_id}", response_model=Supplier)
 async def update_supplier(supplier_id: str, supplier_data: SupplierCreate, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "suppliers", "write")
-    result = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
+    result = await db.suppliers.find_one({"id": supplier_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not result:
         raise HTTPException(status_code=404, detail="Supplier not found")
     update_data = supplier_data.model_dump()
     for f in ['branch_id', 'category', 'sub_category', 'phone', 'email']:
         if update_data.get(f) == '': update_data[f] = None
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    await db.suppliers.update_one({"id": supplier_id}, {"$set": update_data})
-    updated = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
+    await db.suppliers.update_one({"id": supplier_id, **get_tenant_filter(current_user)}, {"$set": update_data})
+    updated = await db.suppliers.find_one({"id": supplier_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if isinstance(updated.get('created_at'), str):
         updated['created_at'] = datetime.fromisoformat(updated['created_at'])
     return Supplier(**updated)
@@ -130,12 +131,12 @@ async def update_supplier(supplier_id: str, supplier_data: SupplierCreate, curre
 @router.delete("/suppliers/{supplier_id}")
 async def delete_supplier(supplier_id: str, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "suppliers", "write")
-    supplier = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
+    supplier = await db.suppliers.find_one({"id": supplier_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
     from routers.access_policies import check_delete_permission
     await check_delete_permission(current_user, "customers", supplier.get("created_at"), f"Supplier: {supplier.get('name', supplier_id[:8])}")
-    result = await db.suppliers.delete_one({"id": supplier_id})
+    result = await db.suppliers.delete_one({"id": supplier_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Supplier not found")
     from routers.activity_logs import log_activity
@@ -145,17 +146,18 @@ async def delete_supplier(supplier_id: str, current_user: User = Depends(get_cur
 @router.post("/suppliers/{supplier_id}/pay-credit")
 async def pay_supplier_credit(supplier_id: str, payment: SupplierCreditPayment, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "supplier_payments", "write")
-    supplier = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
+    supplier = await db.suppliers.find_one({"id": supplier_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
     if payment.amount > supplier["current_credit"]:
         raise HTTPException(status_code=400, detail="Payment amount exceeds current credit")
     new_credit = supplier["current_credit"] - payment.amount
-    await db.suppliers.update_one({"id": supplier_id}, {"$set": {"current_credit": new_credit}})
+    await db.suppliers.update_one({"id": supplier_id, **get_tenant_filter(current_user)}, {"$set": {"current_credit": new_credit}})
     payment_record = SupplierPayment(supplier_id=supplier_id, supplier_name=supplier["name"], amount=payment.amount, payment_mode=payment.payment_mode, branch_id=payment.branch_id, date=datetime.now(timezone.utc), notes=f"Credit payment - Remaining: SAR {new_credit:.2f}", created_by=current_user.id)
     payment_dict = payment_record.model_dump()
     payment_dict["date"] = payment_dict["date"].isoformat()
     payment_dict["created_at"] = payment_dict["created_at"].isoformat()
+    stamp_tenant(payment_dict, current_user)
     await db.supplier_payments.insert_one(payment_dict)
     return {"message": "Credit payment recorded", "remaining_credit": new_credit}
 
@@ -207,7 +209,7 @@ async def check_duplicate_supplier_payment(
 @router.post("/supplier-payments", response_model=SupplierPayment)
 async def create_supplier_payment(payment_data: SupplierPaymentCreate, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "supplier_payments", "write")
-    supplier = await db.suppliers.find_one({"id": payment_data.supplier_id}, {"_id": 0})
+    supplier = await db.suppliers.find_one({"id": payment_data.supplier_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
     if payment_data.payment_mode == "credit":
@@ -220,22 +222,23 @@ async def create_supplier_payment(payment_data: SupplierPaymentCreate, current_u
     payment_dict = payment.model_dump()
     payment_dict["date"] = payment_dict["date"].isoformat()
     payment_dict["created_at"] = payment_dict["created_at"].isoformat()
+    stamp_tenant(payment_dict, current_user)
     await db.supplier_payments.insert_one(payment_dict)
     if payment_data.payment_mode == "credit":
         new_credit = supplier.get("current_credit", 0) + payment_data.amount
-        await db.suppliers.update_one({"id": payment_data.supplier_id}, {"$set": {"current_credit": new_credit}})
+        await db.suppliers.update_one({"id": payment_data.supplier_id, **get_tenant_filter(current_user)}, {"$set": {"current_credit": new_credit}})
     elif payment_data.payment_mode in ("cash", "bank"):
         # Cash/bank payment to supplier reduces their credit balance
         current_credit = supplier.get("current_credit", 0)
         new_credit = max(0, current_credit - payment_data.amount)
-        await db.suppliers.update_one({"id": payment_data.supplier_id}, {"$set": {"current_credit": new_credit}})
+        await db.suppliers.update_one({"id": payment_data.supplier_id, **get_tenant_filter(current_user)}, {"$set": {"current_credit": new_credit}})
     return payment
 
 @router.delete("/supplier-payments/{payment_id}")
 async def delete_supplier_payment(payment_id: str, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "supplier_payments", "write")
     
-    payment = await db.supplier_payments.find_one({"id": payment_id}, {"_id": 0})
+    payment = await db.supplier_payments.find_one({"id": payment_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
     
@@ -247,7 +250,7 @@ async def delete_supplier_payment(payment_id: str, current_user: User = Depends(
     amount = payment.get("amount", 0)
     
     if supplier_id:
-        supplier = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
+        supplier = await db.suppliers.find_one({"id": supplier_id, **get_tenant_filter(current_user)}, {"_id": 0})
         if supplier:
             current_credit = supplier.get("current_credit", 0)
             
@@ -266,7 +269,7 @@ async def delete_supplier_payment(payment_id: str, current_user: User = Depends(
                 {"$set": {"current_credit": new_credit}}
             )
     
-    result = await db.supplier_payments.delete_one({"id": payment_id})
+    result = await db.supplier_payments.delete_one({"id": payment_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Payment not found")
     return {"message": "Payment deleted successfully", "supplier_balance_updated": True}
@@ -293,7 +296,7 @@ async def create_supplier_return(body: dict, current_user: User = Depends(get_cu
     if not supplier_id or amount <= 0:
         raise HTTPException(status_code=400, detail="Supplier and valid amount required")
     
-    supplier = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
+    supplier = await db.suppliers.find_one({"id": supplier_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
     
@@ -315,6 +318,7 @@ async def create_supplier_return(body: dict, current_user: User = Depends(get_cu
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     
+    stamp_tenant(return_record, current_user)
     await db.supplier_returns.insert_one(return_record)
     
     # Update supplier balance based on return type
@@ -326,12 +330,12 @@ async def create_supplier_return(body: dict, current_user: User = Depends(get_cu
     elif return_type == "credit_return":
         # Reduce the credit balance owed to supplier
         new_credit = max(0, current_credit - amount)
-        await db.suppliers.update_one({"id": supplier_id}, {"$set": {"current_credit": new_credit}})
+        await db.suppliers.update_one({"id": supplier_id, **get_tenant_filter(current_user)}, {"$set": {"current_credit": new_credit}})
         return_record["balance_change"] = f"Credit reduced from SAR {current_credit:.2f} to SAR {new_credit:.2f}"
     elif return_type == "full_invoice_return":
         # Full invoice return - reduce credit balance
         new_credit = max(0, current_credit - amount)
-        await db.suppliers.update_one({"id": supplier_id}, {"$set": {"current_credit": new_credit}})
+        await db.suppliers.update_one({"id": supplier_id, **get_tenant_filter(current_user)}, {"$set": {"current_credit": new_credit}})
         return_record["balance_change"] = f"Invoice returned. Credit reduced to SAR {new_credit:.2f}"
     
     return {k: v for k, v in return_record.items() if k != '_id'}
@@ -352,18 +356,18 @@ async def get_supplier_returns(supplier_id: str = None, current_user: User = Dep
 async def delete_supplier_return(return_id: str, current_user: User = Depends(get_current_user)):
     """Delete a supplier return and reverse balance changes"""
     require_permission(current_user, "supplier_payments", "write")
-    ret = await db.supplier_returns.find_one({"id": return_id}, {"_id": 0})
+    ret = await db.supplier_returns.find_one({"id": return_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not ret:
         raise HTTPException(status_code=404, detail="Return not found")
     
     # Reverse the balance change
     if ret.get("return_type") in ["credit_return", "full_invoice_return"]:
-        supplier = await db.suppliers.find_one({"id": ret["supplier_id"]}, {"_id": 0})
+        supplier = await db.suppliers.find_one({"id": ret["supplier_id"], **get_tenant_filter(current_user)}, {"_id": 0})
         if supplier:
             new_credit = supplier.get("current_credit", 0) + ret["amount"]
-            await db.suppliers.update_one({"id": ret["supplier_id"]}, {"$set": {"current_credit": new_credit}})
+            await db.suppliers.update_one({"id": ret["supplier_id"], **get_tenant_filter(current_user)}, {"$set": {"current_credit": new_credit}})
     
-    await db.supplier_returns.delete_one({"id": return_id})
+    await db.supplier_returns.delete_one({"id": return_id, **get_tenant_filter(current_user)})
     return {"message": "Return deleted and balance reversed"}
 
 
@@ -390,11 +394,11 @@ async def upload_bill_image(file: UploadFile = File(...), current_user: User = D
 
 @router.get("/suppliers/{supplier_id}/payment-breakdown")
 async def get_supplier_payment_breakdown(supplier_id: str, current_user: User = Depends(get_current_user)):
-    supplier = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
+    supplier = await db.suppliers.find_one({"id": supplier_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
     payments = await db.supplier_payments.find({"supplier_id": supplier_id}, {"_id": 0}).to_list(10000)
-    branches = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
+    branches = {b["id"]: b["name"] for b in await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)}
     total_cash = sum(p["amount"] for p in payments if p.get("payment_mode") == "cash")
     total_bank = sum(p["amount"] for p in payments if p.get("payment_mode") == "bank")
     total_credit = sum(p["amount"] for p in payments if p.get("payment_mode") == "credit")
@@ -407,9 +411,9 @@ async def get_supplier_payment_breakdown(supplier_id: str, current_user: User = 
 
 @router.get("/suppliers/payment-summaries")
 async def get_all_supplier_summaries(current_user: User = Depends(get_current_user)):
-    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+    suppliers = await db.suppliers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
     payments = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
-    branches = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
+    branches = {b["id"]: b["name"] for b in await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)}
     result = {}
     for sup in suppliers:
         sid = sup["id"]; sp = [p for p in payments if p.get("supplier_id") == sid]
@@ -427,7 +431,7 @@ async def get_all_supplier_summaries(current_user: User = Depends(get_current_us
 async def recalculate_supplier_balance(supplier_id: str, current_user: User = Depends(get_current_user)):
     """Recalculate supplier balance based on actual credit expenses and payments."""
     require_permission(current_user, "suppliers", "write")
-    supplier = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
+    supplier = await db.suppliers.find_one({"id": supplier_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
     
@@ -478,7 +482,7 @@ async def migrate_payments_to_bills(current_user: User = Depends(get_current_use
     import uuid
     
     # Get all supplier payments
-    payments = await db.supplier_payments.find({}, {"_id": 0}).to_list(50000)
+    payments = await db.supplier_payments.find(get_tenant_filter(current_user), {"_id": 0}).to_list(50000)
     
     if not payments:
         return {"message": "No supplier payments to migrate", "migrated": 0}
@@ -505,17 +509,18 @@ async def migrate_payments_to_bills(current_user: User = Depends(get_current_use
             }
             
             # Insert as expense
+            stamp_tenant(expense, current_user)
             await db.expenses.insert_one(expense)
             
             # Delete the old payment
-            await db.supplier_payments.delete_one({"id": payment["id"]})
+            await db.supplier_payments.delete_one({"id": payment["id"], **get_tenant_filter(current_user)})
             
             migrated_count += 1
         except Exception as e:
             errors.append({"payment_id": payment.get("id"), "error": str(e)})
     
     # Recalculate all supplier balances
-    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+    suppliers = await db.suppliers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
     all_credit_expenses = await db.expenses.find(
         {"payment_mode": "credit", "supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}
     ).to_list(50000)
@@ -532,7 +537,7 @@ async def migrate_payments_to_bills(current_user: User = Depends(get_current_use
         new_balance = max(0, total_credit - total_paid)
         old_balance = supplier.get("current_credit", 0)
         
-        await db.suppliers.update_one({"id": sid}, {"$set": {"current_credit": new_balance}})
+        await db.suppliers.update_one({"id": sid, **get_tenant_filter(current_user)}, {"$set": {"current_credit": new_balance}})
         
         if old_balance != new_balance:
             balance_updates.append({
@@ -556,7 +561,7 @@ async def preview_migration(current_user: User = Depends(get_current_user)):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    payments = await db.supplier_payments.find({}, {"_id": 0}).to_list(50000)
+    payments = await db.supplier_payments.find(get_tenant_filter(current_user), {"_id": 0}).to_list(50000)
     
     # Group by supplier
     by_supplier = {}
@@ -597,12 +602,12 @@ async def get_supplier_ledger(
     """
     require_permission(current_user, "suppliers", "read")
     
-    supplier = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
+    supplier = await db.suppliers.find_one({"id": supplier_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
     
     # Get branches for name lookup
-    branches = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
+    branches = {b["id"]: b["name"] for b in await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)}
     
     # Build date query
     date_query = {}
@@ -904,7 +909,7 @@ async def share_supplier_statement(
     """
     require_permission(current_user, "suppliers", "read")
     
-    supplier = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
+    supplier = await db.suppliers.find_one({"id": supplier_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
     
@@ -936,7 +941,7 @@ async def share_supplier_statement(
                 from email.mime.text import MIMEText
                 from email.mime.application import MIMEApplication
                 
-                email_settings = await db.email_settings.find_one({}, {"_id": 0})
+                email_settings = await db.email_settings.find_one(get_tenant_filter(current_user), {"_id": 0})
                 if not email_settings or not email_settings.get("smtp_host"):
                     results["email"] = {"success": False, "error": "Email not configured"}
                 else:
@@ -1002,7 +1007,7 @@ async def share_supplier_statement(
                 )
                 
                 # Try sending to specific number
-                config = await db.whatsapp_config.find_one({}, {"_id": 0})
+                config = await db.whatsapp_config.find_one(get_tenant_filter(current_user), {"_id": 0})
                 if not config or not config.get("account_sid"):
                     results["whatsapp"] = {"success": False, "error": "WhatsApp not configured"}
                 else:

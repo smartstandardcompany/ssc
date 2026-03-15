@@ -12,7 +12,7 @@ from pathlib import Path
 import uuid
 import os
 
-from database import db, get_current_user, ROOT_DIR, get_branch_filter_with_global
+from database import db, get_current_user, ROOT_DIR, get_branch_filter_with_global, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter()
@@ -75,7 +75,7 @@ async def get_asset_types(current_user: User = Depends(get_current_user)):
 @router.get("/assets/stats")
 async def get_asset_stats(current_user: User = Depends(get_current_user)):
     """Get asset statistics"""
-    assets = await db.assets.find({}, {"_id": 0}).to_list(1000)
+    assets = await db.assets.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
     now = datetime.now(timezone.utc)
     
     total_purchase_value = sum(a.get("purchase_price", 0) for a in assets)
@@ -137,7 +137,7 @@ async def get_asset_stats(current_user: User = Depends(get_current_user)):
 @router.get("/assets/depreciation-report")
 async def get_depreciation_report(current_user: User = Depends(get_current_user)):
     """Get detailed depreciation report for all assets"""
-    assets = await db.assets.find({}, {"_id": 0}).to_list(1000)
+    assets = await db.assets.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
     now = datetime.now(timezone.utc)
     
     report = []
@@ -252,6 +252,7 @@ async def create_asset(data: AssetCreate, current_user: User = Depends(get_curre
         if asset_dict.get(key) == "":
             asset_dict[key] = None
     
+    stamp_tenant(asset_dict, current_user)
     await db.assets.insert_one(asset_dict)
     return {k: v for k, v in asset_dict.items() if k != "_id"}
 
@@ -259,21 +260,21 @@ async def create_asset(data: AssetCreate, current_user: User = Depends(get_curre
 @router.put("/assets/{asset_id}")
 async def update_asset(asset_id: str, data: AssetUpdate, current_user: User = Depends(get_current_user)):
     """Update an asset"""
-    asset = await db.assets.find_one({"id": asset_id})
+    asset = await db.assets.find_one({"id": asset_id, **get_tenant_filter(current_user)})
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
     
     update_data = {k: v for k, v in data.model_dump().items() if v is not None}
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     
-    await db.assets.update_one({"id": asset_id}, {"$set": update_data})
-    return await db.assets.find_one({"id": asset_id}, {"_id": 0})
+    await db.assets.update_one({"id": asset_id, **get_tenant_filter(current_user)}, {"$set": update_data})
+    return await db.assets.find_one({"id": asset_id, **get_tenant_filter(current_user)}, {"_id": 0})
 
 
 @router.delete("/assets/{asset_id}")
 async def delete_asset(asset_id: str, current_user: User = Depends(get_current_user)):
     """Delete an asset"""
-    asset = await db.assets.find_one({"id": asset_id})
+    asset = await db.assets.find_one({"id": asset_id, **get_tenant_filter(current_user)})
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
     
@@ -281,14 +282,14 @@ async def delete_asset(asset_id: str, current_user: User = Depends(get_current_u
     if asset.get("file_path") and os.path.exists(asset["file_path"]):
         os.remove(asset["file_path"])
     
-    await db.assets.delete_one({"id": asset_id})
+    await db.assets.delete_one({"id": asset_id, **get_tenant_filter(current_user)})
     return {"message": "Asset deleted"}
 
 
 @router.post("/assets/{asset_id}/upload")
 async def upload_asset_document(asset_id: str, file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
     """Upload document/photo for an asset"""
-    asset = await db.assets.find_one({"id": asset_id})
+    asset = await db.assets.find_one({"id": asset_id, **get_tenant_filter(current_user)})
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
     
@@ -312,7 +313,7 @@ async def upload_asset_document(asset_id: str, file: UploadFile = File(...), cur
 @router.get("/assets/{asset_id}/download")
 async def download_asset_document(asset_id: str, current_user: User = Depends(get_current_user)):
     """Download asset document"""
-    asset = await db.assets.find_one({"id": asset_id})
+    asset = await db.assets.find_one({"id": asset_id, **get_tenant_filter(current_user)})
     if not asset or not asset.get("file_path"):
         raise HTTPException(status_code=404, detail="No file attached")
     if not os.path.exists(asset["file_path"]):
@@ -330,8 +331,8 @@ async def get_liabilities_summary(current_user: User = Depends(get_current_user)
     now = datetime.now(timezone.utc)
     
     # Get company loans
-    loans = await db.company_loans.find({}, {"_id": 0}).to_list(100)
-    loan_payments = await db.company_loan_payments.find({}, {"_id": 0}).to_list(10000)
+    loans = await db.company_loans.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
+    loan_payments = await db.company_loan_payments.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
     
     total_loan_amount = 0
     total_loan_paid = 0
@@ -357,7 +358,7 @@ async def get_liabilities_summary(current_user: User = Depends(get_current_user)
             })
     
     # Get unpaid fines
-    fines = await db.fines.find({}, {"_id": 0}).to_list(1000)
+    fines = await db.fines.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
     total_fines = 0
     total_fines_paid = 0
     unpaid_fines = 0
@@ -382,16 +383,16 @@ async def get_liabilities_summary(current_user: User = Depends(get_current_user)
             })
     
     # Get supplier dues
-    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(500)
+    suppliers = await db.suppliers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(500)
     total_supplier_dues = sum(s.get("balance", 0) for s in suppliers if s.get("balance", 0) > 0)
     suppliers_with_dues = sum(1 for s in suppliers if s.get("balance", 0) > 0)
     
     # Get customer credit (money owed TO us - shown for reference)
-    customers = await db.customers.find({}, {"_id": 0}).to_list(5000)
+    customers = await db.customers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(5000)
     total_customer_credit = sum(c.get("balance", 0) for c in customers if c.get("balance", 0) > 0)
     
     # Get expiring documents
-    documents = await db.documents.find({}, {"_id": 0}).to_list(1000)
+    documents = await db.documents.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
     expiring_docs = 0
     expired_docs = 0
     
@@ -448,7 +449,7 @@ async def get_liabilities_summary(current_user: User = Depends(get_current_user)
 @router.post("/assets/{asset_id}/maintenance")
 async def log_maintenance(asset_id: str, body: dict, current_user: User = Depends(get_current_user)):
     """Log maintenance activity for an asset"""
-    asset = await db.assets.find_one({"id": asset_id})
+    asset = await db.assets.find_one({"id": asset_id, **get_tenant_filter(current_user)})
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
     
@@ -465,11 +466,12 @@ async def log_maintenance(asset_id: str, body: dict, current_user: User = Depend
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
+    stamp_tenant(log_entry, current_user)
     await db.asset_maintenance.insert_one(log_entry)
     
     # Update asset status if specified
     if body.get("update_status"):
-        await db.assets.update_one({"id": asset_id}, {"$set": {"status": body.get("update_status")}})
+        await db.assets.update_one({"id": asset_id, **get_tenant_filter(current_user)}, {"$set": {"status": body.get("update_status")}})
     
     return {k: v for k, v in log_entry.items() if k != "_id"}
 

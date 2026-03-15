@@ -4,7 +4,7 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 import uuid
 
-from database import db, get_current_user
+from database import db, get_current_user, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter()
@@ -39,7 +39,6 @@ PRESET_TEMPLATES = {
     ],
 }
 
-
 class TaskReminderCreate(BaseModel):
     name: str
     message: str
@@ -51,7 +50,6 @@ class TaskReminderCreate(BaseModel):
     days_of_week: list = [0, 1, 2, 3, 4, 5, 6]  # 0=Mon..6=Sun
     channels: list = ["push", "in_app"]
     enabled: bool = True
-
 
 class TaskReminderUpdate(BaseModel):
     name: Optional[str] = None
@@ -65,19 +63,16 @@ class TaskReminderUpdate(BaseModel):
     channels: Optional[list] = None
     enabled: Optional[bool] = None
 
-
 @router.get("/task-reminders/presets")
 async def get_preset_templates(current_user: User = Depends(get_current_user)):
     """Get preset reminder templates grouped by role."""
     return PRESET_TEMPLATES
 
-
 @router.get("/task-reminders")
 async def list_task_reminders(current_user: User = Depends(get_current_user)):
     """List all task reminders."""
-    reminders = await db.task_reminders.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    reminders = await db.task_reminders.find(get_tenant_filter(current_user), {"_id": 0}).sort("created_at", -1).to_list(500)
     return reminders
-
 
 @router.post("/task-reminders")
 async def create_task_reminder(reminder: TaskReminderCreate, current_user: User = Depends(get_current_user)):
@@ -99,10 +94,10 @@ async def create_task_reminder(reminder: TaskReminderCreate, current_user: User 
         "created_by": current_user.id,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
+    stamp_tenant(doc, current_user)
     await db.task_reminders.insert_one(doc)
     del doc["_id"]
     return doc
-
 
 @router.post("/task-reminders/bulk")
 async def create_bulk_reminders(body: dict, current_user: User = Depends(get_current_user)):
@@ -136,16 +131,16 @@ async def create_bulk_reminders(body: dict, current_user: User = Depends(get_cur
             "created_by": current_user.id,
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
+        stamp_tenant(doc, current_user)
         await db.task_reminders.insert_one(doc)
         del doc["_id"]
         created.append(doc)
 
     return {"created": len(created), "reminders": created}
 
-
 @router.put("/task-reminders/{reminder_id}")
 async def update_task_reminder(reminder_id: str, update: TaskReminderUpdate, current_user: User = Depends(get_current_user)):
-    existing = await db.task_reminders.find_one({"id": reminder_id})
+    existing = await db.task_reminders.find_one({"id": reminder_id, **get_tenant_filter(current_user)})
     if not existing:
         raise HTTPException(status_code=404, detail="Reminder not found")
     updates = {}
@@ -154,17 +149,15 @@ async def update_task_reminder(reminder_id: str, update: TaskReminderUpdate, cur
         if val is not None:
             updates[field] = val
     if updates:
-        await db.task_reminders.update_one({"id": reminder_id}, {"$set": updates})
+        await db.task_reminders.update_one({"id": reminder_id, **get_tenant_filter(current_user)}, {"$set": updates})
     return {"message": "Updated"}
-
 
 @router.delete("/task-reminders/{reminder_id}")
 async def delete_task_reminder(reminder_id: str, current_user: User = Depends(get_current_user)):
-    result = await db.task_reminders.delete_one({"id": reminder_id})
+    result = await db.task_reminders.delete_one({"id": reminder_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Reminder not found")
     return {"message": "Deleted"}
-
 
 @router.post("/task-reminders/{reminder_id}/acknowledge")
 async def acknowledge_reminder(reminder_id: str, current_user: User = Depends(get_current_user)):
@@ -176,16 +169,15 @@ async def acknowledge_reminder(reminder_id: str, current_user: User = Depends(ge
         "employee_name": current_user.name,
         "acknowledged_at": datetime.now(timezone.utc).isoformat(),
     }
+    stamp_tenant(ack, current_user)
     await db.reminder_acknowledgements.insert_one(ack)
     return {"message": "Acknowledged"}
-
 
 @router.get("/task-reminders/history")
 async def get_reminder_history(limit: int = 50, current_user: User = Depends(get_current_user)):
     """Get recent reminder alert history."""
-    history = await db.reminder_alerts.find({}, {"_id": 0}).sort("sent_at", -1).to_list(limit)
+    history = await db.reminder_alerts.find(get_tenant_filter(current_user), {"_id": 0}).sort("sent_at", -1).to_list(limit)
     return history
-
 
 @router.get("/task-reminders/my-reminders")
 async def get_my_reminders(current_user: User = Depends(get_current_user)):
@@ -201,7 +193,7 @@ async def get_my_reminders(current_user: User = Depends(get_current_user)):
     # Get the job title name
     job_title_name = ""
     if job_title_id:
-        jt = await db.job_titles.find_one({"id": job_title_id}, {"_id": 0})
+        jt = await db.job_titles.find_one({"id": job_title_id, **get_tenant_filter(current_user)}, {"_id": 0})
         if jt:
             job_title_name = jt.get("title", "").lower()
 
@@ -232,7 +224,6 @@ async def get_my_reminders(current_user: User = Depends(get_current_user)):
 
     return my_reminders
 
-
 @router.get("/task-reminders/acknowledgements/{reminder_id}")
 async def get_acknowledgements(reminder_id: str, current_user: User = Depends(get_current_user)):
     """Get acknowledgement history for a specific reminder."""
@@ -241,7 +232,6 @@ async def get_acknowledgements(reminder_id: str, current_user: User = Depends(ge
     ).sort("acknowledged_at", -1).to_list(200)
     return acks
 
-
 @router.get("/task-reminders/compliance")
 async def get_compliance_dashboard(days: int = 30, current_user: User = Depends(get_current_user)):
     """Comprehensive compliance analytics for task reminders."""
@@ -249,11 +239,11 @@ async def get_compliance_dashboard(days: int = 30, current_user: User = Depends(
     now = datetime.now(timezone.utc)
     cutoff = (now - timedelta(days=days)).isoformat()
 
-    reminders = await db.task_reminders.find({}, {"_id": 0}).to_list(500)
+    reminders = await db.task_reminders.find(get_tenant_filter(current_user), {"_id": 0}).to_list(500)
     alerts = await db.reminder_alerts.find({"sent_at": {"$gte": cutoff}}, {"_id": 0}).to_list(50000)
     acks = await db.reminder_acknowledgements.find({"acknowledged_at": {"$gte": cutoff}}, {"_id": 0}).to_list(50000)
     employees = await db.employees.find({"status": {"$ne": "terminated"}}, {"_id": 0}).to_list(1000)
-    job_titles = await db.job_titles.find({}, {"_id": 0}).to_list(100)
+    job_titles = await db.job_titles.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     jt_map = {jt["id"]: jt.get("title", "") for jt in job_titles}
 
     # Build employee info map
@@ -389,7 +379,6 @@ async def get_compliance_dashboard(days: int = 30, current_user: User = Depends(
         "flagged_employees": flagged,
     }
 
-
 @router.post("/task-reminders/ai-generate")
 async def ai_generate_duties(body: dict, current_user: User = Depends(get_current_user)):
     """Use AI to generate a duty plan for a specific role or employee."""
@@ -457,9 +446,6 @@ Return ONLY a valid JSON array (no markdown):
         raise HTTPException(status_code=500, detail="AI returned invalid JSON. Please try again.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)[:200]}")
-
-
-
 
 async def process_task_reminders():
     """Called by scheduler - check and fire due reminders."""
@@ -552,6 +538,7 @@ async def process_task_reminders():
                     "read": False,
                     "created_at": now.isoformat()
                 }
+
                 await db.notifications.insert_one(notif)
 
             # Send push if configured and not in quiet hours
@@ -584,6 +571,7 @@ async def process_task_reminders():
             "employees_notified": len(target_employees),
             "sent_at": now.isoformat()
         }
+
         await db.reminder_alerts.insert_one(alert_log)
 
         # Update last triggered
@@ -591,7 +579,6 @@ async def process_task_reminders():
             {"id": r["id"]},
             {"$set": {"last_triggered": now.isoformat()}, "$inc": {"trigger_count": 1}}
         )
-
 
 async def _send_whatsapp_to_employee(phone: str, message: str):
     """Send WhatsApp message to a specific employee phone number."""
@@ -613,7 +600,6 @@ async def _send_whatsapp_to_employee(phone: str, message: str):
     except Exception:
         return False
 
-
 # ---- Employee Notification Endpoints ----
 
 @router.get("/my/notifications")
@@ -626,7 +612,6 @@ async def get_my_notifications(current_user: User = Depends(get_current_user)):
     unread = sum(1 for n in notifs if not n.get("read"))
     return {"notifications": notifs, "unread_count": unread}
 
-
 @router.put("/my/notifications/{notif_id}/read")
 async def mark_notification_read(notif_id: str, current_user: User = Depends(get_current_user)):
     """Mark a notification as read."""
@@ -638,7 +623,6 @@ async def mark_notification_read(notif_id: str, current_user: User = Depends(get
         raise HTTPException(status_code=404, detail="Notification not found")
     return {"message": "Marked as read"}
 
-
 @router.put("/my/notifications/read-all")
 async def mark_all_notifications_read(current_user: User = Depends(get_current_user)):
     """Mark all notifications as read."""
@@ -647,7 +631,6 @@ async def mark_all_notifications_read(current_user: User = Depends(get_current_u
         {"$set": {"read": True, "read_at": datetime.now(timezone.utc).isoformat()}}
     )
     return {"message": "All notifications marked as read"}
-
 
 # ---- Notification Preferences Endpoints ----
 
@@ -670,7 +653,6 @@ async def get_notification_preferences(current_user: User = Depends(get_current_
             "system_alerts": True,
         }
     return prefs
-
 
 @router.put("/my/notification-preferences")
 async def update_notification_preferences(body: dict, current_user: User = Depends(get_current_user)):

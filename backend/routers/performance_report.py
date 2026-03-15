@@ -3,7 +3,7 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 
-from database import db, get_current_user
+from database import db, get_current_user, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter()
@@ -36,8 +36,8 @@ async def get_performance_report(
     expenses = await db.expenses.find(q_current, {"_id": 0}).to_list(50000)
     prev_expenses = await db.expenses.find(q_prev, {"_id": 0}).to_list(50000)
     employees = await db.employees.find({"status": {"$ne": "terminated"}}, {"_id": 0}).to_list(1000)
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
-    job_titles = await db.job_titles.find({}, {"_id": 0}).to_list(100)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
+    job_titles = await db.job_titles.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     salary_payments = await db.salary_payments.find({"date": {"$gte": cutoff}}, {"_id": 0}).to_list(10000)
     supplier_payments = await db.supplier_payments.find(q_current, {"_id": 0}).to_list(10000)
 
@@ -135,7 +135,7 @@ async def get_performance_report(
         acks_by_employee[a.get("employee_id", "")] += 1
 
     emp_alert_count = defaultdict(int)
-    reminders = await db.task_reminders.find({}, {"_id": 0}).to_list(500)
+    reminders = await db.task_reminders.find(get_tenant_filter(current_user), {"_id": 0}).to_list(500)
     reminder_by_id = {r["id"]: r for r in reminders}
     for a in alerts:
         rid = a.get("reminder_id")

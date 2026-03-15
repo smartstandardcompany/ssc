@@ -9,7 +9,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
 from reportlab.lib.units import inch
 
-from database import db, get_current_user, ROOT_DIR, require_permission, get_branch_filter_with_global
+from database import db, get_current_user, ROOT_DIR, require_permission, get_branch_filter_with_global, get_tenant_filter, stamp_tenant
 from models import User, Customer, CustomerCreate
 
 router = APIRouter()
@@ -36,19 +36,20 @@ async def create_customer(customer_data: CustomerCreate, current_user: User = De
     customer = Customer(**customer_data.model_dump())
     customer_dict = customer.model_dump()
     customer_dict["created_at"] = customer_dict["created_at"].isoformat()
+    stamp_tenant(customer_dict, current_user)
     await db.customers.insert_one(customer_dict)
     return customer
 
 @router.put("/customers/{customer_id}", response_model=Customer)
 async def update_customer(customer_id: str, customer_data: CustomerCreate, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "customers", "write")
-    result = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    result = await db.customers.find_one({"id": customer_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not result:
         raise HTTPException(status_code=404, detail="Customer not found")
     update_data = customer_data.model_dump()
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    await db.customers.update_one({"id": customer_id}, {"$set": update_data})
-    updated = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    await db.customers.update_one({"id": customer_id, **get_tenant_filter(current_user)}, {"$set": update_data})
+    updated = await db.customers.find_one({"id": customer_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if isinstance(updated.get('created_at'), str):
         updated['created_at'] = datetime.fromisoformat(updated['created_at'])
     return Customer(**updated)
@@ -56,19 +57,19 @@ async def update_customer(customer_id: str, customer_data: CustomerCreate, curre
 @router.delete("/customers/{customer_id}")
 async def delete_customer(customer_id: str, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "customers", "write")
-    customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    customer = await db.customers.find_one({"id": customer_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
     from routers.access_policies import check_delete_permission
     await check_delete_permission(current_user, "customers", None, f"Customer: {customer.get('name', customer_id[:8])}")
-    result = await db.customers.delete_one({"id": customer_id})
+    result = await db.customers.delete_one({"id": customer_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Customer not found")
     return {"message": "Customer deleted successfully"}
 
 @router.get("/customers/{customer_id}/balance")
 async def get_customer_balance(customer_id: str, current_user: User = Depends(get_current_user)):
-    customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    customer = await db.customers.find_one({"id": customer_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
     sales = await db.sales.find({"customer_id": customer_id}, {"_id": 0}).to_list(10000)
@@ -84,13 +85,13 @@ async def get_customer_balance(customer_id: str, current_user: User = Depends(ge
 
 @router.get("/customers/{customer_id}/report")
 async def get_customer_report(customer_id: str, current_user: User = Depends(get_current_user)):
-    customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    customer = await db.customers.find_one({"id": customer_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
     sales = await db.sales.find({"customer_id": customer_id}, {"_id": 0}).sort("date", -1).to_list(10000)
     invoices_list = await db.invoices.find({"customer_id": customer_id}, {"_id": 0}).to_list(10000)
     inv_by_sale = {inv.get("sale_id"): inv for inv in invoices_list if inv.get("sale_id")}
-    branches = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
+    branches = {b["id"]: b["name"] for b in await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)}
     purchases = []
     for s in sales:
         payments_detail = [{"mode": p.get("mode",""), "amount": p.get("amount", 0)} for p in s.get("payment_details", [])]
@@ -102,12 +103,12 @@ async def get_customer_report(customer_id: str, current_user: User = Depends(get
 
 @router.get("/customers/{customer_id}/report/pdf")
 async def export_customer_report_pdf(customer_id: str, current_user: User = Depends(get_current_user)):
-    customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    customer = await db.customers.find_one({"id": customer_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
     sales = await db.sales.find({"customer_id": customer_id}, {"_id": 0}).sort("date", -1).to_list(10000)
-    branches = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
-    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    branches = {b["id"]: b["name"] for b in await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)}
+    company = await db.company_settings.find_one(get_tenant_filter(current_user), {"_id": 0}) or {}
     co_name = company.get("company_name", "Smart Standard Company")
     co_addr = ", ".join([p for p in [company.get("address_line1",""), company.get("city",""), company.get("country","")] if p])
     buffer = BytesIO()
@@ -149,8 +150,8 @@ async def export_customer_report_pdf(customer_id: str, current_user: User = Depe
 
 @router.get("/customers-balance")
 async def get_all_customers_balance(current_user: User = Depends(get_current_user)):
-    customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
-    sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+    customers = await db.customers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
+    sales = await db.sales.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
     result = []
     for customer in customers:
         cid = customer.get("id")
@@ -173,7 +174,7 @@ async def get_all_customers_balance(current_user: User = Depends(get_current_use
 @router.get("/loyalty/settings")
 async def get_loyalty_settings(current_user: User = Depends(get_current_user)):
     """Get loyalty program settings."""
-    settings = await db.loyalty_settings.find_one({}, {"_id": 0})
+    settings = await db.loyalty_settings.find_one(get_tenant_filter(current_user), {"_id": 0})
     if not settings:
         # Default settings
         settings = {
@@ -216,12 +217,12 @@ async def update_loyalty_settings(settings: dict, current_user: User = Depends(g
 @router.get("/customers/{customer_id}/loyalty")
 async def get_customer_loyalty(customer_id: str, current_user: User = Depends(get_current_user)):
     """Get customer's loyalty points and history."""
-    customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    customer = await db.customers.find_one({"id": customer_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
     
     # Get loyalty settings
-    settings = await db.loyalty_settings.find_one({}, {"_id": 0}) or {
+    settings = await db.loyalty_settings.find_one(get_tenant_filter(current_user), {"_id": 0}) or {
         "points_per_sar": 1, "sar_per_point": 0.1, "tier_levels": [
             {"name": "Bronze", "min_points": 0, "multiplier": 1.0},
             {"name": "Silver", "min_points": 500, "multiplier": 1.25},
@@ -272,11 +273,11 @@ async def get_customer_loyalty(customer_id: str, current_user: User = Depends(ge
 @router.post("/customers/{customer_id}/loyalty/earn")
 async def earn_loyalty_points(customer_id: str, body: dict, current_user: User = Depends(get_current_user)):
     """Add loyalty points for a purchase."""
-    customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    customer = await db.customers.find_one({"id": customer_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
     
-    settings = await db.loyalty_settings.find_one({}, {"_id": 0}) or {"points_per_sar": 1, "enabled": False}
+    settings = await db.loyalty_settings.find_one(get_tenant_filter(current_user), {"_id": 0}) or {"points_per_sar": 1, "enabled": False}
     
     if not settings.get("enabled", False):
         return {"message": "Loyalty program is not enabled", "points_earned": 0}
@@ -314,6 +315,7 @@ async def earn_loyalty_points(customer_id: str, body: dict, current_user: User =
         "created_at": datetime.now(timezone.utc).isoformat(),
         "created_by": current_user.id
     }
+    stamp_tenant(transaction, current_user)
     await db.loyalty_transactions.insert_one(transaction)
     
     return {
@@ -328,11 +330,11 @@ async def earn_loyalty_points(customer_id: str, body: dict, current_user: User =
 @router.post("/customers/{customer_id}/loyalty/redeem")
 async def redeem_loyalty_points(customer_id: str, body: dict, current_user: User = Depends(get_current_user)):
     """Redeem loyalty points for discount."""
-    customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    customer = await db.customers.find_one({"id": customer_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
     
-    settings = await db.loyalty_settings.find_one({}, {"_id": 0}) or {
+    settings = await db.loyalty_settings.find_one(get_tenant_filter(current_user), {"_id": 0}) or {
         "sar_per_point": 0.1, "min_redeem_points": 100, "enabled": False
     }
     
@@ -374,6 +376,7 @@ async def redeem_loyalty_points(customer_id: str, body: dict, current_user: User
         "created_at": datetime.now(timezone.utc).isoformat(),
         "created_by": current_user.id
     }
+    stamp_tenant(transaction, current_user)
     await db.loyalty_transactions.insert_one(transaction)
     
     return {
@@ -387,10 +390,10 @@ async def redeem_loyalty_points(customer_id: str, body: dict, current_user: User
 @router.get("/loyalty/leaderboard")
 async def get_loyalty_leaderboard(current_user: User = Depends(get_current_user)):
     """Get top customers by loyalty points."""
-    customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
-    transactions = await db.loyalty_transactions.find({}, {"_id": 0}).to_list(50000)
+    customers = await db.customers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
+    transactions = await db.loyalty_transactions.find(get_tenant_filter(current_user), {"_id": 0}).to_list(50000)
     
-    settings = await db.loyalty_settings.find_one({}, {"_id": 0}) or {
+    settings = await db.loyalty_settings.find_one(get_tenant_filter(current_user), {"_id": 0}) or {
         "sar_per_point": 0.1, 
         "tier_levels": [
             {"name": "Bronze", "min_points": 0},

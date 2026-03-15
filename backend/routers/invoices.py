@@ -4,7 +4,7 @@ import uuid
 import os
 from pathlib import Path
 
-from database import db, get_current_user, ROOT_DIR, require_permission, get_branch_filter
+from database import db, get_current_user, ROOT_DIR, require_permission, get_branch_filter, get_tenant_filter, stamp_tenant
 from models import User, Sale, Invoice, InvoiceCreate
 
 router = APIRouter()
@@ -87,7 +87,7 @@ async def create_invoice(data: InvoiceCreate, current_user: User = Depends(get_c
     require_permission(current_user, "invoices", "write")
     customer_name = None
     if data.customer_id:
-        cust = await db.customers.find_one({"id": data.customer_id}, {"_id": 0})
+        cust = await db.customers.find_one({"id": data.customer_id, **get_tenant_filter(current_user)}, {"_id": 0})
         customer_name = cust["name"] if cust else None
     items = []
     subtotal = 0
@@ -100,12 +100,12 @@ async def create_invoice(data: InvoiceCreate, current_user: User = Depends(get_c
     discount = data.discount or 0
     total = subtotal - discount
     # VAT calculation (ZATCA)
-    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one(get_tenant_filter(current_user), {"_id": 0}) or {}
     vat_enabled = company.get("vat_enabled", False)
     vat_rate = float(company.get("vat_rate", 15)) if vat_enabled else 0
     vat_amount = round(total * vat_rate / 100, 2) if vat_enabled else 0
     total_with_vat = round(total + vat_amount, 2)
-    count = await db.invoices.count_documents({})
+    count = await db.invoices.count_documents(get_tenant_filter(current_user))
     inv_number = f"INV-{count + 1:05d}"
     if data.payment_details:
         payment_details = data.payment_details
@@ -124,6 +124,7 @@ async def create_invoice(data: InvoiceCreate, current_user: User = Depends(get_c
     inv_dict = invoice.model_dump()
     inv_dict["date"] = inv_dict["date"].isoformat()
     inv_dict["created_at"] = inv_dict["created_at"].isoformat()
+    stamp_tenant(inv_dict, current_user)
     await db.invoices.insert_one(inv_dict)
     sale_total = total_with_vat if vat_enabled else total
     cash_bank_paid = sum(p["amount"] for p in payment_details if p.get("mode") in ["cash", "bank"])
@@ -140,8 +141,9 @@ async def create_invoice(data: InvoiceCreate, current_user: User = Depends(get_c
     sale_dict = sale.model_dump()
     sale_dict["date"] = sale_dict["date"].isoformat()
     sale_dict["created_at"] = sale_dict["created_at"].isoformat()
+    stamp_tenant(sale_dict, current_user)
     await db.sales.insert_one(sale_dict)
-    await db.invoices.update_one({"id": invoice.id}, {"$set": {"sale_id": sale.id}})
+    await db.invoices.update_one({"id": invoice.id, **get_tenant_filter(current_user)}, {"$set": {"sale_id": sale.id}})
     inv_dict["sale_id"] = sale.id
     return {k: v for k, v in inv_dict.items() if k != '_id'}
 
@@ -149,10 +151,10 @@ async def create_invoice(data: InvoiceCreate, current_user: User = Depends(get_c
 @router.get("/invoices/{invoice_id}/zatca-qr")
 async def get_zatca_qr(invoice_id: str, current_user: User = Depends(get_current_user)):
     """Generate ZATCA Phase 1 TLV QR code data for an invoice."""
-    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    inv = await db.invoices.find_one({"id": invoice_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not inv:
         raise HTTPException(status_code=404, detail="Invoice not found")
-    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one(get_tenant_filter(current_user), {"_id": 0}) or {}
     import base64
     import struct
     def tlv_encode(tag, value):
@@ -183,14 +185,14 @@ async def get_zatca_qr(invoice_id: str, current_user: User = Depends(get_current
 @router.get("/invoices/{invoice_id}/zatca-phase2")
 async def get_zatca_phase2(invoice_id: str, current_user: User = Depends(get_current_user)):
     """Generate ZATCA Phase 2 compliant XML and 9-tag QR code for an invoice."""
-    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    inv = await db.invoices.find_one({"id": invoice_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not inv:
         raise HTTPException(status_code=404, detail="Invoice not found")
     
-    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one(get_tenant_filter(current_user), {"_id": 0}) or {}
     customer = None
     if inv.get("customer_id"):
-        customer = await db.customers.find_one({"id": inv["customer_id"]}, {"_id": 0})
+        customer = await db.customers.find_one({"id": inv["customer_id"], **get_tenant_filter(current_user)}, {"_id": 0})
     
     from services.zatca_phase2 import get_zatca_service
     zatca_service = get_zatca_service(company)
@@ -224,7 +226,7 @@ async def get_zatca_phase2(invoice_id: str, current_user: User = Depends(get_cur
     
     # Save UUID to invoice if not present
     if not inv.get("uuid"):
-        await db.invoices.update_one({"id": invoice_id}, {"$set": {"uuid": result["uuid"]}})
+        await db.invoices.update_one({"id": invoice_id, **get_tenant_filter(current_user)}, {"$set": {"uuid": result["uuid"]}})
     
     return result
 
@@ -236,11 +238,11 @@ async def submit_to_zatca(invoice_id: str, current_user: User = Depends(get_curr
     Note: Actual submission requires CSID (Cryptographic Stamp Identifier) from ZATCA.
     This endpoint prepares the invoice for submission and returns the required data.
     """
-    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    inv = await db.invoices.find_one({"id": invoice_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not inv:
         raise HTTPException(status_code=404, detail="Invoice not found")
     
-    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one(get_tenant_filter(current_user), {"_id": 0}) or {}
     
     # Check required company settings for ZATCA submission
     required_fields = ["company_name", "vat_number"]
@@ -253,7 +255,7 @@ async def submit_to_zatca(invoice_id: str, current_user: User = Depends(get_curr
     
     customer = None
     if inv.get("customer_id"):
-        customer = await db.customers.find_one({"id": inv["customer_id"]}, {"_id": 0})
+        customer = await db.customers.find_one({"id": inv["customer_id"], **get_tenant_filter(current_user)}, {"_id": 0})
     
     from services.zatca_phase2 import get_zatca_service
     zatca_service = get_zatca_service(company)
@@ -279,7 +281,7 @@ async def submit_to_zatca(invoice_id: str, current_user: User = Depends(get_curr
     result = zatca_service.prepare_for_submission(invoice_data, customer_data)
     
     # Update invoice with ZATCA data
-    await db.invoices.update_one({"id": invoice_id}, {"$set": {
+    await db.invoices.update_one({"id": invoice_id, **get_tenant_filter(current_user)}, {"$set": {
         "uuid": result["uuid"],
         "zatca_qr_phase2": result["qr_code_base64"],
         "zatca_xml_hash": result["xml_hash"],
@@ -307,7 +309,7 @@ async def submit_to_zatca(invoice_id: str, current_user: User = Depends(get_curr
 
 @router.post("/invoices/{invoice_id}/upload-image")
 async def upload_invoice_image(invoice_id: str, file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
-    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    inv = await db.invoices.find_one({"id": invoice_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not inv:
         raise HTTPException(status_code=404, detail="Invoice not found")
     ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else 'png'
@@ -319,7 +321,7 @@ async def upload_invoice_image(invoice_id: str, file: UploadFile = File(...), cu
     with open(file_path, "wb") as f:
         f.write(content)
     image_url = f"/api/invoices/images/{filename}"
-    await db.invoices.update_one({"id": invoice_id}, {"$set": {"image_url": image_url}})
+    await db.invoices.update_one({"id": invoice_id, **get_tenant_filter(current_user)}, {"$set": {"image_url": image_url}})
     return {"message": "Image uploaded", "image_url": image_url}
 
 
@@ -334,7 +336,7 @@ async def get_invoice_image(filename: str):
 
 @router.delete("/invoices/{invoice_id}/image")
 async def delete_invoice_image(invoice_id: str, current_user: User = Depends(get_current_user)):
-    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    inv = await db.invoices.find_one({"id": invoice_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not inv:
         raise HTTPException(status_code=404, detail="Invoice not found")
     if inv.get("image_url"):
@@ -342,20 +344,20 @@ async def delete_invoice_image(invoice_id: str, current_user: User = Depends(get
         file_path = UPLOAD_DIR / filename
         if file_path.exists():
             file_path.unlink()
-    await db.invoices.update_one({"id": invoice_id}, {"$set": {"image_url": None}})
+    await db.invoices.update_one({"id": invoice_id, **get_tenant_filter(current_user)}, {"$set": {"image_url": None}})
     return {"message": "Image removed"}
 
 
 @router.delete("/invoices/{invoice_id}")
 async def delete_invoice(invoice_id: str, current_user: User = Depends(get_current_user)):
-    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    inv = await db.invoices.find_one({"id": invoice_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not inv:
         raise HTTPException(status_code=404, detail="Invoice not found")
     from routers.access_policies import check_delete_permission
     await check_delete_permission(current_user, "invoices", inv.get("created_at"), f"Invoice #{inv.get('invoice_number', invoice_id[:8])}")
     if inv.get("sale_id"):
-        await db.sales.delete_one({"id": inv["sale_id"]})
-    result = await db.invoices.delete_one({"id": invoice_id})
+        await db.sales.delete_one({"id": inv["sale_id"], **get_tenant_filter(current_user)})
+    result = await db.invoices.delete_one({"id": invoice_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Invoice not found")
     return {"message": "Invoice and linked sale deleted"}

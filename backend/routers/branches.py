@@ -2,14 +2,15 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Optional
 from datetime import datetime, timezone
 
-from database import db, get_current_user, require_permission
+from database import db, get_current_user, require_permission, get_tenant_filter, stamp_tenant
 from models import User, Branch, BranchCreate, CashTransfer, CashTransferCreate, BranchPayback
 
 router = APIRouter()
 
 @router.get("/branches", response_model=List[Branch])
 async def get_branches(current_user: User = Depends(get_current_user)):
-    branches = await db.branches.find({}, {"_id": 0}).to_list(1000)
+    tf = get_tenant_filter(current_user)
+    branches = await db.branches.find(tf, {"_id": 0}).to_list(1000)
     for branch in branches:
         if isinstance(branch.get('created_at'), str):
             branch['created_at'] = datetime.fromisoformat(branch['created_at'])
@@ -21,16 +22,17 @@ async def create_branch(branch_data: BranchCreate, current_user: User = Depends(
     branch = Branch(**branch_data.model_dump())
     branch_dict = branch.model_dump()
     branch_dict["created_at"] = branch_dict["created_at"].isoformat()
+    stamp_tenant(branch_dict, current_user)
     await db.branches.insert_one(branch_dict)
     return branch
 
 @router.put("/branches/{branch_id}", response_model=Branch)
 async def update_branch(branch_id: str, branch_data: BranchCreate, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "branches", "write")
-    result = await db.branches.find_one({"id": branch_id}, {"_id": 0})
+    result = await db.branches.find_one({"id": branch_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not result:
         raise HTTPException(status_code=404, detail="Branch not found")
-    await db.branches.update_one({"id": branch_id}, {"$set": branch_data.model_dump()})
+    await db.branches.update_one({"id": branch_id, **get_tenant_filter(current_user)}, {"$set": branch_data.model_dump()})
     updated = await db.branches.find_one({"id": branch_id}, {"_id": 0})
     if isinstance(updated.get('created_at'), str):
         updated['created_at'] = datetime.fromisoformat(updated['created_at'])
@@ -38,19 +40,20 @@ async def update_branch(branch_id: str, branch_data: BranchCreate, current_user:
 
 @router.delete("/branches/{branch_id}")
 async def delete_branch(branch_id: str, current_user: User = Depends(get_current_user)):
-    result = await db.branches.delete_one({"id": branch_id})
+    result = await db.branches.delete_one({"id": branch_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Branch not found")
     return {"message": "Branch deleted successfully"}
 
 @router.get("/branches/{branch_id}/summary")
 async def get_branch_summary(branch_id: str, current_user: User = Depends(get_current_user)):
-    branch = await db.branches.find_one({"id": branch_id}, {"_id": 0})
+    branch = await db.branches.find_one({"id": branch_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not branch:
         raise HTTPException(status_code=404, detail="Branch not found")
-    sales = await db.sales.find({"branch_id": branch_id}, {"_id": 0}).to_list(10000)
-    expenses = await db.expenses.find({"branch_id": branch_id}, {"_id": 0}).to_list(10000)
-    sp = await db.supplier_payments.find({"branch_id": branch_id, "supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
+    tf = get_tenant_filter(current_user)
+    sales = await db.sales.find({"branch_id": branch_id, **tf}, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find({"branch_id": branch_id, **tf}, {"_id": 0}).to_list(10000)
+    sp = await db.supplier_payments.find({"branch_id": branch_id, "supplier_id": {"$exists": True, "$ne": None}, **tf}, {"_id": 0}).to_list(10000)
     total_sales = sum(s.get("final_amount", s.get("amount", 0)) for s in sales)
     cash_sales = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "cash")
     bank_sales = sum(p["amount"] for s in sales for p in s.get("payment_details", []) if p.get("mode") == "bank")
@@ -65,7 +68,7 @@ async def get_branch_summary(branch_id: str, current_user: User = Depends(get_cu
     for e in expenses:
         cat = e.get("category", "other")
         exp_categories[cat] = exp_categories.get(cat, 0) + e["amount"]
-    recs = await db.recurring_expenses.find({"$or": [{"branch_id": branch_id}, {"branch_id": None}]}, {"_id": 0}).to_list(100)
+    recs = await db.recurring_expenses.find({"$or": [{"branch_id": branch_id}, {"branch_id": None}], **tf}, {"_id": 0}).to_list(100)
     monthly_fixed = sum(r["amount"] for r in recs if r.get("frequency") == "monthly")
     return {
         "branch_id": branch_id, "branch_name": branch["name"],
@@ -87,7 +90,7 @@ async def get_cash_transfers(
     limit: int = 100,
     current_user: User = Depends(get_current_user)
 ):
-    query = {}
+    query = get_tenant_filter(current_user)
     total = await db.cash_transfers.count_documents(query)
     skip = (page - 1) * limit
     transfers = await db.cash_transfers.find(query, {"_id": 0}).sort("date", -1).skip(skip).limit(limit).to_list(limit)
@@ -99,7 +102,7 @@ async def get_cash_transfers(
 
 @router.post("/cash-transfers")
 async def create_cash_transfer(data: CashTransferCreate, current_user: User = Depends(get_current_user)):
-    branches = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
+    branches = {b["id"]: b["name"] for b in await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)}
     from_name = branches.get(data.from_branch_id, "Office") if data.from_branch_id else "Office"
     to_name = branches.get(data.to_branch_id, "Office") if data.to_branch_id else "Office"
     transfer = CashTransfer(**data.model_dump(), from_branch_name=from_name, to_branch_name=to_name, created_by=current_user.id)
@@ -109,12 +112,13 @@ async def create_cash_transfer(data: CashTransferCreate, current_user: User = De
     for f in ['from_branch_id', 'to_branch_id']:
         if t_dict.get(f) == '':
             t_dict[f] = None
+    stamp_tenant(t_dict, current_user)
     await db.cash_transfers.insert_one(t_dict)
     return {k: v for k, v in t_dict.items() if k != '_id'}
 
 @router.delete("/cash-transfers/{transfer_id}")
 async def delete_cash_transfer(transfer_id: str, current_user: User = Depends(get_current_user)):
-    result = await db.cash_transfers.delete_one({"id": transfer_id})
+    result = await db.cash_transfers.delete_one({"id": transfer_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Transfer not found")
     return {"message": "Transfer deleted"}
@@ -122,7 +126,7 @@ async def delete_cash_transfer(transfer_id: str, current_user: User = Depends(ge
 # Branch Payback Routes
 @router.get("/branch-paybacks")
 async def get_branch_paybacks(current_user: User = Depends(get_current_user)):
-    paybacks = await db.branch_paybacks.find({}, {"_id": 0}).sort("date", -1).to_list(1000)
+    paybacks = await db.branch_paybacks.find(get_tenant_filter(current_user), {"_id": 0}).sort("date", -1).to_list(1000)
     for p in paybacks:
         for f in ['date', 'created_at']:
             if isinstance(p.get(f), str): p[f] = datetime.fromisoformat(p[f])
@@ -130,7 +134,7 @@ async def get_branch_paybacks(current_user: User = Depends(get_current_user)):
 
 @router.post("/branch-paybacks")
 async def create_branch_payback(body: dict, current_user: User = Depends(get_current_user)):
-    branches = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
+    branches = {b["id"]: b["name"] for b in await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)}
     payback = BranchPayback(
         from_branch_id=body["from_branch_id"], to_branch_id=body["to_branch_id"],
         from_branch_name=branches.get(body["from_branch_id"], "?"), to_branch_name=branches.get(body["to_branch_id"], "?"),
@@ -140,5 +144,6 @@ async def create_branch_payback(body: dict, current_user: User = Depends(get_cur
     p_dict = payback.model_dump()
     p_dict["date"] = p_dict["date"].isoformat()
     p_dict["created_at"] = p_dict["created_at"].isoformat()
+    stamp_tenant(p_dict, current_user)
     await db.branch_paybacks.insert_one(p_dict)
     return {k: v for k, v in p_dict.items() if k != '_id'}

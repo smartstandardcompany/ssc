@@ -2,16 +2,17 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
 from datetime import datetime, timezone, timedelta
 
-from database import db, get_current_user, get_branch_filter
+from database import db, get_current_user, get_branch_filter, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter()
 
 @router.get("/dashboard/stats")
 async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None, current_user: User = Depends(get_current_user)):
-    query = {}
-    exp_query = {}
-    sp_query = {"supplier_id": {"$exists": True, "$ne": None}}
+    tf = get_tenant_filter(current_user)
+    query = {**tf}
+    exp_query = {**tf}
+    sp_query = {"supplier_id": {"$exists": True, "$ne": None}, **tf}
 
     if branch_ids:
         bid_list = [b.strip() for b in branch_ids.split(",") if b.strip()]
@@ -96,7 +97,7 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
     expense_by_category = {r["_id"] or "other": r["total"] for r in cat_agg}
 
     # Supplier dues using aggregation (filtered by branch)
-    sup_dues_query = {}
+    sup_dues_query = {**tf}
     if branch_ids:
         bid_list = [b.strip() for b in branch_ids.split(",") if b.strip()]
         if bid_list:
@@ -107,7 +108,7 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
     sup_dues_agg = await db.suppliers.aggregate(sup_dues_pipeline).to_list(1)
     supplier_dues = sup_dues_agg[0]["total"] if sup_dues_agg else 0
 
-    recurring = await db.recurring_expenses.find({"active": True}, {"_id": 0}).to_list(100)
+    recurring = await db.recurring_expenses.find({"active": True, **tf}, {"_id": 0}).to_list(100)
     now = datetime.now(timezone.utc)
     upcoming_expenses = []
     for r in recurring:
@@ -121,7 +122,7 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
             if days_left <= r.get("alert_days", 7):
                 upcoming_expenses.append({"name": r["name"], "category": r.get("category", ""), "amount": r["amount"], "due_date": due.isoformat(), "days_left": days_left})
 
-    transfers = await db.cash_transfers.find({}, {"_id": 0}).to_list(10000)
+    transfers = await db.cash_transfers.find(tf, {"_id": 0}).to_list(10000)
     branch_dues = {}
     for t in transfers:
         from_b = t.get("from_branch_name", "Office")
@@ -135,8 +136,8 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
     pms = prev_month_start.isoformat()
     pme = prev_month_end.isoformat()
 
-    prev_sales_q = {"date": {"$gte": pms, "$lte": pme}}
-    prev_exp_q = {"date": {"$gte": pms, "$lte": pme}}
+    prev_sales_q = {"date": {"$gte": pms, "$lte": pme}, **tf}
+    prev_exp_q = {"date": {"$gte": pms, "$lte": pme}, **tf}
     if branch_ids:
         bid_list = [b.strip() for b in branch_ids.split(",") if b.strip()]
         if bid_list:
@@ -150,7 +151,7 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
     prev_total_expenses = sum(e["amount"] for e in prev_expenses)
     prev_net = prev_total_sales - prev_total_expenses
 
-    fines_query = {"payment_status": {"$ne": "paid"}}
+    fines_query = {"payment_status": {"$ne": "paid"}, **tf}
     if branch_ids:
         bid_list = [b.strip() for b in branch_ids.split(",") if b.strip()]
         if bid_list:
@@ -163,7 +164,7 @@ async def get_dashboard_stats(branch_ids: Optional[str] = None, start_date: Opti
 
     # Branch loss alerts - use aggregation for expenses and supplier payments per branch
     branch_alerts_list = []
-    all_branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    all_branches = await db.branches.find(tf, {"_id": 0}).to_list(100)
     
     # Get per-branch expense totals
     br_exp_pipeline = [{"$match": exp_query}, {"$group": {"_id": "$branch_id", "total": {"$sum": "$amount"}}}]
@@ -250,7 +251,7 @@ async def get_period_compare(period: str = "day", branch_ids: Optional[str] = No
         else:
             prev_start = curr_start.replace(month=curr_start.month - 1)
 
-    query = {}
+    query = {**get_tenant_filter(current_user)}
     if branch_ids:
         bid_list = [b.strip() for b in branch_ids.split(",") if b.strip()]
         if bid_list:
@@ -327,7 +328,7 @@ async def get_today_vs_yesterday(branch_ids: Optional[str] = None, current_user:
     yest_start = (now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)).isoformat()
     yest_end = today_start
 
-    query = {}
+    query = {**get_tenant_filter(current_user)}
     if branch_ids:
         bid_list = [b.strip() for b in branch_ids.split(",") if b.strip()]
         if bid_list:
@@ -384,10 +385,11 @@ async def get_live_analytics(current_user: User = Depends(get_current_user)):
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
     today_end = (now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)).isoformat()
 
-    sales = await db.sales.find({"date": {"$gte": today_start, "$lt": today_end}}, {"_id": 0}).sort("created_at", -1).to_list(5000)
-    expenses = await db.expenses.find({"date": {"$gte": today_start, "$lt": today_end}}, {"_id": 0}).to_list(5000)
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
-    users = await db.users.find({}, {"_id": 0}).to_list(500)
+    tf = get_tenant_filter(current_user)
+    sales = await db.sales.find({"date": {"$gte": today_start, "$lt": today_end}, **tf}, {"_id": 0}).sort("created_at", -1).to_list(5000)
+    expenses = await db.expenses.find({"date": {"$gte": today_start, "$lt": today_end}, **tf}, {"_id": 0}).to_list(5000)
+    branches = await db.branches.find(tf, {"_id": 0}).to_list(100)
+    users = await db.users.find(tf, {"_id": 0}).to_list(500)
     branch_map = {b["id"]: b["name"] for b in branches}
     user_map = {u["id"]: u["name"] for u in users}
 
@@ -536,7 +538,8 @@ async def get_daily_summary(
     next_day = (datetime.strptime(target_date, "%Y-%m-%d") + td(days=1)).strftime("%Y-%m-%d")
     date_end = f"{next_day}T00:00:00"
     
-    base_query = {"date": {"$gte": date_start, "$lt": date_end}}
+    tf = get_tenant_filter(current_user)
+    base_query = {"date": {"$gte": date_start, "$lt": date_end}, **tf}
     
     # Apply branch filter for sales
     sale_query = dict(base_query)
@@ -550,12 +553,12 @@ async def get_daily_summary(
         exp_query = {"date": {"$gte": date_start, "$lt": date_end}, "$or": [
             {"branch_id": branch_id},
             {"expense_for_branch_id": branch_id}
-        ]}
+        ], **tf}
     elif current_user.branch_id and current_user.role != "admin":
         exp_query = {"date": {"$gte": date_start, "$lt": date_end}, "$or": [
             {"branch_id": current_user.branch_id},
             {"expense_for_branch_id": current_user.branch_id}
-        ]}
+        ], **tf}
     else:
         exp_query = dict(base_query)
     
@@ -564,7 +567,7 @@ async def get_daily_summary(
     
     expenses = await db.expenses.find(exp_query, {"_id": 0}).to_list(10000)
     
-    sp_query = {"date": {"$gte": date_start, "$lt": date_end}}
+    sp_query = {"date": {"$gte": date_start, "$lt": date_end}, **tf}
     if branch_id:
         sp_query["branch_id"] = branch_id
     elif current_user.branch_id and current_user.role != "admin":
@@ -572,15 +575,15 @@ async def get_daily_summary(
     supplier_payments = await db.supplier_payments.find(sp_query, {"_id": 0}).to_list(1000)
     
     # Get branches for names
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branches = await db.branches.find(tf, {"_id": 0}).to_list(100)
     branch_map = {b["id"]: b.get("name", "Unknown") for b in branches}
     
     # Get suppliers for names
-    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+    suppliers = await db.suppliers.find(tf, {"_id": 0}).to_list(1000)
     supplier_map = {s["id"]: s for s in suppliers if "id" in s}
     
     # Get customers for names
-    customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
+    customers = await db.customers.find(tf, {"_id": 0}).to_list(1000)
     customer_map = {c["id"]: c.get("name", "Unknown") for c in customers if "id" in c}
     
     # Helper to get sale total accounting for null final_amount
@@ -770,9 +773,10 @@ async def get_daily_summary_range(
     
     # Use $lt next_day to properly include dates with timezone suffixes like +00:00
     date_filter = {"$gte": f"{start_date}T00:00:00", "$lt": f"{next_day}T00:00:00"}
+    tf = get_tenant_filter(current_user)
 
     # --- Sales query: filter by branch_id ---
-    sale_query = {"date": date_filter}
+    sale_query = {"date": date_filter, **tf}
     if branch_id:
         sale_query["branch_id"] = branch_id
     elif current_user.branch_id and current_user.role != "admin":
@@ -783,17 +787,17 @@ async def get_daily_summary_range(
         exp_query = {"date": date_filter, "$or": [
             {"branch_id": branch_id},
             {"expense_for_branch_id": branch_id}
-        ]}
+        ], **tf}
     elif current_user.branch_id and current_user.role != "admin":
         exp_query = {"date": date_filter, "$or": [
             {"branch_id": current_user.branch_id},
             {"expense_for_branch_id": current_user.branch_id}
-        ]}
+        ], **tf}
     else:
-        exp_query = {"date": date_filter}
+        exp_query = {"date": date_filter, **tf}
 
     # --- Supplier payment query ---
-    sp_query = {"date": date_filter}
+    sp_query = {"date": date_filter, **tf}
     if branch_id:
         sp_query["branch_id"] = branch_id
     elif current_user.branch_id and current_user.role != "admin":
@@ -937,7 +941,8 @@ async def get_missing_data_alerts(current_user: User = Depends(get_current_user)
     today = now.strftime("%Y-%m-%d")
     yesterday = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 
-    branches = await db.branches.find({}, {"_id": 0, "id": 1, "name": 1}).to_list(100)
+    tf = get_tenant_filter(current_user)
+    branches = await db.branches.find(tf, {"_id": 0, "id": 1, "name": 1}).to_list(100)
     if not branches:
         return {"alerts": [], "check_date": today}
 
@@ -953,12 +958,14 @@ async def get_missing_data_alerts(current_user: User = Depends(get_current_user)
             # Check sales
             sales_count = await db.sales.count_documents({
                 "branch_id": bid,
-                "date": {"$gte": date_start, "$lte": date_end}
+                "date": {"$gte": date_start, "$lte": date_end},
+                **tf
             })
             # Check expenses
             expenses_count = await db.expenses.count_documents({
                 "branch_id": bid,
-                "date": {"$gte": date_start, "$lte": date_end}
+                "date": {"$gte": date_start, "$lte": date_end},
+                **tf
             })
 
             missing = []

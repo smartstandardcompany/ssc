@@ -4,13 +4,12 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 import uuid
 
-from database import db, get_current_user
+from database import db, get_current_user, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter()
 scheduler = AsyncIOScheduler()
 scheduler.start()
-
 
 async def _run_task_reminders():
     """Periodic job to process task reminders."""
@@ -21,10 +20,8 @@ async def _run_task_reminders():
         import logging
         logging.getLogger(__name__).warning(f"Task reminder processing error: {e}")
 
-
 # Schedule task reminders to run every 5 minutes
 scheduler.add_job(_run_task_reminders, 'interval', minutes=5, id='task_reminders_job', replace_existing=True)
-
 
 async def _run_supplier_payment_reminders():
     """Daily job to check supplier aging and send payment reminders."""
@@ -38,10 +35,8 @@ async def _run_supplier_payment_reminders():
         import logging
         logging.getLogger(__name__).warning(f"Supplier reminder error: {e}")
 
-
 # Schedule supplier payment reminders daily at 9:00 AM
 scheduler.add_job(_run_supplier_payment_reminders, CronTrigger(hour=9, minute=0), id='supplier_reminders_job', replace_existing=True)
-
 
 async def _build_daily_sales_report():
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -60,7 +55,6 @@ async def _build_daily_sales_report():
     if branch_lines:
         report += f"\nBranch Sales:\n{branch_lines}"
     return report
-
 
 async def _build_low_stock_report():
     items = await db.items.find({}, {"_id": 0}).to_list(1000)
@@ -85,7 +79,6 @@ async def _build_low_stock_report():
         msg += "All items are above minimum stock level."
     return msg
 
-
 async def _build_expense_report():
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     today_end = today_start + timedelta(days=1)
@@ -99,7 +92,6 @@ async def _build_expense_report():
     if cat_lines:
         msg += f"\nBy Category:\n{cat_lines}"
     return msg
-
 
 async def _send_wa(message: str):
     try:
@@ -117,7 +109,6 @@ async def _send_wa(message: str):
     except:
         pass
 
-
 async def _send_email(subject: str, body_text: str):
     try:
         import aiosmtplib
@@ -134,7 +125,6 @@ async def _send_email(subject: str, body_text: str):
                               use_tls=False, start_tls=True, timeout=30)
     except:
         pass
-
 
 async def _build_period_digest(days: int):
     """Build a weekly or monthly sales/expense digest report."""
@@ -190,7 +180,6 @@ async def _build_period_digest(days: int):
 
     return "\n".join(lines)
 
-
 async def _build_eod_report():
     """Build comprehensive End-of-Day report for auto-send."""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -239,7 +228,6 @@ async def _build_eod_report():
             lines.append(f"  {cat.replace('_', ' ').title()}: SAR {amt:,.0f}")
     return "\n".join(lines)
 
-
 async def run_scheduled_job(job_type: str):
     """Execute a scheduled notification job."""
     log_entry = {"job_type": job_type, "triggered_at": datetime.now(timezone.utc).isoformat(), "status": "running"}
@@ -260,6 +248,7 @@ async def run_scheduled_job(job_type: str):
             report = await _build_daily_digest()
         else:
             log_entry["status"] = "unknown_type"
+            stamp_tenant(log_entry, current_user)
             await db.scheduler_logs.insert_one(log_entry)
             return
         schedule = await db.scheduler_config.find_one({"job_type": job_type}, {"_id": 0})
@@ -273,15 +262,14 @@ async def run_scheduled_job(job_type: str):
     except Exception as e:
         log_entry["status"] = "error"
         log_entry["error"] = str(e)[:200]
+    stamp_tenant(log_entry, current_user)
     await db.scheduler_logs.insert_one(log_entry)
-
 
 def _sync_scheduler():
     """Reload all scheduled jobs from DB config (called on startup and after config changes)."""
     import asyncio
     loop = asyncio.get_event_loop()
     loop.create_task(_async_sync_scheduler())
-
 
 async def _async_sync_scheduler():
     # Remove all existing jobs
@@ -344,7 +332,6 @@ async def _async_sync_scheduler():
         except Exception:
             pass
 
-
 async def _run_scheduled_pdf_report(report_id: str):
     """Execute a scheduled PDF report: generate PDF and email it."""
     try:
@@ -391,6 +378,7 @@ async def _run_scheduled_pdf_report(report_id: str):
             "status": "completed" if success else "email_failed",
             "recipients": recipients
         }
+
         await db.scheduler_logs.insert_one(log)
     except Exception as e:
         import logging
@@ -401,12 +389,12 @@ async def _run_scheduled_pdf_report(report_id: str):
             "status": "error",
             "error": str(e)[:200]
         }
-        await db.scheduler_logs.insert_one(log)
 
+        await db.scheduler_logs.insert_one(log)
 
 @router.get("/scheduler/config")
 async def get_scheduler_config(current_user: User = Depends(get_current_user)):
-    configs = await db.scheduler_config.find({}, {"_id": 0}).to_list(50)
+    configs = await db.scheduler_config.find(get_tenant_filter(current_user), {"_id": 0}).to_list(50)
     if not configs:
         defaults = [
             {"job_type": "daily_sales", "label": "Daily Sales Summary", "enabled": False, "hour": 21, "minute": 0, "channels": ["whatsapp"]},
@@ -417,8 +405,9 @@ async def get_scheduler_config(current_user: User = Depends(get_current_user)):
             {"job_type": "monthly_digest", "label": "Monthly Digest", "enabled": False, "hour": 9, "minute": 0, "day": 1, "channels": ["email"]},
         ]
         for d in defaults:
+            stamp_tenant(d, current_user)
             await db.scheduler_config.insert_one(d)
-        configs = await db.scheduler_config.find({}, {"_id": 0}).to_list(50)
+        configs = await db.scheduler_config.find(get_tenant_filter(current_user), {"_id": 0}).to_list(50)
     # Ensure new job types exist for existing users
     existing_types = [c["job_type"] for c in configs]
     new_defaults = []
@@ -431,11 +420,11 @@ async def get_scheduler_config(current_user: User = Depends(get_current_user)):
     if "daily_digest" not in existing_types:
         new_defaults.append({"job_type": "daily_digest", "label": "Daily Digest Email", "enabled": False, "hour": 6, "minute": 0, "channels": ["email"]})
     for d in new_defaults:
+        stamp_tenant(d, current_user)
         await db.scheduler_config.insert_one(d)
     if new_defaults:
-        configs = await db.scheduler_config.find({}, {"_id": 0}).to_list(50)
+        configs = await db.scheduler_config.find(get_tenant_filter(current_user), {"_id": 0}).to_list(50)
     return configs
-
 
 @router.put("/scheduler/config/{job_type}")
 async def update_scheduler_config(job_type: str, body: dict, current_user: User = Depends(get_current_user)):
@@ -453,20 +442,16 @@ async def update_scheduler_config(job_type: str, body: dict, current_user: User 
     updated = await db.scheduler_config.find_one({"job_type": job_type}, {"_id": 0})
     return updated
 
-
 @router.post("/scheduler/trigger/{job_type}")
 async def trigger_scheduler_job(job_type: str, current_user: User = Depends(get_current_user)):
     """Manually trigger a scheduled job for testing."""
     await run_scheduled_job(job_type)
     return {"message": f"Job '{job_type}' triggered"}
 
-
 @router.get("/scheduler/logs")
 async def get_scheduler_logs(current_user: User = Depends(get_current_user)):
-    logs = await db.scheduler_logs.find({}, {"_id": 0}).sort("triggered_at", -1).to_list(50)
+    logs = await db.scheduler_logs.find(get_tenant_filter(current_user), {"_id": 0}).sort("triggered_at", -1).to_list(50)
     return logs
-
-
 
 # =====================================================
 # AI PREDICTIVE ANALYTICS SCHEDULED REPORTS
@@ -547,7 +532,6 @@ async def _build_cashflow_alert():
     
     return "\n".join(lines)
 
-
 async def _build_employee_performance_report():
     """Build weekly employee performance summary."""
     now = datetime.now(timezone.utc)
@@ -598,7 +582,6 @@ async def _build_employee_performance_report():
     ]
     
     return "\n".join(lines)
-
 
 async def _build_expense_anomaly_alert():
     """Build daily expense anomaly alert."""
@@ -670,7 +653,6 @@ async def _build_expense_anomaly_alert():
     
     return "\n".join(lines)
 
-
 async def _build_supplier_payment_reminder():
     """Build weekly supplier payment reminder."""
     now = datetime.now(timezone.utc)
@@ -741,7 +723,6 @@ async def _build_supplier_payment_reminder():
     ]
     
     return "\n".join(lines)
-
 
 async def _build_reconciliation_alert(threshold: float = 500):
     """Build weekly reconciliation alert — flags unmatched bank transactions above threshold."""
@@ -827,6 +808,7 @@ async def _build_reconciliation_alert(threshold: float = 500):
         "statement_summaries": stmt_summaries,
         "status": "flagged" if total_flagged > 0 else "clean",
     }
+
     await db.reconciliation_alerts.insert_one(alert_record)
     del alert_record["_id"]
 
@@ -868,7 +850,6 @@ async def _build_reconciliation_alert(threshold: float = 500):
     ]
 
     return "\n".join(lines)
-
 
 async def _build_daily_digest():
     """Build comprehensive daily digest email with all key metrics."""
@@ -965,7 +946,6 @@ async def _build_daily_digest():
 
     return "\n".join(lines)
 
-
 # Register new AI report types
 AI_REPORT_BUILDERS = {
     "cashflow_alert": _build_cashflow_alert,
@@ -993,6 +973,7 @@ async def run_ai_report(report_type: str):
             "triggered_at": datetime.now(timezone.utc).isoformat(),
             "status": "success"
         }
+        stamp_tenant(log, current_user)
         await db.scheduler_logs.insert_one(log)
     except Exception as e:
         log = {
@@ -1002,8 +983,8 @@ async def run_ai_report(report_type: str):
             "status": "error",
             "error": str(e)
         }
+        stamp_tenant(log, current_user)
         await db.scheduler_logs.insert_one(log)
-
 
 @router.post("/scheduler/ai-reports")
 async def create_ai_report_schedule(body: dict, current_user: User = Depends(get_current_user)):
@@ -1030,11 +1011,11 @@ async def create_ai_report_schedule(body: dict, current_user: User = Depends(get
         await db.scheduler_config.update_one({"job_type": job_type}, {"$set": config})
     else:
         config["created_at"] = datetime.now(timezone.utc).isoformat()
+        stamp_tenant(config, current_user)
         await db.scheduler_config.insert_one(config)
     
     await _async_sync_scheduler()
     return {k: v for k, v in config.items() if k != '_id'}
-
 
 @router.get("/scheduler/ai-reports")
 async def get_ai_report_schedules(current_user: User = Depends(get_current_user)):
@@ -1052,7 +1033,6 @@ async def get_ai_report_schedules(current_user: User = Depends(get_current_user)
         ]
     }
 
-
 @router.post("/scheduler/ai-reports/{report_type}/trigger")
 async def trigger_ai_report(report_type: str, current_user: User = Depends(get_current_user)):
     """Manually trigger an AI report for testing."""
@@ -1063,8 +1043,6 @@ async def trigger_ai_report(report_type: str, current_user: User = Depends(get_c
     await run_ai_report(report_type)
     return {"message": f"Report '{report_type}' triggered", "preview": report}
 
-
-
 # =====================================================
 # RECONCILIATION ALERTS
 # =====================================================
@@ -1072,16 +1050,14 @@ async def trigger_ai_report(report_type: str, current_user: User = Depends(get_c
 @router.get("/reconciliation-alerts")
 async def get_reconciliation_alerts(current_user: User = Depends(get_current_user)):
     """Get reconciliation alert history."""
-    alerts = await db.reconciliation_alerts.find({}, {"_id": 0}).sort("created_at", -1).to_list(20)
+    alerts = await db.reconciliation_alerts.find(get_tenant_filter(current_user), {"_id": 0}).sort("created_at", -1).to_list(20)
     return alerts
-
 
 @router.get("/reconciliation-alerts/latest")
 async def get_latest_reconciliation_alert(current_user: User = Depends(get_current_user)):
     """Get the most recent reconciliation alert."""
     alert = await db.reconciliation_alerts.find_one({}, {"_id": 0}, sort=[("created_at", -1)])
     return alert or {}
-
 
 @router.post("/reconciliation-alerts/run")
 async def run_reconciliation_alert(body: dict = {}, current_user: User = Depends(get_current_user)):
@@ -1111,7 +1087,6 @@ async def run_reconciliation_alert(body: dict = {}, current_user: User = Depends
 
     latest = await db.reconciliation_alerts.find_one({}, {"_id": 0}, sort=[("created_at", -1)])
     return {"message": "Reconciliation alert generated", "alert": latest, "preview": report}
-
 
 @router.put("/reconciliation-alerts/settings")
 async def update_reconciliation_settings(body: dict, current_user: User = Depends(get_current_user)):
@@ -1158,11 +1133,10 @@ async def update_reconciliation_settings(body: dict, current_user: User = Depend
 
     return settings
 
-
 @router.get("/reconciliation-alerts/settings")
 async def get_reconciliation_settings(current_user: User = Depends(get_current_user)):
     """Get reconciliation alert settings."""
-    settings = await db.reconciliation_alert_settings.find_one({}, {"_id": 0})
+    settings = await db.reconciliation_alert_settings.find_one(get_tenant_filter(current_user), {"_id": 0})
     if not settings:
         settings = {
             "threshold": 500,
@@ -1173,7 +1147,6 @@ async def get_reconciliation_settings(current_user: User = Depends(get_current_u
             "channels": ["whatsapp", "push"],
         }
     return settings
-
 
 # =====================================================
 # ZATCA CSID EXPIRY CHECK (Daily at 8 AM)
@@ -1217,7 +1190,6 @@ async def check_zatca_csid_expiry_job():
         
     except ValueError as e:
         return {"checked": False, "reason": f"Invalid date: {str(e)}"}
-
 
 @router.post("/scheduler/zatca-expiry-check/trigger")
 async def trigger_zatca_expiry_check(current_user: User = Depends(get_current_user)):

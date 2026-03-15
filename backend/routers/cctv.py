@@ -18,7 +18,7 @@ import os
 import io
 import uuid
 
-from database import db, get_current_user, ROOT_DIR
+from database import db, get_current_user, ROOT_DIR, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter(tags=["CCTV"])
@@ -163,7 +163,7 @@ async def authenticate_hik_connect(creds: HikConnectCredentials, current_user: U
 @router.get("/cctv/hik-connect/status")
 async def get_hik_connect_status(current_user: User = Depends(get_current_user)):
     """Check Hik-Connect connection status"""
-    creds = await db.hik_connect_credentials.find_one({}, {"_id": 0})
+    creds = await db.hik_connect_credentials.find_one(get_tenant_filter(current_user), {"_id": 0})
     if not creds:
         return {"connected": False, "message": "Not configured"}
     
@@ -183,10 +183,10 @@ async def get_hik_connect_status(current_user: User = Depends(get_current_user))
 @router.get("/cctv/dvrs")
 async def get_dvrs(current_user: User = Depends(get_current_user)):
     """Get all configured DVRs"""
-    dvrs = await db.cctv_dvrs.find({}, {"_id": 0}).to_list(100)
+    dvrs = await db.cctv_dvrs.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     
     # Get branch names
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     branch_map = {b["id"]: b["name"] for b in branches}
     
     for dvr in dvrs:
@@ -205,6 +205,7 @@ async def add_dvr(dvr: DVRConfig, current_user: User = Depends(get_current_user)
     dvr_dict["created_at"] = datetime.now(timezone.utc).isoformat()
     dvr_dict["created_by"] = current_user.id
     
+    stamp_tenant(dvr_dict, current_user)
     await db.cctv_dvrs.insert_one(dvr_dict)
     
     # Auto-create camera entries for each channel
@@ -218,6 +219,7 @@ async def add_dvr(dvr: DVRConfig, current_user: User = Depends(get_current_user)
             "enabled": True,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
+        stamp_tenant(camera, current_user)
         await db.cctv_cameras.insert_one(camera)
     
     return {"success": True, "id": dvr_dict["id"]}
@@ -228,7 +230,7 @@ async def update_dvr(dvr_id: str, dvr: DVRConfig, current_user: User = Depends(g
     dvr_dict = dvr.model_dump()
     dvr_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
     
-    result = await db.cctv_dvrs.update_one({"id": dvr_id}, {"$set": dvr_dict})
+    result = await db.cctv_dvrs.update_one({"id": dvr_id, **get_tenant_filter(current_user)}, {"$set": dvr_dict})
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="DVR not found")
     
@@ -237,7 +239,7 @@ async def update_dvr(dvr_id: str, dvr: DVRConfig, current_user: User = Depends(g
 @router.delete("/cctv/dvrs/{dvr_id}")
 async def delete_dvr(dvr_id: str, current_user: User = Depends(get_current_user)):
     """Delete a DVR and its cameras"""
-    await db.cctv_dvrs.delete_one({"id": dvr_id})
+    await db.cctv_dvrs.delete_one({"id": dvr_id, **get_tenant_filter(current_user)})
     await db.cctv_cameras.delete_many({"dvr_id": dvr_id})
     return {"success": True}
 
@@ -259,7 +261,7 @@ async def get_cameras(
     cameras = await db.cctv_cameras.find(query, {"_id": 0}).to_list(500)
     
     # Get DVR info for branch filtering
-    dvrs = await db.cctv_dvrs.find({}, {"_id": 0}).to_list(100)
+    dvrs = await db.cctv_dvrs.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     dvr_map = {d["id"]: d for d in dvrs}
     
     result = []
@@ -278,7 +280,7 @@ async def get_cameras(
 async def update_camera(camera_id: str, body: dict, current_user: User = Depends(get_current_user)):
     """Update camera settings"""
     body["updated_at"] = datetime.now(timezone.utc).isoformat()
-    result = await db.cctv_cameras.update_one({"id": camera_id}, {"$set": body})
+    result = await db.cctv_cameras.update_one({"id": camera_id, **get_tenant_filter(current_user)}, {"$set": body})
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Camera not found")
     return {"success": True}
@@ -290,11 +292,11 @@ async def update_camera(camera_id: str, body: dict, current_user: User = Depends
 @router.get("/cctv/stream/{camera_id}")
 async def get_stream_url(camera_id: str, current_user: User = Depends(get_current_user)):
     """Get RTSP/RTMP stream URL for a camera"""
-    camera = await db.cctv_cameras.find_one({"id": camera_id}, {"_id": 0})
+    camera = await db.cctv_cameras.find_one({"id": camera_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not camera:
         raise HTTPException(status_code=404, detail="Camera not found")
     
-    dvr = await db.cctv_dvrs.find_one({"id": camera["dvr_id"]}, {"_id": 0})
+    dvr = await db.cctv_dvrs.find_one({"id": camera["dvr_id"], **get_tenant_filter(current_user)}, {"_id": 0})
     if not dvr:
         raise HTTPException(status_code=404, detail="DVR not found")
     
@@ -327,11 +329,11 @@ async def get_stream_url(camera_id: str, current_user: User = Depends(get_curren
 @router.get("/cctv/snapshot/{camera_id}")
 async def get_snapshot(camera_id: str, current_user: User = Depends(get_current_user)):
     """Get a live snapshot from camera via Hikvision ISAPI"""
-    camera = await db.cctv_cameras.find_one({"id": camera_id}, {"_id": 0})
+    camera = await db.cctv_cameras.find_one({"id": camera_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not camera:
         raise HTTPException(status_code=404, detail="Camera not found")
     
-    dvr = await db.cctv_dvrs.find_one({"id": camera["dvr_id"]}, {"_id": 0})
+    dvr = await db.cctv_dvrs.find_one({"id": camera["dvr_id"], **get_tenant_filter(current_user)}, {"_id": 0})
     if not dvr:
         raise HTTPException(status_code=404, detail="DVR not found")
     
@@ -388,15 +390,14 @@ async def get_snapshot(camera_id: str, current_user: User = Depends(get_current_
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get snapshot: {str(e)}")
 
-
 @router.get("/cctv/stream-info/{camera_id}")
 async def get_stream_info(camera_id: str, current_user: User = Depends(get_current_user)):
     """Get complete stream info including RTSP URLs and connection status for a camera"""
-    camera = await db.cctv_cameras.find_one({"id": camera_id}, {"_id": 0})
+    camera = await db.cctv_cameras.find_one({"id": camera_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not camera:
         raise HTTPException(status_code=404, detail="Camera not found")
     
-    dvr = await db.cctv_dvrs.find_one({"id": camera["dvr_id"]}, {"_id": 0})
+    dvr = await db.cctv_dvrs.find_one({"id": camera["dvr_id"], **get_tenant_filter(current_user)}, {"_id": 0})
     if not dvr:
         raise HTTPException(status_code=404, detail="DVR not found")
     
@@ -498,6 +499,7 @@ async def record_people_count(record: PeopleCountRecord, current_user: User = De
     """Record people count data (from AI processing)"""
     record_dict = record.model_dump()
     record_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    stamp_tenant(record_dict, current_user)
     await db.cctv_people_count.insert_one(record_dict)
     return {"success": True}
 
@@ -522,7 +524,7 @@ async def get_motion_alerts(
     alerts = await db.cctv_alerts.find(query, {"_id": 0}).sort("timestamp", -1).to_list(limit)
     
     # Get camera names
-    cameras = await db.cctv_cameras.find({}, {"_id": 0}).to_list(500)
+    cameras = await db.cctv_cameras.find(get_tenant_filter(current_user), {"_id": 0}).to_list(500)
     cam_map = {c["id"]: c["name"] for c in cameras}
     
     for alert in alerts:
@@ -536,6 +538,7 @@ async def create_motion_alert(alert: MotionAlert, current_user: User = Depends(g
     alert_dict = alert.model_dump()
     alert_dict["id"] = f"alert_{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
     alert_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    stamp_tenant(alert_dict, current_user)
     await db.cctv_alerts.insert_one(alert_dict)
     return {"success": True, "id": alert_dict["id"]}
 
@@ -622,7 +625,7 @@ async def get_cctv_analytics(
 @router.get("/cctv/settings")
 async def get_cctv_settings(current_user: User = Depends(get_current_user)):
     """Get CCTV AI feature settings"""
-    settings = await db.cctv_settings.find_one({}, {"_id": 0})
+    settings = await db.cctv_settings.find_one(get_tenant_filter(current_user), {"_id": 0})
     if not settings:
         return {
             "people_counting_enabled": True,
@@ -631,7 +634,6 @@ async def get_cctv_settings(current_user: User = Depends(get_current_user)):
             "counting_interval": 5
         }
     return settings
-
 
 @router.post("/cctv/settings")
 async def save_cctv_settings(body: dict, current_user: User = Depends(get_current_user)):
@@ -647,7 +649,6 @@ async def save_cctv_settings(body: dict, current_user: User = Depends(get_curren
     
     await db.cctv_settings.update_one({}, {"$set": settings}, upsert=True)
     return {"success": True, "message": "CCTV settings saved"}
-
 
 # =====================================================
 # AI PEOPLE COUNTING PROCESSOR
@@ -673,7 +674,7 @@ async def ai_count_people(body: dict, current_user: User = Depends(get_current_u
         raise HTTPException(status_code=400, detail="camera_id and image_data required")
     
     # Check if people counting is enabled
-    settings = await db.cctv_settings.find_one({}, {"_id": 0})
+    settings = await db.cctv_settings.find_one(get_tenant_filter(current_user), {"_id": 0})
     if not settings or not settings.get("people_counting_enabled", True):
         return {"success": False, "message": "People counting disabled"}
     
@@ -692,6 +693,7 @@ async def ai_count_people(body: dict, current_user: User = Depends(get_current_u
             "ai_response": result,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
+        stamp_tenant(count_record, current_user)
         await db.cctv_people_count.insert_one(count_record)
         
         return {
@@ -704,7 +706,6 @@ async def ai_count_people(body: dict, current_user: User = Depends(get_current_u
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
-
 
 @router.post("/cctv/ai/recognize-face")
 async def ai_recognize_face(body: dict, current_user: User = Depends(get_current_user)):
@@ -774,6 +775,7 @@ async def ai_recognize_face(body: dict, current_user: User = Depends(get_current
                             "method": "face_recognition",
                             "created_at": datetime.now(timezone.utc).isoformat()
                         }
+                        stamp_tenant(attendance_record, current_user)
                         await db.cctv_attendance.insert_one(attendance_record)
                         attendance_logged.append({
                             "employee_id": emp_id,
@@ -790,7 +792,6 @@ async def ai_recognize_face(body: dict, current_user: User = Depends(get_current
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
-
 
 @router.post("/cctv/ai/detect-objects")
 async def ai_detect_objects(body: dict, current_user: User = Depends(get_current_user)):
@@ -827,6 +828,7 @@ async def ai_detect_objects(body: dict, current_user: User = Depends(get_current
             "alerts": result.get("alerts", []),
             "created_at": datetime.now(timezone.utc).isoformat()
         }
+        stamp_tenant(detection_record, current_user)
         await db.cctv_object_detections.insert_one(detection_record)
         
         # Create alerts for low stock or issues
@@ -843,6 +845,7 @@ async def ai_detect_objects(body: dict, current_user: User = Depends(get_current
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                     "acknowledged": False
                 }
+                stamp_tenant(alert_record, current_user)
                 await db.cctv_alerts.insert_one(alert_record)
         
         return {
@@ -855,7 +858,6 @@ async def ai_detect_objects(body: dict, current_user: User = Depends(get_current
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
-
 
 @router.post("/cctv/ai/analyze-motion")
 async def ai_analyze_motion(body: dict, current_user: User = Depends(get_current_user)):
@@ -875,7 +877,7 @@ async def ai_analyze_motion(body: dict, current_user: User = Depends(get_current
         raise HTTPException(status_code=400, detail="image_data required")
     
     # Check if motion alerts are enabled
-    settings = await db.cctv_settings.find_one({}, {"_id": 0})
+    settings = await db.cctv_settings.find_one(get_tenant_filter(current_user), {"_id": 0})
     if not settings or not settings.get("motion_alerts_enabled", True):
         return {"success": False, "message": "Motion alerts disabled"}
     
@@ -908,6 +910,7 @@ async def ai_analyze_motion(body: dict, current_user: User = Depends(get_current
                 "acknowledged": False,
                 "ai_analysis": result
             }
+            stamp_tenant(alert_record, current_user)
             await db.cctv_alerts.insert_one(alert_record)
         
         return {
@@ -921,7 +924,6 @@ async def ai_analyze_motion(body: dict, current_user: User = Depends(get_current
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
-
 
 # =====================================================
 # FACE REGISTRATION FOR EMPLOYEES
@@ -943,7 +945,7 @@ async def register_employee_face(body: dict, current_user: User = Depends(get_cu
         raise HTTPException(status_code=400, detail="employee_id and image_data required")
     
     # Get employee info
-    employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    employee = await db.employees.find_one({"id": employee_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     
@@ -976,6 +978,7 @@ async def register_employee_face(body: dict, current_user: User = Depends(get_cu
         face_data["id"] = f"face_{employee_id}"
         face_data["created_at"] = datetime.now(timezone.utc).isoformat()
         face_data["created_by"] = current_user.id
+        stamp_tenant(face_data, current_user)
         await db.cctv_faces.insert_one(face_data)
     
     return {
@@ -983,7 +986,6 @@ async def register_employee_face(body: dict, current_user: User = Depends(get_cu
         "message": f"Face registered for {employee.get('name')}",
         "employee_id": employee_id
     }
-
 
 @router.post("/cctv/faces/register-multiple")
 async def register_multiple_faces(body: dict, current_user: User = Depends(get_current_user)):
@@ -1004,7 +1006,7 @@ async def register_multiple_faces(body: dict, current_user: User = Depends(get_c
         raise HTTPException(status_code=400, detail="Maximum 5 images allowed per employee")
     
     # Get employee info
-    employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    employee = await db.employees.find_one({"id": employee_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     
@@ -1049,6 +1051,7 @@ async def register_multiple_faces(body: dict, current_user: User = Depends(get_c
         face_data["id"] = f"face_{employee_id}"
         face_data["created_at"] = datetime.now(timezone.utc).isoformat()
         face_data["created_by"] = current_user.id
+        stamp_tenant(face_data, current_user)
         await db.cctv_faces.insert_one(face_data)
     
     return {
@@ -1058,7 +1061,6 @@ async def register_multiple_faces(body: dict, current_user: User = Depends(get_c
         "images_saved": len(saved_images),
         "training_status": face_data["training_status"]
     }
-
 
 @router.get("/cctv/faces/training-status")
 async def get_faces_training_status(
@@ -1093,7 +1095,6 @@ async def get_faces_training_status(
         } for f in faces]
     }
 
-
 @router.delete("/cctv/faces/{employee_id}")
 async def delete_employee_face(employee_id: str, current_user: User = Depends(get_current_user)):
     """Remove registered face for an employee"""
@@ -1101,7 +1102,6 @@ async def delete_employee_face(employee_id: str, current_user: User = Depends(ge
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Face registration not found")
     return {"success": True, "message": "Face registration removed"}
-
 
 # =====================================================
 # ATTENDANCE FROM FACE RECOGNITION
@@ -1135,7 +1135,6 @@ async def get_face_attendance(
         "records": records
     }
 
-
 @router.post("/cctv/attendance/checkout")
 async def face_attendance_checkout(body: dict, current_user: User = Depends(get_current_user)):
     """Record checkout time for an employee"""
@@ -1159,7 +1158,6 @@ async def face_attendance_checkout(body: dict, current_user: User = Depends(get_
     
     return {"success": True, "message": "Check-out recorded"}
 
-
 # =====================================================
 # OBJECT DETECTION HISTORY
 # =====================================================
@@ -1180,7 +1178,6 @@ async def get_object_detections(
     
     records = await db.cctv_object_detections.find(query, {"_id": 0}).sort("timestamp", -1).to_list(limit)
     return records
-
 
 @router.post("/cctv/process-frame")
 async def process_camera_frame(body: dict, current_user: User = Depends(get_current_user)):
@@ -1204,7 +1201,7 @@ async def process_camera_frame(body: dict, current_user: User = Depends(get_curr
         raise HTTPException(status_code=400, detail="camera_id required")
     
     # Check if people counting is enabled
-    settings = await db.cctv_settings.find_one({}, {"_id": 0})
+    settings = await db.cctv_settings.find_one(get_tenant_filter(current_user), {"_id": 0})
     if not settings or not settings.get("people_counting_enabled", True):
         return {"success": False, "message": "People counting disabled"}
     
@@ -1238,6 +1235,7 @@ async def process_camera_frame(body: dict, current_user: User = Depends(get_curr
         "total_inside": max(0, total_entries - total_exits),
         "created_at": datetime.now(timezone.utc).isoformat()
     }
+    stamp_tenant(count_record, current_user)
     await db.cctv_people_count.insert_one(count_record)
     
     return {
@@ -1246,7 +1244,6 @@ async def process_camera_frame(body: dict, current_user: User = Depends(get_curr
         "exits": exits,
         "total_inside": count_record["total_inside"]
     }
-
 
 @router.post("/cctv/detect-motion")
 async def detect_motion(body: dict, current_user: User = Depends(get_current_user)):
@@ -1268,7 +1265,7 @@ async def detect_motion(body: dict, current_user: User = Depends(get_current_use
         raise HTTPException(status_code=400, detail="camera_id required")
     
     # Check if motion alerts are enabled
-    settings = await db.cctv_settings.find_one({}, {"_id": 0})
+    settings = await db.cctv_settings.find_one(get_tenant_filter(current_user), {"_id": 0})
     if not settings or not settings.get("motion_alerts_enabled", True):
         return {"success": False, "message": "Motion alerts disabled"}
     
@@ -1304,6 +1301,7 @@ async def detect_motion(body: dict, current_user: User = Depends(get_current_use
         "acknowledged": False,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
+    stamp_tenant(alert, current_user)
     await db.cctv_alerts.insert_one(alert)
     
     return {
@@ -1313,7 +1311,6 @@ async def detect_motion(body: dict, current_user: User = Depends(get_current_use
         "motion_score": motion_score
     }
 
-
 # =====================================================
 # FACE RECOGNITION (Placeholder)
 # =====================================================
@@ -1321,7 +1318,7 @@ async def detect_motion(body: dict, current_user: User = Depends(get_current_use
 @router.get("/cctv/faces")
 async def get_registered_faces(current_user: User = Depends(get_current_user)):
     """Get registered faces for recognition"""
-    faces = await db.cctv_faces.find({}, {"_id": 0}).to_list(500)
+    faces = await db.cctv_faces.find(get_tenant_filter(current_user), {"_id": 0}).to_list(500)
     return faces
 
 @router.post("/cctv/faces")
@@ -1335,6 +1332,7 @@ async def register_face(body: dict, current_user: User = Depends(get_current_use
         "created_at": datetime.now(timezone.utc).isoformat(),
         "created_by": current_user.id
     }
+    stamp_tenant(face_data, current_user)
     await db.cctv_faces.insert_one(face_data)
     return {"success": True, "id": face_data["id"]}
 
@@ -1349,11 +1347,11 @@ async def get_recordings(
     current_user: User = Depends(get_current_user)
 ):
     """Get available recordings for a camera on a specific date"""
-    camera = await db.cctv_cameras.find_one({"id": camera_id}, {"_id": 0})
+    camera = await db.cctv_cameras.find_one({"id": camera_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not camera:
         raise HTTPException(status_code=404, detail="Camera not found")
     
-    dvr = await db.cctv_dvrs.find_one({"id": camera["dvr_id"]}, {"_id": 0})
+    dvr = await db.cctv_dvrs.find_one({"id": camera["dvr_id"], **get_tenant_filter(current_user)}, {"_id": 0})
     if not dvr:
         raise HTTPException(status_code=404, detail="DVR not found")
     
@@ -1387,8 +1385,6 @@ async def get_recordings(
         "message": "Cloud playback available via Hik-Connect app"
     }
 
-
-
 # =====================================================
 # SCHEDULED AI MONITORING
 # =====================================================
@@ -1400,11 +1396,10 @@ class ScheduledMonitoringConfig(BaseModel):
     features: List[str] = ["people_counting", "motion_detection"]  # Available: people_counting, motion_detection, object_detection
     notification_channels: List[str] = ["in_app"]  # in_app, whatsapp, email
 
-
 @router.get("/cctv/monitoring/config")
 async def get_monitoring_config(current_user: User = Depends(get_current_user)):
     """Get scheduled monitoring configuration"""
-    config = await db.cctv_monitoring_config.find_one({}, {"_id": 0})
+    config = await db.cctv_monitoring_config.find_one(get_tenant_filter(current_user), {"_id": 0})
     if not config:
         default_config = {
             "enabled": False,
@@ -1415,10 +1410,10 @@ async def get_monitoring_config(current_user: User = Depends(get_current_user)):
             "last_run": None,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
+        stamp_tenant(default_config, current_user)
         await db.cctv_monitoring_config.insert_one(default_config)
         return default_config
     return config
-
 
 @router.post("/cctv/monitoring/config")
 async def save_monitoring_config(config: ScheduledMonitoringConfig, current_user: User = Depends(get_current_user)):
@@ -1431,11 +1426,10 @@ async def save_monitoring_config(config: ScheduledMonitoringConfig, current_user
     
     return {"success": True, "message": "Monitoring configuration saved"}
 
-
 @router.post("/cctv/monitoring/run")
 async def run_scheduled_monitoring(background_tasks: BackgroundTasks, current_user: User = Depends(get_current_user)):
     """Manually trigger scheduled monitoring for all configured cameras"""
-    config = await db.cctv_monitoring_config.find_one({}, {"_id": 0})
+    config = await db.cctv_monitoring_config.find_one(get_tenant_filter(current_user), {"_id": 0})
     if not config or not config.get("enabled"):
         return {"success": False, "message": "Scheduled monitoring is disabled"}
     
@@ -1443,7 +1437,6 @@ async def run_scheduled_monitoring(background_tasks: BackgroundTasks, current_us
     background_tasks.add_task(execute_scheduled_monitoring)
     
     return {"success": True, "message": "Monitoring task queued"}
-
 
 async def execute_scheduled_monitoring():
     """Execute scheduled monitoring for all cameras"""
@@ -1508,6 +1501,7 @@ async def execute_scheduled_monitoring():
                     "source": "scheduled",
                     "created_at": datetime.now(timezone.utc).isoformat()
                 }
+
                 await db.cctv_people_count.insert_one(count_record)
                 camera_results["people_counting"] = result
             
@@ -1529,6 +1523,7 @@ async def execute_scheduled_monitoring():
                         "acknowledged": False,
                         "source": "scheduled"
                     }
+
                     await db.cctv_alerts.insert_one(alert_record)
                     
                     # Send notifications
@@ -1554,6 +1549,7 @@ async def execute_scheduled_monitoring():
                             "acknowledged": False,
                             "source": "scheduled"
                         }
+
                         await db.cctv_alerts.insert_one(alert_record)
                 
                 camera_results["object_detection"] = result
@@ -1580,10 +1576,10 @@ async def execute_scheduled_monitoring():
             "errors": len([r for r in results if "error" in r])
         }
     }
+
     await db.cctv_monitoring_logs.insert_one(log)
     
     return results
-
 
 async def get_camera_snapshot_base64(camera_id: str, dvr: dict) -> Optional[str]:
     """Get camera snapshot as base64. Returns None if not available."""
@@ -1612,7 +1608,6 @@ async def get_camera_snapshot_base64(camera_id: str, dvr: dict) -> Optional[str]
     
     return None
 
-
 async def send_motion_notification(camera: dict, result: dict, channels: List[str]):
     """Send motion detection notification via configured channels"""
     message = "🚨 *CCTV Motion Alert*\n\n"
@@ -1634,6 +1629,7 @@ async def send_motion_notification(camera: dict, result: dict, channels: List[st
             "read": False,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
+
         await db.notifications.insert_one(notification)
     
     # WhatsApp notification
@@ -1678,13 +1674,11 @@ async def send_motion_notification(camera: dict, result: dict, channels: List[st
         except Exception:
             pass
 
-
 @router.get("/cctv/monitoring/logs")
 async def get_monitoring_logs(limit: int = 50, current_user: User = Depends(get_current_user)):
     """Get scheduled monitoring logs"""
-    logs = await db.cctv_monitoring_logs.find({}, {"_id": 0}).sort("timestamp", -1).to_list(limit)
+    logs = await db.cctv_monitoring_logs.find(get_tenant_filter(current_user), {"_id": 0}).sort("timestamp", -1).to_list(limit)
     return logs
-
 
 # =====================================================
 # UPLOAD CAMERA FRAME FOR MONITORING
@@ -1710,16 +1704,13 @@ async def upload_camera_frame(camera_id: str, body: dict, current_user: User = D
     
     return {"success": True, "message": "Frame uploaded successfully", "camera_id": camera_id}
 
-
-
 # ----- CCTV Monitoring Schedules & Enhanced Alerts -----
 
 @router.get("/cctv/monitoring-schedules")
 async def get_monitoring_schedules(current_user: User = Depends(get_current_user)):
     """Get all monitoring schedules"""
-    schedules = await db.cctv_monitoring_schedules.find({}, {"_id": 0}).to_list(100)
+    schedules = await db.cctv_monitoring_schedules.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     return schedules
-
 
 @router.post("/cctv/monitoring-schedules")
 async def create_monitoring_schedule(body: dict, current_user: User = Depends(get_current_user)):
@@ -1738,10 +1729,10 @@ async def create_monitoring_schedule(body: dict, current_user: User = Depends(ge
         "created_at": datetime.now(timezone.utc).isoformat(),
         "created_by": current_user.id,
     }
+    stamp_tenant(schedule, current_user)
     await db.cctv_monitoring_schedules.insert_one(schedule)
     schedule.pop("_id", None)
     return schedule
-
 
 @router.put("/cctv/monitoring-schedules/{schedule_id}")
 async def update_monitoring_schedule(schedule_id: str, body: dict, current_user: User = Depends(get_current_user)):
@@ -1755,15 +1746,13 @@ async def update_monitoring_schedule(schedule_id: str, body: dict, current_user:
         raise HTTPException(status_code=404, detail="Schedule not found")
     return {"message": "Schedule updated"}
 
-
 @router.delete("/cctv/monitoring-schedules/{schedule_id}")
 async def delete_monitoring_schedule(schedule_id: str, current_user: User = Depends(get_current_user)):
     """Delete a monitoring schedule"""
-    result = await db.cctv_monitoring_schedules.delete_one({"id": schedule_id})
+    result = await db.cctv_monitoring_schedules.delete_one({"id": schedule_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Schedule not found")
     return {"message": "Schedule deleted"}
-
 
 @router.get("/cctv/motion-alerts")
 async def get_motion_alerts(
@@ -1781,7 +1770,6 @@ async def get_motion_alerts(
     alerts = await db.cctv_motion_alerts.find(query, {"_id": 0}).sort("timestamp", -1).to_list(limit)
     return alerts
 
-
 @router.post("/cctv/motion-alerts")
 async def create_motion_alert(body: dict, current_user: User = Depends(get_current_user)):
     """Record a motion detection alert (from camera integration or manual)"""
@@ -1798,10 +1786,10 @@ async def create_motion_alert(body: dict, current_user: User = Depends(get_curre
         "acknowledged": False,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+    stamp_tenant(alert, current_user)
     await db.cctv_motion_alerts.insert_one(alert)
     alert.pop("_id", None)
     return alert
-
 
 @router.put("/cctv/motion-alerts/{alert_id}/acknowledge")
 async def acknowledge_alert(alert_id: str, current_user: User = Depends(get_current_user)):

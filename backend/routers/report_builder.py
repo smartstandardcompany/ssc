@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime, timezone, timedelta
-from database import db, get_current_user
+from database import db, get_current_user, get_tenant_filter, stamp_tenant
 from models import User
 import uuid
 
@@ -10,7 +10,7 @@ router = APIRouter()
 @router.get("/report-templates")
 async def get_report_templates(current_user: User = Depends(get_current_user)):
     """Get all saved report templates."""
-    templates = await db.report_templates.find({}, {"_id": 0}).sort("updated_at", -1).to_list(100)
+    templates = await db.report_templates.find(get_tenant_filter(current_user), {"_id": 0}).sort("updated_at", -1).to_list(100)
     return templates
 
 
@@ -32,6 +32,7 @@ async def create_report_template(body: dict, current_user: User = Depends(get_cu
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
+    stamp_tenant(template, current_user)
     await db.report_templates.insert_one(template)
     template.pop("_id", None)
     return template
@@ -43,17 +44,17 @@ async def update_report_template(template_id: str, body: dict, current_user: Use
     body["updated_at"] = datetime.now(timezone.utc).isoformat()
     body.pop("id", None)
     body.pop("_id", None)
-    result = await db.report_templates.update_one({"id": template_id}, {"$set": body})
+    result = await db.report_templates.update_one({"id": template_id, **get_tenant_filter(current_user)}, {"$set": body})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Template not found")
-    template = await db.report_templates.find_one({"id": template_id}, {"_id": 0})
+    template = await db.report_templates.find_one({"id": template_id, **get_tenant_filter(current_user)}, {"_id": 0})
     return template
 
 
 @router.delete("/report-templates/{template_id}")
 async def delete_report_template(template_id: str, current_user: User = Depends(get_current_user)):
     """Delete a report template."""
-    result = await db.report_templates.delete_one({"id": template_id})
+    result = await db.report_templates.delete_one({"id": template_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Template not found")
     return {"message": "Template deleted"}
@@ -62,7 +63,7 @@ async def delete_report_template(template_id: str, current_user: User = Depends(
 @router.post("/report-templates/{template_id}/run")
 async def run_report_template(template_id: str, body: dict = {}, current_user: User = Depends(get_current_user)):
     """Execute a report template and return results."""
-    template = await db.report_templates.find_one({"id": template_id}, {"_id": 0})
+    template = await db.report_templates.find_one({"id": template_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
 

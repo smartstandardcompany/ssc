@@ -7,7 +7,7 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 
-from database import db, get_current_user
+from database import db, get_current_user, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter()
@@ -49,7 +49,7 @@ async def get_staff_performance(
     ).to_list(50000)
 
     # Job titles for role resolution
-    job_titles = await db.job_titles.find({}, {"_id": 0}).to_list(100)
+    job_titles = await db.job_titles.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     jt_map = {jt["id"]: jt.get("title", "") for jt in job_titles}
 
     # Build per-employee metrics
@@ -200,7 +200,7 @@ async def get_employee_performance(
     current_user: User = Depends(get_current_user)
 ):
     """Get detailed performance for a single employee."""
-    emp = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    emp = await db.employees.find_one({"id": employee_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found")
 

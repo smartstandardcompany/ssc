@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
 from datetime import datetime, timezone, timedelta
 
-from database import db, get_current_user
+from database import db, get_current_user, get_tenant_filter, stamp_tenant
 from models import User, Shift, ShiftAssignment
 
 router = APIRouter()
@@ -26,18 +26,19 @@ async def create_shift(body: dict, current_user: User = Depends(get_current_user
     )
     sd = shift.model_dump()
     sd["created_at"] = sd["created_at"].isoformat()
+    stamp_tenant(sd, current_user)
     await db.shifts.insert_one(sd)
     return {k: v for k, v in sd.items() if k != '_id'}
 
 @router.put("/shifts/{shift_id}")
 async def update_shift(shift_id: str, body: dict, current_user: User = Depends(get_current_user)):
     update = {k: v for k, v in body.items() if k in ["name","start_time","end_time","break_minutes","days","color","active"]}
-    await db.shifts.update_one({"id": shift_id}, {"$set": update})
-    return await db.shifts.find_one({"id": shift_id}, {"_id": 0})
+    await db.shifts.update_one({"id": shift_id, **get_tenant_filter(current_user)}, {"$set": update})
+    return await db.shifts.find_one({"id": shift_id, **get_tenant_filter(current_user)}, {"_id": 0})
 
 @router.delete("/shifts/{shift_id}")
 async def delete_shift(shift_id: str, current_user: User = Depends(get_current_user)):
-    await db.shifts.delete_one({"id": shift_id})
+    await db.shifts.delete_one({"id": shift_id, **get_tenant_filter(current_user)})
     await db.shift_assignments.delete_many({"shift_id": shift_id})
     return {"message": "Shift deleted"}
 
@@ -54,16 +55,16 @@ async def get_shift_assignments(branch_id: Optional[str] = None, week_start: Opt
 
 @router.post("/shift-assignments")
 async def create_shift_assignment(body: dict, current_user: User = Depends(get_current_user)):
-    emp = await db.employees.find_one({"id": body["employee_id"]}, {"_id": 0})
+    emp = await db.employees.find_one({"id": body["employee_id"], **get_tenant_filter(current_user)}, {"_id": 0})
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found")
-    shift = await db.shifts.find_one({"id": body["shift_id"]}, {"_id": 0})
+    shift = await db.shifts.find_one({"id": body["shift_id"], **get_tenant_filter(current_user)}, {"_id": 0})
     if not shift:
         raise HTTPException(status_code=404, detail="Shift not found")
     existing = await db.shift_assignments.find_one({"employee_id": body["employee_id"], "date": body["date"]}, {"_id": 0})
     if existing:
-        await db.shift_assignments.update_one({"id": existing["id"]}, {"$set": {"shift_id": body["shift_id"], "shift_name": shift["name"]}})
-        updated = await db.shift_assignments.find_one({"id": existing["id"]}, {"_id": 0})
+        await db.shift_assignments.update_one({"id": existing["id"], **get_tenant_filter(current_user)}, {"$set": {"shift_id": body["shift_id"], "shift_name": shift["name"]}})
+        updated = await db.shift_assignments.find_one({"id": existing["id"], **get_tenant_filter(current_user)}, {"_id": 0})
         return updated
     assignment = ShiftAssignment(
         employee_id=body["employee_id"], employee_name=emp["name"],
@@ -74,6 +75,7 @@ async def create_shift_assignment(body: dict, current_user: User = Depends(get_c
     )
     ad = assignment.model_dump()
     ad["created_at"] = ad["created_at"].isoformat()
+    stamp_tenant(ad, current_user)
     await db.shift_assignments.insert_one(ad)
     return {k: v for k, v in ad.items() if k != '_id'}
 
@@ -100,9 +102,9 @@ async def update_shift_assignment(assignment_id: str, body: dict, current_user: 
             t_in = datetime.strptime(update["actual_in"], "%H:%M")
             t_out = datetime.strptime(update["actual_out"], "%H:%M")
             worked_hours = (t_out - t_in).total_seconds() / 3600
-            assignment = await db.shift_assignments.find_one({"id": assignment_id}, {"_id": 0})
+            assignment = await db.shift_assignments.find_one({"id": assignment_id, **get_tenant_filter(current_user)}, {"_id": 0})
             if assignment:
-                shift = await db.shifts.find_one({"id": assignment["shift_id"]}, {"_id": 0})
+                shift = await db.shifts.find_one({"id": assignment["shift_id"], **get_tenant_filter(current_user)}, {"_id": 0})
                 if shift:
                     s_in = datetime.strptime(shift["start_time"], "%H:%M")
                     s_out = datetime.strptime(shift["end_time"], "%H:%M")
@@ -112,9 +114,9 @@ async def update_shift_assignment(assignment_id: str, body: dict, current_user: 
         except:
             pass
     if update.get("actual_in"):
-        assignment = await db.shift_assignments.find_one({"id": assignment_id}, {"_id": 0})
+        assignment = await db.shift_assignments.find_one({"id": assignment_id, **get_tenant_filter(current_user)}, {"_id": 0})
         if assignment:
-            shift = await db.shifts.find_one({"id": assignment.get("shift_id")}, {"_id": 0})
+            shift = await db.shifts.find_one({"id": assignment.get("shift_id"), **get_tenant_filter(current_user)}, {"_id": 0})
             if shift:
                 try:
                     actual = datetime.strptime(update["actual_in"], "%H:%M")
@@ -125,8 +127,8 @@ async def update_shift_assignment(assignment_id: str, body: dict, current_user: 
                         update["status"] = "present"
                 except:
                     update["status"] = "present"
-    await db.shift_assignments.update_one({"id": assignment_id}, {"$set": update})
-    return await db.shift_assignments.find_one({"id": assignment_id}, {"_id": 0})
+    await db.shift_assignments.update_one({"id": assignment_id, **get_tenant_filter(current_user)}, {"$set": update})
+    return await db.shift_assignments.find_one({"id": assignment_id, **get_tenant_filter(current_user)}, {"_id": 0})
 
 @router.get("/shift-assignments/attendance-summary")
 async def get_attendance_summary(branch_id: Optional[str] = None, month: Optional[str] = None, current_user: User = Depends(get_current_user)):

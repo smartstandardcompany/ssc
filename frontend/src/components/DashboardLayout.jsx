@@ -7,7 +7,7 @@ import {
   Handshake, HelpCircle, Building2, Package, ChefHat, CalendarClock,
   ArrowDownUp, Activity, PackageCheck, ChevronDown, Menu, X, Zap,
   AlertCircle, Moon, Sun, Keyboard, Globe, UtensilsCrossed, Camera, Armchair, Wallet,
-  CalendarDays, Gift, TrendingUp, Clock, Database, Copy, Download, ShieldCheck, Award
+  CalendarDays, Gift, TrendingUp, Clock, Database, Copy, Download, ShieldCheck, Award, Crown
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -139,6 +139,7 @@ const NAV_GROUPS = [
       { path: '/data-management', icon: Database, label: 'Data Management', perm: 'settings', roles: ['admin'] },
       { path: '/notification-preferences', icon: Bell, label: 'Notif. Settings' },
       { path: '/help', icon: HelpCircle, label: 'Help & Guide' },
+      { path: '/super-admin', icon: Crown, label: 'Platform Admin', superAdmin: true },
     ]
   },
 ];
@@ -164,8 +165,10 @@ function hasPermission(perms, module) {
   return level === 'read' || level === 'write';
 }
 
-function NavGroup({ group, userRole, userPerms, currentPath, onNavigate, t }) {
+function NavGroup({ group, userRole, userPerms, currentPath, onNavigate, t, isSuperAdmin }) {
   const filteredItems = group.items.filter(item => {
+    // Super admin items only visible to super admins
+    if (item.superAdmin && !isSuperAdmin) return false;
     if (userRole === 'admin') return true;
     if (item.roles && !item.roles.includes(userRole || 'operator')) return false;
     if (item.perm) {
@@ -371,6 +374,7 @@ export const DashboardLayout = ({ children }) => {
               currentPath={location.pathname}
               onNavigate={() => setMobileOpen(false)}
               t={t}
+              isSuperAdmin={currentUser.is_super_admin}
             />
           ))}
           </>

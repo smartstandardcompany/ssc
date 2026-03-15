@@ -1,3 +1,4 @@
+from database import get_tenant_filter, stamp_tenant
 from fastapi import APIRouter, HTTPException, Response, UploadFile, File
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -406,7 +407,6 @@ async def generate_branded_pdf(request: PDFExportRequest):
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
-
 # =====================================================
 # SCHEDULED PDF REPORTS
 # =====================================================
@@ -439,6 +439,7 @@ async def create_scheduled_report(config: ScheduledReport):
         "last_sent": None,
         "next_run": None,
     }
+    stamp_tenant(report, current_user)
     await db.scheduled_reports.insert_one(report)
     return {k: v for k, v in report.items() if k != '_id'}
 
@@ -515,7 +516,6 @@ async def send_scheduled_report_now(report_id: str):
             return {"message": "Report generated but email delivery failed. Check SMTP settings.", "status": "email_failed"}
     except Exception as e:
         return {"message": f"Error: {str(e)}", "status": "error"}
-
 
 async def generate_report_pdf(report_type: str, branding: dict, title: str):
     """Generate a PDF report and return BytesIO buffer"""

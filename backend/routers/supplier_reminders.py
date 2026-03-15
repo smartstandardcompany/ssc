@@ -9,11 +9,10 @@ from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel
 import uuid
 
-from database import db, get_current_user, require_permission
+from database import db, get_current_user, require_permission, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter()
-
 
 class ReminderConfig(BaseModel):
     id: str = ""
@@ -29,18 +28,16 @@ class ReminderConfig(BaseModel):
     created_at: str = ""
     updated_at: str = ""
 
-
 @router.get("/supplier-reminders/config")
 async def get_reminder_config(current_user: User = Depends(get_current_user)):
     require_permission(current_user, "suppliers", "read")
-    config = await db.supplier_reminder_config.find_one({}, {"_id": 0})
+    config = await db.supplier_reminder_config.find_one(get_tenant_filter(current_user), {"_id": 0})
     if not config:
         config = ReminderConfig(
             id=str(uuid.uuid4()),
             created_at=datetime.now(timezone.utc).isoformat()
         ).dict()
     return config
-
 
 @router.post("/supplier-reminders/config")
 async def save_reminder_config(config: dict, current_user: User = Depends(get_current_user)):
@@ -55,14 +52,12 @@ async def save_reminder_config(config: dict, current_user: User = Depends(get_cu
     )
     return {"message": "Reminder configuration saved", "config": config}
 
-
 @router.post("/supplier-reminders/test")
 async def test_reminder(current_user: User = Depends(get_current_user)):
     """Send a test reminder immediately"""
     require_permission(current_user, "suppliers", "read")
     result = await run_supplier_reminder_check(is_test=True)
     return result
-
 
 @router.get("/supplier-reminders/history")
 async def get_reminder_history(limit: int = 20, current_user: User = Depends(get_current_user)):
@@ -72,7 +67,6 @@ async def get_reminder_history(limit: int = 20, current_user: User = Depends(get
         {}, {"_id": 0}
     ).sort("sent_at", -1).to_list(limit)
     return history
-
 
 async def run_supplier_reminder_check(is_test: bool = False):
     """
@@ -276,6 +270,7 @@ async def run_supplier_reminder_check(is_test: bool = False):
             for sa in supplier_alerts.values()
         ]
     }
+
     await db.supplier_reminder_history.insert_one(history_entry)
     history_entry.pop("_id", None)
     

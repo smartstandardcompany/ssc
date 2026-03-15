@@ -1,3 +1,4 @@
+from database import get_tenant_filter, stamp_tenant
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
@@ -129,6 +130,7 @@ async def customer_register(request: CustomerRegisterRequest):
             "created_at": datetime.now(timezone.utc).isoformat(),
             "credit_balance": 0,
         }
+        stamp_tenant(new_customer, current_user)
         result = await db.customers.insert_one(new_customer)
         customer_id = str(result.inserted_id)
     

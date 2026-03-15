@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import List, Optional
 from datetime import datetime, timezone
 
-from database import db, get_current_user, require_permission, get_branch_filter
+from database import db, get_current_user, require_permission, get_branch_filter, get_tenant_filter, stamp_tenant
 from models import User, Sale, SaleCreate, SalePayment
 
 router = APIRouter()
@@ -71,6 +71,7 @@ async def create_sale(sale_data: SaleCreate, current_user: User = Depends(get_cu
     sale = Sale(**sale_data_dict, discount=discount, final_amount=final_amount, credit_amount=credit_amount, credit_received=0, created_by=current_user.id)
     sale_dict = sale.model_dump()
     sale_dict["date"] = sale_dict["date"].isoformat(); sale_dict["created_at"] = sale_dict["created_at"].isoformat()
+    stamp_tenant(sale_dict, current_user)
     await db.sales.insert_one(sale_dict)
     # Log activity
     from routers.activity_logs import log_activity
@@ -100,7 +101,7 @@ async def check_duplicate_sale(
 @router.post("/sales/{sale_id}/receive-credit")
 async def receive_credit_payment(sale_id: str, payment: SalePayment, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "sales", "write")
-    sale = await db.sales.find_one({"id": sale_id}, {"_id": 0})
+    sale = await db.sales.find_one({"id": sale_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not sale:
         raise HTTPException(status_code=404, detail="Sale not found")
     remaining_credit = sale["credit_amount"] - sale["credit_received"]
@@ -111,18 +112,18 @@ async def receive_credit_payment(sale_id: str, payment: SalePayment, current_use
     new_payment_details = list(sale.get("payment_details", []))
     if payment.amount > 0: new_payment_details.append({"mode": payment.payment_mode, "amount": payment.amount})
     if discount > 0: new_payment_details.append({"mode": "discount", "amount": discount})
-    await db.sales.update_one({"id": sale_id}, {"$set": {"credit_received": new_credit_received, "payment_details": new_payment_details, "updated_at": datetime.now(timezone.utc).isoformat()}})
+    await db.sales.update_one({"id": sale_id, **get_tenant_filter(current_user)}, {"$set": {"credit_received": new_credit_received, "payment_details": new_payment_details, "updated_at": datetime.now(timezone.utc).isoformat()}})
     return {"message": "Credit payment received", "received": payment.amount, "discount": discount, "remaining_credit": remaining_credit - total_settle}
 
 @router.delete("/sales/{sale_id}")
 async def delete_sale(sale_id: str, current_user: User = Depends(get_current_user)):
     require_permission(current_user, "sales", "write")
-    sale = await db.sales.find_one({"id": sale_id}, {"_id": 0})
+    sale = await db.sales.find_one({"id": sale_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not sale:
         raise HTTPException(status_code=404, detail="Sale not found")
     from routers.access_policies import check_delete_permission
     await check_delete_permission(current_user, "sales", sale.get("date"), f"Sale #{sale_id[:8]} - SAR {sale.get('amount', 0)}")
-    result = await db.sales.delete_one({"id": sale_id})
+    result = await db.sales.delete_one({"id": sale_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Sale not found")
     from routers.activity_logs import log_activity

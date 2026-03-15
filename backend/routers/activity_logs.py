@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pydantic import BaseModel
 import uuid
 
-from database import db, get_current_user, require_permission
+from database import db, get_current_user, require_permission, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter()
@@ -79,6 +79,7 @@ async def log_activity(
     log_dict = log_entry.model_dump()
     log_dict["timestamp"] = log_dict["timestamp"].isoformat()
     
+    stamp_tenant(log_dict, user)
     await db.activity_logs.insert_one(log_dict)
     return log_entry
 

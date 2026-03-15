@@ -8,11 +8,10 @@ from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel
 import uuid
 
-from database import db, get_current_user, require_permission
+from database import db, get_current_user, require_permission, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter()
-
 
 class AlertConfig(BaseModel):
     id: str = ""
@@ -33,25 +32,23 @@ class AlertConfig(BaseModel):
             data['created_at'] = datetime.now(timezone.utc).isoformat()
         super().__init__(**data)
 
-
 @router.get("/sales-alerts/config")
 async def get_alert_config(current_user: User = Depends(get_current_user)):
     """Get current sales alert configuration."""
     require_permission(current_user, "settings", "read")
     
-    config = await db.sales_alert_config.find_one({}, {"_id": 0})
+    config = await db.sales_alert_config.find_one(get_tenant_filter(current_user), {"_id": 0})
     if not config:
         # Return default config
         return AlertConfig().model_dump()
     return config
-
 
 @router.post("/sales-alerts/config")
 async def save_alert_config(config_data: dict, current_user: User = Depends(get_current_user)):
     """Save sales alert configuration."""
     require_permission(current_user, "settings", "write")
     
-    existing = await db.sales_alert_config.find_one({})
+    existing = await db.sales_alert_config.find_one(get_tenant_filter(current_user))
     
     config_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     
@@ -60,6 +57,7 @@ async def save_alert_config(config_data: dict, current_user: User = Depends(get_
     else:
         config_data["id"] = str(uuid.uuid4())
         config_data["created_at"] = datetime.now(timezone.utc).isoformat()
+        stamp_tenant(config_data, current_user)
         await db.sales_alert_config.insert_one(config_data)
     
     # Log activity
@@ -67,7 +65,6 @@ async def save_alert_config(config_data: dict, current_user: User = Depends(get_
     await log_activity(current_user, "update", "sales_alerts", "config", {"enabled": config_data.get("enabled")})
     
     return {"message": "Alert configuration saved", "config": config_data}
-
 
 @router.get("/sales-alerts/preview")
 async def preview_alert(current_user: User = Depends(get_current_user)):
@@ -78,7 +75,7 @@ async def preview_alert(current_user: User = Depends(get_current_user)):
     require_permission(current_user, "settings", "read")
     
     # Get config
-    config = await db.sales_alert_config.find_one({}, {"_id": 0}) or {}
+    config = await db.sales_alert_config.find_one(get_tenant_filter(current_user), {"_id": 0}) or {}
     threshold = config.get("threshold_percentage", 20)
     
     # Get forecast data
@@ -139,13 +136,12 @@ async def preview_alert(current_user: User = Depends(get_current_user)):
         "message": f"Predicted sales (SAR {predicted:.2f}) are {abs(diff_pct):.1f}% {'below' if diff_pct > 0 else 'above'} the 30-day average (SAR {avg_30:.2f})"
     }
 
-
 @router.post("/sales-alerts/send-test")
 async def send_test_alert(current_user: User = Depends(get_current_user)):
     """Send a test alert to verify configuration."""
     require_permission(current_user, "settings", "write")
     
-    config = await db.sales_alert_config.find_one({}, {"_id": 0})
+    config = await db.sales_alert_config.find_one(get_tenant_filter(current_user), {"_id": 0})
     if not config:
         raise HTTPException(status_code=400, detail="No alert configuration found")
     
@@ -206,7 +202,6 @@ This is a TEST alert. Configure settings at your SSC Track dashboard.
         "preview": preview
     }
 
-
 @router.get("/sales-alerts/history")
 async def get_alert_history(
     limit: int = 20,
@@ -215,9 +210,8 @@ async def get_alert_history(
     """Get history of sent alerts."""
     require_permission(current_user, "settings", "read")
     
-    alerts = await db.sales_alert_history.find({}, {"_id": 0}).sort("sent_at", -1).limit(limit).to_list(limit)
+    alerts = await db.sales_alert_history.find(get_tenant_filter(current_user), {"_id": 0}).sort("sent_at", -1).limit(limit).to_list(limit)
     return alerts
-
 
 async def check_and_send_daily_alert():
     """

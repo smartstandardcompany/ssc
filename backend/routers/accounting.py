@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Optional
 import uuid
 
-from database import db, get_current_user, require_permission
+from database import db, get_current_user, require_permission, get_tenant_filter, stamp_tenant
 
 router = APIRouter()
 
@@ -39,7 +39,8 @@ SEED_ACCOUNTS = [
 @router.get("/accounting/accounts")
 async def get_accounts(current_user=Depends(get_current_user)):
     require_permission(current_user, "settings", "read")
-    accounts = await db.chart_of_accounts.find({}, {"_id": 0}).sort("code", 1).to_list(500)
+    tf = get_tenant_filter(current_user)
+    accounts = await db.chart_of_accounts.find(tf, {"_id": 0}).sort("code", 1).to_list(500)
     if not accounts:
         # Seed default accounts
         for acc in SEED_ACCOUNTS:
@@ -47,15 +48,17 @@ async def get_accounts(current_user=Depends(get_current_user)):
             acc["balance"] = 0
             acc["is_active"] = True
             acc["created_at"] = datetime.now(timezone.utc).isoformat()
+            stamp_tenant(acc, current_user)
         await db.chart_of_accounts.insert_many(SEED_ACCOUNTS)
-        accounts = await db.chart_of_accounts.find({}, {"_id": 0}).sort("code", 1).to_list(500)
+        accounts = await db.chart_of_accounts.find(tf, {"_id": 0}).sort("code", 1).to_list(500)
     return accounts
 
 
 @router.post("/accounting/accounts")
 async def create_account(body: dict, current_user=Depends(get_current_user)):
     require_permission(current_user, "settings", "write")
-    existing = await db.chart_of_accounts.find_one({"code": body["code"]})
+    tf = get_tenant_filter(current_user)
+    existing = await db.chart_of_accounts.find_one({"code": body["code"], **tf})
     if existing:
         raise HTTPException(status_code=400, detail="Account code already exists")
     account = {
@@ -70,6 +73,7 @@ async def create_account(body: dict, current_user=Depends(get_current_user)):
         "is_system": False,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
+    stamp_tenant(account, current_user)
     await db.chart_of_accounts.insert_one(account)
     account.pop("_id", None)
     return account
@@ -78,7 +82,7 @@ async def create_account(body: dict, current_user=Depends(get_current_user)):
 @router.put("/accounting/accounts/{account_id}")
 async def update_account(account_id: str, body: dict, current_user=Depends(get_current_user)):
     require_permission(current_user, "settings", "write")
-    acc = await db.chart_of_accounts.find_one({"id": account_id})
+    acc = await db.chart_of_accounts.find_one({"id": account_id, **get_tenant_filter(current_user)})
     if not acc:
         raise HTTPException(status_code=404, detail="Account not found")
     updates = {}
@@ -86,7 +90,7 @@ async def update_account(account_id: str, body: dict, current_user=Depends(get_c
         if field in body:
             updates[field] = body[field]
     if updates:
-        await db.chart_of_accounts.update_one({"id": account_id}, {"$set": updates})
+        await db.chart_of_accounts.update_one({"id": account_id, **get_tenant_filter(current_user)}, {"$set": updates})
     updated = await db.chart_of_accounts.find_one({"id": account_id}, {"_id": 0})
     return updated
 
@@ -94,12 +98,12 @@ async def update_account(account_id: str, body: dict, current_user=Depends(get_c
 @router.delete("/accounting/accounts/{account_id}")
 async def delete_account(account_id: str, current_user=Depends(get_current_user)):
     require_permission(current_user, "settings", "write")
-    acc = await db.chart_of_accounts.find_one({"id": account_id})
+    acc = await db.chart_of_accounts.find_one({"id": account_id, **get_tenant_filter(current_user)})
     if not acc:
         raise HTTPException(status_code=404, detail="Account not found")
     if acc.get("is_system"):
         raise HTTPException(status_code=400, detail="Cannot delete system accounts")
-    await db.chart_of_accounts.delete_one({"id": account_id})
+    await db.chart_of_accounts.delete_one({"id": account_id, **get_tenant_filter(current_user)})
     return {"success": True}
 
 
@@ -115,14 +119,16 @@ SEED_TAX_RATES = [
 
 @router.get("/accounting/tax-rates")
 async def get_tax_rates(current_user=Depends(get_current_user)):
-    rates = await db.tax_rates.find({}, {"_id": 0}).sort("rate", -1).to_list(100)
+    tf = get_tenant_filter(current_user)
+    rates = await db.tax_rates.find(tf, {"_id": 0}).sort("rate", -1).to_list(100)
     if not rates:
         for rate in SEED_TAX_RATES:
             rate["id"] = str(uuid.uuid4())
             rate["is_active"] = True
             rate["created_at"] = datetime.now(timezone.utc).isoformat()
+            stamp_tenant(rate, current_user)
         await db.tax_rates.insert_many(SEED_TAX_RATES)
-        rates = await db.tax_rates.find({}, {"_id": 0}).sort("rate", -1).to_list(100)
+        rates = await db.tax_rates.find(tf, {"_id": 0}).sort("rate", -1).to_list(100)
     return rates
 
 
@@ -139,8 +145,10 @@ async def create_tax_rate(body: dict, current_user=Depends(get_current_user)):
         "description": body.get("description", ""),
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
+    tf = get_tenant_filter(current_user)
     if rate["is_default"]:
-        await db.tax_rates.update_many({}, {"$set": {"is_default": False}})
+        await db.tax_rates.update_many(tf, {"$set": {"is_default": False}})
+    stamp_tenant(rate, current_user)
     await db.tax_rates.insert_one(rate)
     rate.pop("_id", None)
     return rate
@@ -154,9 +162,10 @@ async def update_tax_rate(rate_id: str, body: dict, current_user=Depends(get_cur
         if field in body:
             updates[field] = body[field]
     if updates.get("is_default"):
-        await db.tax_rates.update_many({}, {"$set": {"is_default": False}})
+        tf = get_tenant_filter(current_user)
+        await db.tax_rates.update_many(tf, {"$set": {"is_default": False}})
     if updates:
-        await db.tax_rates.update_one({"id": rate_id}, {"$set": updates})
+        await db.tax_rates.update_one({"id": rate_id, **get_tenant_filter(current_user)}, {"$set": updates})
     updated = await db.tax_rates.find_one({"id": rate_id}, {"_id": 0})
     return updated
 
@@ -164,7 +173,7 @@ async def update_tax_rate(rate_id: str, body: dict, current_user=Depends(get_cur
 @router.delete("/accounting/tax-rates/{rate_id}")
 async def delete_tax_rate(rate_id: str, current_user=Depends(get_current_user)):
     require_permission(current_user, "settings", "write")
-    await db.tax_rates.delete_one({"id": rate_id})
+    await db.tax_rates.delete_one({"id": rate_id, **get_tenant_filter(current_user)})
     return {"success": True}
 
 
@@ -179,7 +188,7 @@ async def get_bills(
     current_user=Depends(get_current_user),
 ):
     require_permission(current_user, "expenses", "read")
-    query = {}
+    query = get_tenant_filter(current_user)
     if status:
         query["status"] = status
     if supplier_id:
@@ -224,6 +233,7 @@ async def create_bill(body: dict, current_user=Depends(get_current_user)):
         "created_at": datetime.now(timezone.utc).isoformat(),
         "payments": [],
     }
+    stamp_tenant(bill, current_user)
     await db.bills.insert_one(bill)
     bill.pop("_id", None)
     return bill
@@ -232,7 +242,7 @@ async def create_bill(body: dict, current_user=Depends(get_current_user)):
 @router.put("/accounting/bills/{bill_id}")
 async def update_bill(bill_id: str, body: dict, current_user=Depends(get_current_user)):
     require_permission(current_user, "expenses", "write")
-    bill = await db.bills.find_one({"id": bill_id})
+    bill = await db.bills.find_one({"id": bill_id, **get_tenant_filter(current_user)})
     if not bill:
         raise HTTPException(status_code=404, detail="Bill not found")
     updates = {}
@@ -250,7 +260,7 @@ async def update_bill(bill_id: str, body: dict, current_user=Depends(get_current
         updates["total"] = total
         updates["balance_due"] = round(total - bill.get("amount_paid", 0), 2)
     if updates:
-        await db.bills.update_one({"id": bill_id}, {"$set": updates})
+        await db.bills.update_one({"id": bill_id, **get_tenant_filter(current_user)}, {"$set": updates})
     updated = await db.bills.find_one({"id": bill_id}, {"_id": 0})
     return updated
 
@@ -258,7 +268,7 @@ async def update_bill(bill_id: str, body: dict, current_user=Depends(get_current
 @router.post("/accounting/bills/{bill_id}/payment")
 async def record_bill_payment(bill_id: str, body: dict, current_user=Depends(get_current_user)):
     require_permission(current_user, "expenses", "write")
-    bill = await db.bills.find_one({"id": bill_id})
+    bill = await db.bills.find_one({"id": bill_id, **get_tenant_filter(current_user)})
     if not bill:
         raise HTTPException(status_code=404, detail="Bill not found")
 
@@ -278,7 +288,7 @@ async def record_bill_payment(bill_id: str, body: dict, current_user=Depends(get
     new_balance = round(bill.get("total", 0) - new_amount_paid, 2)
     new_status = "paid" if new_balance <= 0 else "partial"
 
-    await db.bills.update_one({"id": bill_id}, {
+    await db.bills.update_one({"id": bill_id, **get_tenant_filter(current_user)}, {
         "$push": {"payments": payment},
         "$set": {
             "amount_paid": new_amount_paid,
@@ -293,7 +303,7 @@ async def record_bill_payment(bill_id: str, body: dict, current_user=Depends(get
 @router.delete("/accounting/bills/{bill_id}")
 async def delete_bill(bill_id: str, current_user=Depends(get_current_user)):
     require_permission(current_user, "expenses", "write")
-    await db.bills.delete_one({"id": bill_id})
+    await db.bills.delete_one({"id": bill_id, **get_tenant_filter(current_user)})
     return {"success": True}
 
 
@@ -316,8 +326,9 @@ async def get_profit_loss(
         end_date = now.strftime("%Y-%m-%d")
 
     # Build date query
-    date_query_sales = {"date": {"$gte": start_date, "$lte": end_date + "T23:59:59"}}
-    date_query_expenses = {"date": {"$gte": start_date, "$lte": end_date + "T23:59:59"}}
+    tf = get_tenant_filter(current_user)
+    date_query_sales = {"date": {"$gte": start_date, "$lte": end_date + "T23:59:59"}, **tf}
+    date_query_expenses = {"date": {"$gte": start_date, "$lte": end_date + "T23:59:59"}, **tf}
 
     if branch_id:
         date_query_sales["branch_id"] = branch_id
@@ -351,7 +362,7 @@ async def get_profit_loss(
         expenses_total += exp["total"]
 
     # Supplier payments
-    supplier_query = {"date": {"$gte": start_date, "$lte": end_date + "T23:59:59"}}
+    supplier_query = {"date": {"$gte": start_date, "$lte": end_date + "T23:59:59"}, **tf}
     if branch_id:
         supplier_query["branch_id"] = branch_id
     supplier_pipeline = [
@@ -363,6 +374,7 @@ async def get_profit_loss(
 
     # Bills summary
     bills_pipeline = [
+        {"$match": tf},
         {"$group": {"_id": "$status", "total": {"$sum": "$total"}, "count": {"$sum": 1}}}
     ]
     bills_results = await db.bills.aggregate(bills_pipeline).to_list(10)
@@ -431,7 +443,7 @@ MIDDLE_EAST_CURRENCIES = [
 
 @router.get("/accounting/currencies")
 async def get_currencies(current_user=Depends(get_current_user)):
-    settings = await db.accounting_settings.find_one({"type": "currency"}, {"_id": 0})
+    settings = await db.accounting_settings.find_one({"type": "currency", **get_tenant_filter(current_user)}, {"_id": 0})
     return {
         "available": MIDDLE_EAST_CURRENCIES,
         "default": settings.get("default_currency", "SAR") if settings else "SAR",
@@ -442,8 +454,9 @@ async def get_currencies(current_user=Depends(get_current_user)):
 @router.put("/accounting/currencies")
 async def update_currency_settings(body: dict, current_user=Depends(get_current_user)):
     require_permission(current_user, "settings", "write")
+    tf = get_tenant_filter(current_user)
     await db.accounting_settings.update_one(
-        {"type": "currency"},
+        {"type": "currency", **tf},
         {"$set": {
             "type": "currency",
             "default_currency": body.get("default_currency", "SAR"),
@@ -460,10 +473,11 @@ async def update_currency_settings(body: dict, current_user=Depends(get_current_
 @router.get("/accounting/summary")
 async def get_accounting_summary(current_user=Depends(get_current_user)):
     require_permission(current_user, "reports", "read")
+    tf = get_tenant_filter(current_user)
 
     # AR: Outstanding customer credits
     credit_pipeline = [
-        {"$match": {"credit": {"$gt": 0}}},
+        {"$match": {"credit": {"$gt": 0}, **tf}},
         {"$group": {"_id": None, "total": {"$sum": "$credit"}, "count": {"$sum": 1}}}
     ]
     ar_result = await db.sales.aggregate(credit_pipeline).to_list(1)
@@ -471,7 +485,7 @@ async def get_accounting_summary(current_user=Depends(get_current_user)):
 
     # AP: Unpaid bills
     ap_pipeline = [
-        {"$match": {"status": {"$in": ["unpaid", "partial"]}}},
+        {"$match": {"status": {"$in": ["unpaid", "partial"]}, **tf}},
         {"$group": {"_id": None, "total": {"$sum": "$balance_due"}, "count": {"$sum": 1}}}
     ]
     ap_result = await db.bills.aggregate(ap_pipeline).to_list(1)
@@ -480,7 +494,7 @@ async def get_accounting_summary(current_user=Depends(get_current_user)):
     # Overdue bills
     now_str = datetime.now(timezone.utc).isoformat()
     overdue_pipeline = [
-        {"$match": {"status": {"$in": ["unpaid", "partial"]}, "due_date": {"$lt": now_str}}},
+        {"$match": {"status": {"$in": ["unpaid", "partial"]}, "due_date": {"$lt": now_str}, **tf}},
         {"$group": {"_id": None, "total": {"$sum": "$balance_due"}, "count": {"$sum": 1}}}
     ]
     overdue_result = await db.bills.aggregate(overdue_pipeline).to_list(1)
@@ -493,13 +507,13 @@ async def get_accounting_summary(current_user=Depends(get_current_user)):
     month_end = now.strftime("%Y-%m-%d")
 
     sales_pipeline = [
-        {"$match": {"date": {"$gte": month_start, "$lte": month_end + "T23:59:59"}}},
+        {"$match": {"date": {"$gte": month_start, "$lte": month_end + "T23:59:59"}, **tf}},
         {"$group": {"_id": None, "total": {"$sum": "$total"}}}
     ]
     month_sales = await db.sales.aggregate(sales_pipeline).to_list(1)
 
     expense_pipeline = [
-        {"$match": {"date": {"$gte": month_start, "$lte": month_end + "T23:59:59"}}},
+        {"$match": {"date": {"$gte": month_start, "$lte": month_end + "T23:59:59"}, **tf}},
         {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
     ]
     month_expenses = await db.expenses.aggregate(expense_pipeline).to_list(1)
@@ -522,7 +536,7 @@ async def get_journal_entries(
     entry_type: Optional[str] = None,
     current_user=Depends(get_current_user),
 ):
-    query = {}
+    query = get_tenant_filter(current_user)
     if entry_type:
         query["entry_type"] = entry_type
     total = await db.journal_entries.count_documents(query)
@@ -555,6 +569,7 @@ async def create_journal_entry(body: dict, current_user=Depends(get_current_user
         "created_by": getattr(current_user, "name", None) or getattr(current_user, "email", ""),
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
+    stamp_tenant(entry, current_user)
     await db.journal_entries.insert_one(entry)
     entry.pop("_id", None)
     return entry
@@ -562,7 +577,7 @@ async def create_journal_entry(body: dict, current_user=Depends(get_current_user
 
 @router.delete("/accounting/journal-entries/{entry_id}")
 async def delete_journal_entry(entry_id: str, current_user=Depends(get_current_user)):
-    result = await db.journal_entries.delete_one({"id": entry_id})
+    result = await db.journal_entries.delete_one({"id": entry_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Entry not found")
     return {"success": True}
@@ -581,11 +596,12 @@ async def get_balance_sheet(
 
     date_query = {"$lte": as_of_date + "T23:59:59"}
     branch_query = {"branch_id": branch_id} if branch_id else {}
+    tf = get_tenant_filter(current_user)
 
     # Assets
     # Cash: sum of sales cash - expenses cash
     sales_cash_pipeline = [
-        {"$match": {**branch_query, "date": date_query}},
+        {"$match": {**branch_query, **tf, "date": date_query}},
         {"$group": {"_id": None, "cash": {"$sum": "$cash"}, "bank": {"$sum": "$bank"}, "online": {"$sum": "$online"}}}
     ]
     sales_cash = await db.sales.aggregate(sales_cash_pipeline).to_list(1)
@@ -593,7 +609,7 @@ async def get_balance_sheet(
     total_bank_in = (sales_cash[0].get("bank", 0) + sales_cash[0].get("online", 0)) if sales_cash else 0
 
     expense_cash_pipeline = [
-        {"$match": {**branch_query, "date": date_query}},
+        {"$match": {**branch_query, **tf, "date": date_query}},
         {"$group": {"_id": "$payment_mode", "total": {"$sum": "$amount"}}}
     ]
     expense_results = await db.expenses.aggregate(expense_cash_pipeline).to_list(20)
@@ -603,7 +619,7 @@ async def get_balance_sheet(
 
     # Accounts Receivable (outstanding credits from sales)
     ar_pipeline = [
-        {"$match": {**branch_query, "credit": {"$gt": 0}}},
+        {"$match": {**branch_query, **tf, "credit": {"$gt": 0}}},
         {"$group": {"_id": None, "total": {"$sum": "$credit"}}}
     ]
     ar_result = await db.sales.aggregate(ar_pipeline).to_list(1)
@@ -611,7 +627,7 @@ async def get_balance_sheet(
 
     # Inventory value
     inv_pipeline = [
-        {"$match": {"quantity": {"$gt": 0}}},
+        {"$match": {"quantity": {"$gt": 0}, **tf}},
         {"$group": {"_id": None, "total": {"$sum": {"$multiply": ["$quantity", {"$ifNull": ["$cost_price", 0]}]}}}}
     ]
     inv_result = await db.inventory.aggregate(inv_pipeline).to_list(1)
@@ -620,7 +636,7 @@ async def get_balance_sheet(
     # Liabilities
     # Accounts Payable (unpaid bills + supplier credit)
     ap_pipeline = [
-        {"$match": {"status": {"$in": ["unpaid", "partial"]}}},
+        {"$match": {"status": {"$in": ["unpaid", "partial"]}, **tf}},
         {"$group": {"_id": None, "total": {"$sum": "$balance_due"}}}
     ]
     ap_result = await db.bills.aggregate(ap_pipeline).to_list(1)
@@ -628,7 +644,7 @@ async def get_balance_sheet(
 
     # Supplier credits
     supplier_credit_pipeline = [
-        {"$match": {"credit_balance": {"$gt": 0}}},
+        {"$match": {"credit_balance": {"$gt": 0}, **tf}},
         {"$group": {"_id": None, "total": {"$sum": "$credit_balance"}}}
     ]
     supplier_credit = await db.suppliers.aggregate(supplier_credit_pipeline).to_list(1)
@@ -636,7 +652,7 @@ async def get_balance_sheet(
 
     # VAT Payable (estimated)
     total_sales_pipeline = [
-        {"$match": {**branch_query, "date": date_query}},
+        {"$match": {**branch_query, **tf, "date": date_query}},
         {"$group": {"_id": None, "total": {"$sum": "$total"}}}
     ]
     total_sales = await db.sales.aggregate(total_sales_pipeline).to_list(1)
@@ -645,7 +661,7 @@ async def get_balance_sheet(
     # Equity = Total Revenue - Total Expenses (retained earnings)
     total_revenue = total_sales[0]["total"] if total_sales else 0
     total_exp_pipeline = [
-        {"$match": {**branch_query, "date": date_query}},
+        {"$match": {**branch_query, **tf, "date": date_query}},
         {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
     ]
     total_exp = await db.expenses.aggregate(total_exp_pipeline).to_list(1)
@@ -701,6 +717,7 @@ async def get_financial_dashboard(
     current_user=Depends(get_current_user),
 ):
     now = datetime.now(timezone.utc)
+    tf = get_tenant_filter(current_user)
     month_start = now.replace(day=1).strftime("%Y-%m-%d")
     month_end = now.strftime("%Y-%m-%d")
     end_filter = month_end + "T23:59:59"
@@ -719,12 +736,12 @@ async def get_financial_dashboard(
         else:
             me = f"{y}-{m + 1:02d}-01"
         pipeline = [
-            {"$match": {"date": {"$gte": ms, "$lt": me}}},
+            {"$match": {"date": {"$gte": ms, "$lt": me}, **tf}},
             {"$group": {"_id": None, "revenue": {"$sum": "$total"}, "count": {"$sum": 1}}}
         ]
         result = await db.sales.aggregate(pipeline).to_list(1)
         exp_pipeline = [
-            {"$match": {"date": {"$gte": ms, "$lt": me}}},
+            {"$match": {"date": {"$gte": ms, "$lt": me}, **tf}},
             {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
         ]
         exp_result = await db.expenses.aggregate(exp_pipeline).to_list(1)
@@ -738,7 +755,7 @@ async def get_financial_dashboard(
 
     # Expense breakdown by category (current month)
     expense_cat_pipeline = [
-        {"$match": {"date": {"$gte": month_start, "$lte": end_filter}}},
+        {"$match": {"date": {"$gte": month_start, "$lte": end_filter}, **tf}},
         {"$group": {"_id": "$category", "total": {"$sum": "$amount"}, "count": {"$sum": 1}}}
     ]
     expense_cats = await db.expenses.aggregate(expense_cat_pipeline).to_list(50)
@@ -747,7 +764,7 @@ async def get_financial_dashboard(
 
     # Revenue by payment method (current month)
     revenue_method_pipeline = [
-        {"$match": {"date": {"$gte": month_start, "$lte": end_filter}}},
+        {"$match": {"date": {"$gte": month_start, "$lte": end_filter}, **tf}},
         {"$group": {"_id": None, "cash": {"$sum": "$cash"}, "bank": {"$sum": "$bank"},
                     "online": {"$sum": "$online"}, "credit": {"$sum": "$credit"}, "total": {"$sum": "$total"}}}
     ]
@@ -762,16 +779,16 @@ async def get_financial_dashboard(
     # Cash flow (in vs out this month)
     total_in = rev_method[0]["total"] if rev_method else 0
     total_out_pipeline = [
-        {"$match": {"date": {"$gte": month_start, "$lte": end_filter}}},
+        {"$match": {"date": {"$gte": month_start, "$lte": end_filter}, **tf}},
         {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
     ]
     total_out_result = await db.expenses.aggregate(total_out_pipeline).to_list(1)
     total_out = total_out_result[0]["total"] if total_out_result else 0
 
     # Outstanding amounts
-    ar_pipeline = [{"$match": {"credit": {"$gt": 0}}}, {"$group": {"_id": None, "total": {"$sum": "$credit"}, "count": {"$sum": 1}}}]
+    ar_pipeline = [{"$match": {"credit": {"$gt": 0}, **tf}}, {"$group": {"_id": None, "total": {"$sum": "$credit"}, "count": {"$sum": 1}}}]
     ar = await db.sales.aggregate(ar_pipeline).to_list(1)
-    ap_pipeline = [{"$match": {"status": {"$in": ["unpaid", "partial"]}}}, {"$group": {"_id": None, "total": {"$sum": "$balance_due"}, "count": {"$sum": 1}}}]
+    ap_pipeline = [{"$match": {"status": {"$in": ["unpaid", "partial"]}, **tf}}, {"$group": {"_id": None, "total": {"$sum": "$balance_due"}, "count": {"$sum": 1}}}]
     ap = await db.bills.aggregate(ap_pipeline).to_list(1)
 
     return {

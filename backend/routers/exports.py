@@ -10,7 +10,7 @@ from reportlab.lib.units import inch
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 
-from database import db, get_current_user
+from database import db, get_current_user, get_tenant_filter, stamp_tenant
 from models import User, ExportRequest
 
 router = APIRouter()
@@ -22,7 +22,7 @@ async def export_data(request: dict, current_user: User = Depends(get_current_us
     start_date = request.get("start_date")
     end_date = request.get("end_date")
     filters = request.get("filters", {})
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     branch_map = {b["id"]: b["name"] for b in branches}
 
     # Build date filter
@@ -46,7 +46,7 @@ async def export_data(request: dict, current_user: User = Depends(get_current_us
         if filters.get("branch_id"):
             query["branch_id"] = filters["branch_id"]
         sales = await db.sales.find(query, {"_id": 0}).sort("date", -1).to_list(10000)
-        customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
+        customers = await db.customers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
         cust_map = {c["id"]: c["name"] for c in customers if c.get("id")}
         rows = []
         for s in sales:
@@ -66,7 +66,7 @@ async def export_data(request: dict, current_user: User = Depends(get_current_us
         if filters.get("category"):
             query["category"] = filters["category"]
         expenses = await db.expenses.find(query, {"_id": 0}).sort("date", -1).to_list(10000)
-        suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+        suppliers = await db.suppliers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
         sup_map = {s["id"]: s["name"] for s in suppliers}
         rows = []
         for e in expenses:
@@ -89,32 +89,32 @@ async def export_data(request: dict, current_user: User = Depends(get_current_us
         headers = ["Date", "Supplier", "Branch", "Amount", "Payment Mode", "Notes"]
         title = f"Supplier Payments Report{date_label}"
     elif data_type == "customers":
-        customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
+        customers = await db.customers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
         rows = [[c["name"], branch_map.get(c.get("branch_id"), "All Branches"), c.get("phone", "-"), c.get("email", "-")] for c in customers]
         headers = ["Name", "Branch", "Phone", "Email"]
         title = "Customers Report"
     elif data_type == "suppliers":
-        suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+        suppliers = await db.suppliers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
         rows = [[s["name"], s.get("category", "-"), branch_map.get(s.get("branch_id"), "All"), s.get("phone", "-"), s.get("current_credit", 0), s.get("credit_limit", 0)] for s in suppliers]
         headers = ["Name", "Category", "Branch", "Phone", "Current Credit", "Credit Limit"]
         title = "Suppliers Report"
     elif data_type == "employees":
-        employees = await db.employees.find({}, {"_id": 0}).to_list(1000)
+        employees = await db.employees.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
         rows = []
         for emp in employees:
             rows.append([emp["name"], emp.get("position", "-"), emp.get("document_id", "-"), branch_map.get(emp.get("branch_id"), "-"), emp.get("salary", 0), emp.get("pay_frequency", "monthly"), datetime.fromisoformat(emp["document_expiry"]).strftime("%Y-%m-%d") if emp.get("document_expiry") else "-"])
         headers = ["Name", "Position", "Document ID", "Branch", "Salary", "Pay Frequency", "Doc Expiry"]
         title = "Employees Report"
     elif data_type == "loans":
-        loans = await db.loans.find({}, {"_id": 0}).sort("created_at", -1).to_list(5000)
+        loans = await db.loans.find(get_tenant_filter(current_user), {"_id": 0}).sort("created_at", -1).to_list(5000)
         rows = []
         for l in loans:
             rows.append([l["employee_name"], l["loan_type"].replace("_", " ").capitalize(), l["amount"], l.get("monthly_installment", 0), l.get("total_installments", 0), l.get("paid_installments", 0), l.get("remaining_balance", 0), l["status"].capitalize(), datetime.fromisoformat(l["created_at"]).strftime("%Y-%m-%d") if isinstance(l.get("created_at"), str) else "-"])
         headers = ["Employee", "Loan Type", "Amount", "Monthly Installment", "Total Inst.", "Paid Inst.", "Remaining", "Status", "Created"]
         title = "Loans Report"
     elif data_type == "attendance":
-        attendance = await db.attendance.find({}, {"_id": 0}).sort("date", -1).to_list(10000)
-        emps = await db.employees.find({}, {"_id": 0}).to_list(1000)
+        attendance = await db.attendance.find(get_tenant_filter(current_user), {"_id": 0}).sort("date", -1).to_list(10000)
+        emps = await db.employees.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
         emp_map = {e["id"]: e["name"] for e in emps}
         rows = []
         for a in attendance:
@@ -128,7 +128,7 @@ async def export_data(request: dict, current_user: User = Depends(get_current_us
         headers = ["Date", "Employee", "Time In", "Time Out", "Hours"]
         title = "Attendance Report"
     elif data_type == "leaves":
-        leaves = await db.leaves.find({}, {"_id": 0}).sort("created_at", -1).to_list(5000)
+        leaves = await db.leaves.find(get_tenant_filter(current_user), {"_id": 0}).sort("created_at", -1).to_list(5000)
         rows = []
         for l in leaves:
             start = datetime.fromisoformat(l["start_date"]).strftime("%Y-%m-%d") if isinstance(l.get("start_date"), str) else "-"
@@ -193,11 +193,11 @@ async def export_data(request: dict, current_user: User = Depends(get_current_us
 @router.post("/export/reports")
 async def export_reports(export_request: ExportRequest, current_user: User = Depends(get_current_user)):
     try:
-        sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
-        expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
-        supplier_payments = await db.supplier_payments.find({}, {"_id": 0}).to_list(10000)
-        branches = await db.branches.find({}, {"_id": 0}).to_list(100)
-        customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
+        sales = await db.sales.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
+        expenses = await db.expenses.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
+        supplier_payments = await db.supplier_payments.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
+        branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
+        customers = await db.customers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
         if export_request.start_date:
             start = datetime.fromisoformat(export_request.start_date)
             sales = [s for s in sales if datetime.fromisoformat(s["date"]) >= start]

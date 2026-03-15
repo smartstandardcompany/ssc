@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from io import BytesIO
 import uuid
 
-from database import db, get_current_user, ROOT_DIR
+from database import db, get_current_user, ROOT_DIR, get_tenant_filter, stamp_tenant
 from models import User
 
 import barcode
@@ -139,12 +139,12 @@ async def get_item_barcode(item_id: str, current_user: User = Depends(get_curren
     Returns a PNG image with company logo, item name, price, and barcode.
     """
     # Get item details
-    item = await db.items.find_one({"id": item_id}, {"_id": 0})
+    item = await db.items.find_one({"id": item_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     
     # Get company settings for name and logo
-    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one(get_tenant_filter(current_user), {"_id": 0}) or {}
     company_name = company.get("company_name", "SSC Track")
     
     # Check for company logo
@@ -178,11 +178,11 @@ async def preview_item_barcode(item_id: str, current_user: User = Depends(get_cu
     """
     Preview barcode label (inline display instead of download).
     """
-    item = await db.items.find_one({"id": item_id}, {"_id": 0})
+    item = await db.items.find_one({"id": item_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     
-    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one(get_tenant_filter(current_user), {"_id": 0}) or {}
     company_name = company.get("company_name", "SSC Track")
     
     logo_path = None
@@ -231,7 +231,7 @@ async def generate_batch_barcodes(body: dict, current_user: User = Depends(get_c
         raise HTTPException(status_code=404, detail="No items found")
     
     # Get company settings
-    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one(get_tenant_filter(current_user), {"_id": 0}) or {}
     company_name = company.get("company_name", "SSC Track")
     
     logo_path = None

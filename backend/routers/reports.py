@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
 from datetime import datetime, timezone, timedelta
 
-from database import db, get_current_user, require_permission, get_branch_filter
+from database import db, get_current_user, require_permission, get_branch_filter, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter()
@@ -14,8 +14,8 @@ async def get_credit_sales_report(current_user: User = Depends(get_current_user)
     if not query and current_user.branch_id and current_user.role != "admin":
         query["branch_id"] = current_user.branch_id
     sales = await db.sales.find(query, {"_id": 0}).to_list(10000)
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
-    customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
+    customers = await db.customers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
     credit_sales = []
     total_credit_given = 0; total_credit_received = 0; total_credit_remaining = 0
     for sale in sales:
@@ -29,9 +29,9 @@ async def get_credit_sales_report(current_user: User = Depends(get_current_user)
 
 @router.get("/reports/suppliers")
 async def get_supplier_report(current_user: User = Depends(get_current_user)):
-    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
-    supplier_payments = await db.supplier_payments.find({}, {"_id": 0}).to_list(10000)
-    expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
+    suppliers = await db.suppliers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
+    supplier_payments = await db.supplier_payments.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
     supplier_report = []
     for supplier in suppliers:
         payments = [p for p in supplier_payments if p.get("supplier_id") == supplier["id"]]
@@ -43,9 +43,9 @@ async def get_supplier_report(current_user: User = Depends(get_current_user)):
 
 @router.get("/reports/supplier-categories")
 async def get_supplier_category_report(current_user: User = Depends(get_current_user)):
-    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
-    supplier_payments = await db.supplier_payments.find({}, {"_id": 0}).to_list(10000)
-    expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
+    suppliers = await db.suppliers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
+    supplier_payments = await db.supplier_payments.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
     category_report = {}
     for supplier in suppliers:
         category = supplier.get("category", "Uncategorized")
@@ -61,9 +61,9 @@ async def get_supplier_category_report(current_user: User = Depends(get_current_
 
 @router.get("/reports/branch-cashbank")
 async def get_branch_cashbank_report(current_user: User = Depends(get_current_user)):
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
-    sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
-    expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
+    sales = await db.sales.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
     supplier_payments = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
     branch_data = []
     for branch in branches:
@@ -83,8 +83,8 @@ async def get_branch_cashbank_report(current_user: User = Depends(get_current_us
 
 @router.get("/reports/supplier-balance")
 async def get_supplier_balance_report(period: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None, branch_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
-    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
-    branches = {b["id"]: b["name"] for b in await db.branches.find({}, {"_id": 0}).to_list(100)}
+    suppliers = await db.suppliers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
+    branches = {b["id"]: b["name"] for b in await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)}
     date_query = {}
     if period == "today":
         today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -149,14 +149,14 @@ async def get_supplier_balance_report(period: Optional[str] = None, start_date: 
 
 @router.get("/reports/branch-dues")
 async def get_branch_dues(current_user: User = Depends(get_current_user)):
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     branch_map = {b["id"]: b["name"] for b in branches}
     expenses = await db.expenses.find({"branch_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
     sp = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}, "branch_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
     salary_payments = await db.salary_payments.find({"branch_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
-    employees = {e["id"]: e for e in await db.employees.find({}, {"_id": 0}).to_list(1000)}
-    suppliers = {s["id"]: s for s in await db.suppliers.find({}, {"_id": 0}).to_list(1000)}
-    transfers = await db.cash_transfers.find({}, {"_id": 0}).to_list(10000)
+    employees = {e["id"]: e for e in await db.employees.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)}
+    suppliers = {s["id"]: s for s in await db.suppliers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)}
+    transfers = await db.cash_transfers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
     dues = {}
     for p in sp:
         pay_b = p.get("branch_id"); sup = suppliers.get(p.get("supplier_id"), {}); sup_b = sup.get("branch_id")
@@ -188,7 +188,7 @@ async def get_branch_dues(current_user: User = Depends(get_current_user)):
 @router.get("/reports/branch-dues-net")
 async def get_branch_dues_net(current_user: User = Depends(get_current_user)):
     dues_resp = await get_branch_dues(current_user)
-    paybacks = await db.branch_paybacks.find({}, {"_id": 0}).to_list(10000)
+    paybacks = await db.branch_paybacks.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
     payback_totals = {}
     for p in paybacks:
         key = f"{p['from_branch_name']} paid back {p['to_branch_name']}"
@@ -197,7 +197,7 @@ async def get_branch_dues_net(current_user: User = Depends(get_current_user)):
 
 @router.get("/reports/item-pnl")
 async def get_item_pnl(branch_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
-    items = await db.items.find({}, {"_id": 0}).to_list(1000)
+    items = await db.items.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
     e_query = {"branch_id": branch_id} if branch_id else {}
     u_query = {"branch_id": branch_id} if branch_id else {}
     i_query = {"branch_id": branch_id} if branch_id else {}
@@ -276,8 +276,8 @@ async def get_daily_summary(start_date: Optional[str] = None, end_date: Optional
 
 @router.get("/reports/top-customers")
 async def get_top_customers(current_user: User = Depends(get_current_user)):
-    customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
-    sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+    customers = await db.customers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
+    sales = await db.sales.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
     result = []
     for c in customers:
         cid = c["id"]
@@ -300,8 +300,8 @@ async def get_top_customers(current_user: User = Depends(get_current_user)):
 @router.get("/reports/cashier-performance")
 async def get_cashier_performance(current_user: User = Depends(get_current_user)):
     users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(500)
-    sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    sales = await db.sales.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     result = []
     for u in users:
         uid = u["id"]
@@ -336,9 +336,9 @@ async def export_analytics_pdf(current_user: User = Depends(get_current_user)):
     except ImportError:
         raise HTTPException(status_code=500, detail="reportlab not installed")
 
-    sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
-    expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    sales = await db.sales.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
 
     total_sales = sum(s.get("final_amount", s["amount"] - s.get("discount", 0)) for s in sales)
     total_expenses = sum(e["amount"] for e in expenses)
@@ -420,7 +420,7 @@ async def export_analytics_pdf(current_user: User = Depends(get_current_user)):
 async def get_sales_forecast(current_user: User = Depends(get_current_user)):
     """AI-powered sales forecast for next 7 days based on historical patterns."""
     import os
-    sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+    sales = await db.sales.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
     if len(sales) < 5:
         return {"forecast": [], "message": "Need more historical data for forecasting"}
 
@@ -495,7 +495,7 @@ async def get_eod_summary(date: str, branch_id: Optional[str] = None, current_us
     sales = await db.sales.find(s_query, {"_id": 0}).to_list(10000)
     expenses = await db.expenses.find(e_query, {"_id": 0}).to_list(10000)
     supplier_payments = await db.supplier_payments.find(sp_query, {"_id": 0}).to_list(10000)
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     branch_map = {b["id"]: b["name"] for b in branches}
 
     # Sales breakdown
@@ -578,10 +578,10 @@ async def get_eod_summary(date: str, branch_id: Optional[str] = None, current_us
 @router.get("/reports/partner-pnl")
 async def get_partner_pnl(current_user: User = Depends(get_current_user)):
     """Partner P&L: calculate profit/loss per partner based on investments, withdrawals, and share."""
-    partners = await db.partners.find({}, {"_id": 0}).to_list(100)
-    transactions = await db.partner_transactions.find({}, {"_id": 0}).to_list(10000)
-    sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
-    expenses = await db.expenses.find({}, {"_id": 0}).to_list(10000)
+    partners = await db.partners.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
+    transactions = await db.partner_transactions.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
+    sales = await db.sales.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
     supplier_payments = await db.supplier_payments.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
 
     total_revenue = sum(s.get("final_amount", s["amount"] - s.get("discount", 0)) for s in sales)
@@ -678,9 +678,9 @@ async def get_expense_forecast(current_user: User = Depends(get_current_user)):
 @router.get("/reports/stock-reorder")
 async def get_stock_reorder(current_user: User = Depends(get_current_user)):
     """Predict when items will run out and suggest reorder dates/quantities."""
-    items = await db.items.find({}, {"_id": 0}).to_list(1000)
-    entries = await db.stock_entries.find({}, {"_id": 0}).to_list(10000)
-    usage_records = await db.stock_usage.find({}, {"_id": 0}).to_list(10000)
+    items = await db.items.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
+    entries = await db.stock_entries.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
+    usage_records = await db.stock_usage.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
     stock_in = {}
     for e in entries:
         stock_in[e["item_id"]] = stock_in.get(e["item_id"], 0) + e["quantity"]
@@ -776,7 +776,7 @@ async def get_revenue_trends(current_user: User = Depends(get_current_user)):
 @router.get("/reports/customer-churn")
 async def get_customer_churn(current_user: User = Depends(get_current_user)):
     """Identify customers who haven't purchased recently (churn risk)."""
-    customers = await db.customers.find({}, {"_id": 0}).to_list(10000)
+    customers = await db.customers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
     sales = await db.sales.find({"customer_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(50000)
     now = datetime.now(timezone.utc)
     customer_map = {c["id"]: c for c in customers}
@@ -818,8 +818,8 @@ async def get_customer_churn(current_user: User = Depends(get_current_user)):
 @router.get("/reports/margin-optimizer")
 async def get_margin_optimizer(current_user: User = Depends(get_current_user)):
     """Suggest items to promote based on profit margin vs volume analysis."""
-    items = await db.items.find({}, {"_id": 0}).to_list(1000)
-    sales = await db.sales.find({}, {"_id": 0}).to_list(50000)
+    items = await db.items.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
+    sales = await db.sales.find(get_tenant_filter(current_user), {"_id": 0}).to_list(50000)
     item_map = {i["id"]: i for i in items}
     item_sales = {}
     for s in sales:
@@ -888,9 +888,9 @@ async def get_heatmap_data(current_user: User = Depends(get_current_user)):
 @router.get("/reports/sales-funnel")
 async def get_sales_funnel(current_user: User = Depends(get_current_user)):
     """Sales pipeline funnel: total customers → active customers → sales → paid → fully collected."""
-    customers = await db.customers.find({}, {"_id": 0}).to_list(10000)
-    sales = await db.sales.find({}, {"_id": 0}).to_list(50000)
-    invoices = await db.invoices.find({}, {"_id": 0}).to_list(50000)
+    customers = await db.customers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
+    sales = await db.sales.find(get_tenant_filter(current_user), {"_id": 0}).to_list(50000)
+    invoices = await db.invoices.find(get_tenant_filter(current_user), {"_id": 0}).to_list(50000)
     total_customers = len(customers)
     customer_with_sales = len(set(s.get("customer_id") for s in sales if s.get("customer_id")))
     total_sales_count = len(sales)
@@ -941,7 +941,7 @@ async def get_kpi_gauges(current_user: User = Depends(get_current_user)):
     month_end = ((now.replace(day=1) + timedelta(days=32)).replace(day=1)).isoformat()[:10]
     sales = await db.sales.find({"date": {"$gte": month_start, "$lt": month_end}}, {"_id": 0}).to_list(10000)
     expenses = await db.expenses.find({"date": {"$gte": month_start, "$lt": month_end}}, {"_id": 0}).to_list(10000)
-    customers = await db.customers.find({}, {"_id": 0}).to_list(10000)
+    customers = await db.customers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
     total_sales = sum(s.get("final_amount", s["amount"]) for s in sales)
     total_expenses = sum(e["amount"] for e in expenses)
     credit_given = sum(s.get("credit_amount", 0) for s in sales)
@@ -970,13 +970,13 @@ async def get_kpi_gauges(current_user: User = Depends(get_current_user)):
 @router.get("/reports/branch-radar")
 async def get_branch_radar(current_user: User = Depends(get_current_user)):
     """Multi-metric branch comparison for radar chart."""
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     now = datetime.now(timezone.utc)
     m_start = now.replace(day=1).isoformat()[:10]
     m_end = ((now.replace(day=1) + timedelta(days=32)).replace(day=1)).isoformat()[:10]
     sales = await db.sales.find({"date": {"$gte": m_start, "$lt": m_end}}, {"_id": 0}).to_list(10000)
     expenses = await db.expenses.find({"date": {"$gte": m_start, "$lt": m_end}}, {"_id": 0}).to_list(10000)
-    customers = await db.customers.find({}, {"_id": 0}).to_list(10000)
+    customers = await db.customers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(10000)
     if not branches:
         return {"branches": [], "metrics": []}
     max_sales = 1
@@ -1066,7 +1066,7 @@ async def get_money_flow(current_user: User = Depends(get_current_user)):
     sales = await db.sales.find({"date": {"$gte": m_start, "$lt": m_end}}, {"_id": 0}).to_list(10000)
     expenses = await db.expenses.find({"date": {"$gte": m_start, "$lt": m_end}}, {"_id": 0}).to_list(10000)
     sp = await db.supplier_payments.find({"date": {"$gte": m_start, "$lt": m_end}, "supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     branch_map = {b["id"]: b["name"] for b in branches}
     # Sources → Revenue
     sources = {}
@@ -1190,7 +1190,7 @@ async def get_cashflow_prediction(days: int = 14, current_user: User = Depends(g
     avg_expense = {i: sum(daily_expense[i]) / max(len(daily_expense[i]), 1) for i in range(7)}
     
     # Get current cash balance from branches
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     current_cash = sum(b.get("cash_balance", 0) for b in branches)
     
     # Predict future days
@@ -1402,7 +1402,7 @@ async def get_employee_performance(current_user: User = Depends(get_current_user
     shifts = await db.shifts.find({"date": {"$gte": start_date}}, {"_id": 0}).to_list(10000)
     
     # Get branches for context
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     branch_map = {b["id"]: b["name"] for b in branches}
     
     # Calculate performance for each employee
@@ -1638,16 +1638,16 @@ async def get_supplier_optimization(current_user: User = Depends(get_current_use
     now = datetime.now(timezone.utc)
     
     # Get suppliers
-    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(500)
+    suppliers = await db.suppliers.find(get_tenant_filter(current_user), {"_id": 0}).to_list(500)
     
     # Get payment history
-    all_payments = await db.supplier_payments.find({}, {"_id": 0}).to_list(20000)
+    all_payments = await db.supplier_payments.find(get_tenant_filter(current_user), {"_id": 0}).to_list(20000)
     
     # Get expenses linked to suppliers
     expenses = await db.expenses.find({"supplier_id": {"$exists": True, "$ne": None}}, {"_id": 0}).to_list(10000)
     
     # Get current cash balance
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     total_cash = sum(b.get("cash_balance", 0) for b in branches)
     total_bank = sum(b.get("bank_balance", 0) for b in branches)
     

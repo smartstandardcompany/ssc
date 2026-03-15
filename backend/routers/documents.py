@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 import os
 
-from database import db, get_current_user, ROOT_DIR, require_permission, get_branch_filter_with_global
+from database import db, get_current_user, ROOT_DIR, require_permission, get_branch_filter_with_global, get_tenant_filter, stamp_tenant
 from models import User, Document, DocumentCreate
 
 router = APIRouter()
@@ -34,30 +34,31 @@ async def create_document(data: DocumentCreate, current_user: User = Depends(get
     doc_dict = doc.model_dump()
     for f in ['created_at', 'issue_date', 'expiry_date']:
         if doc_dict.get(f): doc_dict[f] = doc_dict[f].isoformat()
+    stamp_tenant(doc_dict, current_user)
     await db.documents.insert_one(doc_dict)
     return {k: v for k, v in doc_dict.items() if k != '_id'}
 
 @router.put("/documents/{doc_id}")
 async def update_document(doc_id: str, data: DocumentCreate, current_user: User = Depends(get_current_user)):
-    result = await db.documents.find_one({"id": doc_id})
+    result = await db.documents.find_one({"id": doc_id, **get_tenant_filter(current_user)})
     if not result: raise HTTPException(status_code=404, detail="Document not found")
     update = data.model_dump()
     for f in ['issue_date', 'expiry_date']:
         if update.get(f): update[f] = update[f].isoformat()
-    await db.documents.update_one({"id": doc_id}, {"$set": update})
-    return await db.documents.find_one({"id": doc_id}, {"_id": 0})
+    await db.documents.update_one({"id": doc_id, **get_tenant_filter(current_user)}, {"$set": update})
+    return await db.documents.find_one({"id": doc_id, **get_tenant_filter(current_user)}, {"_id": 0})
 
 @router.delete("/documents/{doc_id}")
 async def delete_document(doc_id: str, current_user: User = Depends(get_current_user)):
-    doc = await db.documents.find_one({"id": doc_id}, {"_id": 0})
+    doc = await db.documents.find_one({"id": doc_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not doc: raise HTTPException(status_code=404, detail="Document not found")
     if doc.get("file_path") and os.path.exists(doc["file_path"]): os.remove(doc["file_path"])
-    await db.documents.delete_one({"id": doc_id})
+    await db.documents.delete_one({"id": doc_id, **get_tenant_filter(current_user)})
     return {"message": "Document deleted"}
 
 @router.post("/documents/{doc_id}/upload")
 async def upload_document_file(doc_id: str, file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
-    doc = await db.documents.find_one({"id": doc_id}, {"_id": 0})
+    doc = await db.documents.find_one({"id": doc_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not doc: raise HTTPException(status_code=404, detail="Document not found")
     upload_dir = ROOT_DIR / "uploads" / "documents"
     upload_dir.mkdir(parents=True, exist_ok=True)
@@ -66,20 +67,20 @@ async def upload_document_file(doc_id: str, file: UploadFile = File(...), curren
     with open(file_path, "wb") as f:
         content = await file.read()
         f.write(content)
-    await db.documents.update_one({"id": doc_id}, {"$set": {"file_path": str(file_path), "file_name": file.filename}})
+    await db.documents.update_one({"id": doc_id, **get_tenant_filter(current_user)}, {"$set": {"file_path": str(file_path), "file_name": file.filename}})
     return {"message": "File uploaded", "file_name": file.filename}
 
 @router.get("/documents/{doc_id}/download")
 async def download_document_file(doc_id: str, current_user: User = Depends(get_current_user)):
-    doc = await db.documents.find_one({"id": doc_id}, {"_id": 0})
+    doc = await db.documents.find_one({"id": doc_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not doc or not doc.get("file_path"): raise HTTPException(status_code=404, detail="No file attached")
     if not os.path.exists(doc["file_path"]): raise HTTPException(status_code=404, detail="File not found on disk")
     return FileResponse(doc["file_path"], filename=doc.get("file_name", "document"))
 
 @router.get("/documents/alerts/upcoming")
 async def get_expiry_alerts(current_user: User = Depends(get_current_user)):
-    docs = await db.documents.find({}, {"_id": 0}).to_list(1000)
-    employees = await db.employees.find({}, {"_id": 0}).to_list(1000)
+    docs = await db.documents.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
+    employees = await db.employees.find(get_tenant_filter(current_user), {"_id": 0}).to_list(1000)
     now = datetime.now(timezone.utc)
     alerts = []
     for d in docs:

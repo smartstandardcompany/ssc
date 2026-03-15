@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime, timezone, timedelta
-from database import db, get_current_user
+from database import db, get_current_user, get_tenant_filter, stamp_tenant
 from models import User
 import uuid
 import logging
@@ -18,7 +18,6 @@ ARCHIVABLE_COLLECTIONS = {
     "notifications": {"date_field": "created_at", "label": "Notifications"},
 }
 
-
 @router.get("/data-management/stats")
 async def get_data_stats(current_user: User = Depends(get_current_user)):
     """Get collection sizes and data age statistics."""
@@ -28,7 +27,7 @@ async def get_data_stats(current_user: User = Depends(get_current_user)):
     stats = []
     for coll_name, config in ARCHIVABLE_COLLECTIONS.items():
         collection = db[coll_name]
-        total = await collection.count_documents({})
+        total = await collection.count_documents(get_tenant_filter(current_user))
         oldest = await collection.find_one({}, {"_id": 0, config["date_field"]: 1}, sort=[(config["date_field"], 1)])
         newest = await collection.find_one({}, {"_id": 0, config["date_field"]: 1}, sort=[(config["date_field"], -1)])
 
@@ -55,10 +54,9 @@ async def get_data_stats(current_user: User = Depends(get_current_user)):
         })
 
     # Get archive history
-    archives = await db.archive_history.find({}, {"_id": 0}).sort("archived_at", -1).to_list(20)
+    archives = await db.archive_history.find(get_tenant_filter(current_user), {"_id": 0}).sort("archived_at", -1).to_list(20)
 
     return {"stats": stats, "archives": archives}
-
 
 @router.get("/data-management/recommendations")
 async def get_archive_recommendations(current_user: User = Depends(get_current_user)):
@@ -71,7 +69,7 @@ async def get_archive_recommendations(current_user: User = Depends(get_current_u
 
     for coll_name, config in ARCHIVABLE_COLLECTIONS.items():
         collection = db[coll_name]
-        total = await collection.count_documents({})
+        total = await collection.count_documents(get_tenant_filter(current_user))
 
         if total == 0:
             continue
@@ -157,7 +155,6 @@ async def get_archive_recommendations(current_user: User = Depends(get_current_u
         "analyzed_at": now.isoformat(),
     }
 
-
 @router.post("/data-management/archive")
 async def archive_data(body: dict, current_user: User = Depends(get_current_user)):
     """Archive old data by moving to archive collections."""
@@ -204,6 +201,7 @@ async def archive_data(body: dict, current_user: User = Depends(get_current_user
         "archived_at": datetime.now(timezone.utc).isoformat(),
         "archived_by": current_user.email,
     }
+    stamp_tenant(log_entry, current_user)
     await db.archive_history.insert_one(log_entry)
 
     logger.info(f"Archived {result.deleted_count} records from {collection_name} older than {months} months")
@@ -213,7 +211,6 @@ async def archive_data(body: dict, current_user: User = Depends(get_current_user
         "archived_count": result.deleted_count,
         "cutoff_date": cutoff[:10],
     }
-
 
 @router.post("/data-management/restore")
 async def restore_archived_data(body: dict, current_user: User = Depends(get_current_user)):
@@ -225,7 +222,7 @@ async def restore_archived_data(body: dict, current_user: User = Depends(get_cur
     if not archive_id:
         raise HTTPException(status_code=400, detail="archive_id required")
 
-    archive_entry = await db.archive_history.find_one({"id": archive_id}, {"_id": 0})
+    archive_entry = await db.archive_history.find_one({"id": archive_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not archive_entry:
         raise HTTPException(status_code=404, detail="Archive record not found")
 
@@ -261,7 +258,6 @@ async def restore_archived_data(body: dict, current_user: User = Depends(get_cur
 
     return {"message": f"Restored {len(records)} records to {collection_name}", "restored_count": len(records)}
 
-
 @router.delete("/data-management/purge")
 async def purge_archived_data(body: dict, current_user: User = Depends(get_current_user)):
     """Permanently delete archived data (cannot be undone)."""
@@ -272,7 +268,7 @@ async def purge_archived_data(body: dict, current_user: User = Depends(get_curre
     if not archive_id:
         raise HTTPException(status_code=400, detail="archive_id required")
 
-    archive_entry = await db.archive_history.find_one({"id": archive_id}, {"_id": 0})
+    archive_entry = await db.archive_history.find_one({"id": archive_id, **get_tenant_filter(current_user)}, {"_id": 0})
     if not archive_entry:
         raise HTTPException(status_code=404, detail="Archive record not found")
 
@@ -289,7 +285,6 @@ async def purge_archived_data(body: dict, current_user: User = Depends(get_curre
 
     return {"message": f"Permanently deleted {result.deleted_count} archived records", "purged_count": result.deleted_count}
 
-
 @router.get("/data-management/export/{collection_name}")
 async def export_collection(collection_name: str, current_user: User = Depends(get_current_user)):
     """Export a collection as JSON for backup."""
@@ -299,14 +294,13 @@ async def export_collection(collection_name: str, current_user: User = Depends(g
     if collection_name not in ARCHIVABLE_COLLECTIONS:
         raise HTTPException(status_code=400, detail="Invalid collection")
 
-    records = await db[collection_name].find({}, {"_id": 0}).to_list(50000)
+    records = await db[collection_name].find(get_tenant_filter(current_user), {"_id": 0}).to_list(50000)
     return {
         "collection": collection_name,
         "count": len(records),
         "exported_at": datetime.now(timezone.utc).isoformat(),
         "data": records,
     }
-
 
 # =====================================================
 # AUTO-ARCHIVE SCHEDULING
@@ -318,7 +312,7 @@ async def get_auto_archive_settings(current_user: User = Depends(get_current_use
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin only")
 
-    settings = await db.auto_archive_settings.find_one({}, {"_id": 0})
+    settings = await db.auto_archive_settings.find_one(get_tenant_filter(current_user), {"_id": 0})
     if not settings:
         settings = {
             "enabled": False,
@@ -332,7 +326,6 @@ async def get_auto_archive_settings(current_user: User = Depends(get_current_use
             "last_run": None,
         }
     return settings
-
 
 @router.put("/data-management/auto-archive-settings")
 async def update_auto_archive_settings(body: dict, current_user: User = Depends(get_current_user)):
@@ -368,7 +361,6 @@ async def update_auto_archive_settings(body: dict, current_user: User = Depends(
         scheduler.add_job(run_auto_archive, trigger, id=job_id, replace_existing=True)
 
     return await get_auto_archive_settings(current_user)
-
 
 async def run_auto_archive():
     """Automated archive job that runs on schedule."""
@@ -412,6 +404,7 @@ async def run_auto_archive():
             "archived_at": datetime.now(timezone.utc).isoformat(),
             "archived_by": "auto-archive",
         }
+
         await db.archive_history.insert_one(log_entry)
         total_archived += result.deleted_count
         results.append(f"{config['label']}: {result.deleted_count}")

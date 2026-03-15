@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime, timezone
 import uuid
 
-from database import db, get_current_user
+from database import db, get_current_user, get_tenant_filter, stamp_tenant
 from models import User
 
 router = APIRouter()
@@ -10,7 +10,7 @@ router = APIRouter()
 
 @router.get("/targets")
 async def get_targets(current_user: User = Depends(get_current_user)):
-    targets = await db.sales_targets.find({}, {"_id": 0}).sort("month", -1).to_list(500)
+    targets = await db.sales_targets.find(get_tenant_filter(current_user), {"_id": 0}).sort("month", -1).to_list(500)
     return targets
 
 
@@ -37,6 +37,7 @@ async def create_target(body: dict, current_user: User = Depends(get_current_use
         "created_by": current_user.id,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
+    stamp_tenant(target, current_user)
     await db.sales_targets.insert_one(target)
     return {k: v for k, v in target.items() if k != "_id"}
 
@@ -47,7 +48,7 @@ async def get_target_progress(month: str = None, current_user: User = Depends(ge
     if not month:
         month = datetime.now(timezone.utc).strftime("%Y-%m")
     targets = await db.sales_targets.find({"month": month}, {"_id": 0}).to_list(100)
-    branches = await db.branches.find({}, {"_id": 0}).to_list(100)
+    branches = await db.branches.find(get_tenant_filter(current_user), {"_id": 0}).to_list(100)
     start = f"{month}-01"
     end = f"{month}-31"
     sales = await db.sales.find({"date": {"$gte": start, "$lte": end + "T23:59:59"}}, {"_id": 0}).to_list(10000)
@@ -81,7 +82,7 @@ async def get_target_progress(month: str = None, current_user: User = Depends(ge
 
 @router.delete("/targets/{target_id}")
 async def delete_target(target_id: str, current_user: User = Depends(get_current_user)):
-    result = await db.sales_targets.delete_one({"id": target_id})
+    result = await db.sales_targets.delete_one({"id": target_id, **get_tenant_filter(current_user)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Target not found")
     return {"message": "Target deleted"}
