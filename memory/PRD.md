@@ -4,15 +4,16 @@
 SSC Track is a comprehensive, multi-tenant ERP/accounting SaaS platform purpose-built for Middle East businesses. It supports POS, sales, expenses, HR, inventory, accounting, and analytics — all isolated per company (tenant).
 
 ## Core Architecture
-- **Frontend:** React + Shadcn/UI + TailwindCSS
+- **Frontend:** React + Shadcn/UI + TailwindCSS + Recharts
 - **Backend:** FastAPI (Python) + MongoDB (Motor async driver)
-- **Multi-Tenancy:** Every collection filtered by `tenant_id`. Enforced via `get_tenant_filter(user)` for reads and `stamp_tenant(doc, user)` for writes in `database.py`.
+- **Multi-Tenancy:** Every collection filtered by `tenant_id`. Enforced via `get_tenant_filter(user)` for reads and `stamp_tenant(doc, user)` for writes.
 - **Auth:** JWT tokens with tenant_id embedded in user records
+- **Payments:** Stripe via emergentintegrations library
 
 ## User Roles
-- **Super Admin (`is_super_admin: true`):** Platform-wide access, manages all tenants
-- **Admin:** Company-level admin with full access within their tenant
-- **Operator/Manager/Employee:** Role-based permissions within a tenant
+- **Super Admin (`is_super_admin: true`):** Platform-wide access, analytics, tenant management
+- **Admin:** Company-level admin, manages users/roles/subscription within their tenant
+- **Manager/Cashier/Viewer/Employee:** Defined by RBAC role templates
 
 ## Credentials
 - Super Admin: `ss@ssc.com` / `Aa147258369Ssc@`
@@ -22,62 +23,59 @@ SSC Track is a comprehensive, multi-tenant ERP/accounting SaaS platform purpose-
 
 ## Completed Features
 
-### P0: Multi-Tenancy (DONE - March 2026)
-- All 50+ backend routers refactored for tenant isolation
-- `get_branch_filter()` auto-includes tenant_id
-- Registration page (3-step wizard): company name, admin details, country, industry, currency, plan
-- Super Admin Dashboard at `/super-admin`: stats, tenant management, activate/deactivate
-- Data isolation verified: new tenants see zero data from other tenants
+### P0: Multi-Tenancy (DONE)
+- All 50+ backend routers with tenant isolation
+- Registration page (3-step wizard), Super Admin Dashboard
+- Data isolation verified across tenants
 
-### P0.5: Onboarding Wizard (DONE - March 2026)
-- 3-step setup wizard at `/onboarding` for new tenants
-- Step 1: Create first branch
-- Step 2: Add first employee
-- Step 3: Configure VAT/tax settings
-- Auto-redirect on first login if `onboarding_completed=false`
-- Skip/Back navigation, finish marks onboarding complete
+### P0.5: Onboarding Wizard (DONE)
+- 3-step setup: Create Branch → Add Employee → Configure VAT
+- Auto-redirect for new tenants, skippable
 
-### P1: Subscription Management UI (DONE - March 2026)
-- Subscription page at `/subscription` with current plan display
-- Usage stats: users, branches, employees vs plan limits
-- Plan comparison (Starter SAR 199, Business SAR 499, Enterprise Custom)
-- Plan switching with downgrade protection (validates usage fits new limits)
-- "Contact Sales" for Enterprise plan
-- Sidebar link visible for admin users only
+### P1: Subscription Management (DONE)
+- Subscription page with plan display + usage stats
+- Plan comparison (Starter SAR 199 / Business SAR 499 / Enterprise SAR 999)
+- Stripe checkout integration for plan upgrades
+- Payment history tracking
+- Downgrade protection (validates usage fits limits)
 
-### Bug Fix: Employee→User Auto-Creation (DONE - March 2026)
-- Fixed: Employee creation with email now properly creates user with branch_id
-- Fixed: Tenant-scoped email uniqueness check
-- Default password: `emp@123` for auto-created employee users
+### P2: Advanced RBAC (DONE)
+- 4 system role templates: Manager, Cashier, Viewer, Employee
+- Custom role template CRUD (create/edit/delete/duplicate)
+- Module-level permissions (write/read/none) for 25 modules
+- Quick-set buttons (All Write / All Read / All None)
+- System templates protected from deletion
+- Role Management page at `/role-management`
+
+### P3: Stripe Integration (DONE)
+- Stripe checkout session creation via emergentintegrations
+- Webhook endpoint for payment events
+- Payment status polling on redirect
+- Transaction history stored in DB
+- Auto plan upgrade on successful payment
+
+### Tenant Analytics Dashboard (DONE)
+- MRR with ARR calculation ($3,188 MRR / $38,256 ARR)
+- Tenant Growth bar chart (6-month trend)
+- Revenue by Plan donut chart
+- Plan Distribution breakdown
+- Subscription Status distribution
+- Top Tenants leaderboard
+- Total revenue and payment count
+- Super admin access only
+
+### Bug Fix: Employee→User Auto-Creation (DONE)
+- Employee creation with email auto-creates user with branch_id and tenant scoping
 
 ### Full Accounting Module (DONE)
-- Financial Dashboard, Chart of Accounts, Journal Entries
-- Profit & Loss, Balance Sheet reports
-- Bills management with payment tracking
-- Tax/VAT settings (Middle East compliant)
-- Currency settings
+- Financial Dashboard, Chart of Accounts, Journal Entries, P&L, Balance Sheet, Bills, Tax/Currency
 
 ### ERP Core (DONE)
-- Sales & POS system, Expense management, Employee/HR management
-- Inventory & stock, Multi-branch, Customer/Supplier management
-- Invoicing, Document management, Shift scheduling
-- Loan management, Partner P&L, Activity logs, Data export
-
-### UI (DONE)
-- Foodics-inspired modern design, Dark mode, Multi-language (EN/AR)
-- Keyboard shortcuts, PWA support
+- Sales/POS, Expenses, HR, Inventory, Multi-branch, Customer/Supplier, Invoicing, Documents, Shifts, Loans, Partners, Activity Logs, Data Export
 
 ---
 
-## Backlog (Priority Order)
-
-### P2: Advanced User Permissions (RBAC)
-- Granular role-based access control within each tenant
-- Custom permission sets per role
-
-### P3: Stripe Integration
-- Real payment processing for subscriptions
-- Webhook handling for subscription lifecycle
+## Backlog
 
 ### P4: SMTP Email Delivery
 - Blocked on user's Microsoft 365 configuration
@@ -87,3 +85,4 @@ SSC Track is a comprehensive, multi-tenant ERP/accounting SaaS platform purpose-
 - Scheduled PDF report delivery
 - API rate limiting per tenant
 - Tenant data export/migration tools
+- Audit log for role template changes
