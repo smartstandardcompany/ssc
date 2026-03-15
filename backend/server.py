@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 import os
@@ -65,6 +65,7 @@ from routers import (
     ai_insights,
     tenants,
     rbac_payments,
+    platform_features,
 )
 
 app = FastAPI()
@@ -76,6 +77,34 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Rate Limiting Middleware
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    from starlette.responses import JSONResponse
+    if request.url.path.startswith("/api/"):
+        try:
+            result = await platform_features.check_rate_limit(request)
+            if result and result.get("exceeded"):
+                return JSONResponse(
+                    status_code=429,
+                    content={"detail": "Rate limit exceeded. Please upgrade your plan."},
+                    headers={
+                        "X-RateLimit-Limit": str(result["limit"]),
+                        "X-RateLimit-Remaining": "0",
+                        "X-RateLimit-Reset": str(result["reset"]),
+                    },
+                )
+            response = await call_next(request)
+            if result and result.get("limit", -1) > 0:
+                response.headers["X-RateLimit-Limit"] = str(result["limit"])
+                response.headers["X-RateLimit-Remaining"] = str(result["remaining"])
+                response.headers["X-RateLimit-Reset"] = str(result["reset"])
+            return response
+        except Exception:
+            return await call_next(request)
+    return await call_next(request)
 
 # Include all routers with /api prefix
 for module in [
@@ -135,6 +164,7 @@ for module in [
     ai_insights,
     tenants,
     rbac_payments,
+    platform_features,
 ]:
     app.include_router(module.router, prefix="/api")
 

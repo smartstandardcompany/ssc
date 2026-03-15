@@ -228,7 +228,7 @@ async def get_payment_status(session_id: str, current_user: User = Depends(get_c
 
     from emergentintegrations.payments.stripe.checkout import StripeCheckout
 
-    host_url = "https://ssc-saas-build.preview.emergentagent.com"
+    host_url = "https://erp-multi-tenant-5.preview.emergentagent.com"
     webhook_url = f"{host_url}/api/webhook/stripe"
     stripe_checkout = StripeCheckout(api_key=api_key, webhook_url=webhook_url)
 

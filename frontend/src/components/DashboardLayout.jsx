@@ -7,7 +7,7 @@ import {
   Handshake, HelpCircle, Building2, Package, ChefHat, CalendarClock,
   ArrowDownUp, Activity, PackageCheck, ChevronDown, Menu, X, Zap,
   AlertCircle, Moon, Sun, Keyboard, Globe, UtensilsCrossed, Camera, Armchair, Wallet,
-  CalendarDays, Gift, TrendingUp, Clock, Database, Copy, Download, ShieldCheck, Award, Crown
+  CalendarDays, Gift, TrendingUp, Clock, Database, Copy, Download, ShieldCheck, Award, Crown, Paintbrush
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -137,6 +137,8 @@ const NAV_GROUPS = [
       { path: '/activity-logs', icon: Activity, label: 'Activity Logs', perm: 'settings', roles: ['admin'] },
       { path: '/audit-trail', icon: Shield, label: 'Audit Trail', perm: 'settings', roles: ['admin'] },
       { path: '/data-management', icon: Database, label: 'Data Management', perm: 'settings', roles: ['admin'] },
+      { path: '/white-label', icon: Paintbrush, label: 'White-Label', perm: 'settings', roles: ['admin'] },
+      { path: '/usage-alerts', icon: AlertCircle, label: 'Usage & Limits', perm: 'settings', roles: ['admin'] },
       { path: '/notification-preferences', icon: Bell, label: 'Notif. Settings' },
       { path: '/role-management', icon: Shield, label: 'Roles & Permissions', roles: ['admin'] },
       { path: '/subscription', icon: CreditCard, label: 'Subscription', roles: ['admin'] },

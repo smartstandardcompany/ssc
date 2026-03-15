@@ -328,7 +328,7 @@ class TestStripeCheckout:
             headers={"Authorization": f"Bearer {super_admin_token}"},
             json={
                 "plan": "starter",
-                "origin_url": "https://ssc-saas-build.preview.emergentagent.com"
+                "origin_url": "https://erp-multi-tenant-5.preview.emergentagent.com"
             }
         )
         assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
@@ -345,7 +345,7 @@ class TestStripeCheckout:
             headers={"Authorization": f"Bearer {super_admin_token}"},
             json={
                 "plan": "business",
-                "origin_url": "https://ssc-saas-build.preview.emergentagent.com"
+                "origin_url": "https://erp-multi-tenant-5.preview.emergentagent.com"
             }
         )
         assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"

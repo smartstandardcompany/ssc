@@ -72,7 +72,7 @@
   "verified_features": {
     "test_1_super_admin_login": {
       "status": "PASSED",
-      "result": "Login returns is_super_admin=true, tenant_id=da05caba-cef1-42a1-8ff9-9a3056d7c9e9"
+      "result": "Login returns is_super_admin=true, tenant_id=erp-multi-tenant-5"
     },
     "test_2_admin_dashboard": {
       "status": "PASSED",

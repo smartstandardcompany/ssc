@@ -96,6 +96,8 @@ import OnboardingWizardPage from "./pages/OnboardingWizardPage";
 import SubscriptionPage from "./pages/SubscriptionPage";
 import TenantAnalyticsPage from "./pages/TenantAnalyticsPage";
 import RoleManagementPage from "./pages/RoleManagementPage";
+import WhiteLabelingPage from "./pages/WhiteLabelingPage";
+import UsageAlertsPage from "./pages/UsageAlertsPage";
 import BankAccountsPage from "./pages/finance/BankAccountsPage";
 import PlatformReconciliationPage from "./pages/finance/PlatformReconciliationPage";
 import MonthlyReconReportPage from "./pages/finance/MonthlyReconReportPage";
@@ -346,6 +348,8 @@ function App() {
           <Route path="/activity-logs" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><ActivityLogsPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/audit-trail" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><AuditTrailPage /></ProtectedRoute></AuthRoute>} />
           <Route path="/data-management" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><DataManagementPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/white-label" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><WhiteLabelingPage /></ProtectedRoute></AuthRoute>} />
+          <Route path="/usage-alerts" element={<AuthRoute><ProtectedRoute perm="settings" roles={['admin']}><UsageAlertsPage /></ProtectedRoute></AuthRoute>} />
 
           {/* Customer Portal (no auth required - has its own auth) */}
           <Route path="/customer-portal" element={<CustomerPortalLogin />} />

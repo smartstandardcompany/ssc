@@ -312,7 +312,7 @@ async def forgot_password(data: ForgotPasswordRequest):
         if settings and settings.get("smtp_host") and settings.get("password"):
             # Get frontend URL from environment or use default
             import os
-            frontend_url = os.environ.get("FRONTEND_URL", "https://ssc-saas-build.preview.emergentagent.com")
+            frontend_url = os.environ.get("FRONTEND_URL", "https://erp-multi-tenant-5.preview.emergentagent.com")
             reset_link = f"{frontend_url}/reset-password?token={token}"
             
             body = f"""Hello {user['name']},
