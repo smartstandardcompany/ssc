@@ -103,6 +103,16 @@ SSC Track is a comprehensive, multi-tenant ERP/accounting SaaS platform purpose-
 
 ---
 
+### Bug Fix: Tenant Data Isolation in Suppliers & Platforms (DONE - Mar 2026)
+- Added `tenant_id` filter to supplier credit aggregation pipelines (expenses + payments)
+- Added `tenant_id` filter to platform sales/payment sub-queries
+- Added `tenant_id` filter to `GET /api/supplier-payments` query
+- Fixed double-credit-update bug: `POST /supplier-payments` with credit mode no longer updates stored balance (only `POST /expenses` does)
+- Fixed `DELETE /supplier-payments` reversal logic to only reverse cash/bank modes
+- Ran `PUT /api/suppliers/recalculate-all-balances` to correct existing data
+
+---
+
 ## Backlog
 
 ### P4: SMTP Email Delivery
