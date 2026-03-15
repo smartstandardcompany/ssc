@@ -35,9 +35,17 @@ async def create_employee(data: EmployeeCreate, current_user: User = Depends(get
     emp = Employee(**data.model_dump())
     emp_dict = emp.model_dump()
     if data.email:
-        existing_user = await db.users.find_one({"email": data.email}, {"_id": 0})
-        if not existing_user:
-            user = User(email=data.email, name=data.name, role="employee", permissions=["self_service"])
+        # Check globally for email uniqueness (emails are unique across all tenants)
+        global_check = await db.users.find_one({"email": data.email}, {"_id": 0})
+        if global_check:
+            # If user exists in same tenant, link them
+            if global_check.get("tenant_id") == current_user.tenant_id:
+                emp_dict["user_id"] = global_check["id"]
+            else:
+                # Email exists in another tenant - still create employee but don't link
+                pass
+        else:
+            user = User(email=data.email, name=data.name, role="employee", branch_id=data.branch_id or None, permissions=["self_service"])
             user_dict = user.model_dump()
             user_dict["password"] = hash_password("emp@123")
             user_dict["created_at"] = user_dict["created_at"].isoformat()
